@@ -3,6 +3,8 @@ import { db } from '../../../../../db/index';
 import { tasks, taskAssignments, users, timeEntries } from '../../../../../db/schema';
 import { eq, sql } from 'drizzle-orm';
 
+export const prerender = false;
+
 export const GET: APIRoute = async ({ params }) => {
   try {
     const projectId = params.id;

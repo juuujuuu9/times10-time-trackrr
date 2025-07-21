@@ -3,6 +3,8 @@ import { db } from '../../../../db/index';
 import { tasks } from '../../../../db/schema';
 import { eq } from 'drizzle-orm';
 
+export const prerender = false;
+
 export const DELETE: APIRoute = async ({ params }) => {
   try {
     const { id } = params;
