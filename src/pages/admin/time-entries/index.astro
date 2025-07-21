@@ -1,0 +1,512 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { db } from '../../../db/index';
+import { timeEntries, users, tasks, projects, clients } from '../../../db/schema';
+import { sql } from 'drizzle-orm';
+
+// Get all time entries with related data
+const allTimeEntries = await db
+  .select({
+    id: timeEntries.id,
+    startTime: timeEntries.startTime,
+    endTime: timeEntries.endTime,
+    durationManual: timeEntries.durationManual,
+    notes: timeEntries.notes,
+    createdAt: timeEntries.createdAt,
+    userName: users.name,
+    taskName: tasks.name,
+    projectName: projects.name,
+    clientName: clients.name,
+  })
+  .from(timeEntries)
+  .innerJoin(users, sql`${timeEntries.userId} = ${users.id}`)
+  .innerJoin(tasks, sql`${timeEntries.taskId} = ${tasks.id}`)
+  .innerJoin(projects, sql`${tasks.projectId} = ${projects.id}`)
+  .innerJoin(clients, sql`${projects.clientId} = ${clients.id}`)
+  .orderBy(sql`${timeEntries.startTime} DESC`);
+
+// Get all users for filtering
+const allUsers = await db.select().from(users).orderBy(users.name);
+
+// Get all tasks for filtering
+const allTasks = await db
+  .select({
+    id: tasks.id,
+    name: tasks.name,
+    projectName: projects.name,
+    clientName: clients.name,
+  })
+  .from(tasks)
+  .innerJoin(projects, sql`${tasks.projectId} = ${projects.id}`)
+  .innerJoin(clients, sql`${projects.clientId} = ${clients.id}`)
+  .orderBy(clients.name, projects.name, tasks.name);
+---
+
+<AdminLayout title="Time Entries" currentPage="time-entries">
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Time Entries</h1>
+        <p class="text-gray-600">View and manage time tracking data</p>
+      </div>
+      <div class="flex space-x-3">
+        <button
+          id="exportCsvBtn"
+          class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+        >
+          Export CSV
+        </button>
+        <button
+          id="addTimeEntryBtn"
+          class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+        >
+          + Add Entry
+        </button>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div>
+          <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+          <input
+            type="text"
+            id="search"
+            placeholder="Search entries..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <div>
+          <label for="userFilter" class="block text-sm font-medium text-gray-700 mb-1">User</label>
+          <select
+            id="userFilter"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Users</option>
+            {allUsers.map((user) => (
+              <option value={user.name}>{user.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label for="taskFilter" class="block text-sm font-medium text-gray-700 mb-1">Task</label>
+          <select
+            id="taskFilter"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Tasks</option>
+            {allTasks.map((task) => (
+              <option value={task.name}>{task.clientName} - {task.projectName} - {task.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label for="dateRange" class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+          <select
+            id="dateRange"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Time</option>
+            <option value="today">Today</option>
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+            <option value="quarter">This Quarter</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Time Entries Table -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                User
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Task
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Project
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Start Time
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                End Time
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Duration
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Notes
+              </th>
+              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            {allTimeEntries.map((entry) => {
+              const startTime = new Date(entry.startTime);
+              const endTime = entry.endTime ? new Date(entry.endTime) : null;
+              const duration = endTime 
+                ? (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60) // hours
+                : entry.durationManual ? entry.durationManual / 3600 : 0;
+              
+              return (
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {entry.userName}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {entry.taskName}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {entry.projectName}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {startTime.toLocaleDateString()} {startTime.toLocaleTimeString()}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {endTime ? `${endTime.toLocaleDateString()} ${endTime.toLocaleTimeString()}` : 'Ongoing'}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {duration ? Math.round(duration * 10) / 10 : 0} hours
+                  </td>
+                  <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                    {entry.notes || '-'}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div class="flex justify-end space-x-2">
+                      <button
+                        class="text-indigo-600 hover:text-indigo-900"
+                        onclick={`editTimeEntry(${entry.id})`}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        class="text-red-600 hover:text-red-900"
+                        onclick={`deleteTimeEntry(${entry.id})`}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {allTimeEntries.length === 0 && (
+      <div class="text-center py-12">
+        <div class="text-6xl mb-4">⏱️</div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No time entries yet</h3>
+        <p class="text-gray-600 mb-4">Start tracking time to see entries here</p>
+        <button
+          class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+          onclick="document.getElementById('addTimeEntryBtn').click()"
+        >
+          Add Your First Entry
+        </button>
+      </div>
+    )}
+  </div>
+
+  <!-- Add/Edit Time Entry Modal -->
+  <div id="timeEntryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 id="timeEntryModalTitle" class="text-lg font-medium text-gray-900">Add Time Entry</h3>
+        </div>
+        <form id="timeEntryForm" class="p-6">
+          <input type="hidden" id="timeEntryId" />
+          <div class="mb-4">
+            <label for="timeEntryUser" class="block text-sm font-medium text-gray-700 mb-1">
+              User
+            </label>
+            <select
+              id="timeEntryUser"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select a user</option>
+              {allUsers.map((user) => (
+                <option value={user.id}>{user.name}</option>
+              ))}
+            </select>
+          </div>
+          <div class="mb-4">
+            <label for="timeEntryTask" class="block text-sm font-medium text-gray-700 mb-1">
+              Task
+            </label>
+            <select
+              id="timeEntryTask"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select a task</option>
+              {allTasks.map((task) => (
+                <option value={task.id}>{task.clientName} - {task.projectName} - {task.name}</option>
+              ))}
+            </select>
+          </div>
+          <div class="mb-4">
+            <label for="timeEntryStart" class="block text-sm font-medium text-gray-700 mb-1">
+              Start Time
+            </label>
+            <input
+              type="datetime-local"
+              id="timeEntryStart"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div class="mb-4">
+            <label for="timeEntryEnd" class="block text-sm font-medium text-gray-700 mb-1">
+              End Time
+            </label>
+            <input
+              type="datetime-local"
+              id="timeEntryEnd"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div class="mb-4">
+            <label for="timeEntryNotes" class="block text-sm font-medium text-gray-700 mb-1">
+              Notes
+            </label>
+            <textarea
+              id="timeEntryNotes"
+              rows="3"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            ></textarea>
+          </div>
+          <div class="flex justify-end space-x-3">
+            <button
+              type="button"
+              onclick="closeTimeEntryModal()"
+              class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+            >
+              Save Entry
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Time entry management JavaScript
+    const addTimeEntryBtn = document.getElementById('addTimeEntryBtn');
+    const timeEntryForm = document.getElementById('timeEntryForm');
+    const exportCsvBtn = document.getElementById('exportCsvBtn');
+    const searchInput = document.getElementById('search');
+    const userFilter = document.getElementById('userFilter');
+    const taskFilter = document.getElementById('taskFilter');
+    const dateRange = document.getElementById('dateRange');
+
+    if (addTimeEntryBtn) {
+      addTimeEntryBtn.addEventListener('click', () => {
+        const modalTitle = document.getElementById('timeEntryModalTitle');
+        const timeEntryId = document.getElementById('timeEntryId') as HTMLInputElement;
+        const timeEntryModal = document.getElementById('timeEntryModal');
+        
+        if (modalTitle) modalTitle.textContent = 'Add Time Entry';
+        if (timeEntryId) timeEntryId.value = '';
+        if (timeEntryModal) timeEntryModal.classList.remove('hidden');
+      });
+    }
+
+    if (exportCsvBtn) {
+      exportCsvBtn.addEventListener('click', () => {
+        // Get filtered data and export as CSV
+        const rows = document.querySelectorAll('tbody tr:not([style*="display: none"])');
+        let csv = 'User,Task,Project,Start Time,End Time,Duration,Notes\n';
+        
+        rows.forEach(row => {
+          const cells = row.querySelectorAll('td');
+          const rowData = Array.from(cells).slice(0, 7).map(cell => {
+            const text = cell.textContent?.trim() || '';
+            return `"${text.replace(/"/g, '""')}"`;
+          });
+          csv += rowData.join(',') + '\n';
+        });
+        
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'time-entries.csv';
+        a.click();
+        window.URL.revokeObjectURL(url);
+      });
+    }
+
+    if (timeEntryForm) {
+      timeEntryForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const timeEntryId = (document.getElementById('timeEntryId') as HTMLInputElement)?.value;
+        const userId = (document.getElementById('timeEntryUser') as HTMLSelectElement)?.value;
+        const taskId = (document.getElementById('timeEntryTask') as HTMLSelectElement)?.value;
+        const startTime = (document.getElementById('timeEntryStart') as HTMLInputElement)?.value;
+        const endTime = (document.getElementById('timeEntryEnd') as HTMLInputElement)?.value;
+        const notes = (document.getElementById('timeEntryNotes') as HTMLTextAreaElement)?.value;
+        
+        try {
+          const response = await fetch('/api/admin/time-entries', {
+            method: timeEntryId ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              id: timeEntryId,
+              userId: parseInt(userId),
+              taskId: parseInt(taskId),
+              startTime: new Date(startTime).toISOString(),
+              endTime: endTime ? new Date(endTime).toISOString() : null,
+              notes: notes || null
+            }),
+          });
+          
+          if (response.ok) {
+            window.location.reload();
+          } else {
+            alert('Error saving time entry');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('Error saving time entry');
+        }
+      });
+    }
+
+    function closeTimeEntryModal() {
+      const timeEntryModal = document.getElementById('timeEntryModal');
+      if (timeEntryModal) timeEntryModal.classList.add('hidden');
+    }
+
+    function editTimeEntry(id: number) {
+      const modalTitle = document.getElementById('timeEntryModalTitle');
+      const timeEntryId = document.getElementById('timeEntryId') as HTMLInputElement;
+      const timeEntryModal = document.getElementById('timeEntryModal');
+      
+      if (modalTitle) modalTitle.textContent = 'Edit Time Entry';
+      if (timeEntryId) timeEntryId.value = id.toString();
+      if (timeEntryModal) timeEntryModal.classList.remove('hidden');
+    }
+
+    function deleteTimeEntry(id: number) {
+      if (confirm('Are you sure you want to delete this time entry?')) {
+        fetch(`/api/admin/time-entries/${id}`, { method: 'DELETE' })
+          .then(response => {
+            if (response.ok) {
+              window.location.reload();
+            } else {
+              alert('Error deleting time entry');
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting time entry');
+          });
+      }
+    }
+
+    // Search functionality
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const target = e.target as HTMLInputElement;
+        const searchTerm = target.value.toLowerCase();
+        const rows = document.querySelectorAll('tbody tr');
+        
+        rows.forEach(row => {
+          const text = row.textContent?.toLowerCase() || '';
+          (row as HTMLElement).style.display = text.includes(searchTerm) ? '' : 'none';
+        });
+      });
+    }
+
+    // User filter functionality
+    if (userFilter) {
+      userFilter.addEventListener('change', (e) => {
+        const target = e.target as HTMLSelectElement;
+        const selectedUser = target.value;
+        const rows = document.querySelectorAll('tbody tr');
+        
+        rows.forEach(row => {
+          const userCell = row.querySelector('td:first-child');
+          const user = userCell?.textContent?.trim() || '';
+          if (!selectedUser || user === selectedUser) {
+            (row as HTMLElement).style.display = '';
+          } else {
+            (row as HTMLElement).style.display = 'none';
+          }
+        });
+      });
+    }
+
+    // Task filter functionality
+    if (taskFilter) {
+      taskFilter.addEventListener('change', (e) => {
+        const target = e.target as HTMLSelectElement;
+        const selectedTask = target.value;
+        const rows = document.querySelectorAll('tbody tr');
+        
+        rows.forEach(row => {
+          const taskCell = row.querySelector('td:nth-child(2)');
+          const task = taskCell?.textContent?.trim() || '';
+          if (!selectedTask || task === selectedTask) {
+            (row as HTMLElement).style.display = '';
+          } else {
+            (row as HTMLElement).style.display = 'none';
+          }
+        });
+      });
+    }
+
+    // Date range filter functionality
+    if (dateRange) {
+      dateRange.addEventListener('change', (e) => {
+        const target = e.target as HTMLSelectElement;
+        const selectedRange = target.value;
+        const rows = document.querySelectorAll('tbody tr');
+        const now = new Date();
+        
+        rows.forEach(row => {
+          const startCell = row.querySelector('td:nth-child(4)');
+          const startText = startCell?.textContent?.trim() || '';
+          const startDate = new Date(startText);
+          
+          let show = true;
+          if (selectedRange === 'today') {
+            show = startDate.toDateString() === now.toDateString();
+          } else if (selectedRange === 'week') {
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            show = startDate >= weekAgo;
+          } else if (selectedRange === 'month') {
+            const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1);
+            show = startDate >= monthAgo;
+          } else if (selectedRange === 'quarter') {
+            const quarterAgo = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+            show = startDate >= quarterAgo;
+          }
+          
+          (row as HTMLElement).style.display = show ? '' : 'none';
+        });
+      });
+    }
+  </script>
+</AdminLayout> 
