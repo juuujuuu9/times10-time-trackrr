@@ -1,12 +1,36 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db/index';
-import { projects } from '../../../db/schema';
-import { eq } from 'drizzle-orm';
+import { projects, clients } from '../../../db/schema';
+import { eq, and } from 'drizzle-orm';
 
 export const GET: APIRoute = async () => {
   try {
-    const allProjects = await db.select().from(projects);
-    return new Response(JSON.stringify(allProjects), {
+    // Get all projects with client information, filtering out projects from archived clients
+    const allProjects = await db
+      .select({
+        id: projects.id,
+        name: projects.name,
+        clientId: projects.clientId,
+        archived: projects.archived,
+        createdAt: projects.createdAt,
+        updatedAt: projects.updatedAt,
+        clientArchived: clients.archived,
+      })
+      .from(projects)
+      .leftJoin(clients, eq(projects.clientId, clients.id))
+      .where(eq(clients.archived, false)); // Only show projects from active clients
+    
+    // Remove the clientArchived field from the response
+    const cleanProjects = allProjects.map(project => ({
+      id: project.id,
+      name: project.name,
+      clientId: project.clientId,
+      archived: project.archived,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+    }));
+    
+    return new Response(JSON.stringify(cleanProjects), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });

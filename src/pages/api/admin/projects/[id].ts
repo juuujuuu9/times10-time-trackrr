@@ -3,6 +3,45 @@ import { db } from '../../../../db/index';
 import { projects, tasks, taskAssignments, timeEntries } from '../../../../db/schema';
 import { eq } from 'drizzle-orm';
 
+export const GET: APIRoute = async ({ params }) => {
+  try {
+    const { id } = params;
+
+    if (!id) {
+      return new Response(JSON.stringify({ error: 'Project ID is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const projectId = parseInt(id);
+
+    const project = await db
+      .select()
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .limit(1);
+
+    if (project.length === 0) {
+      return new Response(JSON.stringify({ error: 'Project not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify(project[0]), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Error fetching project:', error);
+    return new Response(JSON.stringify({ error: 'Failed to fetch project' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+};
+
 export const DELETE: APIRoute = async ({ params }) => {
   try {
     const { id } = params;

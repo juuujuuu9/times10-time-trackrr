@@ -132,7 +132,7 @@ const allClients = await db
                   <div class="flex justify-end space-x-2">
                     <button
                       class="text-[#4F46E5] hover:text-[#3730A3]"
-                      onclick={`viewProjects(${client.id}, '${client.name}')`}
+                      onclick={`viewProjects(${client.id}, '${client.name}', ${client.archived})`}
                     >
                       Projects
                     </button>
@@ -178,9 +178,9 @@ const allClients = await db
   </div>
 
   <!-- Create/Edit Client Modal -->
-  <div id="clientModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden z-50">
+  <div id="clientModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-gray-800 rounded-lg shadow-xl max-w-md w-full border border-gray-700">
+      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-md w-full border border-gray-700">
         <div class="px-6 py-4 border-b border-gray-700">
           <h3 id="modalTitle" class="text-lg font-medium text-white">Add New Client</h3>
         </div>
@@ -218,9 +218,9 @@ const allClients = await db
   </div>
 
   <!-- Projects Modal -->
-  <div id="projectsModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden z-50">
+  <div id="projectsModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full border border-gray-700">
+      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-4xl w-full border border-gray-700">
         <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
           <h3 id="projectsModalTitle" class="text-lg font-medium text-white">Projects</h3>
           <button
@@ -236,7 +236,7 @@ const allClients = await db
           <div class="flex justify-between items-center mb-6">
             <div>
               <h4 id="clientNameHeader" class="text-xl font-semibold text-white"></h4>
-              <p class="text-gray-300">Manage projects for this client</p>
+              <p id="clientDescription" class="text-gray-300">Manage projects for this client</p>
             </div>
             <button
               id="newProjectBtn"
@@ -255,9 +255,9 @@ const allClients = await db
   </div>
 
   <!-- New Project Modal -->
-  <div id="newProjectModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden z-50">
+  <div id="newProjectModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-gray-800 rounded-lg shadow-xl max-w-md w-full border border-gray-700">
+      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-md w-full border border-gray-700">
         <div class="px-6 py-4 border-b border-gray-700">
           <h3 class="text-lg font-medium text-white">Add New Project</h3>
         </div>
@@ -515,19 +515,41 @@ const allClients = await db
 
     // Projects modal functionality
     let currentClientId: number | null = null;
+    let currentProjectId: number | null = null;
 
-    (window as any).viewProjects = async function(clientId: number, clientName: string) {
+    (window as any).viewProjects = async function(clientId: number, clientName: string, isArchived: boolean = false) {
       currentClientId = clientId;
       
       const projectsModal = document.getElementById('projectsModal');
       const clientNameHeader = document.getElementById('clientNameHeader');
+      const clientDescription = document.getElementById('clientDescription');
       const projectsList = document.getElementById('projectsList');
+      const newProjectBtn = document.getElementById('newProjectBtn');
       
-      if (clientNameHeader) clientNameHeader.textContent = clientName;
+      if (clientNameHeader) {
+        clientNameHeader.textContent = clientName;
+        if (isArchived) {
+          clientNameHeader.innerHTML = `${clientName} <span class="text-gray-400 text-sm">(Archived)</span>`;
+        }
+      }
+      
+      if (clientDescription) {
+        if (isArchived) {
+          clientDescription.innerHTML = '<span class="text-yellow-400">⚠️ This client is archived. Projects are read-only.</span>';
+        } else {
+          clientDescription.textContent = 'Manage projects for this client';
+        }
+      }
+      
+      // Hide new project button for archived clients
+      if (newProjectBtn) {
+        newProjectBtn.style.display = isArchived ? 'none' : 'block';
+      }
+      
       if (projectsModal) projectsModal.classList.remove('hidden');
       
       // Load projects for this client
-      await loadProjects(clientId);
+      await loadProjects(clientId, isArchived);
     };
 
     (window as any).closeProjectsModal = function() {
@@ -543,7 +565,7 @@ const allClients = await db
       if (projectName) projectName.value = '';
     };
 
-    async function loadProjects(clientId: number) {
+    async function loadProjects(clientId: number, isClientArchived: boolean = false) {
       try {
         const response = await fetch('/api/admin/projects');
         if (!response.ok) {
@@ -552,17 +574,21 @@ const allClients = await db
         
         const allProjects = await response.json();
         const clientProjects = allProjects.filter((project: any) => 
-          project.clientId === clientId && !project.archived
+          project.clientId === clientId
         );
         
         const projectsList = document.getElementById('projectsList');
         if (projectsList) {
           if (clientProjects.length === 0) {
+            const message = isClientArchived 
+              ? "This archived client has no projects"
+              : "Get started by creating your first project";
+            
             projectsList.innerHTML = `
               <div class="text-center py-8">
                 <div class="text-4xl mb-4">📁</div>
                 <h3 class="text-lg font-medium text-white mb-2">No projects yet</h3>
-                <p class="text-gray-300">Get started by creating your first project</p>
+                <p class="text-gray-300">${message}</p>
               </div>
             `;
           } else {
@@ -581,15 +607,9 @@ const allClients = await db
                   </button>
                   <button
                     class="text-[#EC4899] hover:text-[#DB2777] text-sm"
-                    onclick="editProject(${project.id})"
+                    onclick="console.log('Edit button clicked for project ${project.id}'); editProject(${project.id})"
                   >
                     Edit
-                  </button>
-                  <button
-                    class="text-yellow-400 hover:text-yellow-300 text-sm"
-                    onclick="archiveProject(${project.id})"
-                  >
-                    Archive
                   </button>
                   <button
                     class="text-red-400 hover:text-red-300 text-sm"
@@ -621,46 +641,30 @@ const allClients = await db
 
     if (newProjectBtn) {
       newProjectBtn.addEventListener('click', () => {
+        currentProjectId = null;
         const newProjectModal = document.getElementById('newProjectModal');
         const projectClientId = document.getElementById('projectClientId') as HTMLInputElement;
         const projectName = document.getElementById('projectName') as HTMLInputElement;
+        const modalTitle = newProjectModal?.querySelector('h3');
+        const submitButton = newProjectModal?.querySelector('button[type="submit"]');
         
         if (projectClientId && currentClientId) projectClientId.value = currentClientId.toString();
         if (projectName) projectName.value = '';
+        if (modalTitle) modalTitle.textContent = 'Add New Project';
+        if (submitButton) submitButton.textContent = 'Create Project';
         if (newProjectModal) newProjectModal.classList.remove('hidden');
+        
+        // Reset form to use new project submission
+        const newProjectForm = document.getElementById('newProjectForm');
+        if (newProjectForm) {
+          newProjectForm.removeEventListener('submit', (window as any).handleEditProjectSubmit);
+          newProjectForm.addEventListener('submit', (window as any).handleNewProjectSubmit);
+        }
       });
     }
 
     if (newProjectForm) {
-      newProjectForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const projectClientId = (document.getElementById('projectClientId') as HTMLInputElement)?.value;
-        const projectName = (document.getElementById('projectName') as HTMLInputElement)?.value;
-        
-        try {
-          const response = await fetch('/api/admin/projects', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              name: projectName, 
-              clientId: parseInt(projectClientId) 
-            }),
-          });
-          
-          if (response.ok) {
-            (window as any).closeNewProjectModal();
-            if (currentClientId) {
-              await loadProjects(currentClientId);
-              await updateProjectCounter(currentClientId);
-            }
-          } else {
-            alert('Error creating project');
-          }
-        } catch (error) {
-          console.error('Error:', error);
-          alert('Error creating project');
-        }
-      });
+      newProjectForm.addEventListener('submit', (window as any).handleNewProjectSubmit);
     }
 
     // Project counter update functions
@@ -673,14 +677,14 @@ const allClients = await db
         
         const allProjects = await response.json();
         const clientProjects = allProjects.filter((project: any) => 
-          project.clientId === clientId && !project.archived
+          project.clientId === clientId
         );
         
         const counterElement = document.querySelector(`[data-client-id="${clientId}"]`);
         if (counterElement) {
           counterElement.textContent = `${clientProjects.length} projects`;
         }
-      } catch (error) {
+              } catch (error) {
         console.error('Error updating project counter:', error);
       }
     }
@@ -691,34 +695,121 @@ const allClients = await db
       alert('Project details view coming soon!');
     };
 
-    (window as any).editProject = function(projectId: number) {
-      // TODO: Implement project editing
-      alert('Project editing coming soon!');
-    };
-
-    (window as any).archiveProject = async function(projectId: number) {
-      if (confirm('Are you sure you want to archive this project? This will hide it from the main view.')) {
-        try {
-          const response = await fetch('/api/admin/projects', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: projectId, archived: true }),
-          });
+    (window as any).editProject = async function(projectId: number) {
+      console.log('editProject called with id:', projectId);
+      currentProjectId = projectId;
+      try {
+        // Fetch project details
+        console.log('Fetching project details...');
+        const response = await fetch(`/api/admin/projects/${projectId}`);
+        console.log('Response status:', response.status);
+        if (response.ok) {
+          const project = await response.json();
+          console.log('Project data:', project);
           
-          if (response.ok) {
-            if (currentClientId) {
-              await loadProjects(currentClientId);
-              await updateProjectCounter(currentClientId);
-            }
-          } else {
-            alert('Error archiving project');
+          // Populate the new project modal for editing
+          const projectName = document.getElementById('projectName') as HTMLInputElement;
+          const projectClientId = document.getElementById('projectClientId') as HTMLInputElement;
+          const newProjectModal = document.getElementById('newProjectModal');
+          const modalTitle = newProjectModal?.querySelector('h3');
+          const submitButton = newProjectModal?.querySelector('button[type="submit"]');
+          
+          if (projectName) projectName.value = project.name;
+          if (projectClientId) projectClientId.value = project.clientId.toString();
+          if (modalTitle) modalTitle.textContent = 'Edit Project';
+          if (submitButton) submitButton.textContent = 'Update Project';
+          if (newProjectModal) newProjectModal.classList.remove('hidden');
+          
+          console.log('Modal should be open now');
+          
+          // Change the form submission to use PUT method
+          const newProjectForm = document.getElementById('newProjectForm');
+          if (newProjectForm) {
+            // Remove existing event listener and add new one for editing
+            newProjectForm.removeEventListener('submit', (window as any).handleNewProjectSubmit);
+            newProjectForm.addEventListener('submit', (window as any).handleEditProjectSubmit);
           }
-        } catch (error) {
-          console.error('Error:', error);
-          alert('Error archiving project');
+        } else {
+          alert('Error loading project details');
         }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error loading project details');
       }
     };
+
+    // Handle edit project form submission
+    (window as any).handleEditProjectSubmit = async function(e: Event) {
+      e.preventDefault();
+      const projectName = (document.getElementById('projectName') as HTMLInputElement)?.value;
+      const projectClientId = (document.getElementById('projectClientId') as HTMLInputElement)?.value;
+      
+      console.log('Edit form submission:', { projectName, projectClientId, currentProjectId });
+      
+      try {
+        const response = await fetch('/api/admin/projects', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            id: currentProjectId, 
+            name: projectName, 
+            clientId: parseInt(projectClientId) 
+          }),
+        });
+        
+        console.log('Response status:', response.status);
+        if (response.ok) {
+          console.log('Success! Closing modal and refreshing...');
+          (window as any).closeNewProjectModal();
+          if (currentClientId) {
+            await loadProjects(currentClientId, false);
+            await updateProjectCounter(currentClientId);
+          }
+        } else {
+          const errorText = await response.text();
+          console.error('Error response:', errorText);
+          alert('Error updating project');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error updating project');
+      }
+    };
+
+    // Handle new project form submission
+    (window as any).handleNewProjectSubmit = async function(e: Event) {
+      e.preventDefault();
+      const projectClientId = (document.getElementById('projectClientId') as HTMLInputElement)?.value;
+      const projectName = (document.getElementById('projectName') as HTMLInputElement)?.value;
+      
+      console.log('New project form submission:', { projectName, projectClientId });
+      
+      try {
+        const response = await fetch('/api/admin/projects', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            name: projectName, 
+            clientId: parseInt(projectClientId) 
+          }),
+        });
+        
+        if (response.ok) {
+          (window as any).closeNewProjectModal();
+          if (currentClientId) {
+            await loadProjects(currentClientId, false);
+            await updateProjectCounter(currentClientId);
+          }
+        } else {
+          alert('Error creating project');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error creating project');
+      }
+    };
+
+
 
     (window as any).deleteProject = function(projectId: number) {
       if (confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
@@ -726,7 +817,7 @@ const allClients = await db
           .then(response => {
             if (response.ok) {
               if (currentClientId) {
-                loadProjects(currentClientId);
+                loadProjects(currentClientId, false);
                 updateProjectCounter(currentClientId);
               }
             } else {
