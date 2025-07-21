@@ -4,33 +4,58 @@ import { db } from '../../db/index';
 import { users, clients, projects, tasks, timeEntries } from '../../db/schema';
 import { count, sql } from 'drizzle-orm';
 
-// Get dashboard stats
-const userCount = await db.select({ count: count() }).from(users);
-const clientCount = await db.select({ count: count() }).from(clients);
-const projectCount = await db.select({ count: count() }).from(projects);
-const taskCount = await db.select({ count: count() }).from(tasks);
+// Initialize stats with error handling
+let userCount = [{ count: 0 }];
+let clientCount = [{ count: 0 }];
+let projectCount = [{ count: 0 }];
+let taskCount = [{ count: 0 }];
+let recentTimeEntries: any[] = [];
+let dbError = false;
 
-// Get recent time entries
-const recentTimeEntries = await db
-  .select({
-    id: timeEntries.id,
-    startTime: timeEntries.startTime,
-    endTime: timeEntries.endTime,
-    notes: timeEntries.notes,
-    userName: users.name,
-    taskName: tasks.name,
-    projectName: projects.name,
-  })
-  .from(timeEntries)
-  .innerJoin(users, sql`${timeEntries.userId} = ${users.id}`)
-  .innerJoin(tasks, sql`${timeEntries.taskId} = ${tasks.id}`)
-  .innerJoin(projects, sql`${tasks.projectId} = ${projects.id}`)
-  .orderBy(sql`${timeEntries.startTime} DESC`)
-  .limit(5);
+try {
+  // Test database connection first
+  await db.select().from(users).limit(1);
+  
+  // If connection works, get dashboard stats
+  userCount = await db.select({ count: count() }).from(users);
+  clientCount = await db.select({ count: count() }).from(clients);
+  projectCount = await db.select({ count: count() }).from(projects);
+  taskCount = await db.select({ count: count() }).from(tasks);
+
+  // Get recent time entries
+  recentTimeEntries = await db
+    .select({
+      id: timeEntries.id,
+      startTime: timeEntries.startTime,
+      endTime: timeEntries.endTime,
+      notes: timeEntries.notes,
+      userName: users.name,
+      taskName: tasks.name,
+      projectName: projects.name,
+    })
+    .from(timeEntries)
+    .innerJoin(users, sql`${timeEntries.userId} = ${users.id}`)
+    .innerJoin(tasks, sql`${timeEntries.taskId} = ${tasks.id}`)
+    .innerJoin(projects, sql`${tasks.projectId} = ${projects.id}`)
+    .orderBy(sql`${timeEntries.startTime} DESC`)
+    .limit(5);
+} catch (error: any) {
+  console.error('Database connection error:', error);
+  dbError = true;
+}
 ---
 
 <AdminLayout title="Dashboard" currentPage="dashboard">
   <div class="space-y-8">
+    <!-- Database Error Alert -->
+    {dbError && (
+      <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+        <strong>⚠️ Database Connection Error!</strong> 
+        <p class="mt-1">Unable to connect to the database. Please check your DATABASE_URL environment variable.</p>
+        <p class="text-sm mt-2">Error details: Database connection failed</p>
+      </div>
+    )}
+
     <!-- Welcome Header -->
     <div class="bg-gradient-to-r from-[#4F46E5] to-[#3730A3] rounded-xl shadow-lg p-8 text-white">
       <div class="flex items-center justify-between">
