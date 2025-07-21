@@ -1,6 +1,6 @@
 import { renderers } from './renderers.mjs';
 import { c as createExports } from './chunks/entrypoint_BN7JFiw8.mjs';
-import { manifest } from './manifest_CnZMvLOL.mjs';
+import { manifest } from './manifest_hawiRHoX.mjs';
 
 const serverIslandMap = new Map();;
 
@@ -27,10 +27,11 @@ const _page19 = () => import('./pages/api/admin/time-entries.astro.mjs');
 const _page20 = () => import('./pages/api/admin/users/role.astro.mjs');
 const _page21 = () => import('./pages/api/admin/users/status.astro.mjs');
 const _page22 = () => import('./pages/api/admin/users.astro.mjs');
-const _page23 = () => import('./pages/api/test-db.astro.mjs');
-const _page24 = () => import('./pages/test-db.astro.mjs');
-const _page25 = () => import('./pages/test-tailwind.astro.mjs');
-const _page26 = () => import('./pages/index.astro.mjs');
+const _page23 = () => import('./pages/api/health.astro.mjs');
+const _page24 = () => import('./pages/api/test-db.astro.mjs');
+const _page25 = () => import('./pages/test-db.astro.mjs');
+const _page26 = () => import('./pages/test-tailwind.astro.mjs');
+const _page27 = () => import('./pages/index.astro.mjs');
 const pageMap = new Map([
     ["node_modules/astro/dist/assets/endpoint/generic.js", _page0],
     ["src/pages/admin/clients/index.astro", _page1],
@@ -55,10 +56,11 @@ const pageMap = new Map([
     ["src/pages/api/admin/users/role.ts", _page20],
     ["src/pages/api/admin/users/status.ts", _page21],
     ["src/pages/api/admin/users.ts", _page22],
-    ["src/pages/api/test-db.ts", _page23],
-    ["src/pages/test-db.astro", _page24],
-    ["src/pages/test-tailwind.astro", _page25],
-    ["src/pages/index.astro", _page26]
+    ["src/pages/api/health.ts", _page23],
+    ["src/pages/api/test-db.ts", _page24],
+    ["src/pages/test-db.astro", _page25],
+    ["src/pages/test-tailwind.astro", _page26],
+    ["src/pages/index.astro", _page27]
 ]);
 
 const _manifest = Object.assign(manifest, {
@@ -69,7 +71,7 @@ const _manifest = Object.assign(manifest, {
     middleware: () => import('./_noop-middleware.mjs')
 });
 const _args = {
-    "middlewareSecret": "aa5b8674-9bdf-4a3c-bf9b-326ba0d5fe6c",
+    "middlewareSecret": "45d5afad-7ff9-46c2-ab93-a034fa245d5e",
     "skewProtection": false
 };
 const _exports = createExports(_manifest, _args);

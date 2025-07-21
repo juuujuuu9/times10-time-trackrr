@@ -1,61 +1,9 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import { db } from '../../db/index';
-import { users, clients, projects, tasks, timeEntries } from '../../db/schema';
-import { count, sql } from 'drizzle-orm';
-
-// Initialize stats with error handling
-let userCount = [{ count: 0 }];
-let clientCount = [{ count: 0 }];
-let projectCount = [{ count: 0 }];
-let taskCount = [{ count: 0 }];
-let recentTimeEntries: any[] = [];
-let dbError = false;
-
-try {
-  // Test database connection first
-  await db.select().from(users).limit(1);
-  
-  // If connection works, get dashboard stats
-  userCount = await db.select({ count: count() }).from(users);
-  clientCount = await db.select({ count: count() }).from(clients);
-  projectCount = await db.select({ count: count() }).from(projects);
-  taskCount = await db.select({ count: count() }).from(tasks);
-
-  // Get recent time entries
-  recentTimeEntries = await db
-    .select({
-      id: timeEntries.id,
-      startTime: timeEntries.startTime,
-      endTime: timeEntries.endTime,
-      notes: timeEntries.notes,
-      userName: users.name,
-      taskName: tasks.name,
-      projectName: projects.name,
-    })
-    .from(timeEntries)
-    .innerJoin(users, sql`${timeEntries.userId} = ${users.id}`)
-    .innerJoin(tasks, sql`${timeEntries.taskId} = ${tasks.id}`)
-    .innerJoin(projects, sql`${tasks.projectId} = ${projects.id}`)
-    .orderBy(sql`${timeEntries.startTime} DESC`)
-    .limit(5);
-} catch (error: any) {
-  console.error('Database connection error:', error);
-  dbError = true;
-}
 ---
 
 <AdminLayout title="Dashboard" currentPage="dashboard">
   <div class="space-y-8">
-    <!-- Database Error Alert -->
-    {dbError && (
-      <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
-        <strong>⚠️ Database Connection Error!</strong> 
-        <p class="mt-1">Unable to connect to the database. Please check your DATABASE_URL environment variable.</p>
-        <p class="text-sm mt-2">Error details: Database connection failed</p>
-      </div>
-    )}
-
     <!-- Welcome Header -->
     <div class="bg-gradient-to-r from-[#4F46E5] to-[#3730A3] rounded-xl shadow-lg p-8 text-white">
       <div class="flex items-center justify-between">
@@ -79,7 +27,7 @@ try {
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-400">Total Users</p>
-            <p class="text-3xl font-bold text-white">{userCount[0]?.count || 0}</p>
+            <p class="text-3xl font-bold text-white" id="user-count">-</p>
             <div class="flex items-center mt-1">
               <span class="text-[#10B981] text-sm">↗</span>
               <span class="text-[#10B981] text-xs ml-1">+12%</span>
@@ -95,7 +43,7 @@ try {
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-400">Total Clients</p>
-            <p class="text-3xl font-bold text-white">{clientCount[0]?.count || 0}</p>
+            <p class="text-3xl font-bold text-white" id="client-count">-</p>
             <div class="flex items-center mt-1">
               <span class="text-[#10B981] text-sm">↗</span>
               <span class="text-[#10B981] text-xs ml-1">+8%</span>
@@ -111,7 +59,7 @@ try {
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-400">Total Projects</p>
-            <p class="text-3xl font-bold text-white">{projectCount[0]?.count || 0}</p>
+            <p class="text-3xl font-bold text-white" id="project-count">-</p>
             <div class="flex items-center mt-1">
               <span class="text-[#10B981] text-sm">↗</span>
               <span class="text-[#10B981] text-xs ml-1">+15%</span>
@@ -127,7 +75,7 @@ try {
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-400">Total Tasks</p>
-            <p class="text-3xl font-bold text-white">{taskCount[0]?.count || 0}</p>
+            <p class="text-3xl font-bold text-white" id="task-count">-</p>
             <div class="flex items-center mt-1">
               <span class="text-[#10B981] text-sm">↗</span>
               <span class="text-[#10B981] text-xs ml-1">+23%</span>
@@ -153,46 +101,15 @@ try {
         </div>
       </div>
       <div class="p-6">
-        {recentTimeEntries.length > 0 ? (
-          <div class="space-y-4">
-            {recentTimeEntries.map((entry) => (
-              <div class="flex items-center justify-between p-4 bg-gradient-to-r from-gray-700 to-gray-600 rounded-xl border border-gray-600 hover:shadow-md transition-all duration-200">
-                <div class="flex items-center">
-                  <div class="w-10 h-10 bg-[#10B981] rounded-lg flex items-center justify-center mr-4">
-                    <span class="text-white text-lg">👤</span>
-                  </div>
-                  <div>
-                    <p class="font-semibold text-white">{entry.userName}</p>
-                    <p class="text-sm text-gray-300">
-                      {entry.taskName} • {entry.projectName}
-                    </p>
-                    {entry.notes && (
-                      <p class="text-sm text-gray-400 mt-1 italic">"{entry.notes}"</p>
-                    )}
-                  </div>
-                </div>
-                <div class="text-right">
-                  <div class="bg-gray-600 px-3 py-1 rounded-lg border border-gray-500">
-                    <p class="text-sm font-medium text-white">
-                      {new Date(entry.startTime).toLocaleDateString()}
-                    </p>
-                    <p class="text-xs text-gray-300">
-                      {new Date(entry.startTime).toLocaleTimeString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
+        <div id="recent-entries" class="space-y-4">
           <div class="text-center py-12">
             <div class="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
               <span class="text-gray-400 text-2xl">⏱️</span>
             </div>
-            <p class="text-gray-300 text-lg font-medium">No recent time entries</p>
-            <p class="text-gray-500 text-sm mt-1">Time entries will appear here as users track their work</p>
+            <p class="text-gray-300 text-lg font-medium">Loading recent time entries...</p>
+            <p class="text-gray-500 text-sm mt-1">Please wait while we fetch the data</p>
           </div>
-        )}
+        </div>
       </div>
     </div>
 
@@ -263,25 +180,114 @@ try {
             <div class="w-3 h-3 bg-[#10B981] rounded-full mr-3 animate-pulse"></div>
             <div>
               <p class="font-medium text-white">Database</p>
-              <p class="text-sm text-[#10B981]">Connected</p>
+              <p class="text-sm text-[#10B981]" id="db-status">Checking...</p>
             </div>
           </div>
           <div class="flex items-center p-4 bg-gray-700 rounded-lg border border-gray-600">
             <div class="w-3 h-3 bg-[#4F46E5] rounded-full mr-3 animate-pulse"></div>
             <div>
               <p class="font-medium text-white">API</p>
-              <p class="text-sm text-[#4F46E5]">Online</p>
+              <p class="text-sm text-[#4F46E5]" id="api-status">Checking...</p>
             </div>
           </div>
           <div class="flex items-center p-4 bg-gray-700 rounded-lg border border-gray-600">
             <div class="w-3 h-3 bg-[#EC4899] rounded-full mr-3 animate-pulse"></div>
             <div>
               <p class="font-medium text-white">Services</p>
-              <p class="text-sm text-[#EC4899]">Running</p>
+              <p class="text-sm text-[#EC4899]" id="service-status">Checking...</p>
             </div>
           </div>
         </div>
       </div>
     </div>
   </div>
-</AdminLayout> 
+</AdminLayout>
+
+<script>
+  // Load dashboard data
+  async function loadDashboardData() {
+    try {
+      // Test database connection
+      const dbResponse = await fetch('/api/test-db');
+      if (dbResponse.ok) {
+        const dbData = await dbResponse.json();
+        
+        // Update counts
+        document.getElementById('user-count').textContent = dbData.counts.users;
+        document.getElementById('client-count').textContent = dbData.counts.clients;
+        document.getElementById('project-count').textContent = dbData.counts.projects;
+        document.getElementById('task-count').textContent = dbData.counts.tasks;
+        
+        // Update recent entries
+        const recentEntriesContainer = document.getElementById('recent-entries');
+        if (dbData.data.timeEntries.length > 0) {
+          recentEntriesContainer.innerHTML = dbData.data.timeEntries.slice(0, 5).map(entry => `
+            <div class="flex items-center justify-between p-4 bg-gradient-to-r from-gray-700 to-gray-600 rounded-xl border border-gray-600 hover:shadow-md transition-all duration-200">
+              <div class="flex items-center">
+                <div class="w-10 h-10 bg-[#10B981] rounded-lg flex items-center justify-center mr-4">
+                  <span class="text-white text-lg">👤</span>
+                </div>
+                <div>
+                  <p class="font-semibold text-white">${entry.userName || 'Unknown User'}</p>
+                  <p class="text-sm text-gray-300">
+                    ${entry.taskName || 'Unknown Task'} • ${entry.projectName || 'Unknown Project'}
+                  </p>
+                  ${entry.notes ? `<p class="text-sm text-gray-400 mt-1 italic">"${entry.notes}"</p>` : ''}
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="bg-gray-600 px-3 py-1 rounded-lg border border-gray-500">
+                  <p class="text-sm font-medium text-white">
+                    ${new Date(entry.startTime).toLocaleDateString()}
+                  </p>
+                  <p class="text-xs text-gray-300">
+                    ${new Date(entry.startTime).toLocaleTimeString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          recentEntriesContainer.innerHTML = `
+            <div class="text-center py-12">
+              <div class="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span class="text-gray-400 text-2xl">⏱️</span>
+              </div>
+              <p class="text-gray-300 text-lg font-medium">No recent time entries</p>
+              <p class="text-gray-500 text-sm mt-1">Time entries will appear here as users track their work</p>
+            </div>
+          `;
+        }
+        
+        // Update status indicators
+        document.getElementById('db-status').textContent = 'Connected';
+        document.getElementById('api-status').textContent = 'Online';
+        document.getElementById('service-status').textContent = 'Running';
+      } else {
+        throw new Error('Database connection failed');
+      }
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      
+      // Update status indicators to show error
+      document.getElementById('db-status').textContent = 'Error';
+      document.getElementById('db-status').className = 'text-sm text-red-500';
+      document.getElementById('api-status').textContent = 'Error';
+      document.getElementById('api-status').className = 'text-sm text-red-500';
+      document.getElementById('service-status').textContent = 'Error';
+      document.getElementById('service-status').className = 'text-sm text-red-500';
+      
+      // Show error message
+      const recentEntriesContainer = document.getElementById('recent-entries');
+      recentEntriesContainer.innerHTML = `
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+          <strong>⚠️ Database Connection Error!</strong> 
+          <p class="mt-1">Unable to connect to the database. Please check your configuration.</p>
+        </div>
+      `;
+    }
+  }
+
+  // Load data when page loads
+  document.addEventListener('DOMContentLoaded', loadDashboardData);
+</script> 

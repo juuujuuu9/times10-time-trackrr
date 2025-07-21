@@ -2,6 +2,7 @@ import { d as db, p as projects, a as tasks, t as timeEntries, b as taskAssignme
 import { eq } from 'drizzle-orm';
 export { renderers } from '../../../../renderers.mjs';
 
+const prerender = false;
 const GET = async ({ params }) => {
   try {
     const { id } = params;
@@ -75,7 +76,8 @@ const DELETE = async ({ params }) => {
 const _page = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
   DELETE,
-  GET
+  GET,
+  prerender
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const page = () => _page;

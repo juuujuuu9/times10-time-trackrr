@@ -1,6 +1,6 @@
 import { c as createComponent, f as renderComponent, e as renderTemplate, m as maybeRenderHead, g as renderScript, d as addAttribute } from '../../chunks/astro/server_CoMPydnS.mjs';
 import 'kleur/colors';
-import { $ as $$AdminLayout } from '../../chunks/AdminLayout_6J3_7iip.mjs';
+import { $ as $$AdminLayout } from '../../chunks/AdminLayout_DcFH0Yfs.mjs';
 import { d as db, c as clients, u as users, p as projects } from '../../chunks/index_DQhihAc3.mjs';
 import { count, sql } from 'drizzle-orm';
 export { renderers } from '../../renderers.mjs';
