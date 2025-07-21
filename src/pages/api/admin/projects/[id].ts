@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../../db/index';
-import { projects } from '../../../../db/schema';
+import { projects, tasks, taskAssignments, timeEntries } from '../../../../db/schema';
 import { eq } from 'drizzle-orm';
 
 export const DELETE: APIRoute = async ({ params }) => {
@@ -14,9 +14,41 @@ export const DELETE: APIRoute = async ({ params }) => {
       });
     }
 
+    const projectId = parseInt(id);
+
+    // First, get all tasks for this project
+    const projectTasks = await db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(eq(tasks.projectId, projectId));
+
+    const taskIds = projectTasks.map(task => task.id);
+
+    if (taskIds.length > 0) {
+      // Delete time entries for all tasks in this project
+      for (const taskId of taskIds) {
+        await db
+          .delete(timeEntries)
+          .where(eq(timeEntries.taskId, taskId));
+      }
+
+      // Delete task assignments for all tasks in this project
+      for (const taskId of taskIds) {
+        await db
+          .delete(taskAssignments)
+          .where(eq(taskAssignments.taskId, taskId));
+      }
+
+      // Delete all tasks for this project
+      await db
+        .delete(tasks)
+        .where(eq(tasks.projectId, projectId));
+    }
+
+    // Finally, delete the project
     const deletedProject = await db
       .delete(projects)
-      .where(eq(projects.id, parseInt(id)))
+      .where(eq(projects.id, projectId))
       .returning();
 
     if (deletedProject.length === 0) {

@@ -57,34 +57,34 @@ const allUsers = await db.select().from(users).orderBy(users.name);
     <!-- Header -->
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Tasks</h1>
-        <p class="text-gray-600">Manage tasks organized by project</p>
+        <h1 class="text-2xl font-bold text-white">Tasks</h1>
+        <p class="text-gray-300">Manage tasks organized by project</p>
       </div>
       <button
         id="createTaskBtn"
-        class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+        class="bg-[#4F46E5] hover:bg-[#3730A3] text-white font-medium py-2 px-4 rounded-lg transition-colors"
       >
         + Add Task
       </button>
     </div>
 
     <!-- Filters -->
-    <div class="bg-white rounded-lg shadow p-6">
+    <div class="bg-gray-800 rounded-lg shadow border border-gray-700 p-6">
       <div class="flex flex-col sm:flex-row gap-4">
         <div class="flex-1">
-          <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+          <label for="search" class="block text-sm font-medium text-gray-300 mb-1">Search</label>
           <input
             type="text"
             id="search"
             placeholder="Search tasks..."
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
           />
         </div>
         <div class="sm:w-48">
-          <label for="statusFilter" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          <label for="statusFilter" class="block text-sm font-medium text-gray-300 mb-1">Status</label>
           <select
             id="statusFilter"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
           >
             <option value="">All Statuses</option>
             <option value="pending">Pending</option>
@@ -94,10 +94,10 @@ const allUsers = await db.select().from(users).orderBy(users.name);
           </select>
         </div>
         <div class="sm:w-48">
-          <label for="userFilter" class="block text-sm font-medium text-gray-700 mb-1">Assigned User</label>
+          <label for="userFilter" class="block text-sm font-medium text-gray-300 mb-1">Assigned User</label>
           <select
             id="userFilter"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
           >
             <option value="">All Users</option>
             {allUsers.map((user) => (
@@ -111,73 +111,73 @@ const allUsers = await db.select().from(users).orderBy(users.name);
     <!-- Tasks by Project -->
     <div class="space-y-6">
       {Object.entries(tasksByProject).map(([projectKey, projectTasks]) => (
-        <div class="bg-white rounded-lg shadow overflow-hidden">
-          <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
-            <h3 class="text-lg font-medium text-gray-900">{projectKey}</h3>
-            <p class="text-sm text-gray-600">{projectTasks.length} tasks</p>
+        <div class="bg-gray-800 rounded-lg shadow border border-gray-700 overflow-hidden">
+          <div class="px-6 py-4 bg-gray-700 border-b border-gray-600">
+            <h3 class="text-lg font-medium text-white">{projectKey}</h3>
+            <p class="text-sm text-gray-300">{projectTasks.length} tasks</p>
           </div>
           <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-              <thead class="bg-gray-50">
+            <table class="min-w-full divide-y divide-gray-700">
+              <thead class="bg-gray-700">
                 <tr>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Task Name
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Status
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Assigned Users
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Time Logged
                   </th>
-                  <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody class="bg-white divide-y divide-gray-200">
+              <tbody class="bg-gray-800 divide-y divide-gray-700">
                 {projectTasks.map((task) => (
-                  <tr class="hover:bg-gray-50">
+                  <tr class="hover:bg-gray-700">
                     <td class="px-6 py-4 whitespace-nowrap">
-                      <div class="text-sm font-medium text-gray-900">{task.name}</div>
+                      <div class="text-sm font-medium text-white">{task.name}</div>
                       {task.description && (
-                        <div class="text-sm text-gray-500 truncate max-w-xs">{task.description}</div>
+                        <div class="text-sm text-gray-400 truncate max-w-xs">{task.description}</div>
                       )}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                       <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        task.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        task.status === 'in-progress' ? 'bg-yellow-100 text-yellow-800' :
-                        task.status === 'archived' ? 'bg-gray-100 text-gray-800' :
-                        'bg-blue-100 text-blue-800'
+                        task.status === 'completed' ? 'bg-[#10B981] text-white' :
+                        task.status === 'in-progress' ? 'bg-[#F59E0B] text-white' :
+                        task.status === 'archived' ? 'bg-gray-600 text-gray-300' :
+                        'bg-[#4F46E5] text-white'
                       }`}>
                         {task.status}
                       </span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
                       {task.assignedUsers || 'Unassigned'}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
                       {task.timeLogged ? Math.round(task.timeLogged * 10) / 10 : 0} hours
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div class="flex justify-end space-x-2">
                         <button
-                          class="text-blue-600 hover:text-blue-900"
+                          class="text-[#4F46E5] hover:text-[#3730A3]"
                           onclick={`assignUsers(${task.id})`}
                         >
                           Assign
                         </button>
                         <button
-                          class="text-indigo-600 hover:text-indigo-900"
+                          class="text-[#EC4899] hover:text-[#DB2777]"
                           onclick={`editTask(${task.id})`}
                         >
                           Edit
                         </button>
                         <button
-                          class="text-red-600 hover:text-red-900"
+                          class="text-red-400 hover:text-red-300"
                           onclick={`deleteTask(${task.id})`}
                         >
                           Delete
@@ -196,10 +196,10 @@ const allUsers = await db.select().from(users).orderBy(users.name);
     {Object.keys(tasksByProject).length === 0 && (
       <div class="text-center py-12">
         <div class="text-6xl mb-4">✅</div>
-        <h3 class="text-lg font-medium text-gray-900 mb-2">No tasks yet</h3>
-        <p class="text-gray-600 mb-4">Get started by adding your first task</p>
+        <h3 class="text-lg font-medium text-white mb-2">No tasks yet</h3>
+        <p class="text-gray-300 mb-4">Get started by adding your first task</p>
         <button
-          class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+          class="bg-[#4F46E5] hover:bg-[#3730A3] text-white font-medium py-2 px-4 rounded-lg transition-colors"
           onclick="document.getElementById('createTaskBtn').click()"
         >
           Add Your First Task
@@ -209,43 +209,43 @@ const allUsers = await db.select().from(users).orderBy(users.name);
   </div>
 
   <!-- Create/Edit Task Modal -->
-  <div id="taskModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+  <div id="taskModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <h3 id="taskModalTitle" class="text-lg font-medium text-gray-900">Add New Task</h3>
+      <div class="bg-gray-800 rounded-lg shadow-xl max-w-md w-full border border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-700">
+          <h3 id="taskModalTitle" class="text-lg font-medium text-white">Add New Task</h3>
         </div>
         <form id="taskForm" class="p-6">
           <input type="hidden" id="taskId" />
           <div class="mb-4">
-            <label for="taskName" class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="taskName" class="block text-sm font-medium text-gray-300 mb-1">
               Task Name
             </label>
             <input
               type="text"
               id="taskName"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
             />
           </div>
           <div class="mb-4">
-            <label for="taskDescription" class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="taskDescription" class="block text-sm font-medium text-gray-300 mb-1">
               Description
             </label>
             <textarea
               id="taskDescription"
               rows="3"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
             ></textarea>
           </div>
           <div class="mb-4">
-            <label for="taskProject" class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="taskProject" class="block text-sm font-medium text-gray-300 mb-1">
               Project
             </label>
             <select
               id="taskProject"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
             >
               <option value="">Select a project</option>
               {allProjects.map((project) => (
@@ -254,13 +254,13 @@ const allUsers = await db.select().from(users).orderBy(users.name);
             </select>
           </div>
           <div class="mb-4">
-            <label for="taskStatus" class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="taskStatus" class="block text-sm font-medium text-gray-300 mb-1">
               Status
             </label>
             <select
               id="taskStatus"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
             >
               <option value="pending">Pending</option>
               <option value="in-progress">In Progress</option>
@@ -272,13 +272,13 @@ const allUsers = await db.select().from(users).orderBy(users.name);
             <button
               type="button"
               onclick="closeTaskModal()"
-              class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+              class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+              class="px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-md transition-colors"
             >
               Save Task
             </button>
@@ -289,25 +289,25 @@ const allUsers = await db.select().from(users).orderBy(users.name);
   </div>
 
   <!-- User Assignment Modal -->
-  <div id="assignmentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+  <div id="assignmentModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <h3 class="text-lg font-medium text-gray-900">Assign Users to Task</h3>
+      <div class="bg-gray-800 rounded-lg shadow-xl max-w-md w-full border border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-700">
+          <h3 class="text-lg font-medium text-white">Assign Users to Task</h3>
         </div>
         <div class="p-6">
           <input type="hidden" id="assignmentTaskId" />
           <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Select Users</label>
+            <label class="block text-sm font-medium text-gray-300 mb-2">Select Users</label>
             <div class="space-y-2 max-h-48 overflow-y-auto">
               {allUsers.map((user) => (
                 <label class="flex items-center">
                   <input
                     type="checkbox"
                     value={user.id}
-                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    class="rounded border-gray-500 text-[#4F46E5] focus:ring-[#4F46E5] bg-gray-700"
                   />
-                  <span class="ml-2 text-sm text-gray-900">{user.name}</span>
+                  <span class="ml-2 text-sm text-white">{user.name}</span>
                 </label>
               ))}
             </div>
@@ -316,13 +316,13 @@ const allUsers = await db.select().from(users).orderBy(users.name);
             <button
               type="button"
               onclick="closeAssignmentModal()"
-              class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+              class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
             >
               Cancel
             </button>
             <button
               onclick="saveAssignments()"
-              class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+              class="px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-md transition-colors"
             >
               Save Assignments
             </button>

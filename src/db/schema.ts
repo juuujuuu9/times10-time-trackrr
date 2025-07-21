@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, integer, varchar, time, primaryKey } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, timestamp, integer, varchar, time, primaryKey, boolean } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Users table
@@ -16,6 +16,7 @@ export const clients = pgTable('clients', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
   createdBy: integer('created_by').references(() => users.id).notNull(),
+  archived: boolean('archived').notNull().default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -25,6 +26,7 @@ export const projects = pgTable('projects', {
   id: serial('id').primaryKey(),
   clientId: integer('client_id').references(() => clients.id).notNull(),
   name: varchar('name', { length: 255 }).notNull(),
+  archived: boolean('archived').notNull().default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -36,6 +38,7 @@ export const tasks = pgTable('tasks', {
   name: varchar('name', { length: 255 }).notNull(),
   description: text('description'),
   status: varchar('status', { length: 50 }).notNull().default('pending'),
+  archived: boolean('archived').notNull().default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

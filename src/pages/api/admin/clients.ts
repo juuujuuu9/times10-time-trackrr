@@ -87,4 +87,42 @@ export const PUT: APIRoute = async ({ request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   }
+};
+
+export const PATCH: APIRoute = async ({ request }) => {
+  try {
+    const body = await request.json();
+    const { id, archived } = body;
+
+    if (id === undefined || archived === undefined) {
+      return new Response(JSON.stringify({ error: 'Client ID and archived status are required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const updatedClient = await db
+      .update(clients)
+      .set({ archived, updatedAt: new Date() })
+      .where(eq(clients.id, id))
+      .returning();
+
+    if (updatedClient.length === 0) {
+      return new Response(JSON.stringify({ error: 'Client not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify(updatedClient[0]), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Error archiving/unarchiving client:', error);
+    return new Response(JSON.stringify({ error: 'Failed to update client archive status' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 }; 

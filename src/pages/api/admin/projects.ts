@@ -89,4 +89,42 @@ export const PUT: APIRoute = async ({ request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   }
+};
+
+export const PATCH: APIRoute = async ({ request }) => {
+  try {
+    const body = await request.json();
+    const { id, archived } = body;
+
+    if (id === undefined || archived === undefined) {
+      return new Response(JSON.stringify({ error: 'Project ID and archived status are required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const updatedProject = await db
+      .update(projects)
+      .set({ archived, updatedAt: new Date() })
+      .where(eq(projects.id, id))
+      .returning();
+
+    if (updatedProject.length === 0) {
+      return new Response(JSON.stringify({ error: 'Project not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify(updatedProject[0]), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Error archiving/unarchiving project:', error);
+    return new Response(JSON.stringify({ error: 'Failed to update project archive status' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 }; 
