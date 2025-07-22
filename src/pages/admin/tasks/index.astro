@@ -177,10 +177,14 @@ const allUsers = await db.select().from(users).orderBy(users.name);
                           Edit
                         </button>
                         <button
-                          class="text-red-400 hover:text-red-300"
-                          onclick={`deleteTask(${task.id})`}
+                          class="delete-task-btn text-red-400 hover:text-red-300 transition-colors"
+                          data-task-id={task.id}
+                          data-task-name={task.name}
+                          title="Delete task"
                         >
-                          Delete
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                          </svg>
                         </button>
                       </div>
                     </td>
@@ -215,7 +219,7 @@ const allUsers = await db.select().from(users).orderBy(users.name);
         <div class="px-6 py-4 border-b border-gray-700">
           <h3 id="taskModalTitle" class="text-lg font-medium text-white">Add New Task</h3>
         </div>
-        <form id="taskForm" class="p-6">
+        <form id="taskForm" class="px-6 py-4">
           <input type="hidden" id="taskId" />
           <div class="mb-4">
             <label for="taskName" class="block text-sm font-medium text-gray-300 mb-1">
@@ -461,6 +465,21 @@ const allUsers = await db.select().from(users).orderBy(users.name);
           });
       }
     }
+
+    // Add event listener for delete task buttons
+    document.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      
+      // Handle delete task button
+      if (target.classList.contains('delete-task-btn') || target.closest('.delete-task-btn')) {
+        const taskId = parseInt(target.getAttribute('data-task-id') || target.closest('.delete-task-btn')?.getAttribute('data-task-id') || '0');
+        const taskName = target.getAttribute('data-task-name') || target.closest('.delete-task-btn')?.getAttribute('data-task-name') || 'Unknown Task';
+        
+        console.log('Delete task button clicked:', { taskId, taskName });
+        deleteTask(taskId);
+        return;
+      }
+    });
 
     // Search functionality
     if (searchInput) {

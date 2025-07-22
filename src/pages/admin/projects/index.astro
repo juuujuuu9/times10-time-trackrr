@@ -71,7 +71,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
             type="text"
             id="search"
             placeholder="Search projects..."
-            class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+            class="w-[calc(100%-5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
           />
         </div>
         <div class="sm:w-48">
@@ -160,10 +160,14 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                         </button>
                         <button
                           type="button"
-                          class="text-red-400 hover:text-red-300 delete-project-btn"
+                          class="delete-project-btn text-red-400 hover:text-red-300 transition-colors"
                           data-project-id={project.id}
+                          data-project-name={project.name}
+                          title="Delete project"
                         >
-                          Delete
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                          </svg>
                         </button>
                       </div>
                     </td>
@@ -199,7 +203,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         <div class="px-6 py-4 border-b border-gray-700">
           <h3 id="projectModalTitle" class="text-lg font-medium text-white">Add New Project</h3>
         </div>
-        <form id="projectForm" class="p-6">
+        <form id="projectForm" class="px-6 py-4">
           <input type="hidden" id="projectId" />
           <div class="mb-4">
             <label for="projectName" class="block text-sm font-medium text-gray-300 mb-1">
@@ -209,7 +213,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               type="text"
               id="projectName"
               required
-              class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+              class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
             />
           </div>
           <div class="mb-4">
@@ -263,7 +267,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         <div class="px-6 py-4 border-b border-gray-700">
           <h3 class="text-lg font-medium text-white">Create New Client</h3>
         </div>
-        <form id="clientForm" class="p-6">
+        <form id="clientForm" class="px-6 py-4">
           <div class="mb-4">
             <label for="clientName" class="block text-sm font-medium text-gray-300 mb-1">
               Client Name
@@ -342,7 +346,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         <div class="px-6 py-4 border-b border-gray-700">
           <h3 class="text-lg font-medium text-white">Add New Task</h3>
         </div>
-        <form id="addTaskForm" class="p-6">
+        <form id="addTaskForm" class="px-6 py-4">
           <input type="hidden" id="taskProjectId" />
           <div class="mb-4">
             <label for="taskName" class="block text-sm font-medium text-gray-300 mb-1">
@@ -352,7 +356,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               type="text"
               id="taskName"
               required
-              class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+              class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
               placeholder="Enter task name"
             />
           </div>
@@ -363,7 +367,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
             <textarea
               id="taskDescription"
               rows="3"
-              class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+              class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
               placeholder="Enter task description"
             ></textarea>
           </div>
@@ -648,12 +652,27 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       searchInput.addEventListener('input', (e) => {
         const target = e.target as HTMLInputElement;
         const searchTerm = target.value.toLowerCase();
-        const rows = document.querySelectorAll('tbody tr');
         
-        rows.forEach(row => {
-          const firstCell = row.querySelector('td:first-child');
-          const projectName = firstCell?.textContent?.toLowerCase() || '';
-          (row as HTMLElement).style.display = projectName.includes(searchTerm) ? '' : 'none';
+        // Get all client sections
+        const clientSections = document.querySelectorAll('.bg-gray-800.rounded-lg.shadow.border.border-gray-700.overflow-hidden');
+        
+        clientSections.forEach(section => {
+          const rows = section.querySelectorAll('tbody tr');
+          let hasVisibleProjects = false;
+          
+          rows.forEach(row => {
+            const firstCell = row.querySelector('td:first-child');
+            const projectName = firstCell?.textContent?.toLowerCase() || '';
+            const isVisible = projectName.includes(searchTerm);
+            (row as HTMLElement).style.display = isVisible ? '' : 'none';
+            
+            if (isVisible) {
+              hasVisibleProjects = true;
+            }
+          });
+          
+          // Hide the entire client section if no projects match the search
+          (section as HTMLElement).style.display = hasVisibleProjects ? '' : 'none';
         });
       });
     }
@@ -678,8 +697,11 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       }
       
       // Handle delete project buttons
-      if (target.classList.contains('delete-project-btn')) {
-        const projectId = parseInt(target.getAttribute('data-project-id') || '0');
+      if (target.classList.contains('delete-project-btn') || target.closest('.delete-project-btn')) {
+        const projectId = parseInt(target.getAttribute('data-project-id') || target.closest('.delete-project-btn')?.getAttribute('data-project-id') || '0');
+        const projectName = target.getAttribute('data-project-name') || target.closest('.delete-project-btn')?.getAttribute('data-project-name') || 'Unknown Project';
+        
+        console.log('Delete project button clicked:', { projectId, projectName });
         (window as any).deleteProject(projectId);
         return;
       }
@@ -781,15 +803,30 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       tasksList.innerHTML = tasks.map((task, index) => `
         <div class="bg-gray-700 rounded-lg p-4 border border-gray-600" data-task-id="${task.id}" data-assigned-user-ids="${task.assignedUserIds || ''}">
           <div class="flex justify-between items-start mb-2">
-            <h5 class="font-medium text-white">${task.name}</h5>
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-              task.status === 'completed' ? 'bg-green-600 text-white' :
-              task.status === 'in-progress' ? 'bg-blue-600 text-white' :
-              task.status === 'cancelled' ? 'bg-red-600 text-white' :
-              'bg-yellow-600 text-white'
-            }">
-              ${task.status.replace('-', ' ')}
-            </span>
+            <div class="flex-1">
+              <h5 class="font-medium text-white">${task.name}</h5>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                task.status === 'completed' ? 'bg-green-600 text-white' :
+                task.status === 'in-progress' ? 'bg-blue-600 text-white' :
+                task.status === 'cancelled' ? 'bg-red-600 text-white' :
+                'bg-yellow-600 text-white'
+              }">
+                ${task.status.replace('-', ' ')}
+              </span>
+              <button
+                type="button"
+                class="delete-task-btn text-red-400 hover:text-red-300 transition-colors"
+                data-task-id="${task.id}"
+                data-task-name="${task.name}"
+                title="Delete task"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+              </button>
+            </div>
           </div>
           ${task.description ? `<p class="text-gray-300 text-sm mb-2">${task.description}</p>` : ''}
           <div class="flex justify-between items-center text-sm mb-3">
@@ -804,7 +841,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
           <!-- User Assignment Section -->
           <div class="border-t border-gray-600 pt-3">
             <div class="flex items-center space-x-2 mb-2">
-              <div class="flex-1 relative">
+              <div class="flex-1 relative mr-10">
                 <input
                   type="text"
                   id="userSearch-${task.id}"
@@ -986,6 +1023,19 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       }
       
       loadProjectTasks(projectId);
+      
+      // Add direct event listener for the Add Task button after modal is shown
+      setTimeout(() => {
+        const addTaskBtn = document.getElementById('addTaskBtn');
+        if (addTaskBtn) {
+          addTaskBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Add Task button clicked directly!');
+            (window as any).showAddTaskModal();
+          });
+        }
+      }, 100);
     }
 
     // Close tasks modal
@@ -1000,11 +1050,15 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
 
     // Show add task modal
     function showAddTaskModal() {
+      console.log('showAddTaskModal called!');
       const addTaskModal = document.getElementById('addTaskModal');
       const taskProjectId = document.getElementById('taskProjectId') as HTMLInputElement;
       const taskName = document.getElementById('taskName') as HTMLInputElement;
       const taskDescription = document.getElementById('taskDescription') as HTMLTextAreaElement;
       const taskStatus = document.getElementById('taskStatus') as HTMLSelectElement;
+      
+      console.log('Modal elements found:', { addTaskModal, taskProjectId, taskName, taskDescription, taskStatus });
+      console.log('Current project ID:', currentProjectId);
       
       if (taskProjectId && currentProjectId) taskProjectId.value = currentProjectId.toString();
       if (taskName) taskName.value = '';
@@ -1017,6 +1071,22 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       if (addTaskModal) {
         addTaskModal.classList.remove('hidden');
         addTaskModal.style.display = 'block';
+        console.log('Add task modal should now be visible');
+        
+        // Add direct event listener for the cancel button after modal is shown
+        setTimeout(() => {
+          const cancelAddTaskBtn = document.getElementById('cancelAddTaskBtn');
+          if (cancelAddTaskBtn) {
+            cancelAddTaskBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Cancel Add Task button clicked directly!');
+              (window as any).closeAddTaskModal();
+            });
+          }
+        }, 100);
+      } else {
+        console.error('Add task modal not found!');
       }
     }
 
@@ -1191,6 +1261,33 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       }
     }
 
+    // Delete task
+    async function deleteTask(taskId: number, taskName: string) {
+      if (confirm(`Are you sure you want to delete the task "${taskName}"? This action cannot be undone.`)) {
+        try {
+          const response = await fetch(`/api/admin/tasks/${taskId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+          });
+
+          if (response.ok) {
+            console.log('Task deleted successfully');
+            // Reload tasks to show updated list
+            if (currentProjectId) {
+              loadProjectTasks(currentProjectId);
+            }
+          } else {
+            const errorText = await response.text();
+            console.error('Error response:', errorText);
+            alert('Error deleting task');
+          }
+        } catch (error) {
+          console.error('Error deleting task:', error);
+          alert('Error deleting task');
+        }
+      }
+    }
+
     // Make functions globally available
     (window as any).showTasksModal = showTasksModal;
     (window as any).closeTasksModal = closeTasksModal;
@@ -1198,6 +1295,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
     (window as any).closeAddTaskModal = closeAddTaskModal;
     (window as any).assignUserToTask = assignUserToTask;
     (window as any).removeUserFromTask = removeUserFromTask;
+    (window as any).deleteTask = deleteTask;
 
     // Load users on page load
     loadUsers();
@@ -1226,7 +1324,8 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       }
       
       // Handle add task button
-      if (target.id === 'addTaskBtn') {
+      if (target.id === 'addTaskBtn' || target.closest('#addTaskBtn')) {
+        console.log('Add Task button clicked!');
         (window as any).showAddTaskModal();
         return;
       }
@@ -1238,7 +1337,8 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       }
       
       // Handle cancel add task button
-      if (target.id === 'cancelAddTaskBtn') {
+      if (target.id === 'cancelAddTaskBtn' || target.closest('#cancelAddTaskBtn')) {
+        console.log('Cancel Add Task button clicked!');
         (window as any).closeAddTaskModal();
         return;
       }
@@ -1288,6 +1388,16 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         }
         return;
       }
+
+      // Handle delete task button
+      if (target.classList.contains('delete-task-btn') || target.closest('.delete-task-btn')) {
+        const taskId = parseInt(target.getAttribute('data-task-id') || target.closest('.delete-task-btn')?.getAttribute('data-task-id') || '0');
+        const taskName = target.getAttribute('data-task-name') || target.closest('.delete-task-btn')?.getAttribute('data-task-name') || 'Unknown Task';
+        
+        console.log('Delete task button clicked:', { taskId, taskName });
+        (window as any).deleteTask(taskId, taskName);
+        return;
+      }
     });
 
     // Add task form submission
@@ -1301,6 +1411,28 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
     if (closeTasksModalBtn) {
       closeTasksModalBtn.addEventListener('click', () => {
         (window as any).closeTasksModal();
+      });
+    }
+
+    // Add direct event listener for add task button (if it exists on page load)
+    const addTaskBtn = document.getElementById('addTaskBtn');
+    if (addTaskBtn) {
+      addTaskBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Add Task button clicked (direct listener)!');
+        (window as any).showAddTaskModal();
+      });
+    }
+
+    // Add direct event listener for cancel add task button (if it exists on page load)
+    const cancelAddTaskBtn = document.getElementById('cancelAddTaskBtn');
+    if (cancelAddTaskBtn) {
+      cancelAddTaskBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Cancel Add Task button clicked (direct listener)!');
+        (window as any).closeAddTaskModal();
       });
     }
 

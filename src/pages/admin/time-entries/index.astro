@@ -190,10 +190,14 @@ const allTasks = await db
                         Edit
                       </button>
                       <button
-                        class="text-red-400 hover:text-red-300"
-                        onclick={`deleteTimeEntry(${entry.id})`}
+                        class="delete-time-entry-btn text-red-400 hover:text-red-300 transition-colors"
+                        data-time-entry-id={entry.id}
+                        data-time-entry-notes={entry.notes || 'No notes'}
+                        title="Delete time entry"
                       >
-                        Delete
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
                       </button>
                     </div>
                   </td>
@@ -227,7 +231,7 @@ const allTasks = await db
         <div class="px-6 py-4 border-b border-gray-700">
           <h3 id="timeEntryModalTitle" class="text-lg font-medium text-white">Add Time Entry</h3>
         </div>
-        <form id="timeEntryForm" class="p-6">
+        <form id="timeEntryForm" class="px-6 py-4">
           <input type="hidden" id="timeEntryId" />
           <div class="mb-4">
             <label for="timeEntryUser" class="block text-sm font-medium text-gray-300 mb-1">
@@ -236,7 +240,7 @@ const allTasks = await db
             <select
               id="timeEntryUser"
               required
-              class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+              class="w-full px-3 py-2 border border-gray-600 rounded-md focus:ring-[#4F46E5] bg-gray-700 text-white"
             >
               <option value="">Select a user</option>
               {allUsers.map((user) => (
@@ -424,6 +428,21 @@ const allTasks = await db
           });
       }
     }
+
+    // Add event listener for delete time entry buttons
+    document.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      
+      // Handle delete time entry button
+      if (target.classList.contains('delete-time-entry-btn') || target.closest('.delete-time-entry-btn')) {
+        const timeEntryId = parseInt(target.getAttribute('data-time-entry-id') || target.closest('.delete-time-entry-btn')?.getAttribute('data-time-entry-id') || '0');
+        const timeEntryNotes = target.getAttribute('data-time-entry-notes') || target.closest('.delete-time-entry-btn')?.getAttribute('data-time-entry-notes') || 'No notes';
+        
+        console.log('Delete time entry button clicked:', { timeEntryId, timeEntryNotes });
+        deleteTimeEntry(timeEntryId);
+        return;
+      }
+    });
 
     // Search functionality
     if (searchInput) {

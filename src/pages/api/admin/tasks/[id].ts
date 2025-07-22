@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../../db/index';
-import { tasks } from '../../../../db/schema';
+import { tasks, taskAssignments, timeEntries } from '../../../../db/schema';
 import { eq } from 'drizzle-orm';
 
 export const prerender = false;
@@ -16,9 +16,22 @@ export const DELETE: APIRoute = async ({ params }) => {
       });
     }
 
+    const taskId = parseInt(id);
+
+    // First, delete related time entries
+    await db
+      .delete(timeEntries)
+      .where(eq(timeEntries.taskId, taskId));
+
+    // Then, delete related task assignments
+    await db
+      .delete(taskAssignments)
+      .where(eq(taskAssignments.taskId, taskId));
+
+    // Finally, delete the task
     const deletedTask = await db
       .delete(tasks)
-      .where(eq(tasks.id, parseInt(id)))
+      .where(eq(tasks.id, taskId))
       .returning();
 
     if (deletedTask.length === 0) {
