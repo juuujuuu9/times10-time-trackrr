@@ -11,6 +11,12 @@ body {
   line-height: 1.6;
 }
 
+/* Reset heading margins */
+h1, h2, h3, h4, h5, h6 {
+  margin: 0 !important;
+  padding: 0;
+}
+
 /* Custom scrollbar for webkit browsers */
 ::-webkit-scrollbar {
   width: 8px;
