@@ -199,63 +199,65 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
   <!-- Create/Edit Project Modal -->
         <div id="projectModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-md w-full border border-gray-700" onclick="event.stopPropagation()">
-        <div class="px-6 py-4 border-b border-gray-700">
+      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col" onclick="event.stopPropagation()">
+        <div class="px-6 py-4 border-b border-gray-700 flex-shrink-0">
           <h3 id="projectModalTitle" class="text-lg font-medium text-white">Add New Project</h3>
         </div>
-        <form id="projectForm" class="px-6 py-4">
-          <input type="hidden" id="projectId" />
-          <div class="mb-4">
-            <label for="projectName" class="block text-sm font-medium text-gray-300 mb-1">
-              Project Name
-            </label>
-            <input
-              type="text"
-              id="projectName"
-              required
-              class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
-            />
-          </div>
-          <div class="mb-4">
-            <label for="projectClient" class="block text-sm font-medium text-gray-300 mb-1">
-              Client
-            </label>
-            <div class="flex space-x-2">
-              <select
-                id="projectClient"
+        <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
+          <form id="projectForm" class="px-6 py-4">
+            <input type="hidden" id="projectId" />
+            <div class="mb-4">
+              <label for="projectName" class="block text-sm font-medium text-gray-300 mb-1">
+                Project Name
+              </label>
+              <input
+                type="text"
+                id="projectName"
                 required
-                class="flex-1 px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
-              >
-                <option value="">Select a client</option>
-                {allClients.map((client) => (
-                  <option value={client.id}>{client.name}</option>
-                ))}
-              </select>
+                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+              />
+            </div>
+            <div class="mb-4">
+              <label for="projectClient" class="block text-sm font-medium text-gray-300 mb-1">
+                Client
+              </label>
+              <div class="flex space-x-2">
+                <select
+                  id="projectClient"
+                  required
+                  class="flex-1 px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+                >
+                  <option value="">Select a client</option>
+                  {allClients.map((client) => (
+                    <option value={client.id}>{client.name}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  id="createClientBtn"
+                  class="px-3 py-2 bg-[#10B981] hover:bg-[#059669] text-white rounded-md transition-colors text-sm font-medium"
+                >
+                  + New
+                </button>
+              </div>
+            </div>
+            <div class="flex justify-end space-x-3">
               <button
                 type="button"
-                id="createClientBtn"
-                class="px-3 py-2 bg-[#10B981] hover:bg-[#059669] text-white rounded-md transition-colors text-sm font-medium"
+                id="cancelProjectBtn"
+                class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
               >
-                + New
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-md transition-colors"
+              >
+                Save Project
               </button>
             </div>
-          </div>
-          <div class="flex justify-end space-x-3">
-            <button
-              type="button"
-              id="cancelProjectBtn"
-              class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              class="px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-md transition-colors"
-            >
-              Save Project
-            </button>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   </div>
@@ -263,39 +265,41 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
   <!-- Create New Client Modal -->
         <div id="clientModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-md w-full border border-gray-700" onclick="event.stopPropagation()">
-        <div class="px-6 py-4 border-b border-gray-700">
+      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col" onclick="event.stopPropagation()">
+        <div class="px-6 py-4 border-b border-gray-700 flex-shrink-0">
           <h3 class="text-lg font-medium text-white">Create New Client</h3>
         </div>
-        <form id="clientForm" class="px-6 py-4">
-          <div class="mb-4">
-            <label for="clientName" class="block text-sm font-medium text-gray-300 mb-1">
-              Client Name
-            </label>
-            <input
-              type="text"
-              id="clientName"
-              required
-              class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
-              placeholder="Enter client name"
-            />
-          </div>
-          <div class="flex justify-end space-x-3">
-            <button
-              type="button"
-              id="cancelClientBtn"
-              class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              class="px-4 py-2 bg-[#10B981] hover:bg-[#059669] text-white rounded-md transition-colors"
-            >
-              Create Client
-            </button>
-          </div>
-        </form>
+        <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
+          <form id="clientForm" class="px-6 py-4">
+            <div class="mb-4">
+              <label for="clientName" class="block text-sm font-medium text-gray-300 mb-1">
+                Client Name
+              </label>
+              <input
+                type="text"
+                id="clientName"
+                required
+                class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+                placeholder="Enter client name"
+              />
+            </div>
+            <div class="flex justify-end space-x-3">
+              <button
+                type="button"
+                id="cancelClientBtn"
+                class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="px-4 py-2 bg-[#10B981] hover:bg-[#059669] text-white rounded-md transition-colors"
+              >
+                Create Client
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   </div>
@@ -303,8 +307,8 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
   <!-- Tasks Modal -->
   <div id="tasksModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-4xl w-full border border-gray-700" onclick="event.stopPropagation()">
-        <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
+      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] border border-gray-700 flex flex-col" onclick="event.stopPropagation()">
+        <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center flex-shrink-0">
           <h3 id="tasksModalTitle" class="text-lg font-medium text-white">Project Tasks</h3>
           <button
             type="button"
@@ -317,10 +321,9 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
           </button>
         </div>
         
-        <div class="p-6">
-          <!-- Tasks List -->
-          <div class="mb-6">
-            <div class="flex justify-between items-center mb-4">
+        <div class="flex-1 overflow-hidden flex flex-col">
+          <div class="px-6 py-4 flex-shrink-0">
+            <div class="flex justify-between items-center">
               <h4 class="text-md font-medium text-white">Tasks</h4>
               <button
                 type="button"
@@ -330,6 +333,9 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                 + Add Task
               </button>
             </div>
+          </div>
+          
+          <div class="px-6 pb-6 flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
             <div id="tasksList" class="space-y-3">
               <!-- Tasks will be loaded here -->
             </div>
@@ -342,73 +348,91 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
   <!-- Add Task Modal -->
   <div id="addTaskModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-md w-full border border-gray-700" onclick="event.stopPropagation()">
-        <div class="px-6 py-4 border-b border-gray-700">
+      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col" onclick="event.stopPropagation()">
+        <div class="px-6 py-4 border-b border-gray-700 flex-shrink-0">
           <h3 class="text-lg font-medium text-white">Add New Task</h3>
         </div>
-        <form id="addTaskForm" class="px-6 py-4">
-          <input type="hidden" id="taskProjectId" />
-          <div class="mb-4">
-            <label for="taskName" class="block text-sm font-medium text-gray-300 mb-1">
-              Task Name
-            </label>
-            <input
-              type="text"
-              id="taskName"
-              required
-              class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
-              placeholder="Enter task name"
-            />
-          </div>
-          <div class="mb-4">
-            <label for="taskDescription" class="block text-sm font-medium text-gray-300 mb-1">
-              Description
-            </label>
-            <textarea
-              id="taskDescription"
-              rows="3"
-              class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
-              placeholder="Enter task description"
-            ></textarea>
-          </div>
-          <div class="mb-4">
-            <label for="taskStatus" class="block text-sm font-medium text-gray-300 mb-1">
-              Status
-            </label>
-            <select
-              id="taskStatus"
-              class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
-            >
-              <option value="pending">Pending</option>
-              <option value="in-progress">In Progress</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-300 mb-1">
-              Assign Users
-            </label>
-            <div id="userAssignments" class="space-y-2 max-h-32 overflow-y-auto">
-              <!-- Users will be loaded here -->
+        <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
+          <form id="addTaskForm" class="px-6 py-4">
+            <input type="hidden" id="taskProjectId" />
+            <div class="mb-4">
+              <label for="taskName" class="block text-sm font-medium text-gray-300 mb-1">
+                Task Name
+              </label>
+              <input
+                type="text"
+                id="taskName"
+                required
+                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+                placeholder="Enter task name"
+              />
             </div>
-          </div>
-          <div class="flex justify-end space-x-3">
-            <button
-              type="button"
-              id="cancelAddTaskBtn"
-              class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              class="px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-md transition-colors"
-            >
-              Create Task
-            </button>
-          </div>
-        </form>
+            <div class="mb-4">
+              <label for="taskDescription" class="block text-sm font-medium text-gray-300 mb-1">
+                Description
+              </label>
+              <textarea
+                id="taskDescription"
+                rows="3"
+                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+                placeholder="Enter task description"
+              ></textarea>
+            </div>
+            <div class="mb-4">
+              <label for="taskStatus" class="block text-sm font-medium text-gray-300 mb-1">
+                Status
+              </label>
+              <select
+                id="taskStatus"
+                class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+              >
+                <option value="pending">Pending</option>
+                <option value="in-progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-300 mb-1">
+                Assign Users
+              </label>
+              <div class="space-y-3">
+                <!-- User Search Input -->
+                <div class="relative">
+                  <input
+                    type="text"
+                    id="addTaskUserSearch"
+                    placeholder="Search users to assign..."
+                    class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+                  />
+                  <div id="addTaskUserSuggestions" class="absolute z-10 w-full bg-gray-800 border border-gray-600 rounded-md mt-1 max-h-32 overflow-y-auto hidden">
+                    <!-- Suggestions will appear here -->
+                  </div>
+                </div>
+                
+                <!-- Selected Users Display -->
+                <div id="addTaskSelectedUsers" class="flex flex-wrap gap-2">
+                  <!-- Selected users will appear here -->
+                </div>
+              </div>
+            </div>
+            <div class="flex justify-end space-x-3">
+              <button
+                type="button"
+                id="cancelAddTaskBtn"
+                class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-md transition-colors"
+              >
+                Create Task
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   </div>
@@ -1149,21 +1173,129 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       }
     }
 
-    // Load users for assignment
+    // Load users for assignment (now handled by search functionality)
     function loadUsersForAssignment() {
-      const userAssignments = document.getElementById('userAssignments');
-      if (!userAssignments || allUsers.length === 0) return;
+      // Clear any existing selected users
+      const selectedUsersContainer = document.getElementById('addTaskSelectedUsers');
+      if (selectedUsersContainer) {
+        selectedUsersContainer.innerHTML = '';
+      }
+      
+      // Clear search input
+      const searchInput = document.getElementById('addTaskUserSearch') as HTMLInputElement;
+      if (searchInput) {
+        searchInput.value = '';
+      }
+      
+      // Set up search functionality
+      setupAddTaskUserSearch();
+    }
 
-      userAssignments.innerHTML = allUsers.map(user => `
-        <label class="flex items-center space-x-2">
-          <input
-            type="checkbox"
-            value="${user.id}"
-            class="rounded border-gray-600 text-[#4F46E5] focus:ring-[#4F46E5] bg-gray-700"
-          />
-          <span class="text-gray-300">${user.name} (${user.email})</span>
-        </label>
-      `).join('');
+    // Set up user search functionality for add task modal
+    function setupAddTaskUserSearch() {
+      const searchInput = document.getElementById('addTaskUserSearch') as HTMLInputElement;
+      const suggestionsDiv = document.getElementById('addTaskUserSuggestions');
+      
+      if (!searchInput || !suggestionsDiv) return;
+      
+      // Clear any existing event listeners
+      const newSearchInput = searchInput.cloneNode(true) as HTMLInputElement;
+      searchInput.parentNode?.replaceChild(newSearchInput, searchInput);
+      
+      newSearchInput.addEventListener('input', (e) => {
+        const query = (e.target as HTMLInputElement).value.toLowerCase();
+        
+        if (query.length < 2) {
+          suggestionsDiv.classList.add('hidden');
+          return;
+        }
+        
+        const filteredUsers = allUsers.filter(user => 
+          user.name.toLowerCase().includes(query) || 
+          user.email.toLowerCase().includes(query)
+        );
+        
+        if (filteredUsers.length > 0) {
+          suggestionsDiv.innerHTML = filteredUsers.map(user => `
+            <div
+              class="px-3 py-2 hover:bg-gray-700 cursor-pointer text-white text-sm add-task-user-suggestion"
+              data-user-id="${user.id}"
+              data-user-name="${user.name}"
+              data-user-email="${user.email}"
+            >
+              ${user.name} (${user.email})
+            </div>
+          `).join('');
+          suggestionsDiv.classList.remove('hidden');
+        } else {
+          suggestionsDiv.classList.add('hidden');
+        }
+      });
+
+      // Handle suggestion clicks
+      suggestionsDiv.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        if (target.classList.contains('add-task-user-suggestion')) {
+          const userId = target.getAttribute('data-user-id');
+          const userName = target.getAttribute('data-user-name');
+          const userEmail = target.getAttribute('data-user-email');
+          
+          if (userId && userName) {
+            addUserToTaskSelection(parseInt(userId), userName, userEmail || '');
+            newSearchInput.value = '';
+            suggestionsDiv.classList.add('hidden');
+          }
+        }
+      });
+
+      // Hide suggestions when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!newSearchInput.contains(e.target as Node) && !suggestionsDiv.contains(e.target as Node)) {
+          suggestionsDiv.classList.add('hidden');
+        }
+      });
+    }
+
+    // Add user to task selection
+    function addUserToTaskSelection(userId: number, userName: string, userEmail: string) {
+      const selectedUsersContainer = document.getElementById('addTaskSelectedUsers');
+      if (!selectedUsersContainer) return;
+      
+      // Check if user is already selected
+      const existingUser = selectedUsersContainer.querySelector(`[data-user-id="${userId}"]`);
+      if (existingUser) {
+        return; // User already selected
+      }
+      
+      const userTag = document.createElement('span');
+      userTag.className = 'inline-flex items-center px-2 py-1 rounded-full text-xs bg-[#4F46E5] text-white';
+      userTag.setAttribute('data-user-id', userId.toString());
+      userTag.innerHTML = `
+        ${userName}
+        <button
+          type="button"
+          class="ml-1 remove-add-task-user-btn hover:text-red-300 transition-colors"
+          data-user-id="${userId}"
+          data-user-name="${userName}"
+          title="Remove ${userName} from task"
+        >
+          ×
+        </button>
+      `;
+      
+      selectedUsersContainer.appendChild(userTag);
+      console.log(`Added user ${userName} (ID: ${userId}) to selection. Total selected:`, selectedUsersContainer.children.length);
+      
+      // Add event listener for remove button
+      const removeBtn = userTag.querySelector('.remove-add-task-user-btn') as HTMLButtonElement;
+      if (removeBtn) {
+        removeBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          userTag.remove();
+          console.log(`Removed user ${userName} (ID: ${userId}) from selection. Total selected:`, selectedUsersContainer.children.length);
+        });
+      }
     }
 
     // Handle add task form submission
@@ -1175,10 +1307,17 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       const taskStatus = (document.getElementById('taskStatus') as HTMLSelectElement)?.value;
       const taskProjectId = (document.getElementById('taskProjectId') as HTMLInputElement)?.value;
       
-      // Get selected users
-      const selectedUsers = Array.from(
-        document.querySelectorAll('#userAssignments input[type="checkbox"]:checked')
-      ).map((checkbox: any) => parseInt(checkbox.value));
+      // Get selected users from the new interface - only select span elements, not buttons
+      const selectedUserElements = document.querySelectorAll('#addTaskSelectedUsers span[data-user-id]');
+      console.log('Found selected user elements:', selectedUserElements.length);
+      
+      const selectedUsers = Array.from(selectedUserElements).map((userTag: any) => {
+        const userId = parseInt(userTag.getAttribute('data-user-id'));
+        console.log('User tag:', userTag, 'User ID:', userId);
+        return userId;
+      });
+
+      console.log('Creating task with selected users:', selectedUsers);
 
       try {
         // Create the task
@@ -1195,10 +1334,12 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
 
         if (taskResponse.ok) {
           const newTask = await taskResponse.json();
+          console.log('Task created successfully:', newTask);
           
           // Assign users if any are selected
           if (selectedUsers.length > 0) {
-            await fetch('/api/admin/tasks/assign', {
+            console.log('Assigning users to task:', selectedUsers);
+            const assignResponse = await fetch('/api/admin/tasks/assign', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -1206,6 +1347,14 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                 userIds: selectedUsers
               }),
             });
+            
+            if (assignResponse.ok) {
+              console.log('Users assigned successfully');
+            } else {
+              const errorText = await assignResponse.text();
+              console.error('Error assigning users:', errorText);
+              alert('Task created but failed to assign users');
+            }
           }
           
           // Close add task modal and reload tasks
@@ -1214,6 +1363,8 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
             loadProjectTasks(currentProjectId);
           }
         } else {
+          const errorText = await taskResponse.text();
+          console.error('Error creating task:', errorText);
           alert('Error creating task');
         }
       } catch (error) {

@@ -183,39 +183,41 @@ const allClients = await db
   <!-- Create/Edit Client Modal -->
   <div id="clientModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-md w-full border border-gray-700">
-        <div class="px-6 py-4 border-b border-gray-700">
+      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col">
+        <div class="px-6 py-4 border-b border-gray-700 flex-shrink-0">
           <h3 id="modalTitle" class="text-lg font-medium text-white">Add New Client</h3>
         </div>
-        <form id="clientForm" class="p-6">
-          <input type="hidden" id="clientId" />
-          <div class="mb-4">
-            <label for="clientName" class="block text-sm font-medium text-gray-300 mb-1">
-              Client Name
-            </label>
-            <input
-              type="text"
-              id="clientName"
-              required
-              class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
-            />
-          </div>
-          <div class="flex justify-end space-x-3">
-            <button
-              type="button"
-              onclick="closeModal()"
-              class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              class="px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-md transition-colors"
-            >
-              Save Client
-            </button>
-          </div>
-        </form>
+        <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
+          <form id="clientForm" class="p-6">
+            <input type="hidden" id="clientId" />
+            <div class="mb-4">
+              <label for="clientName" class="block text-sm font-medium text-gray-300 mb-1">
+                Client Name
+              </label>
+              <input
+                type="text"
+                id="clientName"
+                required
+                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+              />
+            </div>
+            <div class="flex justify-end space-x-3">
+              <button
+                type="button"
+                onclick="closeModal()"
+                class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-md transition-colors"
+              >
+                Save Client
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   </div>
@@ -223,8 +225,8 @@ const allClients = await db
   <!-- Projects Modal -->
   <div id="projectsModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-4xl w-full border border-gray-700">
-        <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
+      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] border border-gray-700 flex flex-col">
+        <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center flex-shrink-0">
           <h3 id="projectsModalTitle" class="text-lg font-medium text-white">Projects</h3>
           <button
             onclick="closeProjectsModal()"
@@ -235,22 +237,26 @@ const allClients = await db
             </svg>
           </button>
         </div>
-        <div class="p-6">
-          <div class="flex justify-between items-center mb-6">
-            <div>
-              <h4 id="clientNameHeader" class="text-xl font-semibold text-white"></h4>
-              <p id="clientDescription" class="text-gray-300">Manage projects for this client</p>
+        <div class="flex-1 overflow-hidden flex flex-col">
+          <div class="px-6 py-4 flex-shrink-0">
+            <div class="flex justify-between items-center">
+              <div>
+                <h4 id="clientNameHeader" class="text-xl font-semibold text-white"></h4>
+                <p id="clientDescription" class="text-gray-300">Manage projects for this client</p>
+              </div>
+              <button
+                id="newProjectBtn"
+                class="bg-[#4F46E5] hover:bg-[#3730A3] text-white font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                + New Project
+              </button>
             </div>
-            <button
-              id="newProjectBtn"
-              class="bg-[#4F46E5] hover:bg-[#3730A3] text-white font-medium py-2 px-4 rounded-lg transition-colors"
-            >
-              + New Project
-            </button>
           </div>
           
-          <div id="projectsList" class="space-y-3">
-            <!-- Projects will be loaded here -->
+          <div class="px-6 pb-6 flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
+            <div id="projectsList" class="space-y-3">
+              <!-- Projects will be loaded here -->
+            </div>
           </div>
         </div>
       </div>
@@ -260,39 +266,41 @@ const allClients = await db
   <!-- New Project Modal -->
   <div id="newProjectModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-md w-full border border-gray-700">
-        <div class="px-6 py-4 border-b border-gray-700">
+      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col">
+        <div class="px-6 py-4 border-b border-gray-700 flex-shrink-0">
           <h3 class="text-lg font-medium text-white">Add New Project</h3>
         </div>
-        <form id="newProjectForm" class="px-6 py-4">
-          <input type="hidden" id="projectClientId" />
-          <div class="mb-4">
-            <label for="projectName" class="block text-sm font-medium text-gray-300 mb-1">
-              Project Name
-            </label>
-            <input
-              type="text"
-              id="projectName"
-              required
-              class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
-            />
-          </div>
-          <div class="flex justify-end space-x-3">
-            <button
-              type="button"
-              onclick="closeNewProjectModal()"
-              class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              class="px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-md transition-colors"
-            >
-              Create Project
-            </button>
-          </div>
-        </form>
+        <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
+          <form id="newProjectForm" class="px-6 py-4">
+            <input type="hidden" id="projectClientId" />
+            <div class="mb-4">
+              <label for="projectName" class="block text-sm font-medium text-gray-300 mb-1">
+                Project Name
+              </label>
+              <input
+                type="text"
+                id="projectName"
+                required
+                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+              />
+            </div>
+            <div class="flex justify-end space-x-3">
+              <button
+                type="button"
+                onclick="closeNewProjectModal()"
+                class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-md transition-colors"
+              >
+                Create Project
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   </div>

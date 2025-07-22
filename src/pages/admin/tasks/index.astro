@@ -215,79 +215,81 @@ const allUsers = await db.select().from(users).orderBy(users.name);
   <!-- Create/Edit Task Modal -->
   <div id="taskModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-md w-full border border-gray-700">
-        <div class="px-6 py-4 border-b border-gray-700">
+      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col">
+        <div class="px-6 py-4 border-b border-gray-700 flex-shrink-0">
           <h3 id="taskModalTitle" class="text-lg font-medium text-white">Add New Task</h3>
         </div>
-        <form id="taskForm" class="px-6 py-4">
-          <input type="hidden" id="taskId" />
-          <div class="mb-4">
-            <label for="taskName" class="block text-sm font-medium text-gray-300 mb-1">
-              Task Name
-            </label>
-            <input
-              type="text"
-              id="taskName"
-              required
-              class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
-            />
-          </div>
-          <div class="mb-4">
-            <label for="taskDescription" class="block text-sm font-medium text-gray-300 mb-1">
-              Description
-            </label>
-            <textarea
-              id="taskDescription"
-              rows="3"
-              class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
-            ></textarea>
-          </div>
-          <div class="mb-4">
-            <label for="taskProject" class="block text-sm font-medium text-gray-300 mb-1">
-              Project
-            </label>
-            <select
-              id="taskProject"
-              required
-              class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
-            >
-              <option value="">Select a project</option>
-              {allProjects.map((project) => (
-                <option value={project.id}>{project.clientName} - {project.name}</option>
-              ))}
-            </select>
-          </div>
-          <div class="mb-4">
-            <label for="taskStatus" class="block text-sm font-medium text-gray-300 mb-1">
-              Status
-            </label>
-            <select
-              id="taskStatus"
-              required
-              class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
-            >
-              <option value="pending">Pending</option>
-              <option value="in-progress">In Progress</option>
-              <option value="completed">Completed</option>
-              <option value="archived">Archived</option>
-            </select>
-          </div>
-          <div class="flex justify-end space-x-3">
-            <button
-              type="button"
-              onclick="closeTaskModal()"
-              class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              class="px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-md transition-colors"
-            >
-              Save Task
-            </button>
-          </div>
-        </form>
+        <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
+          <form id="taskForm" class="px-6 py-4">
+            <input type="hidden" id="taskId" />
+            <div class="mb-4">
+              <label for="taskName" class="block text-sm font-medium text-gray-300 mb-1">
+                Task Name
+              </label>
+              <input
+                type="text"
+                id="taskName"
+                required
+                class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+              />
+            </div>
+            <div class="mb-4">
+              <label for="taskDescription" class="block text-sm font-medium text-gray-300 mb-1">
+                Description
+              </label>
+              <textarea
+                id="taskDescription"
+                rows="3"
+                class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+              ></textarea>
+            </div>
+            <div class="mb-4">
+              <label for="taskProject" class="block text-sm font-medium text-gray-300 mb-1">
+                Project
+              </label>
+              <select
+                id="taskProject"
+                required
+                class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+              >
+                <option value="">Select a project</option>
+                {allProjects.map((project) => (
+                  <option value={project.id}>{project.clientName} - {project.name}</option>
+                ))}
+              </select>
+            </div>
+            <div class="mb-4">
+              <label for="taskStatus" class="block text-sm font-medium text-gray-300 mb-1">
+                Status
+              </label>
+              <select
+                id="taskStatus"
+                required
+                class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+              >
+                <option value="pending">Pending</option>
+                <option value="in-progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+            <div class="flex justify-end space-x-3">
+              <button
+                type="button"
+                onclick="closeTaskModal()"
+                class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-md transition-colors"
+              >
+                Save Task
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   </div>
@@ -295,41 +297,43 @@ const allUsers = await db.select().from(users).orderBy(users.name);
   <!-- User Assignment Modal -->
   <div id="assignmentModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-md w-full border border-gray-700">
-        <div class="px-6 py-4 border-b border-gray-700">
+      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col">
+        <div class="px-6 py-4 border-b border-gray-700 flex-shrink-0">
           <h3 class="text-lg font-medium text-white">Assign Users to Task</h3>
         </div>
-        <div class="p-6">
-          <input type="hidden" id="assignmentTaskId" />
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-300 mb-2">Select Users</label>
-            <div class="space-y-2 max-h-48 overflow-y-auto">
-              {allUsers.map((user) => (
-                <label class="flex items-center">
-                  <input
-                    type="checkbox"
-                    value={user.id}
-                    class="rounded border-gray-500 text-[#4F46E5] focus:ring-[#4F46E5] bg-gray-700"
-                  />
-                  <span class="ml-2 text-sm text-white">{user.name}</span>
-                </label>
-              ))}
+        <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
+          <div class="p-6">
+            <input type="hidden" id="assignmentTaskId" />
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-300 mb-2">Select Users</label>
+              <div class="space-y-2">
+                {allUsers.map((user) => (
+                  <label class="flex items-center">
+                    <input
+                      type="checkbox"
+                      value={user.id}
+                      class="rounded border-gray-500 text-[#4F46E5] focus:ring-[#4F46E5] bg-gray-700"
+                    />
+                    <span class="ml-2 text-sm text-white">{user.name}</span>
+                  </label>
+                ))}
+              </div>
             </div>
-          </div>
-          <div class="flex justify-end space-x-3">
-            <button
-              type="button"
-              onclick="closeAssignmentModal()"
-              class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onclick="saveAssignments()"
-              class="px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-md transition-colors"
-            >
-              Save Assignments
-            </button>
+            <div class="flex justify-end space-x-3">
+              <button
+                type="button"
+                onclick="closeAssignmentModal()"
+                class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onclick="saveAssignments()"
+                class="px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-md transition-colors"
+              >
+                Save Assignments
+              </button>
+            </div>
           </div>
         </div>
       </div>

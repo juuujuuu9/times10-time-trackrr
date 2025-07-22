@@ -35,6 +35,69 @@ h1, h2, h3, h4, h5, h6 {
   background: #94a3b8;
 }
 
+/* Dark theme scrollbar for all modals */
+#projectModal .overflow-y-auto::-webkit-scrollbar,
+#clientModal .overflow-y-auto::-webkit-scrollbar,
+#addTaskModal .overflow-y-auto::-webkit-scrollbar,
+#tasksModal .overflow-y-auto::-webkit-scrollbar,
+#taskModal .overflow-y-auto::-webkit-scrollbar,
+#assignmentModal .overflow-y-auto::-webkit-scrollbar,
+#timeEntryModal .overflow-y-auto::-webkit-scrollbar,
+#inviteModal .overflow-y-auto::-webkit-scrollbar,
+#editUserModal .overflow-y-auto::-webkit-scrollbar,
+#roleModal .overflow-y-auto::-webkit-scrollbar,
+#projectsModal .overflow-y-auto::-webkit-scrollbar,
+#newProjectModal .overflow-y-auto::-webkit-scrollbar {
+  width: 8px;
+}
+
+#projectModal .overflow-y-auto::-webkit-scrollbar-track,
+#clientModal .overflow-y-auto::-webkit-scrollbar-track,
+#addTaskModal .overflow-y-auto::-webkit-scrollbar-track,
+#tasksModal .overflow-y-auto::-webkit-scrollbar-track,
+#taskModal .overflow-y-auto::-webkit-scrollbar-track,
+#assignmentModal .overflow-y-auto::-webkit-scrollbar-track,
+#timeEntryModal .overflow-y-auto::-webkit-scrollbar-track,
+#inviteModal .overflow-y-auto::-webkit-scrollbar-track,
+#editUserModal .overflow-y-auto::-webkit-scrollbar-track,
+#roleModal .overflow-y-auto::-webkit-scrollbar-track,
+#projectsModal .overflow-y-auto::-webkit-scrollbar-track,
+#newProjectModal .overflow-y-auto::-webkit-scrollbar-track {
+  background: #1F2937;
+  border-radius: 4px;
+}
+
+#projectModal .overflow-y-auto::-webkit-scrollbar-thumb,
+#clientModal .overflow-y-auto::-webkit-scrollbar-thumb,
+#addTaskModal .overflow-y-auto::-webkit-scrollbar-thumb,
+#tasksModal .overflow-y-auto::-webkit-scrollbar-thumb,
+#taskModal .overflow-y-auto::-webkit-scrollbar-thumb,
+#assignmentModal .overflow-y-auto::-webkit-scrollbar-thumb,
+#timeEntryModal .overflow-y-auto::-webkit-scrollbar-thumb,
+#inviteModal .overflow-y-auto::-webkit-scrollbar-thumb,
+#editUserModal .overflow-y-auto::-webkit-scrollbar-thumb,
+#roleModal .overflow-y-auto::-webkit-scrollbar-thumb,
+#projectsModal .overflow-y-auto::-webkit-scrollbar-thumb,
+#newProjectModal .overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #4B5563;
+  border-radius: 4px;
+}
+
+#projectModal .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+#clientModal .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+#addTaskModal .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+#tasksModal .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+#taskModal .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+#assignmentModal .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+#timeEntryModal .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+#inviteModal .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+#editUserModal .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+#roleModal .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+#projectsModal .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+#newProjectModal .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #6B7280;
+}
+
 /* Focus styles for better accessibility */
 *:focus {
   outline: 2px solid #3b82f6;
