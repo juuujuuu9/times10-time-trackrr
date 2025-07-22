@@ -25,7 +25,7 @@ const allUsers = await db
   .orderBy(users.name);
 ---
 
-<AdminLayout title="Users" currentPage="users">
+<AdminLayout title="Team Members" currentPage="users">
   <div class="space-y-8">
     <!-- Header -->
     <div class="bg-gray-800 rounded-xl shadow-sm border border-gray-700 p-6">
@@ -35,7 +35,7 @@ const allUsers = await db
             <span class="text-white text-xl">👥</span>
           </div>
           <div>
-            <h1 class="text-3xl font-bold text-white">Users</h1>
+            <h1 class="text-3xl font-bold text-white">Team Members</h1>
             <p class="text-gray-300 mt-1">Manage team members and their roles</p>
           </div>
         </div>
@@ -43,7 +43,7 @@ const allUsers = await db
           id="inviteUserBtn"
           class="bg-gradient-to-r from-[#4F46E5] to-[#3730A3] hover:from-[#3730A3] hover:to-[#312E81] text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg"
         >
-          ➕ Invite User
+          ➕ Invite Team Member
         </button>
       </div>
     </div>
@@ -56,7 +56,7 @@ const allUsers = await db
             <span class="text-2xl text-white">👤</span>
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-gray-400">Total Users</p>
+            <p class="text-sm font-medium text-gray-400">Total Team Members</p>
             <p class="text-3xl font-bold text-white">{allUsers.length}</p>
           </div>
         </div>
@@ -67,7 +67,7 @@ const allUsers = await db
             <span class="text-2xl text-white">🟢</span>
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-gray-400">Active Users</p>
+            <p class="text-sm font-medium text-gray-400">Active Team Members</p>
             <p class="text-3xl font-bold text-white">{allUsers.filter(u => u.status === 'active').length}</p>
           </div>
         </div>
@@ -89,7 +89,7 @@ const allUsers = await db
     <div class="bg-gray-800 rounded-xl shadow-sm border border-gray-700 p-6">
       <div class="flex flex-col sm:flex-row gap-6">
         <div class="flex-1">
-          <label for="search" class="block text-sm font-semibold text-gray-300 mb-2">Search Users</label>
+          <label for="search" class="block text-sm font-semibold text-gray-300 mb-2">Search Team Members</label>
           <input
             type="text"
             id="search"
@@ -122,14 +122,14 @@ const allUsers = await db
       </div>
     </div>
 
-    <!-- Users Table -->
+                <!-- Team Members Table -->
     <div class="bg-gray-800 rounded-xl shadow-sm border border-gray-700 overflow-hidden">
       <div class="px-6 py-4 bg-gradient-to-r from-gray-800 to-gray-700 border-b border-gray-700">
         <div class="flex items-center">
           <div class="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center mr-3">
             <span class="text-gray-300 text-xl">📋</span>
           </div>
-          <h3 class="text-xl font-semibold text-white">User Management</h3>
+          <h3 class="text-xl font-semibold text-white">Team Member Management</h3>
         </div>
       </div>
       <div class="overflow-x-auto">
@@ -137,7 +137,7 @@ const allUsers = await db
           <thead class="bg-gray-700">
             <tr>
               <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                User
+                Team Member
               </th>
               <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                 Role
@@ -239,19 +239,19 @@ const allUsers = await db
         <div class="w-20 h-20 bg-gradient-to-r from-[#4F46E5] to-[#3730A3] rounded-full flex items-center justify-center mx-auto mb-6">
           <span class="text-white text-3xl">👤</span>
         </div>
-        <h3 class="text-2xl font-bold text-white mb-2">No users yet</h3>
+        <h3 class="text-2xl font-bold text-white mb-2">No team members yet</h3>
         <p class="text-gray-300 mb-6">Get started by inviting your first team member to join your organization</p>
         <button
           class="bg-gradient-to-r from-[#4F46E5] to-[#3730A3] hover:from-[#3730A3] hover:to-[#312E81] text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg"
           onclick="document.getElementById('inviteUserBtn').click()"
         >
-          ➕ Invite Your First User
+          ➕ Invite Your First Team Member
         </button>
       </div>
     )}
   </div>
 
-  <!-- Invite User Modal -->
+      <!-- Invite Team Member Modal -->
   <div id="inviteModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
       <div class="bg-[#1F2937] rounded-xl shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col">
@@ -260,7 +260,7 @@ const allUsers = await db
             <div class="w-10 h-10 bg-[#4F46E5] rounded-lg flex items-center justify-center mr-3">
               <span class="text-white text-xl">📧</span>
             </div>
-            <h3 class="text-xl font-semibold text-white">Invite New User</h3>
+            <h3 class="text-xl font-semibold text-white">Invite New Team Member</h3>
           </div>
         </div>
         <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
@@ -341,7 +341,7 @@ const allUsers = await db
     </div>
   </div>
 
-  <!-- Edit User Modal -->
+      <!-- Edit Team Member Modal -->
   <div id="editUserModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
       <div class="bg-[#1F2937] rounded-xl shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col">
@@ -350,7 +350,7 @@ const allUsers = await db
             <div class="w-10 h-10 bg-[#10B981] rounded-lg flex items-center justify-center mr-3">
               <span class="text-white text-xl">✏️</span>
             </div>
-            <h3 class="text-xl font-semibold text-white">Edit User</h3>
+            <h3 class="text-xl font-semibold text-white">Edit Team Member</h3>
           </div>
         </div>
         <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
@@ -452,7 +452,7 @@ const allUsers = await db
             <div class="w-10 h-10 bg-[#EC4899] rounded-lg flex items-center justify-center mr-3">
               <span class="text-white text-xl">👑</span>
             </div>
-            <h3 class="text-xl font-semibold text-white">Change User Role</h3>
+            <h3 class="text-xl font-semibold text-white">Change Team Member Role</h3>
           </div>
         </div>
         <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
@@ -491,7 +491,7 @@ const allUsers = await db
 
 
   <script>
-    // User management JavaScript
+    // Team Member management JavaScript
     const inviteUserBtn = document.getElementById('inviteUserBtn');
     const inviteForm = document.getElementById('inviteForm');
     const editUserForm = document.getElementById('editUserForm');
@@ -567,11 +567,11 @@ const allUsers = await db
           if (response.ok) {
             window.location.reload();
           } else {
-            alert('Error inviting user');
+            alert('Error inviting team member');
           }
         } catch (error) {
           console.error('Error:', error);
-          alert('Error inviting user');
+          alert('Error inviting team member');
         }
       });
     }
@@ -603,11 +603,11 @@ const allUsers = await db
           if (response.ok) {
             window.location.reload();
           } else {
-            alert('Error updating user');
+            alert('Error updating team member');
           }
         } catch (error) {
           console.error('Error:', error);
-          alert('Error updating user');
+          alert('Error updating team member');
         }
       });
     }
@@ -631,7 +631,7 @@ const allUsers = await db
       const editUserId = document.getElementById('editUserId') as HTMLInputElement;
       const editUserModal = document.getElementById('editUserModal');
       
-      // Find the user row and get current values
+      // Find the team member row and get current values
       const userRow = document.querySelector(`tr[data-user-id="${id}"]`);
       
       if (userRow) {
@@ -648,7 +648,7 @@ const allUsers = await db
         const currentStatus = statusElement?.textContent?.includes('🟢 Active') ? 'active' : 'inactive';
         const currentPayRate = payRateElement?.textContent?.replace('/hr', '').replace('$', '').trim() || '0.00';
         
-        console.log('Found user data:', { currentName, currentEmail, currentRole, currentStatus, currentPayRate });
+        console.log('Found team member data:', { currentName, currentEmail, currentRole, currentStatus, currentPayRate });
         
         // Populate the form fields
         const editUserName = document.getElementById('editUserName') as HTMLInputElement;

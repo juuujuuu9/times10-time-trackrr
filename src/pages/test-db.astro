@@ -102,7 +102,7 @@ try {
                     <h3>Created Data:</h3>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
                         <div style="background: #f0f0f0; padding: 1rem; border-radius: 4px;">
-                            <h4>User</h4>
+                            <h4>Team Member</h4>
                             <pre>{JSON.stringify(result.data.user, null, 2)}</pre>
                         </div>
                         <div style="background: #f0f0f0; padding: 1rem; border-radius: 4px;">
@@ -126,7 +126,7 @@ try {
                     <div style="margin-top: 2rem;">
                         <h3>Database Counts:</h3>
                         <ul>
-                            <li>Users: {result.data.counts.users}</li>
+                            <li>Team Members: {result.data.counts.users}</li>
                             <li>Clients: {result.data.counts.clients}</li>
                             <li>Projects: {result.data.counts.projects}</li>
                             <li>Tasks: {result.data.counts.tasks}</li>
@@ -140,7 +140,7 @@ try {
         <div style="margin-top: 2rem;">
             <h2>Database Schema Summary:</h2>
             <ul>
-                <li><strong>users:</strong> id, email, name, role</li>
+                <li><strong>users:</strong> id, email, name, role (Team Members)</li>
                 <li><strong>clients:</strong> id, name, created_by</li>
                 <li><strong>projects:</strong> id, client_id, name</li>
                 <li><strong>tasks:</strong> id, project_id, name, description, status</li>

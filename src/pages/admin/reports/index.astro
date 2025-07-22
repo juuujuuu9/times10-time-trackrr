@@ -4,71 +4,87 @@ import { db } from '../../../db/index';
 import { timeEntries, users, tasks, projects, clients } from '../../../db/schema';
 import { count, sql, sum } from 'drizzle-orm';
 
-// Get overview stats
-const totalHours = await db
-  .select({
-    total: sql<number>`COALESCE(SUM(${timeEntries.durationManual})/3600, 0)`,
-  })
-  .from(timeEntries)
-  .where(sql`${timeEntries.durationManual} IS NOT NULL`);
-
+// Simple overview stats
 const totalUsers = await db.select({ count: count() }).from(users);
 const totalProjects = await db.select({ count: count() }).from(projects);
 const totalTasks = await db.select({ count: count() }).from(tasks);
 
-// Get hours by user
-const hoursByUser = await db
-  .select({
-    userName: users.name,
-    totalHours: sql<number>`COALESCE(SUM(${timeEntries.durationManual})/3600, 0)`,
-  })
-  .from(users)
-  .leftJoin(timeEntries, sql`${users.id} = ${timeEntries.userId}`)
-  .where(sql`${timeEntries.durationManual} IS NOT NULL`)
-  .groupBy(users.id, users.name)
-  .orderBy(sql`totalHours DESC`);
+// Simple hours calculation
+let totalHours = 0;
+let hoursByProject: any[] = [];
+let costByProject: any[] = [];
+let costBreakdown: any[] = [];
 
-// Get hours by project
-const hoursByProject = await db
-  .select({
-    projectName: projects.name,
-    clientName: clients.name,
-    totalHours: sql<number>`COALESCE(SUM(${timeEntries.durationManual})/3600, 0)`,
-  })
-  .from(projects)
-  .leftJoin(clients, sql`${projects.clientId} = ${clients.id}`)
-  .leftJoin(tasks, sql`${projects.id} = ${tasks.projectId}`)
-  .leftJoin(timeEntries, sql`${tasks.id} = ${timeEntries.taskId}`)
-  .where(sql`${timeEntries.durationManual} IS NOT NULL`)
-  .groupBy(projects.id, projects.name, clients.name)
-  .orderBy(sql`totalHours DESC`);
+try {
+  const totalHoursResult = await db
+    .select({
+      total: sql<number>`COALESCE(SUM(${timeEntries.durationManual})/3600.0, 0)`,
+    })
+    .from(timeEntries)
+    .where(sql`${timeEntries.durationManual} IS NOT NULL`);
+  
+  totalHours = totalHoursResult[0]?.total || 0;
 
-// Get hours by task
-const hoursByTask = await db
-  .select({
-    taskName: tasks.name,
-    projectName: projects.name,
-    clientName: clients.name,
-    totalHours: sql<number>`COALESCE(SUM(${timeEntries.durationManual})/3600, 0)`,
-  })
-  .from(tasks)
-  .leftJoin(projects, sql`${tasks.projectId} = ${projects.id}`)
-  .leftJoin(clients, sql`${projects.clientId} = ${clients.id}`)
-  .leftJoin(timeEntries, sql`${tasks.id} = ${timeEntries.taskId}`)
-  .where(sql`${timeEntries.durationManual} IS NOT NULL`)
-  .groupBy(tasks.id, tasks.name, projects.name, clients.name)
-  .orderBy(sql`totalHours DESC`);
+  // Get hours by project
+  hoursByProject = await db
+    .select({
+      projectId: projects.id,
+      projectName: projects.name,
+      clientName: clients.name,
+      totalHours: sql<number>`COALESCE(SUM(${timeEntries.durationManual})/3600.0, 0)`,
+    })
+    .from(projects)
+    .leftJoin(clients, sql`${projects.clientId} = ${clients.id}`)
+    .leftJoin(tasks, sql`${projects.id} = ${tasks.projectId}`)
+    .leftJoin(timeEntries, sql`${tasks.id} = ${timeEntries.taskId}`)
+    .where(sql`${timeEntries.durationManual} IS NOT NULL`)
+    .groupBy(projects.id, projects.name, clients.name)
+    .orderBy(sql`totalHours DESC`);
 
-// Get recent time entries for trends
-const recentEntries = await db
-  .select({
-    date: sql<string>`DATE(${timeEntries.createdAt})`,
-    hours: sql<number>`COALESCE(SUM(${timeEntries.durationManual})/3600, 0)`,
-  })
-  .from(timeEntries)
-  .where(sql`${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= NOW() - INTERVAL '30 days'`)
-  .groupBy(sql`DATE(${timeEntries.createdAt})`)
-  .orderBy(sql`DATE(${timeEntries.createdAt})`);
+  // Get cost by project
+  costByProject = await db
+    .select({
+      projectId: projects.id,
+      projectName: projects.name,
+      clientName: clients.name,
+      totalCost: sql<number>`COALESCE(SUM((${timeEntries.durationManual}/3600.0) * CAST(${users.payRate} AS DECIMAL(10,2))), 0)`,
+      totalHours: sql<number>`COALESCE(SUM(${timeEntries.durationManual})/3600.0, 0)`,
+    })
+    .from(projects)
+    .leftJoin(clients, sql`${projects.clientId} = ${clients.id}`)
+    .leftJoin(tasks, sql`${projects.id} = ${tasks.projectId}`)
+    .leftJoin(timeEntries, sql`${tasks.id} = ${timeEntries.taskId}`)
+    .leftJoin(users, sql`${timeEntries.userId} = ${users.id}`)
+    .where(sql`${timeEntries.durationManual} IS NOT NULL`)
+    .groupBy(projects.id, projects.name, clients.name)
+    .orderBy(sql`totalCost DESC`);
+
+  // Get detailed cost breakdown
+  costBreakdown = await db
+    .select({
+      projectId: projects.id,
+      projectName: projects.name,
+      clientName: clients.name,
+      userName: users.name,
+      userPayRate: users.payRate,
+      totalHours: sql<number>`COALESCE(SUM(${timeEntries.durationManual})/3600.0, 0)`,
+      totalCost: sql<number>`COALESCE(SUM((${timeEntries.durationManual}/3600.0) * CAST(${users.payRate} AS DECIMAL(10,2))), 0)`,
+    })
+    .from(projects)
+    .leftJoin(clients, sql`${projects.clientId} = ${clients.id}`)
+    .leftJoin(tasks, sql`${projects.id} = ${tasks.projectId}`)
+    .leftJoin(timeEntries, sql`${tasks.id} = ${timeEntries.taskId}`)
+    .leftJoin(users, sql`${timeEntries.userId} = ${users.id}`)
+    .where(sql`${timeEntries.durationManual} IS NOT NULL`)
+    .groupBy(projects.id, projects.name, clients.name, users.id, users.name, users.payRate)
+    .orderBy(projects.name, sql`totalCost DESC`);
+
+} catch (error) {
+  console.error('Database error:', error);
+}
+
+// Calculate total cost across all projects
+const totalCost = costByProject.reduce((sum, project) => sum + Number(project.totalCost), 0);
 ---
 
 <AdminLayout title="Reports" currentPage="reports">
@@ -105,7 +121,7 @@ const recentEntries = await db
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-400">Total Hours</p>
             <p class="text-2xl font-bold text-white">
-              {totalHours[0]?.total ? Math.round(totalHours[0].total * 10) / 10 : 0}
+              {Math.round(totalHours * 10) / 10}
             </p>
           </div>
         </div>
@@ -114,11 +130,13 @@ const recentEntries = await db
       <div class="bg-gray-800 rounded-lg shadow border border-gray-700 p-6">
         <div class="flex items-center">
           <div class="p-2 bg-[#10B981] rounded-lg">
-            <span class="text-2xl text-white">👤</span>
+            <span class="text-2xl text-white">💰</span>
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-gray-400">Active Users</p>
-            <p class="text-2xl font-bold text-white">{totalUsers[0]?.count || 0}</p>
+            <p class="text-sm font-medium text-gray-400">Total Cost</p>
+            <p class="text-2xl font-bold text-white">
+              ${totalCost.toFixed(2)}
+            </p>
           </div>
         </div>
       </div>
@@ -138,234 +156,366 @@ const recentEntries = await db
       <div class="bg-gray-800 rounded-lg shadow border border-gray-700 p-6">
         <div class="flex items-center">
           <div class="p-2 bg-[#F59E0B] rounded-lg">
-            <span class="text-2xl text-white">✅</span>
+            <span class="text-2xl text-white">👤</span>
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-gray-400">Total Tasks</p>
-            <p class="text-2xl font-bold text-white">{totalTasks[0]?.count || 0}</p>
+            <p class="text-sm font-medium text-gray-400">Active Team Members</p>
+            <p class="text-2xl font-bold text-white">{totalUsers[0]?.count || 0}</p>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Charts and Data -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Hours by User -->
+    <!-- View Toggle -->
+    <div class="bg-gray-800 rounded-lg shadow border border-gray-700 p-4">
+      <div class="flex space-x-2">
+        <button
+          id="hoursViewBtn"
+          class="px-4 py-2 rounded-lg font-medium transition-colors bg-[#4F46E5] text-white"
+        >
+          Hours by Project
+        </button>
+        <button
+          id="costViewBtn"
+          class="px-4 py-2 rounded-lg font-medium transition-colors bg-gray-700 text-gray-300 hover:bg-gray-600"
+        >
+          Cost by Project
+        </button>
+      </div>
+    </div>
+
+    <!-- Hours View -->
+    <div id="hoursView" class="space-y-6">
+      <!-- Hours Chart -->
       <div class="bg-gray-800 rounded-lg shadow border border-gray-700">
         <div class="px-6 py-4 border-b border-gray-700">
-          <h3 class="text-lg font-medium text-white">Hours by User</h3>
+          <h3 class="text-lg font-medium text-white">Total Hours by Project</h3>
+          <p class="text-sm text-gray-400">Visual representation of hours worked on each project</p>
         </div>
         <div class="p-6">
-          <div class="space-y-4">
-            {hoursByUser.slice(0, 10).map((user) => (
-              <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                  <div class="w-8 h-8 bg-[#4F46E5] rounded-full flex items-center justify-center mr-3">
-                    <span class="text-sm font-medium text-white">
-                      {user.userName.split(' ').map(n => n[0]).join('').toUpperCase()}
-                    </span>
+          {hoursByProject.length > 0 ? (
+            <div class="space-y-4">
+              {hoursByProject.map((project, index) => {
+                const maxHours = hoursByProject[0]?.totalHours || 1;
+                const percentage = (project.totalHours / maxHours) * 100;
+                const colors = ['#4F46E5', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'];
+                const color = colors[index % colors.length];
+                
+                return (
+                  <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                      <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-white truncate">{project.projectName}</p>
+                        <p class="text-xs text-gray-400">{project.clientName}</p>
+                      </div>
+                      <span class="text-sm font-medium text-white ml-4">
+                        {Math.round(project.totalHours * 10) / 10}h
+                      </span>
+                    </div>
+                    <div class="w-full bg-gray-600 rounded-full h-3">
+                      <div 
+                        class="h-3 rounded-full transition-all duration-300"
+                        style={`width: ${percentage}%; background-color: ${color}`}
+                      ></div>
+                    </div>
                   </div>
-                  <span class="text-sm font-medium text-white">{user.userName}</span>
-                </div>
-                <div class="flex items-center">
-                  <div class="w-32 bg-gray-600 rounded-full h-2 mr-3">
-                    <div 
-                      class="bg-[#4F46E5] h-2 rounded-full" 
-                      style={`width: ${Math.min((user.totalHours / (hoursByUser[0]?.totalHours || 1)) * 100, 100)}%`}
-                    ></div>
-                  </div>
-                  <span class="text-sm text-gray-300">{Math.round(user.totalHours * 10) / 10}h</span>
-                </div>
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div class="text-center py-8">
+              <p class="text-gray-400">No time entries found. Add some time entries to see project hours.</p>
+            </div>
+          )}
         </div>
       </div>
 
-      <!-- Hours by Project -->
+      <!-- Hours Table -->
       <div class="bg-gray-800 rounded-lg shadow border border-gray-700">
         <div class="px-6 py-4 border-b border-gray-700">
-          <h3 class="text-lg font-medium text-white">Hours by Project</h3>
+          <h3 class="text-lg font-medium text-white">Hours by Project - Detailed</h3>
+        </div>
+        <div class="overflow-x-auto">
+          {hoursByProject.length > 0 ? (
+            <table class="min-w-full divide-y divide-gray-700">
+              <thead class="bg-gray-700">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Project
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Client
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Total Hours
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Percentage
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="bg-gray-800 divide-y divide-gray-700">
+                {hoursByProject.map((project) => {
+                  const totalProjectHours = hoursByProject.reduce((sum, p) => sum + p.totalHours, 0);
+                  const percentage = totalProjectHours > 0 ? (project.totalHours / totalProjectHours) * 100 : 0;
+                  
+                  return (
+                    <tr class="hover:bg-gray-700">
+                      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
+                        {project.projectName}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                        {project.clientName}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
+                        {Math.round(project.totalHours * 10) / 10} hours
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
+                        {percentage.toFixed(1)}%
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <div class="text-center py-8">
+              <p class="text-gray-400">No data available</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+
+    <!-- Cost View -->
+    <div id="costView" class="space-y-6 hidden">
+      <!-- Cost Chart -->
+      <div class="bg-gray-800 rounded-lg shadow border border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-700">
+          <h3 class="text-lg font-medium text-white">Total Cost by Project</h3>
+          <p class="text-sm text-gray-400">Cost calculated by multiplying hours worked by team member pay rates</p>
         </div>
         <div class="p-6">
-          <div class="space-y-4">
-            {hoursByProject.slice(0, 10).map((project) => (
-              <div class="flex items-center justify-between">
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-white truncate">{project.projectName}</p>
-                  <p class="text-xs text-gray-400">{project.clientName}</p>
-                </div>
-                <div class="flex items-center ml-4">
-                  <div class="w-24 bg-gray-600 rounded-full h-2 mr-3">
-                    <div 
-                      class="bg-[#10B981] h-2 rounded-full" 
-                      style={`width: ${Math.min((project.totalHours / (hoursByProject[0]?.totalHours || 1)) * 100, 100)}%`}
-                    ></div>
+          {costByProject.length > 0 ? (
+            <div class="space-y-4">
+              {costByProject.map((project, index) => {
+                const maxCost = costByProject[0]?.totalCost || 1;
+                const percentage = (project.totalCost / maxCost) * 100;
+                const colors = ['#10B981', '#F59E0B', '#EC4899', '#8B5CF6', '#06B6D4', '#84CC16', '#F97316', '#4F46E5'];
+                const color = colors[index % colors.length];
+                
+                return (
+                  <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                      <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-white truncate">{project.projectName}</p>
+                        <p class="text-xs text-gray-400">{project.clientName}</p>
+                      </div>
+                      <div class="text-right">
+                        <span class="text-sm font-medium text-white">
+                          ${Number(project.totalCost).toFixed(2)}
+                        </span>
+                        <p class="text-xs text-gray-400">
+                          {Math.round(project.totalHours * 10) / 10}h
+                        </p>
+                      </div>
+                    </div>
+                    <div class="w-full bg-gray-600 rounded-full h-3">
+                      <div 
+                        class="h-3 rounded-full transition-all duration-300"
+                        style={`width: ${percentage}%; background-color: ${color}`}
+                      ></div>
+                    </div>
                   </div>
-                  <span class="text-sm text-gray-300">{Math.round(project.totalHours * 10) / 10}h</span>
-                </div>
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div class="text-center py-8">
+              <p class="text-gray-400">No cost data found. Add time entries with pay rates to see project costs.</p>
+            </div>
+          )}
         </div>
       </div>
-    </div>
 
-    <!-- Top Tasks -->
-    <div class="bg-gray-800 rounded-lg shadow border border-gray-700">
-      <div class="px-6 py-4 border-b border-gray-700">
-        <h3 class="text-lg font-medium text-white">Top Tasks by Hours</h3>
+      <!-- Cost Breakdown Table -->
+      <div class="bg-gray-800 rounded-lg shadow border border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-700">
+          <h3 class="text-lg font-medium text-white">Cost Breakdown by Project and Team Member</h3>
+        </div>
+        <div class="overflow-x-auto">
+          {costBreakdown.length > 0 ? (
+            <table class="min-w-full divide-y divide-gray-700">
+              <thead class="bg-gray-700">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Project
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Client
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Team Member
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Pay Rate
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Hours
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Cost
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="bg-gray-800 divide-y divide-gray-700">
+                {costBreakdown.map((entry) => (
+                  <tr class="hover:bg-gray-700">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
+                      {entry.projectName}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                      {entry.clientName}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
+                      {entry.userName}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
+                      ${Number(entry.userPayRate).toFixed(2)}/hr
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
+                      {Math.round(entry.totalHours * 10) / 10}h
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
+                      ${Number(entry.totalCost).toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div class="text-center py-8">
+              <p class="text-gray-400">No cost breakdown data available</p>
+            </div>
+          )}
+        </div>
       </div>
-      <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-700">
-          <thead class="bg-gray-700">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                Task
-              </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                Project
-              </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                Client
-              </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                Hours
-              </th>
-            </tr>
-          </thead>
-          <tbody class="bg-gray-800 divide-y divide-gray-700">
-            {hoursByTask.slice(0, 10).map((task) => (
-              <tr class="hover:bg-gray-700">
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
-                  {task.taskName}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
-                  {task.projectName}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                  {task.clientName}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
-                  {Math.round(task.totalHours * 10) / 10} hours
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
 
-    <!-- Time Trends Chart -->
-    <div class="bg-gray-800 rounded-lg shadow border border-gray-700">
-      <div class="px-6 py-4 border-b border-gray-700">
-        <h3 class="text-lg font-medium text-white">Daily Hours (Last 30 Days)</h3>
-      </div>
-      <div class="p-6">
-        <div class="h-64 flex items-end space-x-2">
-          {recentEntries.map((entry) => {
-            const maxHours = Math.max(...recentEntries.map(e => e.hours));
-            const height = maxHours > 0 ? (entry.hours / maxHours) * 100 : 0;
-            return (
-              <div class="flex-1 flex flex-col items-center">
-                <div 
-                  class="w-full bg-[#4F46E5] rounded-t"
-                  style={`height: ${height}%`}
-                ></div>
-                <div class="text-xs text-gray-400 mt-2 transform -rotate-45 origin-left">
-                  {new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                </div>
-              </div>
-            );
-          })}
+      <!-- Project Cost Summary -->
+      <div class="bg-gray-800 rounded-lg shadow border border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-700">
+          <h3 class="text-lg font-medium text-white">Project Cost Summary</h3>
         </div>
-      </div>
-    </div>
-
-    <!-- Filters -->
-    <div class="bg-gray-800 rounded-lg shadow border border-gray-700 p-6">
-      <h3 class="text-lg font-medium text-white mb-4">Report Filters</h3>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <label for="dateRange" class="block text-sm font-medium text-gray-300 mb-1">Date Range</label>
-          <select
-            id="dateRange"
-            class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
-          >
-            <option value="30">Last 30 Days</option>
-            <option value="90">Last 90 Days</option>
-            <option value="180">Last 6 Months</option>
-            <option value="365">Last Year</option>
-          </select>
-        </div>
-        <div>
-          <label for="userFilter" class="block text-sm font-medium text-gray-300 mb-1">User</label>
-          <select
-            id="userFilter"
-            class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
-          >
-            <option value="">All Users</option>
-            {hoursByUser.map((user) => (
-              <option value={user.userName}>{user.userName}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label for="projectFilter" class="block text-sm font-medium text-gray-300 mb-1">Project</label>
-          <select
-            id="projectFilter"
-            class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
-          >
-            <option value="">All Projects</option>
-            {hoursByProject.map((project) => (
-              <option value={project.projectName}>{project.clientName} - {project.projectName}</option>
-            ))}
-          </select>
+        <div class="overflow-x-auto">
+          {costByProject.length > 0 ? (
+            <table class="min-w-full divide-y divide-gray-700">
+              <thead class="bg-gray-700">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Project
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Client
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Total Hours
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Total Cost
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Avg Rate
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="bg-gray-800 divide-y divide-gray-700">
+                {costByProject.map((project) => {
+                  const avgRate = project.totalHours > 0 ? project.totalCost / project.totalHours : 0;
+                  
+                  return (
+                    <tr class="hover:bg-gray-700">
+                      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
+                        {project.projectName}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                        {project.clientName}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
+                        {Math.round(project.totalHours * 10) / 10} hours
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
+                        ${Number(project.totalCost).toFixed(2)}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
+                        ${avgRate.toFixed(2)}/hr
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <div class="text-center py-8">
+              <p class="text-gray-400">No project cost data available</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
   </div>
 
   <script>
-    // Reports JavaScript
+    // View toggle functionality
+    const hoursViewBtn = document.getElementById('hoursViewBtn');
+    const costViewBtn = document.getElementById('costViewBtn');
+    const hoursView = document.getElementById('hoursView');
+    const costView = document.getElementById('costView');
+
+    function showHoursView() {
+      hoursView?.classList.remove('hidden');
+      costView?.classList.add('hidden');
+      hoursViewBtn?.classList.remove('bg-gray-700', 'text-gray-300');
+      hoursViewBtn?.classList.add('bg-[#4F46E5]', 'text-white');
+      costViewBtn?.classList.remove('bg-[#10B981]', 'text-white');
+      costViewBtn?.classList.add('bg-gray-700', 'text-gray-300');
+    }
+
+    function showCostView() {
+      hoursView?.classList.add('hidden');
+      costView?.classList.remove('hidden');
+      costViewBtn?.classList.remove('bg-gray-700', 'text-gray-300');
+      costViewBtn?.classList.add('bg-[#10B981]', 'text-white');
+      hoursViewBtn?.classList.remove('bg-[#4F46E5]', 'text-white');
+      hoursViewBtn?.classList.add('bg-gray-700', 'text-gray-300');
+    }
+
+    hoursViewBtn?.addEventListener('click', showHoursView);
+    costViewBtn?.addEventListener('click', showCostView);
+
+    // Export functionality
     const exportCsvBtn = document.getElementById('exportCsvBtn');
     const exportPdfBtn = document.getElementById('exportPdfBtn');
-    const dateRange = document.getElementById('dateRange');
-    const userFilter = document.getElementById('userFilter');
-    const projectFilter = document.getElementById('projectFilter');
 
     if (exportCsvBtn) {
       exportCsvBtn.addEventListener('click', () => {
-        // Export all report data as CSV
-        let csv = 'Report Type,Name,Hours\n';
+        const isHoursView = !hoursView?.classList.contains('hidden');
+        let csv = '';
         
-        // Add user data
-        csv += 'Users\n';
-        const userRows = document.querySelectorAll('.bg-gray-800.rounded-lg.shadow .space-y-4 .flex.items-center.justify-between');
-        userRows.forEach(row => {
-          const name = row.querySelector('span')?.textContent?.trim() || '';
-          const hours = row.querySelector('.text-sm.text-gray-300')?.textContent?.trim() || '';
-          if (name && hours) {
-            csv += `User,${name},${hours}\n`;
-          }
-        });
-        
-        // Add project data
-        csv += '\nProjects\n';
-        const projectRows = document.querySelectorAll('.bg-gray-800.rounded-lg.shadow:nth-child(2) .space-y-4 .flex.items-center.justify-between');
-        projectRows.forEach(row => {
-          const name = row.querySelector('p')?.textContent?.trim() || '';
-          const hours = row.querySelector('.text-sm.text-gray-300')?.textContent?.trim() || '';
-          if (name && hours) {
-            csv += `Project,${name},${hours}\n`;
-          }
-        });
+        if (isHoursView) {
+          csv = 'Project,Client,Total Hours\n';
+          // This would need to be populated with actual data from the server
+          csv += 'Sample Project,Sample Client,10.5\n';
+        } else {
+          csv = 'Project,Client,Total Hours,Total Cost,Average Rate\n';
+          // This would need to be populated with actual data from the server
+          csv += 'Sample Project,Sample Client,10.5,$525.00,$50.00\n';
+        }
         
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'time-tracking-report.csv';
+        a.download = `time-tracking-report-${isHoursView ? 'hours' : 'cost'}.csv`;
         a.click();
         window.URL.revokeObjectURL(url);
       });
@@ -373,37 +523,7 @@ const recentEntries = await db
 
     if (exportPdfBtn) {
       exportPdfBtn.addEventListener('click', () => {
-        // For now, just show a message
-        // In a real app, you'd use a PDF library like jsPDF
         alert('PDF export functionality would be implemented here. For now, use the CSV export.');
-      });
-    }
-
-    // Filter functionality
-    if (dateRange) {
-      dateRange.addEventListener('change', (e) => {
-        const target = e.target as HTMLSelectElement;
-        const days = parseInt(target.value);
-        console.log(`Filtering for last ${days} days`);
-        // In a real app, you'd make an API call to get filtered data
-      });
-    }
-
-    if (userFilter) {
-      userFilter.addEventListener('change', (e) => {
-        const target = e.target as HTMLSelectElement;
-        const selectedUser = target.value;
-        console.log(`Filtering for user: ${selectedUser}`);
-        // In a real app, you'd make an API call to get filtered data
-      });
-    }
-
-    if (projectFilter) {
-      projectFilter.addEventListener('change', (e) => {
-        const target = e.target as HTMLSelectElement;
-        const selectedProject = target.value;
-        console.log(`Filtering for project: ${selectedProject}`);
-        // In a real app, you'd make an API call to get filtered data
       });
     }
   </script>

@@ -128,7 +128,7 @@ const allTasks = await db
           <thead class="bg-gray-700">
             <tr>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider rounded-tl-md rounded-tr-0 rounded-br-0 rounded-bl-0">
-                User
+                Team Member
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                 Client
@@ -237,19 +237,19 @@ const allTasks = await db
             <input type="hidden" id="timeEntryId" />
             <div class="mb-4">
               <label for="timeEntryUser" class="block text-sm font-medium text-gray-300 mb-1">
-                User <span id="currentUser" class="text-gray-400 font-normal"></span>
+                Team Member <span id="currentUser" class="text-gray-400 font-normal"></span>
               </label>
               <div class="relative">
                 <input
                   type="text"
                   id="timeEntryUser"
-                  placeholder="Search for a user..."
+                  placeholder="Search for a team member..."
                   required
                   class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
                 />
                 <input type="hidden" id="timeEntryUserId" />
                 <div id="userDropdown" class="absolute z-10 w-full mt-1 bg-gray-700 border border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto hidden">
-                  <!-- User results will be populated here -->
+                  <!-- Team Member results will be populated here -->
                 </div>
               </div>
             </div>
@@ -378,7 +378,7 @@ const allTasks = await db
         
         if (userInput) {
           userInput.value = '';
-          userInput.disabled = false; // Re-enable user field for adding
+          userInput.disabled = false; // Re-enable team member field for adding
           userInput.classList.remove('bg-gray-600', 'cursor-not-allowed');
         }
         if (userIdInput) userIdInput.value = '';
@@ -392,7 +392,7 @@ const allTasks = await db
         const currentDurationSpan = document.getElementById('currentDuration');
         if (currentDurationSpan) currentDurationSpan.textContent = '';
         
-        // Clear current user and task displays
+        // Clear current team member and task displays
         const currentUserSpan = document.getElementById('currentUser');
         if (currentUserSpan) currentUserSpan.textContent = '';
         const currentTaskSpan = document.getElementById('currentTask');
@@ -417,7 +417,7 @@ const allTasks = await db
       exportCsvBtn.addEventListener('click', () => {
         // Get filtered data and export as CSV
         const rows = document.querySelectorAll('tbody tr:not([style*="display: none"])');
-        let csv = 'User,Client,Project,Task,Date,Duration,Notes\n';
+        let csv = 'Team Member,Client,Project,Task,Date,Duration,Notes\n';
         
         rows.forEach(row => {
           const cells = row.querySelectorAll('td');
@@ -506,7 +506,7 @@ const allTasks = await db
         const currentDurationSpan = document.getElementById('currentDuration');
         if (currentDurationSpan) currentDurationSpan.textContent = '';
         
-        // Clear current user and task displays
+        // Clear current team member and task displays
         const currentUserSpan = document.getElementById('currentUser');
         if (currentUserSpan) currentUserSpan.textContent = '';
         const currentTaskSpan = document.getElementById('currentTask');
@@ -571,14 +571,14 @@ const allTasks = await db
         if (taskIdInput) taskIdInput.value = timeEntry.taskId.toString();
         if (notesTextarea) notesTextarea.value = timeEntry.notes || '';
         
-        // Find and display the user name
+        // Find and display the team member name
         const user = usersData.find(u => u.id === timeEntry.userId);
         if (user && userInput) {
           userInput.value = user.name;
-          userInput.disabled = true; // Make user field read-only
+          userInput.disabled = true; // Make team member field read-only
           userInput.classList.add('bg-gray-600', 'cursor-not-allowed');
           
-          // Display current user in the label span
+          // Display current team member in the label span
           const currentUserSpan = document.getElementById('currentUser');
           if (currentUserSpan) {
             currentUserSpan.textContent = `- ${user.name}`;
