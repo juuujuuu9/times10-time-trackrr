@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/neon-http';
 import { neon } from '@neondatabase/serverless';
-import * as schema from './schema.js';
+import * as schema from './schema';
 
 // Load environment variables
 let databaseUrl: string | undefined;
@@ -20,4 +20,4 @@ if (!databaseUrl) {
 const sql = neon(databaseUrl);
 export const db = drizzle(sql, { schema });
 
-export * from './schema.js'; 
+export * from './schema'; 
