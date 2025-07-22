@@ -12,6 +12,7 @@ const allUsers = await db
     email: users.email,
     role: users.role,
     status: users.status,
+    payRate: users.payRate,
     createdAt: users.createdAt,
     updatedAt: users.updatedAt,
     totalHours: sql<number>`COALESCE(SUM(${timeEntries.durationManual})/3600, 0)`,
@@ -148,6 +149,9 @@ const allUsers = await db
                 Total Hours
               </th>
               <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                Pay Rate
+              </th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                 Joined Date
               </th>
               <th class="px-6 py-4 text-right text-xs font-semibold text-gray-300 uppercase tracking-wider">
@@ -202,6 +206,11 @@ const allUsers = await db
                       </div>
                     )}
                   </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="text-sm font-semibold text-white">
+                    ${user.payRate ? parseFloat(user.payRate).toFixed(2) : '0.00'}/hr
+                  </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                   <div class="bg-gray-700 px-3 py-1 rounded-lg border border-gray-600">
@@ -293,6 +302,24 @@ const allUsers = await db
                 <option value="admin">👑 Admin</option>
               </select>
             </div>
+            <div class="mb-6">
+              <label for="invitePayRate" class="block text-sm font-semibold text-gray-300 mb-2">
+                Hourly Pay Rate (USD)
+              </label>
+              <div class="relative">
+                <span class="absolute left-3 top-3 text-gray-400">$</span>
+                <input
+                  type="number"
+                  id="invitePayRate"
+                  step="0.01"
+                  min="0"
+                  value="0.00"
+                  class="w-full pl-8 pr-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition-all duration-200 bg-gray-700 text-white"
+                  placeholder="0.00"
+                />
+              </div>
+              <p class="text-xs text-gray-400 mt-1">Enter the hourly rate in USD (e.g., 25.50)</p>
+            </div>
             <div class="flex justify-end space-x-3">
               <button
                 type="button"
@@ -379,6 +406,23 @@ const allUsers = await db
                 <option value="inactive">⚪ Inactive</option>
               </select>
             </div>
+            <div class="mb-6">
+              <label for="editUserPayRate" class="block text-sm font-semibold text-gray-300 mb-2">
+                Hourly Pay Rate (USD)
+              </label>
+              <div class="relative">
+                <span class="absolute left-3 top-3 text-gray-400">$</span>
+                <input
+                  type="number"
+                  id="editUserPayRate"
+                  step="0.01"
+                  min="0"
+                  class="w-full pl-8 pr-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-transparent transition-all duration-200 bg-gray-700 text-white"
+                  placeholder="0.00"
+                />
+              </div>
+              <p class="text-xs text-gray-400 mt-1">Enter the hourly rate in USD (e.g., 25.50)</p>
+            </div>
             <div class="flex justify-end space-x-3">
               <button
                 type="button"
@@ -444,6 +488,8 @@ const allUsers = await db
     </div>
   </div>
 
+
+
   <script>
     // User management JavaScript
     const inviteUserBtn = document.getElementById('inviteUserBtn');
@@ -503,12 +549,19 @@ const allUsers = await db
         const name = (document.getElementById('inviteName') as HTMLInputElement)?.value;
         const email = (document.getElementById('inviteEmail') as HTMLInputElement)?.value;
         const role = (document.getElementById('inviteRole') as HTMLSelectElement)?.value;
+        const payRate = (document.getElementById('invitePayRate') as HTMLInputElement)?.value;
         
         try {
           const response = await fetch('/api/admin/users', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email, role, status: 'active' }),
+            body: JSON.stringify({ 
+              name, 
+              email, 
+              role, 
+              status: 'active',
+              payRate: payRate ? parseFloat(payRate) : 0.00
+            }),
           });
           
           if (response.ok) {
@@ -531,12 +584,20 @@ const allUsers = await db
         const email = (document.getElementById('editUserEmail') as HTMLInputElement)?.value;
         const role = (document.getElementById('editUserRole') as HTMLSelectElement)?.value;
         const status = (document.getElementById('editUserStatus') as HTMLSelectElement)?.value;
+        const payRate = (document.getElementById('editUserPayRate') as HTMLInputElement)?.value;
         
         try {
           const response = await fetch('/api/admin/users', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: userId, name, email, role, status }),
+            body: JSON.stringify({ 
+              id: userId, 
+              name, 
+              email, 
+              role, 
+              status,
+              payRate: payRate ? parseFloat(payRate) : 0.00
+            }),
           });
           
           if (response.ok) {
@@ -579,24 +640,28 @@ const allUsers = await db
         const emailElement = userRow.querySelector('td:first-child .ml-4 div:last-child');
         const roleElement = userRow.querySelector('td:nth-child(2) span');
         const statusElement = userRow.querySelector('td:nth-child(3) span');
+        const payRateElement = userRow.querySelector('td:nth-child(5) span');
         
         const currentName = nameElement?.textContent?.trim() || '';
         const currentEmail = emailElement?.textContent?.trim() || '';
         const currentRole = roleElement?.textContent?.includes('Admin') ? 'admin' : 'user';
         const currentStatus = statusElement?.textContent?.includes('🟢 Active') ? 'active' : 'inactive';
+        const currentPayRate = payRateElement?.textContent?.replace('/hr', '').replace('$', '').trim() || '0.00';
         
-        console.log('Found user data:', { currentName, currentEmail, currentRole, currentStatus });
+        console.log('Found user data:', { currentName, currentEmail, currentRole, currentStatus, currentPayRate });
         
         // Populate the form fields
         const editUserName = document.getElementById('editUserName') as HTMLInputElement;
         const editUserEmail = document.getElementById('editUserEmail') as HTMLInputElement;
         const editUserRole = document.getElementById('editUserRole') as HTMLSelectElement;
         const editUserStatus = document.getElementById('editUserStatus') as HTMLSelectElement;
+        const editUserPayRate = document.getElementById('editUserPayRate') as HTMLInputElement;
         
         if (editUserName) editUserName.value = currentName;
         if (editUserEmail) editUserEmail.value = currentEmail;
         if (editUserRole) editUserRole.value = currentRole;
         if (editUserStatus) editUserStatus.value = currentStatus;
+        if (editUserPayRate) editUserPayRate.value = currentPayRate;
       }
       
       if (editUserId) editUserId.value = id.toString();
@@ -632,6 +697,8 @@ const allUsers = await db
         alert('Error changing role');
       });
     }
+
+
 
 
 
@@ -683,6 +750,8 @@ const allUsers = await db
           saveRoleChange();
         });
       });
+
+
     });
   </script>
 </AdminLayout> 

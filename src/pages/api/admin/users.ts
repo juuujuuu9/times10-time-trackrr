@@ -22,7 +22,7 @@ export const GET: APIRoute = async () => {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { name, email, role, status } = body;
+    const { name, email, role, status, payRate } = body;
 
     if (!name || !email) {
       return new Response(JSON.stringify({ error: 'Name and email are required' }), {
@@ -45,6 +45,7 @@ export const POST: APIRoute = async ({ request }) => {
       email,
       role: role || 'user',
       status: status || 'active',
+      payRate: payRate || '0.00',
     }).returning();
 
     return new Response(JSON.stringify(newUser[0]), {
@@ -63,27 +64,34 @@ export const POST: APIRoute = async ({ request }) => {
 export const PUT: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { id, name, email, role, status } = body;
+    const { id, name, email, role, status, payRate } = body;
 
-    if (!id || !name || !email) {
-      return new Response(JSON.stringify({ error: 'ID, name, and email are required' }), {
+    if (!id) {
+      return new Response(JSON.stringify({ error: 'ID is required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
     const updateData: any = { 
-      name, 
-      email,
       updatedAt: new Date() 
     };
 
-    // Only update role and status if they are provided
+    // Only update fields if they are provided
+    if (name !== undefined) {
+      updateData.name = name;
+    }
+    if (email !== undefined) {
+      updateData.email = email;
+    }
     if (role !== undefined) {
       updateData.role = role;
     }
     if (status !== undefined) {
       updateData.status = status;
+    }
+    if (payRate !== undefined) {
+      updateData.payRate = payRate;
     }
 
     const updatedUser = await db

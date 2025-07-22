@@ -1,6 +1,6 @@
 {
-  "id": "5e942d04-b322-44e9-a910-e969ab410977",
-  "prevId": "28ed863e-9192-48cb-b5f5-5c83d78afa35",
+  "id": "4694f16b-b3cb-45ae-9069-7c28097a5ebc",
+  "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -399,6 +399,20 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'user'"
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "pay_rate": {
+          "name": "pay_rate",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'0.00'"
         },
         "created_at": {
           "name": "created_at",

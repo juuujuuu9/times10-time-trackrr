@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, integer, varchar, time, primaryKey, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, timestamp, integer, varchar, time, primaryKey, boolean, decimal } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Users table
@@ -8,6 +8,7 @@ export const users = pgTable('users', {
   name: varchar('name', { length: 255 }).notNull(),
   role: varchar('role', { length: 50 }).notNull().default('user'),
   status: varchar('status', { length: 50 }).notNull().default('active'),
+  payRate: decimal('pay_rate', { precision: 10, scale: 2 }).default('0.00'), // Hourly rate in USD
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
