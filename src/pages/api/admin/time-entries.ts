@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { db } from '../../../db/index';
 import { timeEntries } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
+import { parseTimeInput } from '../../../utils/timeParser';
 
 export const GET: APIRoute = async () => {
   try {
@@ -22,10 +23,21 @@ export const GET: APIRoute = async () => {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { userId, taskId, startTime, endTime, notes } = body;
+    const { userId, taskId, duration, notes } = body;
 
-    if (!userId || !taskId || !startTime) {
-      return new Response(JSON.stringify({ error: 'User ID, task ID, and start time are required' }), {
+    if (!userId || !taskId || !duration) {
+      return new Response(JSON.stringify({ error: 'User ID, task ID, and duration are required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Parse duration input (e.g., "2h", "3.5hr", "4:15", etc.)
+    let durationSeconds: number;
+    try {
+      durationSeconds = parseTimeInput(duration);
+    } catch (error) {
+      return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Invalid duration format' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
@@ -34,8 +46,9 @@ export const POST: APIRoute = async ({ request }) => {
     const newTimeEntry = await db.insert(timeEntries).values({
       userId: parseInt(userId),
       taskId: parseInt(taskId),
-      startTime: new Date(startTime),
-      endTime: endTime ? new Date(endTime) : null,
+      startTime: new Date(), // Use current time as start time
+      endTime: null, // No end time for manual entries
+      durationManual: durationSeconds,
       notes: notes || null,
     }).returning();
 
@@ -55,10 +68,21 @@ export const POST: APIRoute = async ({ request }) => {
 export const PUT: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { id, userId, taskId, startTime, endTime, notes } = body;
+    const { id, userId, taskId, duration, notes } = body;
 
-    if (!id || !userId || !taskId || !startTime) {
-      return new Response(JSON.stringify({ error: 'ID, user ID, task ID, and start time are required' }), {
+    if (!id || !userId || !taskId || !duration) {
+      return new Response(JSON.stringify({ error: 'ID, user ID, task ID, and duration are required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Parse duration input (e.g., "2h", "3.5hr", "4:15", etc.)
+    let durationSeconds: number;
+    try {
+      durationSeconds = parseTimeInput(duration);
+    } catch (error) {
+      return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Invalid duration format' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
@@ -69,8 +93,7 @@ export const PUT: APIRoute = async ({ request }) => {
       .set({ 
         userId: parseInt(userId),
         taskId: parseInt(taskId),
-        startTime: new Date(startTime),
-        endTime: endTime ? new Date(endTime) : null,
+        durationManual: durationSeconds,
         notes: notes || null,
         updatedAt: new Date() 
       })

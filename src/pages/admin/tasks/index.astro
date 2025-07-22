@@ -16,7 +16,7 @@ const allTasks = await db
     projectName: projects.name,
     clientName: clients.name,
     assignedUsers: sql<string>`STRING_AGG(${users.name}, ', ')`,
-    timeLogged: sql<number>`COALESCE(SUM(EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))/3600), 0)`,
+    timeLogged: sql<number>`COALESCE(SUM(${timeEntries.durationManual})/3600, 0)`,
   })
   .from(tasks)
   .leftJoin(projects, sql`${tasks.projectId} = ${projects.id}`)

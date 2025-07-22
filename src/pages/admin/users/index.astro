@@ -14,7 +14,7 @@ const allUsers = await db
     status: users.status,
     createdAt: users.createdAt,
     updatedAt: users.updatedAt,
-    totalHours: sql<number>`COALESCE(SUM(EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))/3600), 0)`,
+    totalHours: sql<number>`COALESCE(SUM(${timeEntries.durationManual})/3600, 0)`,
     taskCount: count(tasks.id),
   })
   .from(users)

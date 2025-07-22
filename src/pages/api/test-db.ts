@@ -163,10 +163,10 @@ export const POST: APIRoute = async ({ request }) => {
         });
 
       case 'create_time_entry':
-        if (!data.taskId || !data.userId || !data.startTime) {
+        if (!data.taskId || !data.userId || !data.duration) {
           return new Response(JSON.stringify({
             success: false,
-            message: 'taskId, userId, and startTime are required for time entry creation'
+            message: 'taskId, userId, and duration are required for time entry creation'
           }), {
             status: 400,
             headers: { 'Content-Type': 'application/json' }
@@ -176,9 +176,9 @@ export const POST: APIRoute = async ({ request }) => {
         const [newTimeEntry] = await db.insert(timeEntries).values({
           taskId: data.taskId,
           userId: data.userId,
-          startTime: new Date(data.startTime),
-          endTime: data.endTime ? new Date(data.endTime) : null,
-          durationManual: data.durationManual,
+          startTime: new Date(),
+          endTime: null,
+          durationManual: data.duration,
           notes: data.notes
         }).returning();
 

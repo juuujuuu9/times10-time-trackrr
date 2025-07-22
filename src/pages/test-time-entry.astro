@@ -1,0 +1,81 @@
+---
+import Layout from './layouts/Layout.astro';
+import { db } from '../db/index';
+import { tasks, projects, clients, users } from '../db/schema';
+import { sql } from 'drizzle-orm';
+
+// Get some sample data for testing
+const sampleTasks = await db
+  .select({
+    id: tasks.id,
+    name: tasks.name,
+    projectName: projects.name,
+    clientName: clients.name,
+  })
+  .from(tasks)
+  .innerJoin(projects, sql`${tasks.projectId} = ${projects.id}`)
+  .innerJoin(clients, sql`${projects.clientId} = ${clients.id}`)
+  .limit(5);
+
+const sampleUsers = await db.select().from(users).limit(3);
+---
+
+<Layout title="Test Time Entry">
+  <div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-white mb-8">Time Entry Test</h1>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {sampleTasks.map((task) => (
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+          <h3 class="text-lg font-medium text-white mb-2">{task.name}</h3>
+          <p class="text-gray-400 text-sm mb-4">
+            {task.clientName} - {task.projectName}
+          </p>
+          
+          {sampleUsers.map((user) => (
+            <div class="mb-4">
+              <h4 class="text-sm font-medium text-gray-300 mb-2">Quick Entry for {user.name}</h4>
+              <div id={`quick-entry-${task.id}-${user.id}`} 
+                   data-task-id={task.id} 
+                   data-user-id={user.id} 
+                   data-task-name={task.name}>
+                <!-- React component will be mounted here -->
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import QuickTimeEntry from '../components/QuickTimeEntry';
+  import { createRoot } from 'react-dom/client';
+
+  // Mount React components for quick time entry
+  document.addEventListener('DOMContentLoaded', () => {
+    const quickEntryElements = document.querySelectorAll('[id^="quick-entry-"]');
+    
+    quickEntryElements.forEach((element) => {
+      const taskId = parseInt(element.getAttribute('data-task-id') || '0');
+      const userId = parseInt(element.getAttribute('data-user-id') || '0');
+      const taskName = element.getAttribute('data-task-name') || '';
+      
+      if (taskId && userId) {
+        const root = createRoot(element);
+        root.render(
+          QuickTimeEntry({
+            taskId,
+            userId,
+            taskName,
+            onTimeEntryCreated: () => {
+              console.log('Time entry created successfully!');
+              // You could refresh the page or update the UI here
+            }
+          })
+        );
+      }
+    });
+  });
+</script> 

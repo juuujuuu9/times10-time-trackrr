@@ -25,7 +25,7 @@ export const GET: APIRoute = async ({ params }) => {
         status: tasks.status,
         createdAt: tasks.createdAt,
         updatedAt: tasks.updatedAt,
-        totalHours: sql<number>`COALESCE(SUM(EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))/3600), 0)`,
+        totalHours: sql<number>`COALESCE(SUM(${timeEntries.durationManual})/3600, 0)`,
         assignedUsers: sql<string>`STRING_AGG(DISTINCT ${users.name}, ', ')`,
         assignedUserIds: sql<string>`STRING_AGG(DISTINCT ${users.id}::text, ', ')`,
       })

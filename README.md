@@ -1,14 +1,22 @@
-# Astro Starter Kit: Minimal
+# Times10 Time Tracker
 
-```sh
-npm create astro@latest -- --template minimal
-```
+A modern time tracking application built with Astro, React, and PostgreSQL. Focus on simple, efficient time entry with flexible duration formats.
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/withastro/astro/tree/latest/examples/minimal)
-[![Open with CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/sandbox/github/withastro/astro/tree/latest/examples/minimal)
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/withastro/astro?devcontainer_path=.devcontainer/minimal/devcontainer.json)
+## 🕐 Time Entry Features
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+The application now supports simple time entry with various duration formats:
+
+- **Hours**: `2h`, `2hr`, `3.5hr`, `2hours`
+- **Minutes**: `30m`, `30min`, `90minutes`
+- **Seconds**: `3600s`, `5400sec`
+- **Time format**: `4:15`, `1:30:45`
+- **Decimal hours**: `2.5` (assumes hours)
+
+### Quick Time Entry
+
+Enter time as simply as typing `2h` or `3.5hr` - no need to worry about start and end times. The system focuses on the amount of time spent on each task.
+
+## 🚀 Project Structure
 
 ## 🚀 Project Structure
 
