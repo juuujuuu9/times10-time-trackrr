@@ -22,11 +22,11 @@ export const PUT: APIRoute = async ({ request }) => {
       });
     }
 
-    // For now, we'll just update the user's updatedAt timestamp
-    // In a real app, you might have a separate status field
+    // Update the user's status
     const updatedUser = await db
       .update(users)
       .set({ 
+        status: status,
         updatedAt: new Date() 
       })
       .where(eq(users.id, parseInt(id)))

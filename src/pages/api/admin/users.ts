@@ -22,7 +22,7 @@ export const GET: APIRoute = async () => {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { name, email, role } = body;
+    const { name, email, role, status } = body;
 
     if (!name || !email) {
       return new Response(JSON.stringify({ error: 'Name and email are required' }), {
@@ -44,6 +44,7 @@ export const POST: APIRoute = async ({ request }) => {
       name,
       email,
       role: role || 'user',
+      status: status || 'active',
     }).returning();
 
     return new Response(JSON.stringify(newUser[0]), {
@@ -62,7 +63,7 @@ export const POST: APIRoute = async ({ request }) => {
 export const PUT: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { id, name, email } = body;
+    const { id, name, email, role, status } = body;
 
     if (!id || !name || !email) {
       return new Response(JSON.stringify({ error: 'ID, name, and email are required' }), {
@@ -71,13 +72,23 @@ export const PUT: APIRoute = async ({ request }) => {
       });
     }
 
+    const updateData: any = { 
+      name, 
+      email,
+      updatedAt: new Date() 
+    };
+
+    // Only update role and status if they are provided
+    if (role !== undefined) {
+      updateData.role = role;
+    }
+    if (status !== undefined) {
+      updateData.status = status;
+    }
+
     const updatedUser = await db
       .update(users)
-      .set({ 
-        name, 
-        email,
-        updatedAt: new Date() 
-      })
+      .set(updateData)
       .where(eq(users.id, parseInt(id)))
       .returning();
 

@@ -1,11 +1,13 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../db';
 import { users, clients, projects, tasks, timeEntries } from '../../db/schema';
+import { eq } from 'drizzle-orm';
 
 export const GET: APIRoute = async () => {
   try {
     // Test the connection by querying all tables
     const allUsers = await db.select().from(users);
+    const activeUsers = await db.select().from(users).where(eq(users.status, 'active'));
     const allClients = await db.select().from(clients);
     const allProjects = await db.select().from(projects);
     const allTasks = await db.select().from(tasks);
@@ -15,14 +17,14 @@ export const GET: APIRoute = async () => {
       success: true,
       message: 'Database connection successful!',
       counts: {
-        users: allUsers.length,
+        users: activeUsers.length,
         clients: allClients.length,
         projects: allProjects.length,
         tasks: allTasks.length,
         timeEntries: allTimeEntries.length
       },
       data: {
-        users: allUsers,
+        users: activeUsers,
         clients: allClients,
         projects: allProjects,
         tasks: allTasks,
@@ -70,7 +72,8 @@ export const POST: APIRoute = async ({ request }) => {
         const [newUser] = await db.insert(users).values({
           name: data.name,
           email: data.email,
-          role: data.role || 'user'
+          role: data.role || 'user',
+          status: data.status || 'active'
         }).returning();
 
         return new Response(JSON.stringify({

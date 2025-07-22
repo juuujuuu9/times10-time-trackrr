@@ -869,10 +869,11 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                     ${user.name}
                     <button
                       type="button"
-                      class="ml-1 remove-user-btn"
+                      class="ml-1 remove-user-btn hover:text-red-300 transition-colors"
                       data-task-id="${task.id}"
                       data-user-id="${user.id}"
                       data-user-name="${user.name}"
+                      title="Remove ${user.name} from task"
                     >
                       ×
                     </button>
@@ -922,6 +923,55 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
             }
           });
         }
+        
+        // Add event listeners for remove user buttons
+        const removeButtons = document.querySelectorAll(`[data-task-id="${task.id}"].remove-user-btn`);
+        console.log(`Found ${removeButtons.length} remove buttons for task ${task.id}`);
+        
+        removeButtons.forEach(button => {
+          const removeBtn = button as HTMLButtonElement;
+          console.log('Adding event listener to remove button:', removeBtn);
+          
+          removeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Remove button clicked directly!');
+            
+            const taskId = parseInt(removeBtn.getAttribute('data-task-id') || '0');
+            const userId = parseInt(removeBtn.getAttribute('data-user-id') || '0');
+            const userName = removeBtn.getAttribute('data-user-name') || '';
+            
+            console.log('Remove button clicked:', { taskId, userId, userName });
+            
+            if (confirm(`Remove ${userName} from this task?`)) {
+              (window as any).removeUserFromTask(taskId, userId, userName);
+            }
+          });
+        });
+        
+        // Add event listeners for delete task buttons
+        const deleteButtons = document.querySelectorAll(`[data-task-id="${task.id}"].delete-task-btn`);
+        console.log(`Found ${deleteButtons.length} delete buttons for task ${task.id}`);
+        
+        deleteButtons.forEach(button => {
+          const deleteBtn = button as HTMLButtonElement;
+          console.log('Adding event listener to delete button:', deleteBtn);
+          
+          deleteBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Delete button clicked directly!');
+            
+            const taskId = parseInt(deleteBtn.getAttribute('data-task-id') || '0');
+            const taskName = deleteBtn.getAttribute('data-task-name') || 'Unknown Task';
+            
+            console.log('Delete button clicked:', { taskId, taskName });
+            
+            if (confirm(`Are you sure you want to delete the task "${taskName}"? This action cannot be undone.`)) {
+              (window as any).deleteTask(taskId, taskName);
+            }
+          });
+        });
         
         if (searchInput && suggestionsDiv) {
           searchInput.addEventListener('input', (e) => {
@@ -1307,6 +1357,10 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       console.log('Click detected on:', target.tagName, target.className, target.id);
       console.log('Target classes:', target.classList.toString());
       console.log('Target contains assign-user-btn:', target.classList.contains('assign-user-btn'));
+      console.log('Target contains remove-user-btn:', target.classList.contains('remove-user-btn'));
+      console.log('Target closest remove-user-btn:', target.closest('.remove-user-btn'));
+      console.log('Target contains delete-task-btn:', target.classList.contains('delete-task-btn'));
+      console.log('Target closest delete-task-btn:', target.closest('.delete-task-btn'));
       
       // Debug: Log all button clicks
       if (target.tagName === 'BUTTON') {
@@ -1378,10 +1432,13 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       }
 
       // Handle remove user button
-      if (target.classList.contains('remove-user-btn')) {
-        const taskId = parseInt(target.getAttribute('data-task-id') || '0');
-        const userId = parseInt(target.getAttribute('data-user-id') || '0');
-        const userName = target.getAttribute('data-user-name') || '';
+      if (target.classList.contains('remove-user-btn') || target.closest('.remove-user-btn')) {
+        const button = target.classList.contains('remove-user-btn') ? target : target.closest('.remove-user-btn') as HTMLElement;
+        const taskId = parseInt(button?.getAttribute('data-task-id') || '0');
+        const userId = parseInt(button?.getAttribute('data-user-id') || '0');
+        const userName = button?.getAttribute('data-user-name') || '';
+        
+        console.log('Remove user button clicked:', { taskId, userId, userName });
         
         if (confirm(`Remove ${userName} from this task?`)) {
           (window as any).removeUserFromTask(taskId, userId, userName);

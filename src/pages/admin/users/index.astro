@@ -11,6 +11,7 @@ const allUsers = await db
     name: users.name,
     email: users.email,
     role: users.role,
+    status: users.status,
     createdAt: users.createdAt,
     updatedAt: users.updatedAt,
     totalHours: sql<number>`COALESCE(SUM(EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))/3600), 0)`,
@@ -21,12 +22,6 @@ const allUsers = await db
   .leftJoin(tasks, sql`${users.id} = ${tasks.id}`)
   .groupBy(users.id)
   .orderBy(users.name);
-
-// Calculate user status (active/inactive based on recent activity)
-const usersWithStatus = allUsers.map(user => ({
-  ...user,
-  status: user.totalHours > 0 ? 'active' : 'inactive'
-}));
 ---
 
 <AdminLayout title="Users" currentPage="users">
@@ -61,7 +56,7 @@ const usersWithStatus = allUsers.map(user => ({
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-400">Total Users</p>
-            <p class="text-3xl font-bold text-white">{usersWithStatus.length}</p>
+            <p class="text-3xl font-bold text-white">{allUsers.length}</p>
           </div>
         </div>
       </div>
@@ -72,7 +67,7 @@ const usersWithStatus = allUsers.map(user => ({
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-400">Active Users</p>
-            <p class="text-3xl font-bold text-white">{usersWithStatus.filter(u => u.status === 'active').length}</p>
+            <p class="text-3xl font-bold text-white">{allUsers.filter(u => u.status === 'active').length}</p>
           </div>
         </div>
       </div>
@@ -83,7 +78,7 @@ const usersWithStatus = allUsers.map(user => ({
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-400">Admins</p>
-            <p class="text-3xl font-bold text-white">{usersWithStatus.filter(u => u.role === 'admin').length}</p>
+            <p class="text-3xl font-bold text-white">{allUsers.filter(u => u.role === 'admin').length}</p>
           </div>
         </div>
       </div>
@@ -98,7 +93,7 @@ const usersWithStatus = allUsers.map(user => ({
             type="text"
             id="search"
             placeholder="Search by name or email..."
-            class="w-full px-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition-all duration-200 bg-gray-700 text-white"
+            class="w-[calc(100%-3rem)] px-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition-all duration-200 bg-gray-700 text-white"
           />
         </div>
         <div class="sm:w-48">
@@ -161,8 +156,8 @@ const usersWithStatus = allUsers.map(user => ({
             </tr>
           </thead>
           <tbody class="bg-gray-800 divide-y divide-gray-700">
-            {usersWithStatus.map((user) => (
-              <tr class="hover:bg-gray-700 transition-colors duration-200">
+            {allUsers.map((user) => (
+              <tr class="hover:bg-gray-700 transition-colors duration-200" data-user-id={user.id}>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="flex items-center">
                     <div class="flex-shrink-0 h-12 w-12">
@@ -216,26 +211,10 @@ const usersWithStatus = allUsers.map(user => ({
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div class="flex justify-end space-x-2">
                     <button
-                      class="px-3 py-1 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-lg transition-colors text-xs font-medium"
-                      onclick={`editUser(${user.id})`}
+                      class="edit-user-btn px-3 py-1 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-lg transition-colors text-xs font-medium"
+                      data-user-id={user.id}
                     >
                       ✏️ Edit
-                    </button>
-                    <button
-                      class="px-3 py-1 bg-[#EC4899] hover:bg-[#DB2777] text-white rounded-lg transition-colors text-xs font-medium"
-                      onclick={`changeRole(${user.id})`}
-                    >
-                      🔄 Role
-                    </button>
-                    <button
-                      class={`px-3 py-1 rounded-lg transition-colors text-xs font-medium ${
-                        user.status === 'active' 
-                          ? 'bg-red-600 hover:bg-red-700 text-white' 
-                          : 'bg-[#10B981] hover:bg-[#059669] text-white'
-                      }`}
-                      onclick={`toggleUserStatus(${user.id}, '${user.status}')`}
-                    >
-                      {user.status === 'active' ? '❌ Deactivate' : '✅ Activate'}
                     </button>
                   </div>
                 </td>
@@ -246,7 +225,7 @@ const usersWithStatus = allUsers.map(user => ({
       </div>
     </div>
 
-    {usersWithStatus.length === 0 && (
+    {allUsers.length === 0 && (
       <div class="bg-gray-800 rounded-xl shadow-sm border border-gray-700 p-12 text-center">
         <div class="w-20 h-20 bg-gradient-to-r from-[#4F46E5] to-[#3730A3] rounded-full flex items-center justify-center mx-auto mb-6">
           <span class="text-white text-3xl">👤</span>
@@ -284,7 +263,7 @@ const usersWithStatus = allUsers.map(user => ({
               type="text"
               id="inviteName"
               required
-              class="w-full px-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition-all duration-200 bg-gray-700 text-white"
+              class="w-[calc(100%-2rem)] px-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition-all duration-200 bg-gray-700 text-white"
               placeholder="Enter full name"
             />
           </div>
@@ -296,7 +275,7 @@ const usersWithStatus = allUsers.map(user => ({
               type="email"
               id="inviteEmail"
               required
-              class="w-full px-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition-all duration-200 bg-gray-700 text-white"
+              class="w-[calc(100%-2rem)] px-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition-all duration-200 bg-gray-700 text-white"
               placeholder="Enter email address"
             />
           </div>
@@ -337,7 +316,7 @@ const usersWithStatus = allUsers.map(user => ({
   <div id="editUserModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
       <div class="bg-[#1F2937] rounded-xl shadow-xl max-w-md w-full border border-gray-700">
-        <div class="px-6 py-4 bg-gradient-to-r from-[#1F2937] to-gray-700 border-b border-gray-700">
+        <div class="px-6 py-4 bg-gradient-to-r from-[#1F2937] to-gray-700 border-b border-gray-700 rounded-tl-xl rounded-tr-xl">
           <div class="flex items-center">
             <div class="w-10 h-10 bg-[#10B981] rounded-lg flex items-center justify-center mr-3">
               <span class="text-white text-xl">✏️</span>
@@ -355,7 +334,7 @@ const usersWithStatus = allUsers.map(user => ({
               type="text"
               id="editUserName"
               required
-              class="w-full px-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-transparent transition-all duration-200 bg-gray-700 text-white"
+              class="w-[calc(100%-2rem)] px-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-transparent transition-all duration-200 bg-gray-700 text-white"
               placeholder="Enter full name"
             />
           </div>
@@ -367,15 +346,40 @@ const usersWithStatus = allUsers.map(user => ({
               type="email"
               id="editUserEmail"
               required
-              class="w-full px-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-transparent transition-all duration-200 bg-gray-700 text-white"
+              class="w-[calc(100%-2rem)] px-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-transparent transition-all duration-200 bg-gray-700 text-white"
               placeholder="Enter email address"
             />
+          </div>
+          <div class="mb-6">
+            <label for="editUserRole" class="block text-sm font-semibold text-gray-300 mb-2">
+              Role
+            </label>
+            <select
+              id="editUserRole"
+              required
+              class="w-full px-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-transparent transition-all duration-200 bg-gray-700 text-white"
+            >
+              <option value="user">👤 User</option>
+              <option value="admin">👑 Admin</option>
+            </select>
+          </div>
+          <div class="mb-6">
+            <label for="editUserStatus" class="block text-sm font-semibold text-gray-300 mb-2">
+              Status
+            </label>
+            <select
+              id="editUserStatus"
+              required
+              class="w-full px-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-transparent transition-all duration-200 bg-gray-700 text-white"
+            >
+              <option value="active">🟢 Active</option>
+              <option value="inactive">⚪ Inactive</option>
+            </select>
           </div>
           <div class="flex justify-end space-x-3">
             <button
               type="button"
-              onclick="closeEditUserModal()"
-              class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors font-medium"
+              class="close-edit-modal-btn px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors font-medium"
             >
               Cancel
             </button>
@@ -395,7 +399,7 @@ const usersWithStatus = allUsers.map(user => ({
   <div id="roleModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
       <div class="bg-[#1F2937] rounded-xl shadow-xl max-w-md w-full border border-gray-700">
-        <div class="px-6 py-4 bg-gradient-to-r from-[#1F2937] to-gray-700 border-b border-gray-700">
+        <div class="px-6 py-4 bg-gradient-to-r from-[#1F2937] to-gray-700 border-b border-gray-700 rounded-tl-xl rounded-tr-xl">
           <div class="flex items-center">
             <div class="w-10 h-10 bg-[#EC4899] rounded-lg flex items-center justify-center mr-3">
               <span class="text-white text-xl">👑</span>
@@ -420,14 +424,12 @@ const usersWithStatus = allUsers.map(user => ({
           <div class="flex justify-end space-x-3">
             <button
               type="button"
-              onclick="closeRoleModal()"
-              class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors font-medium"
+              class="close-role-modal-btn px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors font-medium"
             >
               Cancel
             </button>
             <button
-              onclick="saveRoleChange()"
-              class="px-4 py-2 bg-gradient-to-r from-[#EC4899] to-[#DB2777] hover:from-[#DB2777] hover:to-[#BE185D] text-white rounded-lg transition-all duration-200 font-semibold"
+              class="save-role-btn px-4 py-2 bg-gradient-to-r from-[#EC4899] to-[#DB2777] hover:from-[#DB2777] hover:to-[#BE185D] text-white rounded-lg transition-all duration-200 font-semibold"
             >
               👑 Save Role
             </button>
@@ -445,6 +447,43 @@ const usersWithStatus = allUsers.map(user => ({
     const searchInput = document.getElementById('search');
     const roleFilter = document.getElementById('roleFilter');
     const statusFilter = document.getElementById('statusFilter');
+
+    // Function to apply all filters
+    function applyFilters() {
+      const searchTerm = (searchInput as HTMLInputElement)?.value.toLowerCase() || '';
+      const selectedRole = (roleFilter as HTMLSelectElement)?.value || '';
+      const selectedStatus = (statusFilter as HTMLSelectElement)?.value || '';
+      
+      const rows = document.querySelectorAll('tbody tr');
+      
+      rows.forEach(row => {
+        const nameCell = row.querySelector('td:first-child');
+        const emailCell = row.querySelector('td:first-child div:last-child div:last-child');
+        const roleCell = row.querySelector('td:nth-child(2)');
+        const statusCell = row.querySelector('td:nth-child(3)');
+        
+        const name = nameCell?.textContent?.toLowerCase() || '';
+        const email = emailCell?.textContent?.toLowerCase() || '';
+        const roleText = roleCell?.textContent?.trim() || '';
+        const statusText = statusCell?.textContent?.trim() || '';
+        
+        // Check search filter
+        const matchesSearch = !searchTerm || name.includes(searchTerm) || email.includes(searchTerm);
+        
+        // Check role filter
+        const matchesRole = !selectedRole || 
+          (selectedRole === 'admin' && roleText.toLowerCase().includes('admin')) ||
+          (selectedRole === 'user' && roleText.toLowerCase().includes('user') && !roleText.toLowerCase().includes('admin'));
+        
+        // Check status filter
+        const matchesStatus = !selectedStatus || 
+          (selectedStatus === 'active' && statusText.includes('🟢 Active')) ||
+          (selectedStatus === 'inactive' && statusText.includes('⚪ Inactive'));
+        
+        // Show row only if it matches all active filters
+        (row as HTMLElement).style.display = (matchesSearch && matchesRole && matchesStatus) ? '' : 'none';
+      });
+    }
 
     if (inviteUserBtn) {
       inviteUserBtn.addEventListener('click', () => {
@@ -464,7 +503,7 @@ const usersWithStatus = allUsers.map(user => ({
           const response = await fetch('/api/admin/users', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email, role }),
+            body: JSON.stringify({ name, email, role, status: 'active' }),
           });
           
           if (response.ok) {
@@ -485,12 +524,14 @@ const usersWithStatus = allUsers.map(user => ({
         const userId = (document.getElementById('editUserId') as HTMLInputElement)?.value;
         const name = (document.getElementById('editUserName') as HTMLInputElement)?.value;
         const email = (document.getElementById('editUserEmail') as HTMLInputElement)?.value;
+        const role = (document.getElementById('editUserRole') as HTMLSelectElement)?.value;
+        const status = (document.getElementById('editUserStatus') as HTMLSelectElement)?.value;
         
         try {
           const response = await fetch('/api/admin/users', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: userId, name, email }),
+            body: JSON.stringify({ id: userId, name, email, role, status }),
           });
           
           if (response.ok) {
@@ -523,6 +564,35 @@ const usersWithStatus = allUsers.map(user => ({
     function editUser(id: number) {
       const editUserId = document.getElementById('editUserId') as HTMLInputElement;
       const editUserModal = document.getElementById('editUserModal');
+      
+      // Find the user row and get current values
+      const userRow = document.querySelector(`tr[data-user-id="${id}"]`);
+      
+      if (userRow) {
+        // Get name and email from the first cell
+        const nameElement = userRow.querySelector('td:first-child .ml-4 div:first-child');
+        const emailElement = userRow.querySelector('td:first-child .ml-4 div:last-child');
+        const roleElement = userRow.querySelector('td:nth-child(2) span');
+        const statusElement = userRow.querySelector('td:nth-child(3) span');
+        
+        const currentName = nameElement?.textContent?.trim() || '';
+        const currentEmail = emailElement?.textContent?.trim() || '';
+        const currentRole = roleElement?.textContent?.includes('Admin') ? 'admin' : 'user';
+        const currentStatus = statusElement?.textContent?.includes('🟢 Active') ? 'active' : 'inactive';
+        
+        console.log('Found user data:', { currentName, currentEmail, currentRole, currentStatus });
+        
+        // Populate the form fields
+        const editUserName = document.getElementById('editUserName') as HTMLInputElement;
+        const editUserEmail = document.getElementById('editUserEmail') as HTMLInputElement;
+        const editUserRole = document.getElementById('editUserRole') as HTMLSelectElement;
+        const editUserStatus = document.getElementById('editUserStatus') as HTMLSelectElement;
+        
+        if (editUserName) editUserName.value = currentName;
+        if (editUserEmail) editUserEmail.value = currentEmail;
+        if (editUserRole) editUserRole.value = currentRole;
+        if (editUserStatus) editUserStatus.value = currentStatus;
+      }
       
       if (editUserId) editUserId.value = id.toString();
       if (editUserModal) editUserModal.classList.remove('hidden');
@@ -558,79 +628,56 @@ const usersWithStatus = allUsers.map(user => ({
       });
     }
 
-    function toggleUserStatus(id: number, currentStatus: string) {
-      const action = currentStatus === 'active' ? 'deactivate' : 'activate';
-      if (confirm(`Are you sure you want to ${action} this user?`)) {
-        fetch('/api/admin/users/status', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, status: currentStatus === 'active' ? 'inactive' : 'active' }),
-        })
-        .then(response => {
-          if (response.ok) {
-            window.location.reload();
-          } else {
-            alert(`Error ${action}ing user`);
-          }
-        })
-        .catch(error => {
-          console.error('Error:', error);
-          alert(`Error ${action}ing user`);
-        });
-      }
-    }
+
 
     // Search functionality
     if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
-        const target = e.target as HTMLInputElement;
-        const searchTerm = target.value.toLowerCase();
-        const rows = document.querySelectorAll('tbody tr');
-        
-        rows.forEach(row => {
-          const nameCell = row.querySelector('td:first-child');
-          const name = nameCell?.textContent?.toLowerCase() || '';
-          (row as HTMLElement).style.display = name.includes(searchTerm) ? '' : 'none';
-        });
-      });
+      searchInput.addEventListener('input', applyFilters);
     }
 
     // Role filter functionality
     if (roleFilter) {
-      roleFilter.addEventListener('change', (e) => {
-        const target = e.target as HTMLSelectElement;
-        const selectedRole = target.value;
-        const rows = document.querySelectorAll('tbody tr');
-        
-        rows.forEach(row => {
-          const roleCell = row.querySelector('td:nth-child(2)');
-          const role = roleCell?.textContent?.trim() || '';
-          if (!selectedRole || role.includes(selectedRole)) {
-            (row as HTMLElement).style.display = '';
-          } else {
-            (row as HTMLElement).style.display = 'none';
-          }
-        });
-      });
+      roleFilter.addEventListener('change', applyFilters);
     }
 
     // Status filter functionality
     if (statusFilter) {
-      statusFilter.addEventListener('change', (e) => {
-        const target = e.target as HTMLSelectElement;
-        const selectedStatus = target.value;
-        const rows = document.querySelectorAll('tbody tr');
-        
-        rows.forEach(row => {
-          const statusCell = row.querySelector('td:nth-child(3)');
-          const status = statusCell?.textContent?.trim() || '';
-          if (!selectedStatus || status.includes(selectedStatus)) {
-            (row as HTMLElement).style.display = '';
-          } else {
-            (row as HTMLElement).style.display = 'none';
-          }
+      statusFilter.addEventListener('change', applyFilters);
+    }
+
+    // Add event listeners for user action buttons
+    document.addEventListener('DOMContentLoaded', function() {
+      // Edit user buttons
+      document.querySelectorAll('.edit-user-btn').forEach(button => {
+        button.addEventListener('click', function(this: HTMLElement) {
+          const userId = parseInt(this.getAttribute('data-user-id') || '0');
+          editUser(userId);
         });
       });
-    }
+
+
+
+
+
+      // Modal close buttons
+      document.querySelectorAll('.close-edit-modal-btn').forEach(button => {
+        button.addEventListener('click', function() {
+          closeEditUserModal();
+        });
+      });
+
+      document.querySelectorAll('.close-role-modal-btn').forEach(button => {
+        button.addEventListener('click', function() {
+          closeRoleModal();
+        });
+      });
+
+      // Save role button
+      document.querySelectorAll('.save-role-btn').forEach(button => {
+        button.addEventListener('click', function() {
+          saveRoleChange();
+        });
+      });
+    });
   </script>
 </AdminLayout> 

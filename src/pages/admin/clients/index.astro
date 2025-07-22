@@ -107,7 +107,7 @@ const allClients = await db
                   <div class="text-sm font-medium text-white">{client.name}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#4F46E5] text-white" data-client-id="${client.id}">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#4F46E5] text-white" data-client-id={client.id}>
                     {client.projectCount} projects
                   </span>
                 </td>
@@ -682,6 +682,7 @@ const allClients = await db
     // Project counter update functions
     async function updateProjectCounter(clientId: number) {
       try {
+        console.log('Updating project counter for client:', clientId);
         const response = await fetch('/api/admin/projects');
         if (!response.ok) {
           throw new Error('Failed to fetch projects');
@@ -692,11 +693,19 @@ const allClients = await db
           project.clientId === clientId
         );
         
-        const counterElement = document.querySelector(`[data-client-id="${clientId}"]`);
+        console.log('Found projects for client:', clientProjects.length);
+        
+        // Find the specific project counter span by looking for the span with data-client-id in the projects column
+        const counterElement = document.querySelector(`td:nth-child(2) span[data-client-id="${clientId}"]`);
+        console.log('Counter element found:', counterElement);
+        
         if (counterElement) {
           counterElement.textContent = `${clientProjects.length} projects`;
+          console.log('Updated counter to:', `${clientProjects.length} projects`);
+        } else {
+          console.warn('Counter element not found for client:', clientId);
         }
-              } catch (error) {
+      } catch (error) {
         console.error('Error updating project counter:', error);
       }
     }
@@ -819,23 +828,22 @@ const allClients = await db
 
 
 
-    (window as any).deleteProject = function(projectId: number) {
+    (window as any).deleteProject = async function(projectId: number) {
       if (confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
-        fetch(`/api/admin/projects/${projectId}`, { method: 'DELETE' })
-          .then(response => {
-            if (response.ok) {
-              if (currentClientId) {
-                loadProjects(currentClientId, false);
-                updateProjectCounter(currentClientId);
-              }
-            } else {
-              alert('Error deleting project');
+        try {
+          const response = await fetch(`/api/admin/projects/${projectId}`, { method: 'DELETE' });
+          if (response.ok) {
+            if (currentClientId) {
+              await loadProjects(currentClientId, false);
+              await updateProjectCounter(currentClientId);
             }
-          })
-          .catch(error => {
-            console.error('Error:', error);
+          } else {
             alert('Error deleting project');
-          });
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('Error deleting project');
+        }
       }
     };
   </script>
