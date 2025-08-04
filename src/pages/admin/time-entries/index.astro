@@ -116,13 +116,46 @@ const allTasks = await db
             <option value="week">This Week</option>
             <option value="month">This Month</option>
             <option value="quarter">This Quarter</option>
+            <option value="custom">Custom Range</option>
           </select>
+        </div>
+      </div>
+      <div id="customDateRange" class="hidden mt-4">
+        <label class="block text-sm font-medium text-gray-300 mb-1">Custom Date Range</label>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="flex flex-col">
+            <label for="startDate" class="block text-xs text-gray-400 mb-1">Start Date</label>
+            <input
+              type="date"
+              id="startDate"
+              class="w-[calc(100%-3rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white text-sm"
+            />
+          </div>
+          <div>
+            <label for="endDate" class="block text-xs text-gray-400 mb-1">End Date</label>
+            <input
+              type="date"
+              id="endDate"
+              class="w-[calc(100%-3rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white text-sm"
+            />
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Time Entries Table -->
     <div class="bg-gray-800 rounded-lg shadow border border-gray-700 overflow-hidden">
+      <!-- Results Counter -->
+      <div class="px-6 py-3 bg-gray-700 border-b border-gray-600">
+        <div class="flex justify-between items-center">
+          <span id="resultsCounter" class="text-sm text-gray-300">
+            Showing {allTimeEntries.length} time entries
+          </span>
+          <span class="text-xs text-gray-400">
+            Total entries: {allTimeEntries.length}
+          </span>
+        </div>
+      </div>
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-700">
           <thead class="bg-gray-700">
@@ -685,6 +718,8 @@ const allTasks = await db
           const text = row.textContent?.toLowerCase() || '';
           row.style.display = text.includes(searchTerm) ? '' : 'none';
         });
+        
+        updateResultsCounter();
       });
     }
 
@@ -704,6 +739,8 @@ const allTasks = await db
             row.style.display = 'none';
           }
         });
+        
+        updateResultsCounter();
       });
     }
 
@@ -723,6 +760,8 @@ const allTasks = await db
             row.style.display = 'none';
           }
         });
+        
+        updateResultsCounter();
       });
     }
 
@@ -731,31 +770,100 @@ const allTasks = await db
       dateRange.addEventListener('change', (e) => {
         const target = e.target;
         const selectedRange = target.value;
-        const rows = document.querySelectorAll('tbody tr');
-        const now = new Date();
+        const customDateRange = document.getElementById('customDateRange');
         
-        rows.forEach(row => {
-          const startCell = row.querySelector('td:nth-child(5)');
-          const startText = startCell?.textContent?.trim() || '';
-          const startDate = new Date(startText);
-          
-          let show = true;
-          if (selectedRange === 'today') {
-            show = startDate.toDateString() === now.toDateString();
-          } else if (selectedRange === 'week') {
-            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            show = startDate >= weekAgo;
-          } else if (selectedRange === 'month') {
-            const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1);
-            show = startDate >= monthAgo;
-          } else if (selectedRange === 'quarter') {
-            const quarterAgo = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
-            show = startDate >= quarterAgo;
-          }
-          
-          row.style.display = show ? '' : 'none';
-        });
+        // Show/hide custom date range inputs
+        if (selectedRange === 'custom') {
+          customDateRange.classList.remove('hidden');
+        } else {
+          customDateRange.classList.add('hidden');
+        }
+        
+        // Apply the filter
+        applyDateRangeFilter();
       });
+    }
+
+    // Custom date range inputs
+    const startDate = document.getElementById('startDate');
+    const endDate = document.getElementById('endDate');
+
+    if (startDate) {
+      startDate.addEventListener('change', applyDateRangeFilter);
+      // Ensure date picker opens on click
+      startDate.addEventListener('click', () => {
+        startDate.showPicker();
+      });
+    }
+
+    if (endDate) {
+      endDate.addEventListener('change', applyDateRangeFilter);
+      // Ensure date picker opens on click
+      endDate.addEventListener('click', () => {
+        endDate.showPicker();
+      });
+    }
+
+    function updateResultsCounter() {
+      const visibleRows = document.querySelectorAll('tbody tr:not([style*="display: none"])');
+      const totalRows = document.querySelectorAll('tbody tr');
+      const resultsCounter = document.getElementById('resultsCounter');
+      
+      if (resultsCounter) {
+        resultsCounter.textContent = `Showing ${visibleRows.length} time entries`;
+      }
+    }
+
+    function applyDateRangeFilter() {
+      const selectedRange = dateRange?.value;
+      const rows = document.querySelectorAll('tbody tr');
+      const now = new Date();
+      
+      rows.forEach(row => {
+        const startCell = row.querySelector('td:nth-child(5)');
+        const startText = startCell?.textContent?.trim() || '';
+        const startDate = new Date(startText);
+        
+        let show = true;
+        
+        if (selectedRange === 'today') {
+          show = startDate.toDateString() === now.toDateString();
+        } else if (selectedRange === 'week') {
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          show = startDate >= weekAgo;
+        } else if (selectedRange === 'month') {
+          const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1);
+          show = startDate >= monthAgo;
+        } else if (selectedRange === 'quarter') {
+          const quarterAgo = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+          show = startDate >= quarterAgo;
+        } else if (selectedRange === 'custom') {
+          const customStartDate = document.getElementById('startDate')?.value;
+          const customEndDate = document.getElementById('endDate')?.value;
+          
+          if (customStartDate && customEndDate) {
+            const start = new Date(customStartDate);
+            const end = new Date(customEndDate);
+            // Set end date to end of day
+            end.setHours(23, 59, 59, 999);
+            
+            show = startDate >= start && startDate <= end;
+          } else if (customStartDate) {
+            const start = new Date(customStartDate);
+            show = startDate >= start;
+          } else if (customEndDate) {
+            const end = new Date(customEndDate);
+            end.setHours(23, 59, 59, 999);
+            show = startDate <= end;
+          } else {
+            show = true; // If no dates selected, show all
+          }
+        }
+        
+        row.style.display = show ? '' : 'none';
+      });
+      
+      updateResultsCounter();
     }
 
     // Searchable input functionality for User and Task

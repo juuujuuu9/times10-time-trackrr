@@ -1,7 +1,7 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { db } from '../../../db/index';
-import { users, timeEntries, tasks } from '../../../db/schema';
+import { users, tasks } from '../../../db/schema';
 import { count, sql } from 'drizzle-orm';
 
 // Get all users with their stats
@@ -15,11 +15,9 @@ const allUsers = await db
     payRate: users.payRate,
     createdAt: users.createdAt,
     updatedAt: users.updatedAt,
-    totalHours: sql<number>`COALESCE(SUM(${timeEntries.durationManual})/3600, 0)`,
     taskCount: count(tasks.id),
   })
   .from(users)
-  .leftJoin(timeEntries, sql`${users.id} = ${timeEntries.userId}`)
   .leftJoin(tasks, sql`${users.id} = ${tasks.id}`)
   .groupBy(users.id)
   .orderBy(users.name);
@@ -146,9 +144,6 @@ const allUsers = await db
                 Status
               </th>
               <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                Total Hours
-              </th>
-              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                 Pay Rate
               </th>
               <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
@@ -194,18 +189,6 @@ const allUsers = await db
                   }`}>
                     {user.status === 'active' ? '🟢 Active' : '⚪ Inactive'}
                   </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="flex items-center">
-                    <span class="text-sm font-semibold text-white">
-                      {user.totalHours ? Math.round(user.totalHours * 10) / 10 : 0} hours
-                    </span>
-                    {user.totalHours > 0 && (
-                      <div class="ml-2 w-16 bg-gray-600 rounded-full h-2">
-                        <div class="bg-[#4F46E5] h-2 rounded-full" style={`width: ${Math.min((user.totalHours / 100) * 100, 100)}%`}></div>
-                      </div>
-                    )}
-                  </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span class="text-sm font-semibold text-white">

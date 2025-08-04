@@ -1,0 +1,77 @@
+---
+import AdminLayout from '../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Chart Test" currentPage="test">
+  <div class="space-y-6">
+    <h1 class="text-2xl font-bold text-white">Chart.js Test</h1>
+    
+    <div class="bg-gray-800 rounded-lg shadow border border-gray-700 p-6">
+      <h2 class="text-lg font-medium text-white mb-4">Simple Chart Test</h2>
+      <div class="h-80">
+        <canvas id="testChart" width="400" height="300"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    console.log('Test page loaded');
+    console.log('Chart.js available:', typeof (window as any).Chart);
+    
+    // Wait for Chart.js to load
+    setTimeout(() => {
+      const ctx = document.getElementById('testChart') as HTMLCanvasElement;
+      if (!ctx) {
+        console.error('Canvas not found');
+        return;
+      }
+
+      console.log('Creating test chart...');
+      
+      try {
+        const chart = new (window as any).Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
+            datasets: [{
+              label: 'Test Data',
+              data: [12, 19, 3, 5, 2, 3],
+              backgroundColor: [
+                '#4F46E5', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6', '#06B6D4'
+              ],
+              borderColor: [
+                '#3730A3', '#059669', '#D97706', '#BE185D', '#7C3AED', '#0891B2'
+              ],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                labels: {
+                  color: '#D1D5DB'
+                }
+              }
+            },
+            scales: {
+              x: {
+                ticks: { color: '#D1D5DB' },
+                grid: { color: '#374151' }
+              },
+              y: {
+                ticks: { color: '#D1D5DB' },
+                grid: { color: '#374151' }
+              }
+            }
+          }
+        });
+        
+        console.log('Test chart created successfully!');
+      } catch (error) {
+        console.error('Error creating test chart:', error);
+      }
+    }, 1000);
+  </script>
+</AdminLayout> 
