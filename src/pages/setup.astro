@@ -1,0 +1,267 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Setup - Times10 Time Tracker">
+  <main class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl">
+      <!-- Header -->
+      <div class="text-center mb-8">
+        <h1 class="text-4xl font-bold text-gray-800 mb-2">
+          Times10 Setup
+        </h1>
+        <p class="text-gray-600">Initialize your time tracking system</p>
+      </div>
+
+      <!-- Setup Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Demo Users Setup -->
+        <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-200">
+          <div class="flex items-center mb-4">
+            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+              <span class="text-blue-600 text-xl">👥</span>
+            </div>
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900">Demo Users</h3>
+              <p class="text-sm text-gray-600">Create test accounts</p>
+            </div>
+          </div>
+          
+          <p class="text-sm text-gray-600 mb-4">
+            Create demo users with different roles to test the authentication system.
+          </p>
+          
+          <button
+            id="createDemoUsersBtn"
+            class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+          >
+            Create Demo Users
+          </button>
+          
+          <div id="demoUsersResult" class="mt-4 hidden">
+            <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+              <p id="demoUsersMessage"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Full Demo Data Setup -->
+        <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-200">
+          <div class="flex items-center mb-4">
+            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
+              <span class="text-green-600 text-xl">🎯</span>
+            </div>
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900">Complete Demo Data</h3>
+              <p class="text-sm text-gray-600">Restore all demo data</p>
+            </div>
+          </div>
+          
+          <p class="text-sm text-gray-600 mb-4">
+            Create users, clients, projects, tasks, and time entries for a complete demo experience.
+          </p>
+          
+          <button
+            id="restoreDemoDataBtn"
+            class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+          >
+            Restore Demo Data
+          </button>
+          
+          <div id="restoreDataResult" class="mt-4 hidden">
+            <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+              <p id="restoreDataMessage"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Database Test -->
+        <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-200">
+          <div class="flex items-center mb-4">
+            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
+              <span class="text-green-600 text-xl">🗄️</span>
+            </div>
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900">Database Test</h3>
+              <p class="text-sm text-gray-600">Check connection</p>
+            </div>
+          </div>
+          
+          <p class="text-sm text-gray-600 mb-4">
+            Test the database connection and verify it's working properly.
+          </p>
+          
+          <button
+            id="testDbBtn"
+            class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+          >
+            Test Database
+          </button>
+          
+          <div id="dbResult" class="mt-4 hidden">
+            <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+              <p id="dbMessage"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Demo Credentials -->
+      <div class="mt-8 bg-white rounded-2xl shadow-xl p-6 border border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Demo Credentials</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 class="font-medium text-blue-900 mb-2">Admin User</h4>
+            <p class="text-sm text-blue-700">admin@times10.com</p>
+            <p class="text-sm text-blue-700">admin123</p>
+          </div>
+          <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <h4 class="font-medium text-purple-900 mb-2">Manager User</h4>
+            <p class="text-sm text-purple-700">manager@times10.com</p>
+            <p class="text-sm text-purple-700">manager123</p>
+          </div>
+          <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <h4 class="font-medium text-green-900 mb-2">Regular User</h4>
+            <p class="text-sm text-green-700">user@times10.com</p>
+            <p class="text-sm text-green-700">user123</p>
+          </div>
+          <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+            <h4 class="font-medium text-orange-900 mb-2">John Developer</h4>
+            <p class="text-sm text-orange-700">john@times10.com</p>
+            <p class="text-sm text-orange-700">password123</p>
+          </div>
+          <div class="bg-pink-50 border border-pink-200 rounded-lg p-4">
+            <h4 class="font-medium text-pink-900 mb-2">Sarah Designer</h4>
+            <p class="text-sm text-pink-700">sarah@times10.com</p>
+            <p class="text-sm text-pink-700">password123</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="mt-8 text-center">
+        <a href="/login" class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+          Go to Login
+        </a>
+        <a href="/" class="inline-block bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors font-medium ml-4">
+          Back to Home
+        </a>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  // Create demo users
+  document.getElementById('createDemoUsersBtn')?.addEventListener('click', async () => {
+    const button = document.getElementById('createDemoUsersBtn') as HTMLButtonElement;
+    const resultDiv = document.getElementById('demoUsersResult') as HTMLDivElement;
+    const messageEl = document.getElementById('demoUsersMessage') as HTMLParagraphElement;
+    
+    button.disabled = true;
+    button.textContent = 'Creating...';
+    resultDiv.classList.add('hidden');
+    
+    try {
+      const response = await fetch('/api/setup-demo-users', {
+        method: 'POST',
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        messageEl.textContent = data.message;
+        resultDiv.className = 'mt-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg';
+      } else {
+        messageEl.textContent = `Error: ${data.error}`;
+        resultDiv.className = 'mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg';
+      }
+      
+      resultDiv.classList.remove('hidden');
+    } catch (error) {
+      messageEl.textContent = 'Network error occurred';
+      resultDiv.className = 'mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg';
+      resultDiv.classList.remove('hidden');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Create Demo Users';
+    }
+  });
+
+  // Restore demo data
+  document.getElementById('restoreDemoDataBtn')?.addEventListener('click', async () => {
+    const button = document.getElementById('restoreDemoDataBtn') as HTMLButtonElement;
+    const resultDiv = document.getElementById('restoreDataResult') as HTMLDivElement;
+    const messageEl = document.getElementById('restoreDataMessage') as HTMLParagraphElement;
+    
+    button.disabled = true;
+    button.textContent = 'Restoring...';
+    resultDiv.classList.add('hidden');
+    
+    try {
+      const response = await fetch('/api/restore-demo-data', {
+        method: 'POST',
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        const summary = data.summary;
+        messageEl.innerHTML = `
+          <strong>${data.message}</strong><br>
+          <small>
+            Users: ${summary.users} | Clients: ${summary.clients} | 
+            Projects: ${summary.projects} | Tasks: ${summary.tasks} | 
+            Assignments: ${summary.assignments} | Time Entries: ${summary.timeEntries}
+          </small>
+        `;
+        resultDiv.className = 'mt-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg';
+      } else {
+        messageEl.textContent = `Error: ${data.error}`;
+        resultDiv.className = 'mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg';
+      }
+      
+      resultDiv.classList.remove('hidden');
+    } catch (error) {
+      messageEl.textContent = 'Network error occurred';
+      resultDiv.className = 'mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg';
+      resultDiv.classList.remove('hidden');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Restore Demo Data';
+    }
+  });
+
+  // Test database
+  document.getElementById('testDbBtn')?.addEventListener('click', async () => {
+    const button = document.getElementById('testDbBtn') as HTMLButtonElement;
+    const resultDiv = document.getElementById('dbResult') as HTMLDivElement;
+    const messageEl = document.getElementById('dbMessage') as HTMLParagraphElement;
+    
+    button.disabled = true;
+    button.textContent = 'Testing...';
+    resultDiv.classList.add('hidden');
+    
+    try {
+      const response = await fetch('/api/test-db');
+      
+      if (response.ok) {
+        const data = await response.json();
+        messageEl.textContent = `Database connected! Found ${data.counts.users} users, ${data.counts.clients} clients, ${data.counts.projects} projects, and ${data.counts.tasks} tasks.`;
+        resultDiv.className = 'mt-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg';
+      } else {
+        messageEl.textContent = 'Database connection failed';
+        resultDiv.className = 'mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg';
+      }
+      
+      resultDiv.classList.remove('hidden');
+    } catch (error) {
+      messageEl.textContent = 'Network error occurred';
+      resultDiv.className = 'mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg';
+      resultDiv.classList.remove('hidden');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Test Database';
+    }
+  });
+</script> 

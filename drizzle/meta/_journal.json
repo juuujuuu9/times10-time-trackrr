@@ -15,6 +15,13 @@
       "when": 1753210959320,
       "tag": "0001_add_pay_rate",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1754348352969,
+      "tag": "0002_jazzy_retro_girl",
+      "breakpoints": true
     }
   ]
 }

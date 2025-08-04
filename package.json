@@ -10,16 +10,20 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "create-demo-users": "tsx src/scripts/create-demo-users.ts",
+    "restore-demo-data": "tsx src/scripts/restore-demo-data.ts"
   },
   "dependencies": {
     "@astrojs/react": "^4.3.0",
     "@astrojs/vercel": "^8.2.3",
     "@neondatabase/serverless": "^1.0.1",
     "@tailwindcss/vite": "^4.1.11",
+    "@types/bcryptjs": "^2.4.6",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "astro": "^5.12.0",
+    "bcryptjs": "^3.0.2",
     "chart.js": "^4.5.0",
     "dotenv": "^17.2.0",
     "drizzle-orm": "^0.44.3",

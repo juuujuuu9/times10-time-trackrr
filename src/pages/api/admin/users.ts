@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { db } from '../../../db/index';
 import { users } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
+import { hashPassword } from '../../../utils/auth';
 
 export const GET: APIRoute = async () => {
   try {
@@ -22,7 +23,7 @@ export const GET: APIRoute = async () => {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { name, email, role, status, payRate } = body;
+    const { name, email, role, status, payRate, password } = body;
 
     if (!name || !email) {
       return new Response(JSON.stringify({ error: 'Name and email are required' }), {
@@ -40,9 +41,13 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
+    // Hash the password (use a default password if none provided)
+    const hashedPassword = await hashPassword(password || 'password123');
+
     const newUser = await db.insert(users).values({
       name,
       email,
+      password: hashedPassword,
       role: role || 'user',
       status: status || 'active',
       payRate: payRate || '0.00',
@@ -64,7 +69,7 @@ export const POST: APIRoute = async ({ request }) => {
 export const PUT: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { id, name, email, role, status, payRate } = body;
+    const { id, name, email, role, status, payRate, password } = body;
 
     if (!id) {
       return new Response(JSON.stringify({ error: 'ID is required' }), {
@@ -92,6 +97,9 @@ export const PUT: APIRoute = async ({ request }) => {
     }
     if (payRate !== undefined) {
       updateData.payRate = payRate;
+    }
+    if (password !== undefined) {
+      updateData.password = await hashPassword(password);
     }
 
     const updatedUser = await db

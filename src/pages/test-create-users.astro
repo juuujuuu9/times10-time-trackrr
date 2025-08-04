@@ -1,0 +1,72 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Test Create Users">
+  <main class="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-4">Create Demo Users</h1>
+        
+        <button
+          id="createUsersBtn"
+          class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Create Demo Users
+        </button>
+        
+        <div id="result" class="mt-4 hidden">
+          <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+            <p id="message"></p>
+          </div>
+        </div>
+        
+        <div class="mt-6">
+          <h2 class="text-lg font-semibold text-gray-900 mb-2">Demo Credentials:</h2>
+          <div class="space-y-2 text-sm">
+            <div><strong>Admin:</strong> admin@times10.com / admin123</div>
+            <div><strong>Manager:</strong> manager@times10.com / manager123</div>
+            <div><strong>User:</strong> user@times10.com / user123</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  document.getElementById('createUsersBtn')?.addEventListener('click', async () => {
+    const button = document.getElementById('createUsersBtn') as HTMLButtonElement;
+    const resultDiv = document.getElementById('result') as HTMLDivElement;
+    const messageEl = document.getElementById('message') as HTMLParagraphElement;
+    
+    button.disabled = true;
+    button.textContent = 'Creating...';
+    resultDiv.classList.add('hidden');
+    
+    try {
+      const response = await fetch('/api/setup-demo-users', {
+        method: 'POST',
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        messageEl.textContent = data.message;
+        resultDiv.className = 'mt-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg';
+      } else {
+        messageEl.textContent = `Error: ${data.error}`;
+        resultDiv.className = 'mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg';
+      }
+      
+      resultDiv.classList.remove('hidden');
+    } catch (error) {
+      messageEl.textContent = 'Network error occurred';
+      resultDiv.className = 'mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg';
+      resultDiv.classList.remove('hidden');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Create Demo Users';
+    }
+  });
+</script> 

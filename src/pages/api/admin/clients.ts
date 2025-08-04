@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { db } from '../../../db/index';
 import { clients } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
+import { getSessionUser } from '../../../utils/session';
 
 export const GET: APIRoute = async () => {
   try {
@@ -19,8 +20,17 @@ export const GET: APIRoute = async () => {
   }
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
   try {
+    // Get the authenticated user
+    const user = await getSessionUser({ cookies } as any);
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const body = await request.json();
     const { name } = body;
 
@@ -31,11 +41,9 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // For now, we'll use a default user ID of 1
-    // In a real app, this would come from authentication
     const newClient = await db.insert(clients).values({
       name,
-      createdBy: 1,
+      createdBy: user.id,
     }).returning();
 
     return new Response(JSON.stringify(newClient[0]), {

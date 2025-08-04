@@ -1,6 +1,21 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Timer from '../components/Timer';
+import { getSessionUser } from '../utils/session';
+
+// Check if user is logged in
+const user = await getSessionUser(Astro);
+
+// If logged in, redirect to appropriate dashboard
+if (user) {
+  if (user.role === 'admin') {
+    return Astro.redirect('/admin');
+  } else if (user.role === 'manager') {
+    return Astro.redirect('/manager');
+  } else {
+    return Astro.redirect('/dashboard');
+  }
+}
 ---
 
 <Layout title="Times10 Time Tracker">
@@ -13,9 +28,12 @@ import Timer from '../components/Timer';
 				Welcome to your productivity companion
 			</p>
 			<div class="space-x-4 mb-8">
-				<button class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
-					Start Tracking
-				</button>
+				<a href="/login" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors inline-block">
+					Sign In
+				</a>
+				<a href="/setup" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors inline-block">
+					Setup Demo Users
+				</a>
 				<a href="/admin" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors inline-block">
 					Admin Dashboard
 				</a>

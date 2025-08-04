@@ -5,8 +5,8 @@ import { timeEntries, users, tasks, projects, clients } from '../../../db/schema
 import { count, sql, sum, gte, lte, and, eq } from 'drizzle-orm';
 import { getProjectCosts, getClientCosts } from '../../../db/queries';
 
-// Get the selected time period from query params, default to 'week'
-const period = Astro.url.searchParams.get('period') || 'week';
+// Get the selected time period from query params, default to 'last30' (more likely to have data)
+const period = Astro.url.searchParams.get('period') || 'last30';
 // Get the selected view type from query params, default to 'project'
 const viewType = Astro.url.searchParams.get('view') || 'project';
 // Get the selected team member from query params, default to 'all'
@@ -234,9 +234,9 @@ const getChartSubtitle = () => {
             class="appearance-none bg-gray-800 border border-gray-600 text-white px-4 py-2 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
             onchange="handlePeriodChange(this.value)"
           >
+            <option value="last30" selected={period === 'last30'}>Last 30 Days</option>
             <option value="week" selected={period === 'week'}>This Week</option>
             <option value="month" selected={period === 'month'}>This Month</option>
-            <option value="last30" selected={period === 'last30'}>Last 30 Days</option>
             <option value="year" selected={period === 'year'}>Year to Date</option>
             <option value="custom" selected={period === 'custom'}>Custom Range</option>
           </select>

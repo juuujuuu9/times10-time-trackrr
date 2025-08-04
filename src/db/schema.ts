@@ -6,11 +6,21 @@ export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   email: varchar('email', { length: 255 }).notNull().unique(),
   name: varchar('name', { length: 255 }).notNull(),
+  password: varchar('password', { length: 255 }).notNull(), // Hashed password
   role: varchar('role', { length: 50 }).notNull().default('user'),
   status: varchar('status', { length: 50 }).notNull().default('active'),
   payRate: decimal('pay_rate', { precision: 10, scale: 2 }).default('0.00'), // Hourly rate in USD
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Sessions table for authentication
+export const sessions = pgTable('sessions', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  token: varchar('token', { length: 255 }).notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 // Clients table
@@ -71,6 +81,14 @@ export const usersRelations = relations(users, ({ many }) => ({
   clients: many(clients),
   taskAssignments: many(taskAssignments),
   timeEntries: many(timeEntries),
+  sessions: many(sessions),
+}));
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+  user: one(users, {
+    fields: [sessions.userId],
+    references: [users.id],
+  }),
 }));
 
 export const clientsRelations = relations(clients, ({ one, many }) => ({

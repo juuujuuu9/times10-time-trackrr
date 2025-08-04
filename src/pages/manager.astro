@@ -1,0 +1,376 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { requireRole } from '../utils/session';
+
+// Require manager role
+const user = await requireRole('manager', '/dashboard')(Astro) as any;
+---
+
+<Layout title="Manager Dashboard - Times10 Time Tracker">
+  <div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center py-4">
+          <div class="flex items-center">
+            <h1 class="text-2xl font-bold text-gray-900">Manager Dashboard</h1>
+            <span class="ml-3 px-3 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full capitalize">
+              {user.role}
+            </span>
+          </div>
+          <div class="flex items-center space-x-4">
+            <span class="text-sm text-gray-600">Welcome, {user.name}</span>
+            <button
+              id="logoutButton"
+              class="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Main Content -->
+        <div class="lg:col-span-2 space-y-8">
+          <!-- Team Overview -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+              <h2 class="text-xl font-semibold text-gray-900">Team Overview</h2>
+            </div>
+            <div class="p-6">
+              <div id="teamOverview" class="space-y-4">
+                <div class="text-center py-8">
+                  <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="text-gray-400 text-xl">👥</span>
+                  </div>
+                  <p class="text-gray-500">Loading team data...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Project Status -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+              <h2 class="text-xl font-semibold text-gray-900">Project Status</h2>
+            </div>
+            <div class="p-6">
+              <div id="projectStatus" class="space-y-4">
+                <div class="text-center py-8">
+                  <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="text-gray-400 text-xl">📁</span>
+                  </div>
+                  <p class="text-gray-500">Loading project data...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Time Entries -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+              <h2 class="text-xl font-semibold text-gray-900">Recent Team Activity</h2>
+            </div>
+            <div class="p-6">
+              <div id="recentActivity" class="space-y-4">
+                <div class="text-center py-8">
+                  <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="text-gray-400 text-xl">⏱️</span>
+                  </div>
+                  <p class="text-gray-500">Loading recent activity...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+          <!-- Quick Stats -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">This Week</h3>
+            <div class="space-y-4">
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-gray-600">Team Hours</span>
+                <span id="teamHours" class="text-lg font-semibold text-gray-900">-</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-gray-600">Active Projects</span>
+                <span id="activeProjects" class="text-lg font-semibold text-gray-900">-</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-gray-600">Team Members</span>
+                <span id="teamMembers" class="text-lg font-semibold text-gray-900">-</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+            <div class="space-y-3">
+              <button
+                id="viewReportsBtn"
+                class="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+              >
+                View Reports
+              </button>
+              <button
+                id="manageProjectsBtn"
+                class="w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+              >
+                Manage Projects
+              </button>
+              <button
+                id="assignTasksBtn"
+                class="w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+              >
+                Assign Tasks
+              </button>
+            </div>
+          </div>
+
+          <!-- Team Members -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Team Members</h3>
+            <div id="teamMembersList" class="space-y-3">
+              <div class="text-center py-4">
+                <p class="text-gray-500 text-sm">Loading team members...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  // Load manager dashboard data
+  async function loadManagerData() {
+    try {
+      // Load team overview
+      const teamResponse = await fetch('/api/admin/users?role=user');
+      if (teamResponse.ok) {
+        const teamData = await teamResponse.json();
+        updateTeamOverview(teamData.data || []);
+      }
+
+      // Load project status
+      const projectsResponse = await fetch('/api/admin/projects');
+      if (projectsResponse.ok) {
+        const projectsData = await projectsResponse.json();
+        updateProjectStatus(projectsData.data || []);
+      }
+
+      // Load recent activity
+      const activityResponse = await fetch('/api/admin/time-entries?limit=10');
+      if (activityResponse.ok) {
+        const activityData = await activityResponse.json();
+        updateRecentActivity(activityData.data || []);
+      }
+
+      // Load team members
+      const membersResponse = await fetch('/api/admin/users');
+      if (membersResponse.ok) {
+        const membersData = await membersResponse.json();
+        updateTeamMembers(membersData.data || []);
+      }
+
+      // Load weekly stats
+      const statsResponse = await fetch('/api/reports/team-stats');
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        updateWeeklyStats(statsData);
+      }
+
+    } catch (error) {
+      console.error('Error loading manager data:', error);
+    }
+  }
+
+  function updateTeamOverview(team: any[]) {
+    const container = document.getElementById('teamOverview');
+    if (!container) return;
+
+    if (team.length === 0) {
+      container.innerHTML = `
+        <div class="text-center py-8">
+          <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span class="text-gray-400 text-xl">👥</span>
+          </div>
+          <p class="text-gray-500">No team members found</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = team.slice(0, 5).map((member: any) => `
+      <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+        <div class="flex items-center">
+          <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
+            <span class="text-purple-600 text-lg">👤</span>
+          </div>
+          <div>
+            <p class="font-medium text-gray-900">${member.name}</p>
+            <p class="text-sm text-gray-600">${member.email}</p>
+            <span class="inline-block mt-1 px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+              ${member.status}
+            </span>
+          </div>
+        </div>
+        <div class="text-right">
+          <p class="text-sm font-medium text-gray-900">
+            $${member.payRate}/hr
+          </p>
+          <p class="text-xs text-gray-500">
+            ${member.role}
+          </p>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function updateProjectStatus(projects: any[]) {
+    const container = document.getElementById('projectStatus');
+    if (!container) return;
+
+    if (projects.length === 0) {
+      container.innerHTML = `
+        <div class="text-center py-8">
+          <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span class="text-gray-400 text-xl">📁</span>
+          </div>
+          <p class="text-gray-500">No projects found</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = projects.slice(0, 5).map((project: any) => `
+      <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+        <div class="flex items-center">
+          <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+            <span class="text-blue-600 text-lg">📁</span>
+          </div>
+          <div>
+            <p class="font-medium text-gray-900">${project.name}</p>
+            <p class="text-sm text-gray-600">${project.clientName || 'Unknown Client'}</p>
+            <span class="inline-block mt-1 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+              ${project.archived ? 'Archived' : 'Active'}
+            </span>
+          </div>
+        </div>
+        <div class="text-right">
+          <p class="text-sm font-medium text-gray-900">
+            ${project.taskCount || 0} tasks
+          </p>
+          <p class="text-xs text-gray-500">
+            ${new Date(project.createdAt).toLocaleDateString()}
+          </p>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function updateRecentActivity(entries: any[]) {
+    const container = document.getElementById('recentActivity');
+    if (!container) return;
+
+    if (entries.length === 0) {
+      container.innerHTML = `
+        <div class="text-center py-8">
+          <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span class="text-gray-400 text-xl">⏱️</span>
+          </div>
+          <p class="text-gray-500">No recent activity</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = entries.slice(0, 5).map((entry: any) => `
+      <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+        <div class="flex items-center">
+          <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-4">
+            <span class="text-green-600 text-lg">⏱️</span>
+          </div>
+          <div>
+            <p class="font-medium text-gray-900">${entry.userName || 'Unknown User'}</p>
+            <p class="text-sm text-gray-600">${entry.taskName || 'Unknown Task'}</p>
+            ${entry.notes ? `<p class="text-sm text-gray-500 mt-1 italic">"${entry.notes}"</p>` : ''}
+          </div>
+        </div>
+        <div class="text-right">
+          <p class="text-sm font-medium text-gray-900">
+            ${formatDuration(entry.duration || 0)}
+          </p>
+          <p class="text-xs text-gray-500">
+            ${new Date(entry.startTime).toLocaleDateString()}
+          </p>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function updateTeamMembers(members: any[]) {
+    const container = document.getElementById('teamMembersList');
+    if (!container) return;
+
+    if (members.length === 0) {
+      container.innerHTML = '<p class="text-gray-500 text-sm">No team members</p>';
+      return;
+    }
+
+    container.innerHTML = members.slice(0, 5).map((member: any) => `
+      <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+        <div>
+          <p class="font-medium text-gray-900 text-sm">${member.name}</p>
+          <p class="text-xs text-gray-600">${member.role}</p>
+        </div>
+        <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+      </div>
+    `).join('');
+  }
+
+  function updateWeeklyStats(stats: any) {
+    const teamHours = document.getElementById('teamHours');
+    const activeProjects = document.getElementById('activeProjects');
+    const teamMembers = document.getElementById('teamMembers');
+
+    if (teamHours) teamHours.textContent = formatHours(stats.totalHours || 0);
+    if (activeProjects) activeProjects.textContent = stats.activeProjects || 0;
+    if (teamMembers) teamMembers.textContent = stats.teamMembers || 0;
+  }
+
+  function formatDuration(seconds: number): string {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
+  }
+
+  function formatHours(hours: number): string {
+    return hours.toFixed(1) + 'h';
+  }
+
+  // Logout functionality
+  document.getElementById('logoutButton')?.addEventListener('click', async () => {
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+      });
+      
+      if (response.ok) {
+        window.location.href = '/login';
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  });
+
+  // Load data when page loads
+  document.addEventListener('DOMContentLoaded', loadManagerData);
+</script> 

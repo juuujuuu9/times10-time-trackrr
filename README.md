@@ -1,10 +1,41 @@
 # Times10 Time Tracker
 
-A modern time tracking application built with Astro, React, and PostgreSQL. Focus on simple, efficient time entry with flexible duration formats.
+A modern time tracking application built with Astro, React, and PostgreSQL. Focus on simple, efficient time entry with flexible duration formats and role-based access control.
+
+## 🔐 Authentication & User Roles
+
+The application now supports a comprehensive authentication system with three user roles:
+
+### User Roles
+
+1. **Admin** (`admin`)
+   - Full system access
+   - Manage all users, clients, projects, and tasks
+   - Access to admin dashboard at `/admin`
+   - Can view all reports and system settings
+
+2. **Manager** (`manager`)
+   - Team oversight capabilities
+   - View team members and their activities
+   - Manage projects and assign tasks
+   - Access to manager dashboard at `/manager`
+
+3. **User** (`user`)
+   - Basic time tracking functionality
+   - View assigned tasks and projects
+   - Access to user dashboard at `/dashboard`
+
+### Demo Credentials
+
+For testing purposes, the following demo accounts are available:
+
+- **Admin**: `admin@times10.com` / `admin123`
+- **Manager**: `manager@times10.com` / `manager123`
+- **User**: `user@times10.com` / `user123`
 
 ## 🕐 Time Entry Features
 
-The application now supports simple time entry with various duration formats:
+The application supports simple time entry with various duration formats:
 
 - **Hours**: `2h`, `2hr`, `3.5hr`, `2hours`
 - **Minutes**: `30m`, `30min`, `90minutes`
@@ -16,30 +47,75 @@ The application now supports simple time entry with various duration formats:
 
 Enter time as simply as typing `2h` or `3.5hr` - no need to worry about start and end times. The system focuses on the amount of time spent on each task.
 
-## 🚀 Project Structure
+## 🚀 Getting Started
 
-## 🚀 Project Structure
+### Prerequisites
 
-Inside of your Astro project, you'll see the following folders and files:
+- Node.js 18+ 
+- PostgreSQL database (Neon recommended)
+- Environment variables configured
 
-```text
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd Times10-Time-Tracker-2
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables**
+   Create a `.env` file with:
+   ```env
+   DATABASE_URL=your_postgresql_connection_string
+   ```
+
+4. **Set up the database**
+   ```bash
+   npm run db:push
+   ```
+
+5. **Create demo users**
+   Visit `/setup` in your browser and click "Create Demo Users" to set up test accounts.
+
+6. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+7. **Access the application**
+   - Visit `http://localhost:4321`
+   - Use the demo credentials to log in
+   - Each role will be redirected to their appropriate dashboard
+
+## 📁 Project Structure
+
+```
 /
-├── public/
+├── public/                 # Static assets
 ├── src/
-│   └── pages/
-│       └── index.astro
+│   ├── components/         # React components
+│   ├── db/                # Database schema and queries
+│   ├── layouts/           # Astro layouts
+│   ├── pages/             # Application pages
+│   │   ├── api/           # API endpoints
+│   │   │   └── auth/      # Authentication endpoints
+│   │   ├── admin/         # Admin dashboard pages
+│   │   └── ...            # Other pages
+│   ├── scripts/           # Utility scripts
+│   ├── styles/            # Global styles
+│   └── utils/             # Utility functions
+│       ├── auth.ts        # Authentication utilities
+│       └── session.ts     # Session management
+├── drizzle/               # Database migrations
 └── package.json
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
-
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
-
-Any static assets, like images, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
+## 🔧 Available Scripts
 
 | Command                   | Action                                           |
 | :------------------------ | :----------------------------------------------- |
@@ -47,9 +123,93 @@ All commands are run from the root of the project, from a terminal:
 | `npm run dev`             | Starts local dev server at `localhost:4321`      |
 | `npm run build`           | Build your production site to `./dist/`          |
 | `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+| `npm run db:generate`     | Generate database migrations                     |
+| `npm run db:push`         | Push schema changes to database                  |
+| `npm run db:studio`       | Open Drizzle Studio for database management      |
+| `npm run create-demo-users` | Create demo users with hashed passwords         |
+
+## 🛣️ Application Routes
+
+### Public Routes
+- `/` - Landing page (redirects to login if authenticated)
+- `/login` - Authentication page
+- `/setup` - Demo user setup page
+
+### Protected Routes
+- `/dashboard` - User dashboard (requires authentication)
+- `/manager` - Manager dashboard (requires manager role)
+- `/admin` - Admin dashboard (requires admin role)
+- `/admin/*` - Admin management pages
+
+### API Endpoints
+- `/api/auth/login` - User authentication
+- `/api/auth/logout` - User logout
+- `/api/auth/me` - Get current user session
+- `/api/setup-demo-users` - Create demo users
+
+## 🔒 Security Features
+
+- **Password Hashing**: All passwords are hashed using bcrypt
+- **Session Management**: Secure session tokens with expiration
+- **Role-Based Access Control**: Route protection based on user roles
+- **CSRF Protection**: Built-in protection against cross-site request forgery
+- **Secure Cookies**: HttpOnly cookies for session management
+
+## 🎨 User Interface
+
+The application features a modern, responsive design with:
+
+- **Dark theme** for admin dashboard
+- **Light theme** for user dashboards
+- **Responsive design** that works on all devices
+- **Modern UI components** with smooth animations
+- **Intuitive navigation** with role-based menus
+
+## 📊 Dashboard Features
+
+### User Dashboard
+- Time tracking interface
+- Recent time entries
+- Assigned tasks
+- Weekly statistics
+- Quick actions
+
+### Manager Dashboard
+- Team overview
+- Project status
+- Recent team activity
+- Team member management
+- Performance metrics
+
+### Admin Dashboard
+- System overview
+- User management
+- Client and project management
+- Comprehensive reports
+- System settings
+
+## 🚀 Deployment
+
+The application is ready for deployment on Vercel with the following considerations:
+
+1. **Environment Variables**: Set `DATABASE_URL` in your deployment environment
+2. **Database**: Ensure your PostgreSQL database is accessible from your deployment platform
+3. **Build**: The application builds automatically with `npm run build`
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License.
 
 ## 👀 Want to learn more?
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+- [Astro Documentation](https://docs.astro.build)
+- [Drizzle ORM Documentation](https://orm.drizzle.team)
+- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
