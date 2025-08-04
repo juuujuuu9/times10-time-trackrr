@@ -40,6 +40,14 @@ switch (period) {
     startDate = new Date(now.getFullYear(), 0, 1);
     endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
     break;
+  case 'last30':
+    // Last 30 days
+    startDate = new Date(now);
+    startDate.setDate(now.getDate() - 30);
+    startDate.setHours(0, 0, 0, 0);
+    endDate = new Date(now);
+    endDate.setHours(23, 59, 59, 999);
+    break;
   case 'custom':
     // Custom period - use provided dates or default to last 30 days
     if (customStartDate && customEndDate) {
@@ -146,6 +154,7 @@ const getPeriodDisplayName = (period: string) => {
     case 'week': return 'This Week';
     case 'month': return 'This Month';
     case 'year': return 'Year to Date';
+    case 'last30': return 'Last 30 Days';
     case 'custom': 
       if (customStartDate && customEndDate) {
         return `Custom Range (${new Date(customStartDate).toLocaleDateString()} - ${new Date(customEndDate).toLocaleDateString()})`;
@@ -208,6 +217,7 @@ const getChartSubtitle = () => {
             <option value="week" selected={period === 'week'}>This Week</option>
             <option value="month" selected={period === 'month'}>This Month</option>
             <option value="year" selected={period === 'year'}>Year to Date</option>
+            <option value="last30" selected={period === 'last30'}>Last 30 Days</option>
             <option value="custom" selected={period === 'custom'}>Custom Range</option>
           </select>
           <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
