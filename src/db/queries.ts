@@ -156,7 +156,7 @@ export async function getProjectCosts(startDate: Date, endDate: Date) {
         ELSE COALESCE(${timeEntries.durationManual}, 0) / 3600 * COALESCE(${users.payRate}, 0)
       END
     ), 0) > 0`)
-    .orderBy(sql`total_cost DESC`);
+    .orderBy(projects.name);
 }
 
 // Get client costs for a specific time period
@@ -200,5 +200,5 @@ export async function getClientCosts(startDate: Date, endDate: Date) {
         ELSE COALESCE(${timeEntries.durationManual}, 0) / 3600 * COALESCE(${users.payRate}, 0)
       END
     ), 0) > 0`)
-    .orderBy(sql`total_cost DESC`);
+    .orderBy(clients.name);
 } 
