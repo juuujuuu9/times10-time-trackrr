@@ -7,7 +7,17 @@ import { parseTimeInput } from '../../../utils/timeParser';
 export const GET: APIRoute = async () => {
   try {
     const allTimeEntries = await db.select().from(timeEntries);
-    return new Response(JSON.stringify(allTimeEntries), {
+    
+    // Transform the data to include proper date formatting
+    const transformedEntries = allTimeEntries.map(entry => ({
+      ...entry,
+      startTime: entry.startTime,
+      endTime: entry.endTime,
+      createdAt: entry.createdAt,
+      updatedAt: entry.updatedAt
+    }));
+    
+    return new Response(JSON.stringify(transformedEntries), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -23,7 +33,7 @@ export const GET: APIRoute = async () => {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { userId, taskId, duration, notes } = body;
+    const { userId, taskId, duration, notes, taskDate } = body;
 
     if (!userId || !taskId || !duration) {
       return new Response(JSON.stringify({ error: 'User ID, task ID, and duration are required' }), {
@@ -43,10 +53,13 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
+    // Use provided task date or default to today
+    const startTime = taskDate ? new Date(taskDate) : new Date();
+
     const newTimeEntry = await db.insert(timeEntries).values({
       userId: parseInt(userId),
       taskId: parseInt(taskId),
-      startTime: new Date(), // Use current time as start time
+      startTime: startTime, // Use the task date instead of current time
       endTime: null, // No end time for manual entries
       durationManual: durationSeconds,
       notes: notes || null,
@@ -68,7 +81,7 @@ export const POST: APIRoute = async ({ request }) => {
 export const PUT: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { id, userId, taskId, duration, notes } = body;
+    const { id, userId, taskId, duration, notes, taskDate } = body;
 
     if (!id || !userId || !taskId || !duration) {
       return new Response(JSON.stringify({ error: 'ID, user ID, task ID, and duration are required' }), {
@@ -88,15 +101,23 @@ export const PUT: APIRoute = async ({ request }) => {
       });
     }
 
+    // Prepare update data
+    const updateData: any = {
+      userId: parseInt(userId),
+      taskId: parseInt(taskId),
+      durationManual: durationSeconds,
+      notes: notes || null,
+      updatedAt: new Date()
+    };
+
+    // Update startTime if taskDate is provided
+    if (taskDate) {
+      updateData.startTime = new Date(taskDate);
+    }
+
     const updatedTimeEntry = await db
       .update(timeEntries)
-      .set({ 
-        userId: parseInt(userId),
-        taskId: parseInt(taskId),
-        durationManual: durationSeconds,
-        notes: notes || null,
-        updatedAt: new Date() 
-      })
+      .set(updateData)
       .where(eq(timeEntries.id, parseInt(id)))
       .returning();
 

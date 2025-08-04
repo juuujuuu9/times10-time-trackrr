@@ -188,7 +188,7 @@ const allTasks = await db
           </thead>
           <tbody class="bg-gray-800 divide-y divide-gray-700">
             {allTimeEntries.map((entry) => {
-              const createdAt = new Date(entry.createdAt);
+              const taskDate = new Date(entry.startTime);
               const duration = entry.durationManual ? entry.durationManual / 3600 : 0;
               
               return (
@@ -206,7 +206,7 @@ const allTasks = await db
                     {entry.taskName}
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    {createdAt.toLocaleDateString()}
+                    {taskDate.toLocaleDateString()}
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
                     {duration ? Math.round(duration * 10) / 10 : 0} hours
@@ -317,6 +317,20 @@ const allTasks = await db
               />
               <p class="text-xs text-gray-400 mt-1">
                 Supported formats: 2h, 2hr, 3.5hr, 4:15, 90m, 5400s, etc.
+              </p>
+            </div>
+            <div class="mb-4">
+              <label for="timeEntryDate" class="block text-sm font-medium text-gray-300 mb-1">
+                Task Date <span id="currentDate" class="text-gray-400 font-normal"></span>
+              </label>
+              <input
+                type="date"
+                id="timeEntryDate"
+                required
+                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+              />
+              <p class="text-xs text-gray-400 mt-1">
+                When did this task actually occur? (defaults to today)
               </p>
             </div>
             <div class="mb-4">
@@ -431,6 +445,13 @@ const allTasks = await db
         const currentTaskSpan = document.getElementById('currentTask');
         if (currentTaskSpan) currentTaskSpan.textContent = '';
         
+        // Set default date to today
+        const dateInput = document.getElementById('timeEntryDate');
+        if (dateInput) {
+          const today = new Date().toISOString().split('T')[0];
+          dateInput.value = today;
+        }
+        
         if (timeEntryModal) {
           timeEntryModal.classList.remove('hidden');
           console.log('Modal should be visible now');
@@ -486,6 +507,7 @@ const allTasks = await db
         const userId = document.getElementById('timeEntryUserId')?.value;
         const taskId = document.getElementById('timeEntryTaskId')?.value;
         const duration = document.getElementById('timeEntryDuration')?.value;
+        const taskDate = document.getElementById('timeEntryDate')?.value;
         const notes = document.getElementById('timeEntryNotes')?.value;
         
         try {
@@ -497,6 +519,7 @@ const allTasks = await db
               userId: parseInt(userId),
               taskId: parseInt(taskId),
               duration: duration,
+              taskDate: taskDate,
               notes: notes || null
             }),
           });
@@ -544,6 +567,10 @@ const allTasks = await db
         if (currentUserSpan) currentUserSpan.textContent = '';
         const currentTaskSpan = document.getElementById('currentTask');
         if (currentTaskSpan) currentTaskSpan.textContent = '';
+        
+        // Clear current date display
+        const currentDateSpan = document.getElementById('currentDate');
+        if (currentDateSpan) currentDateSpan.textContent = '';
       }
     }
 
@@ -597,12 +624,19 @@ const allTasks = await db
         const taskInput = document.getElementById('timeEntryTask');
         const taskIdInput = document.getElementById('timeEntryTaskId');
         const durationInput = document.getElementById('timeEntryDuration');
+        const dateInput = document.getElementById('timeEntryDate');
         const notesTextarea = document.getElementById('timeEntryNotes');
         
         // Set the IDs
         if (userIdInput) userIdInput.value = timeEntry.userId.toString();
         if (taskIdInput) taskIdInput.value = timeEntry.taskId.toString();
         if (notesTextarea) notesTextarea.value = timeEntry.notes || '';
+        
+        // Set the task date
+        if (dateInput && timeEntry.startTime) {
+          const taskDate = new Date(timeEntry.startTime).toISOString().split('T')[0];
+          dateInput.value = taskDate;
+        }
         
         // Find and display the team member name
         const user = usersData.find(u => u.id === timeEntry.userId);

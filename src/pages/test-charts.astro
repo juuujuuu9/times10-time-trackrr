@@ -6,6 +6,28 @@ import AdminLayout from '../layouts/AdminLayout.astro';
   <div class="space-y-6">
     <h1 class="text-2xl font-bold text-white">Chart.js Test</h1>
     
+    <!-- Data Generation Controls -->
+    <div class="bg-gray-800 rounded-lg shadow border border-gray-700 p-6">
+      <h2 class="text-lg font-medium text-white mb-4">Data Generation</h2>
+      <div class="space-y-4">
+        <div class="flex gap-4">
+          <button 
+            id="generateExtendedData" 
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+          >
+            Generate Extended Time Data (Every Weekday - 30 Days)
+          </button>
+          <button 
+            id="generateExtendedDataClear" 
+            class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+          >
+            Clear & Generate Extended Data
+          </button>
+        </div>
+        <div id="dataGenerationStatus" class="text-sm text-gray-300"></div>
+      </div>
+    </div>
+    
     <div class="bg-gray-800 rounded-lg shadow border border-gray-700 p-6">
       <h2 class="text-lg font-medium text-white mb-4">Simple Chart Test</h2>
       <div class="h-80">
@@ -17,6 +39,62 @@ import AdminLayout from '../layouts/AdminLayout.astro';
   <script>
     console.log('Test page loaded');
     console.log('Chart.js available:', typeof (window as any).Chart);
+    
+    // Data generation functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      const generateBtn = document.getElementById('generateExtendedData') as HTMLButtonElement | null;
+      const generateClearBtn = document.getElementById('generateExtendedDataClear') as HTMLButtonElement | null;
+      const statusDiv = document.getElementById('dataGenerationStatus');
+      
+      async function generateData(clearExisting = false) {
+        if (generateBtn) generateBtn.disabled = true;
+        if (generateClearBtn) generateClearBtn.disabled = true;
+        
+        if (statusDiv) {
+          statusDiv.textContent = 'Generating extended time data... This may take a moment.';
+          statusDiv.className = 'text-sm text-yellow-300';
+        }
+        
+        try {
+          const response = await fetch('/api/generate-extended-time-data', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ clearExisting })
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            if (statusDiv) {
+              statusDiv.textContent = `✅ Success! Generated ${result.data.entriesGenerated} time entries for every weekday spanning past 30 days.`;
+              statusDiv.className = 'text-sm text-green-300';
+            }
+            console.log('Extended time data generated successfully:', result);
+          } else {
+            throw new Error(result.message || 'Unknown error');
+          }
+        } catch (error) {
+          console.error('Error generating data:', error);
+          if (statusDiv) {
+            statusDiv.textContent = `❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            statusDiv.className = 'text-sm text-red-300';
+          }
+        } finally {
+          if (generateBtn) generateBtn.disabled = false;
+          if (generateClearBtn) generateClearBtn.disabled = false;
+        }
+      }
+      
+      if (generateBtn) {
+        generateBtn.addEventListener('click', () => generateData(false));
+      }
+      
+      if (generateClearBtn) {
+        generateClearBtn.addEventListener('click', () => generateData(true));
+      }
+    });
     
     // Wait for Chart.js to load
     setTimeout(() => {
