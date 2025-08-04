@@ -9,6 +9,9 @@ import { getProjectCosts, getClientCosts } from '../../../db/queries';
 const period = Astro.url.searchParams.get('period') || 'week';
 // Get the selected view type from query params, default to 'project'
 const viewType = Astro.url.searchParams.get('view') || 'project';
+// Get custom date range from query params
+const customStartDate = Astro.url.searchParams.get('startDate');
+const customEndDate = Astro.url.searchParams.get('endDate');
 
 // Calculate date ranges based on selected period
 const now = new Date();
@@ -38,10 +41,20 @@ switch (period) {
     endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
     break;
   case 'custom':
-    // Custom period (last 30 days for now)
-    startDate = new Date(now);
-    startDate.setDate(now.getDate() - 30);
-    endDate = new Date(now);
+    // Custom period - use provided dates or default to last 30 days
+    if (customStartDate && customEndDate) {
+      startDate = new Date(customStartDate);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(customEndDate);
+      endDate.setHours(23, 59, 59, 999);
+    } else {
+      // Default to last 30 days if no custom dates provided
+      startDate = new Date(now);
+      startDate.setDate(now.getDate() - 30);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(now);
+      endDate.setHours(23, 59, 59, 999);
+    }
     break;
   default:
     // Default to week if invalid period
@@ -133,7 +146,11 @@ const getPeriodDisplayName = (period: string) => {
     case 'week': return 'This Week';
     case 'month': return 'This Month';
     case 'year': return 'Year to Date';
-    case 'custom': return 'Last 30 Days';
+    case 'custom': 
+      if (customStartDate && customEndDate) {
+        return `Custom Range (${new Date(customStartDate).toLocaleDateString()} - ${new Date(customEndDate).toLocaleDateString()})`;
+      }
+      return 'Last 30 Days';
     default: return 'This Week';
   }
 };
@@ -186,18 +203,43 @@ const getChartSubtitle = () => {
           <select 
             id="periodSelect" 
             class="appearance-none bg-gray-800 border border-gray-600 text-white px-4 py-2 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
-            onchange="window.location.href = '/admin/reports?period=' + this.value + '&view=' + document.getElementById('viewSelect').value"
+            onchange="handlePeriodChange(this.value)"
           >
             <option value="week" selected={period === 'week'}>This Week</option>
             <option value="month" selected={period === 'month'}>This Month</option>
-            <option value="custom" selected={period === 'custom'}>Last 30 Days</option>
             <option value="year" selected={period === 'year'}>Year to Date</option>
+            <option value="custom" selected={period === 'custom'}>Custom Range</option>
           </select>
           <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
             <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
               <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
             </svg>
           </div>
+        </div>
+
+        <!-- Custom Date Range Inputs -->
+        <div id="customDateRange" class={`flex items-center space-x-2 ${period === 'custom' ? '' : 'hidden'}`}>
+          <input 
+            type="date" 
+            id="startDate" 
+            value={customStartDate || ''}
+            class="bg-gray-800 border border-gray-600 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent text-sm"
+            placeholder="Start Date"
+          />
+          <span class="text-gray-400">to</span>
+          <input 
+            type="date" 
+            id="endDate" 
+            value={customEndDate || ''}
+            class="bg-gray-800 border border-gray-600 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent text-sm"
+            placeholder="End Date"
+          />
+          <button 
+            onclick="applyCustomRange()"
+            class="bg-[#4F46E5] hover:bg-[#4338CA] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
+          >
+            Apply
+          </button>
         </div>
 
         <!-- View Type Dropdown -->
@@ -353,4 +395,67 @@ const getChartSubtitle = () => {
       </div>
     </div>
   </div>
+
+  <script is:inline>
+    // Make functions globally available
+    window.handlePeriodChange = function(period) {
+      const customDateRange = document.getElementById('customDateRange');
+      const viewSelect = document.getElementById('viewSelect');
+      
+      if (!customDateRange || !viewSelect) return;
+      
+      if (period === 'custom') {
+        customDateRange.classList.remove('hidden');
+        // Set default dates if not already set
+        const startDate = document.getElementById('startDate');
+        const endDate = document.getElementById('endDate');
+        
+        if (startDate && !startDate.value) {
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          startDate.value = thirtyDaysAgo.toISOString().split('T')[0];
+        }
+        if (endDate && !endDate.value) {
+          endDate.value = new Date().toISOString().split('T')[0];
+        }
+      } else {
+        customDateRange.classList.add('hidden');
+        // Navigate to the selected period
+        window.location.href = `/admin/reports?period=${period}&view=${viewSelect.value}`;
+      }
+    };
+
+    window.applyCustomRange = function() {
+      const startDateEl = document.getElementById('startDate');
+      const endDateEl = document.getElementById('endDate');
+      const viewSelect = document.getElementById('viewSelect');
+      
+      if (!startDateEl || !endDateEl || !viewSelect) return;
+      
+      const startDate = startDateEl.value;
+      const endDate = endDateEl.value;
+      
+      if (!startDate || !endDate) {
+        alert('Please select both start and end dates');
+        return;
+      }
+      
+      if (new Date(startDate) > new Date(endDate)) {
+        alert('Start date cannot be after end date');
+        return;
+      }
+      
+      window.location.href = `/admin/reports?period=custom&view=${viewSelect.value}&startDate=${startDate}&endDate=${endDate}`;
+    };
+
+    // Initialize custom date range visibility on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      const periodSelect = document.getElementById('periodSelect');
+      const customDateRange = document.getElementById('customDateRange');
+      
+      if (periodSelect && customDateRange && periodSelect.value === 'custom') {
+        customDateRange.classList.remove('hidden');
+      }
+    });
+  </script>
 </AdminLayout> 
