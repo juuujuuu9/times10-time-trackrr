@@ -2,13 +2,15 @@
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { db } from '../../../db/index';
 import { timeEntries, users, tasks, projects, clients } from '../../../db/schema';
-import { count, sql, sum, gte, lte, and } from 'drizzle-orm';
+import { count, sql, sum, gte, lte, and, eq } from 'drizzle-orm';
 import { getProjectCosts, getClientCosts } from '../../../db/queries';
 
 // Get the selected time period from query params, default to 'week'
 const period = Astro.url.searchParams.get('period') || 'week';
 // Get the selected view type from query params, default to 'project'
 const viewType = Astro.url.searchParams.get('view') || 'project';
+// Get the selected team member from query params, default to 'all'
+const selectedTeamMember = Astro.url.searchParams.get('teamMember') || 'all';
 // Get custom date range from query params
 const customStartDate = Astro.url.searchParams.get('startDate');
 const customEndDate = Astro.url.searchParams.get('endDate');
@@ -76,8 +78,25 @@ switch (period) {
     endDate.setHours(23, 59, 59, 999);
 }
 
-// Build date filter conditions (always apply date filter now)
-const dateFilter = and(gte(timeEntries.startTime, startDate), lte(timeEntries.startTime, endDate));
+// Build filter conditions
+let filterConditions = [gte(timeEntries.startTime, startDate), lte(timeEntries.startTime, endDate)];
+
+// Add team member filter if a specific member is selected
+if (selectedTeamMember !== 'all') {
+  filterConditions.push(eq(timeEntries.userId, parseInt(selectedTeamMember)));
+}
+
+const dateFilter = and(...filterConditions);
+
+// Get all team members for the dropdown (sorted by first name)
+const allTeamMembers = await db
+  .select({
+    id: users.id,
+    name: users.name,
+    email: users.email
+  })
+  .from(users)
+  .orderBy(users.name);
 
 // Get basic stats
 const totalUsers = await db.select({ count: count() }).from(users);
@@ -122,8 +141,9 @@ const activeTeamMembersResult = await db
   .where(dateFilter);
 
 // Get data based on view type
-const projectCosts = viewType === 'project' ? await getProjectCosts(startDate, endDate) : [];
-const clientCosts = viewType === 'client' ? await getClientCosts(startDate, endDate) : [];
+const teamMemberId = selectedTeamMember !== 'all' ? parseInt(selectedTeamMember) : undefined;
+const projectCosts = viewType === 'project' ? await getProjectCosts(startDate, endDate, teamMemberId) : [];
+const clientCosts = viewType === 'client' ? await getClientCosts(startDate, endDate, teamMemberId) : [];
 
 // Format the data for display
 const totalHours = totalHoursResult[0]?.totalSeconds || 0;
@@ -257,10 +277,31 @@ const getChartSubtitle = () => {
           <select 
             id="viewSelect" 
             class="appearance-none bg-gray-800 border border-gray-600 text-white px-4 py-2 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
-            onchange="window.location.href = '/admin/reports?period=' + document.getElementById('periodSelect').value + '&view=' + this.value"
+            onchange="handleViewChange(this.value)"
           >
             <option value="project" selected={viewType === 'project'}>By Project</option>
             <option value="client" selected={viewType === 'client'}>By Client</option>
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+            <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Team Member Dropdown -->
+        <div class="relative">
+          <select 
+            id="teamMemberSelect" 
+            class="appearance-none bg-gray-800 border border-gray-600 text-white px-4 py-2 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
+            onchange="handleTeamMemberChange(this.value)"
+          >
+            <option value="all" selected={selectedTeamMember === 'all'}>All Team Members</option>
+            {allTeamMembers.map((member) => (
+              <option value={member.id} selected={selectedTeamMember === member.id.toString()}>
+                {member.name}
+              </option>
+            ))}
           </select>
           <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
             <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
@@ -431,7 +472,14 @@ const getChartSubtitle = () => {
       } else {
         customDateRange.classList.add('hidden');
         // Navigate to the selected period
-        window.location.href = `/admin/reports?period=${period}&view=${viewSelect.value}`;
+        const teamMemberSelect = document.getElementById('teamMemberSelect');
+        const currentUrl = new URL(window.location);
+        currentUrl.searchParams.set('period', period);
+        currentUrl.searchParams.set('view', viewSelect.value);
+        if (teamMemberSelect) {
+          currentUrl.searchParams.set('teamMember', teamMemberSelect.value);
+        }
+        window.location.href = currentUrl.toString();
       }
     };
 
@@ -439,8 +487,9 @@ const getChartSubtitle = () => {
       const startDateEl = document.getElementById('startDate');
       const endDateEl = document.getElementById('endDate');
       const viewSelect = document.getElementById('viewSelect');
+      const teamMemberSelect = document.getElementById('teamMemberSelect');
       
-      if (!startDateEl || !endDateEl || !viewSelect) return;
+      if (!startDateEl || !endDateEl || !viewSelect || !teamMemberSelect) return;
       
       const startDate = startDateEl.value;
       const endDate = endDateEl.value;
@@ -455,7 +504,51 @@ const getChartSubtitle = () => {
         return;
       }
       
-      window.location.href = `/admin/reports?period=custom&view=${viewSelect.value}&startDate=${startDate}&endDate=${endDate}`;
+      window.location.href = `/admin/reports?period=custom&view=${viewSelect.value}&teamMember=${teamMemberSelect.value}&startDate=${startDate}&endDate=${endDate}`;
+    };
+
+    window.handleViewChange = function(view) {
+      const periodSelect = document.getElementById('periodSelect');
+      const teamMemberSelect = document.getElementById('teamMemberSelect');
+      
+      if (!periodSelect || !teamMemberSelect) return;
+      
+      const currentUrl = new URL(window.location);
+      currentUrl.searchParams.set('period', periodSelect.value);
+      currentUrl.searchParams.set('view', view);
+      currentUrl.searchParams.set('teamMember', teamMemberSelect.value);
+      
+      // Preserve custom date range if it exists
+      const startDate = document.getElementById('startDate');
+      const endDate = document.getElementById('endDate');
+      if (startDate && endDate && startDate.value && endDate.value) {
+        currentUrl.searchParams.set('startDate', startDate.value);
+        currentUrl.searchParams.set('endDate', endDate.value);
+      }
+      
+      window.location.href = currentUrl.toString();
+    };
+
+    window.handleTeamMemberChange = function(teamMember) {
+      const periodSelect = document.getElementById('periodSelect');
+      const viewSelect = document.getElementById('viewSelect');
+      
+      if (!periodSelect || !viewSelect) return;
+      
+      const currentUrl = new URL(window.location);
+      currentUrl.searchParams.set('period', periodSelect.value);
+      currentUrl.searchParams.set('view', viewSelect.value);
+      currentUrl.searchParams.set('teamMember', teamMember);
+      
+      // Preserve custom date range if it exists
+      const startDate = document.getElementById('startDate');
+      const endDate = document.getElementById('endDate');
+      if (startDate && endDate && startDate.value && endDate.value) {
+        currentUrl.searchParams.set('startDate', startDate.value);
+        currentUrl.searchParams.set('endDate', endDate.value);
+      }
+      
+      window.location.href = currentUrl.toString();
     };
 
     // Initialize custom date range visibility on page load

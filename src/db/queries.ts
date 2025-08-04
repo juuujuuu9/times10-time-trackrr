@@ -116,7 +116,7 @@ export async function getWeeklyTotals() {
 }
 
 // Get project costs for a specific time period
-export async function getProjectCosts(startDate: Date, endDate: Date) {
+export async function getProjectCosts(startDate: Date, endDate: Date, teamMemberId?: number) {
   return await db
     .select({
       projectId: projects.id,
@@ -143,10 +143,16 @@ export async function getProjectCosts(startDate: Date, endDate: Date) {
     .innerJoin(projects, eq(tasks.projectId, projects.id))
     .innerJoin(clients, eq(projects.clientId, clients.id))
     .where(
-      and(
-        gte(timeEntries.startTime, startDate),
-        lte(timeEntries.startTime, endDate)
-      )
+      teamMemberId 
+        ? and(
+            gte(timeEntries.startTime, startDate),
+            lte(timeEntries.startTime, endDate),
+            eq(timeEntries.userId, teamMemberId)
+          )
+        : and(
+            gte(timeEntries.startTime, startDate),
+            lte(timeEntries.startTime, endDate)
+          )
     )
     .groupBy(projects.id, projects.name, clients.name)
     .having(sql`COALESCE(SUM(
@@ -160,7 +166,7 @@ export async function getProjectCosts(startDate: Date, endDate: Date) {
 }
 
 // Get client costs for a specific time period
-export async function getClientCosts(startDate: Date, endDate: Date) {
+export async function getClientCosts(startDate: Date, endDate: Date, teamMemberId?: number) {
   return await db
     .select({
       clientId: clients.id,
@@ -187,10 +193,16 @@ export async function getClientCosts(startDate: Date, endDate: Date) {
     .innerJoin(projects, eq(tasks.projectId, projects.id))
     .innerJoin(clients, eq(projects.clientId, clients.id))
     .where(
-      and(
-        gte(timeEntries.startTime, startDate),
-        lte(timeEntries.startTime, endDate)
-      )
+      teamMemberId 
+        ? and(
+            gte(timeEntries.startTime, startDate),
+            lte(timeEntries.startTime, endDate),
+            eq(timeEntries.userId, teamMemberId)
+          )
+        : and(
+            gte(timeEntries.startTime, startDate),
+            lte(timeEntries.startTime, endDate)
+          )
     )
     .groupBy(clients.id, clients.name)
     .having(sql`COALESCE(SUM(
