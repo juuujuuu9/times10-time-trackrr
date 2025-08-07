@@ -76,6 +76,16 @@ export const timeEntries = pgTable('time_entries', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// Invitation tokens table for email invitations
+export const invitationTokens = pgTable('invitation_tokens', {
+  id: serial('id').primaryKey(),
+  email: varchar('email', { length: 255 }).notNull(),
+  token: varchar('token', { length: 255 }).notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
+  used: boolean('used').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   clients: many(clients),

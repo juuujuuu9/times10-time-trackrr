@@ -3,6 +3,10 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { db } from '../../../db/index';
 import { users, tasks } from '../../../db/schema';
 import { count, sql } from 'drizzle-orm';
+import { requireRole } from '../../../utils/session';
+
+// Get current user
+const currentUser = await requireRole('admin', '/dashboard')(Astro) as any;
 
 // Get all users with their stats
 const allUsers = await db
@@ -47,7 +51,7 @@ const allUsers = await db
     </div>
 
     <!-- Stats Overview -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <div class="bg-gray-800 rounded-xl shadow-sm border border-gray-700 p-6">
         <div class="flex items-center">
           <div class="p-3 bg-gradient-to-r from-[#10B981] to-[#059669] rounded-xl">
@@ -67,6 +71,17 @@ const allUsers = await db
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-400">Active Team Members</p>
             <p class="text-3xl font-bold text-white">{allUsers.filter(u => u.status === 'active').length}</p>
+          </div>
+        </div>
+      </div>
+      <div class="bg-gray-800 rounded-xl shadow-sm border border-gray-700 p-6">
+        <div class="flex items-center">
+          <div class="p-3 bg-gradient-to-r from-[#F59E0B] to-[#D97706] rounded-xl">
+            <span class="text-2xl text-white">📧</span>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-400">Pending Invitations</p>
+            <p class="text-3xl font-bold text-white">{allUsers.filter(u => u.status === 'invited').length}</p>
           </div>
         </div>
       </div>
@@ -185,9 +200,11 @@ const allUsers = await db
                   <span class={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
                     user.status === 'active' 
                       ? 'bg-[#10B981] text-white' 
+                      : user.status === 'invited'
+                      ? 'bg-[#F59E0B] text-white'
                       : 'bg-gray-600 text-gray-300'
                   }`}>
-                    {user.status === 'active' ? '🟢 Active' : '⚪ Inactive'}
+                    {user.status === 'active' ? '🟢 Active' : user.status === 'invited' ? '📧 Invited' : '⚪ Inactive'}
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
@@ -239,11 +256,18 @@ const allUsers = await db
     <div class="flex items-center justify-center min-h-screen p-4">
       <div class="bg-[#1F2937] rounded-xl shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col">
         <div class="px-6 py-4 bg-gradient-to-r from-[#1F2937] to-gray-700 border-b border-gray-700 flex-shrink-0">
-          <div class="flex items-center">
-            <div class="w-10 h-10 bg-[#4F46E5] rounded-lg flex items-center justify-center mr-3">
-              <span class="text-white text-xl">📧</span>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <div class="w-10 h-10 bg-[#4F46E5] rounded-lg flex items-center justify-center mr-3">
+                <span class="text-white text-xl">📧</span>
+              </div>
+              <h3 class="text-xl font-semibold text-white">Invite New Team Member</h3>
             </div>
-            <h3 class="text-xl font-semibold text-white">Invite New Team Member</h3>
+            <button
+              class="close-invite-modal-btn text-gray-400 hover:text-white transition-colors p-1"
+            >
+              <span class="text-2xl">×</span>
+            </button>
           </div>
         </div>
         <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
@@ -297,7 +321,7 @@ const allUsers = await db
                   step="0.01"
                   min="0"
                   value="0.00"
-                  class="w-full pl-8 pr-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition-all duration-200 bg-gray-700 text-white"
+                  class="w-[calc(100%-3rem)] pl-8 pr-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition-all duration-200 bg-gray-700 text-white"
                   placeholder="0.00"
                 />
               </div>
@@ -306,8 +330,7 @@ const allUsers = await db
             <div class="flex justify-end space-x-3">
               <button
                 type="button"
-                onclick="closeInviteModal()"
-                class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors font-medium"
+                class="close-invite-modal-btn px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors font-medium"
               >
                 Cancel
               </button>
@@ -329,11 +352,18 @@ const allUsers = await db
     <div class="flex items-center justify-center min-h-screen p-4">
       <div class="bg-[#1F2937] rounded-xl shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col">
         <div class="px-6 py-4 bg-gradient-to-r from-[#1F2937] to-gray-700 border-b border-gray-700 rounded-tl-xl rounded-tr-xl flex-shrink-0">
-          <div class="flex items-center">
-            <div class="w-10 h-10 bg-[#10B981] rounded-lg flex items-center justify-center mr-3">
-              <span class="text-white text-xl">✏️</span>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <div class="w-10 h-10 bg-[#10B981] rounded-lg flex items-center justify-center mr-3">
+                <span class="text-white text-xl">✏️</span>
+              </div>
+              <h3 class="text-xl font-semibold text-white">Edit Team Member</h3>
             </div>
-            <h3 class="text-xl font-semibold text-white">Edit Team Member</h3>
+            <button
+              class="close-edit-modal-btn text-gray-400 hover:text-white transition-colors p-1"
+            >
+              <span class="text-2xl">×</span>
+            </button>
           </div>
         </div>
         <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
@@ -406,19 +436,32 @@ const allUsers = await db
               </div>
               <p class="text-xs text-gray-400 mt-1">Enter the hourly rate in USD (e.g., 25.50)</p>
             </div>
-            <div class="flex justify-end space-x-3">
+            <div class="flex justify-between items-center">
               <button
                 type="button"
-                class="close-edit-modal-btn px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors font-medium"
+                id="deleteUserBtn"
+                class="delete-user-btn px-4 py-2 text-red-400 hover:text-red-300 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors font-medium flex items-center space-x-2"
+                title="Delete team member"
               >
-                Cancel
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+                <span>Delete</span>
               </button>
-              <button
-                type="submit"
-                class="px-4 py-2 bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white rounded-lg transition-all duration-200 font-semibold"
-              >
-                💾 Save Changes
-              </button>
+              <div class="flex space-x-3">
+                <button
+                  type="button"
+                  class="close-edit-modal-btn px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  class="px-4 py-2 bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white rounded-lg transition-all duration-200 font-semibold"
+                >
+                  💾 Save Changes
+                </button>
+              </div>
             </div>
           </form>
         </div>
@@ -431,11 +474,18 @@ const allUsers = await db
     <div class="flex items-center justify-center min-h-screen p-4">
       <div class="bg-[#1F2937] rounded-xl shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col">
         <div class="px-6 py-4 bg-gradient-to-r from-[#1F2937] to-gray-700 border-b border-gray-700 rounded-tl-xl rounded-tr-xl flex-shrink-0">
-          <div class="flex items-center">
-            <div class="w-10 h-10 bg-[#EC4899] rounded-lg flex items-center justify-center mr-3">
-              <span class="text-white text-xl">👑</span>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <div class="w-10 h-10 bg-[#EC4899] rounded-lg flex items-center justify-center mr-3">
+                <span class="text-white text-xl">👑</span>
+              </div>
+              <h3 class="text-xl font-semibold text-white">Change Team Member Role</h3>
             </div>
-            <h3 class="text-xl font-semibold text-white">Change Team Member Role</h3>
+            <button
+              class="close-role-modal-btn text-gray-400 hover:text-white transition-colors p-1"
+            >
+              <span class="text-2xl">×</span>
+            </button>
           </div>
         </div>
         <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
@@ -456,7 +506,8 @@ const allUsers = await db
           <div class="flex justify-end space-x-3">
             <button
               type="button"
-              class="close-role-modal-btn px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors font-medium"
+              onclick="closeRoleModal()"
+              class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors font-medium"
             >
               Cancel
             </button>
@@ -474,6 +525,13 @@ const allUsers = await db
 
 
   <script>
+    // Current user data
+    const currentUser = {
+      name: '${currentUser.name}',
+      email: '${currentUser.email}',
+      role: '${currentUser.role}'
+    };
+
     // Team Member management JavaScript
     const inviteUserBtn = document.getElementById('inviteUserBtn');
     const inviteForm = document.getElementById('inviteForm');
@@ -542,15 +600,21 @@ const allUsers = await db
               name, 
               email, 
               role, 
-              status: 'active',
-              payRate: payRate ? parseFloat(payRate) : 0.00
+              status: 'invited',
+              payRate: payRate ? parseFloat(payRate) : 0.00,
+              invitedBy: currentUser.name // Pass the current admin's name
             }),
           });
           
           if (response.ok) {
+            const result = await response.json();
+            if (result.invitationSent) {
+              alert('Invitation sent successfully! The team member will receive an email to set up their account.');
+            }
             window.location.reload();
           } else {
-            alert('Error inviting team member');
+            const errorData = await response.json();
+            alert('Error inviting team member: ' + (errorData.error || 'Unknown error'));
           }
         } catch (error) {
           console.error('Error:', error);
@@ -595,20 +659,7 @@ const allUsers = await db
       });
     }
 
-    function closeInviteModal() {
-      const inviteModal = document.getElementById('inviteModal');
-      if (inviteModal) inviteModal.classList.add('hidden');
-    }
 
-    function closeEditUserModal() {
-      const editUserModal = document.getElementById('editUserModal');
-      if (editUserModal) editUserModal.classList.add('hidden');
-    }
-
-    function closeRoleModal() {
-      const roleModal = document.getElementById('roleModal');
-      if (roleModal) roleModal.classList.add('hidden');
-    }
 
     function editUser(id: number) {
       const editUserId = document.getElementById('editUserId') as HTMLInputElement;
@@ -681,6 +732,26 @@ const allUsers = await db
       });
     }
 
+    function deleteUser(userId: number, userName: string) {
+      if (confirm(`Are you sure you want to delete the team member "${userName}"? This action cannot be undone and will also delete all their time entries and task assignments.`)) {
+        fetch(`/api/admin/users/${userId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+        })
+        .then(response => {
+          if (response.ok) {
+            window.location.reload();
+          } else {
+            alert('Error deleting team member');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error deleting team member');
+        });
+      }
+    }
+
 
 
 
@@ -700,6 +771,47 @@ const allUsers = await db
       statusFilter.addEventListener('change', applyFilters);
     }
 
+    // Modal close functions
+    function closeInviteModal() {
+      console.log('closeInviteModal called');
+      const inviteModal = document.getElementById('inviteModal');
+      if (inviteModal) {
+        inviteModal.classList.add('hidden');
+        console.log('Invite modal hidden');
+      }
+      
+      // Clear the form
+      const inviteForm = document.getElementById('inviteForm') as HTMLFormElement;
+      if (inviteForm) inviteForm.reset();
+    }
+
+    function closeEditUserModal() {
+      console.log('closeEditUserModal called');
+      const editUserModal = document.getElementById('editUserModal');
+      if (editUserModal) {
+        editUserModal.classList.add('hidden');
+        console.log('Edit user modal hidden');
+      }
+    }
+
+    function closeRoleModal() {
+      console.log('closeRoleModal called');
+      const roleModal = document.getElementById('roleModal');
+      if (roleModal) {
+        roleModal.classList.add('hidden');
+        console.log('Role modal hidden');
+      }
+    }
+
+    // Keyboard support for closing modals (Escape key)
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        closeInviteModal();
+        closeEditUserModal();
+        closeRoleModal();
+      }
+    });
+
     // Add event listeners for user action buttons
     document.addEventListener('DOMContentLoaded', function() {
       // Edit user buttons
@@ -710,23 +822,6 @@ const allUsers = await db
         });
       });
 
-
-
-
-
-      // Modal close buttons
-      document.querySelectorAll('.close-edit-modal-btn').forEach(button => {
-        button.addEventListener('click', function() {
-          closeEditUserModal();
-        });
-      });
-
-      document.querySelectorAll('.close-role-modal-btn').forEach(button => {
-        button.addEventListener('click', function() {
-          closeRoleModal();
-        });
-      });
-
       // Save role button
       document.querySelectorAll('.save-role-btn').forEach(button => {
         button.addEventListener('click', function() {
@@ -734,7 +829,65 @@ const allUsers = await db
         });
       });
 
+      // Delete user button
+      const deleteUserBtn = document.getElementById('deleteUserBtn');
+      if (deleteUserBtn) {
+        deleteUserBtn.addEventListener('click', function() {
+          const userId = parseInt((document.getElementById('editUserId') as HTMLInputElement)?.value || '0');
+          const userName = (document.getElementById('editUserName') as HTMLInputElement)?.value || 'Unknown User';
+          deleteUser(userId, userName);
+        });
+      }
 
+      // Modal close buttons
+      document.querySelectorAll('.close-invite-modal-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+          e.preventDefault();
+          closeInviteModal();
+        });
+      });
+
+      document.querySelectorAll('.close-edit-modal-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+          e.preventDefault();
+          closeEditUserModal();
+        });
+      });
+
+      document.querySelectorAll('.close-role-modal-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+          e.preventDefault();
+          closeRoleModal();
+        });
+      });
+
+      // Modal backdrop clicks
+      const inviteModal = document.getElementById('inviteModal');
+      if (inviteModal) {
+        inviteModal.addEventListener('click', function(e) {
+          if (e.target === inviteModal) {
+            closeInviteModal();
+          }
+        });
+      }
+
+      const editUserModal = document.getElementById('editUserModal');
+      if (editUserModal) {
+        editUserModal.addEventListener('click', function(e) {
+          if (e.target === editUserModal) {
+            closeEditUserModal();
+          }
+        });
+      }
+
+      const roleModal = document.getElementById('roleModal');
+      if (roleModal) {
+        roleModal.addEventListener('click', function(e) {
+          if (e.target === roleModal) {
+            closeRoleModal();
+          }
+        });
+      }
     });
   </script>
 </AdminLayout> 

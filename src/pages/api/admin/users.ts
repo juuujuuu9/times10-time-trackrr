@@ -3,6 +3,8 @@ import { db } from '../../../db/index';
 import { users } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
 import { hashPassword } from '../../../utils/auth';
+import { createInvitationToken } from '../../../utils/invitation';
+import { sendInvitationEmail } from '../../../utils/email';
 
 export const GET: APIRoute = async () => {
   try {
@@ -23,7 +25,7 @@ export const GET: APIRoute = async () => {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { name, email, role, status, payRate, password } = body;
+    const { name, email, role, status, payRate, password, invitedBy } = body;
 
     if (!name || !email) {
       return new Response(JSON.stringify({ error: 'Name and email are required' }), {
@@ -41,22 +43,69 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Hash the password (use a default password if none provided)
-    const hashedPassword = await hashPassword(password || 'password123');
+    // If password is provided, create user immediately
+    if (password) {
+      const hashedPassword = await hashPassword(password);
+      const newUser = await db.insert(users).values({
+        name,
+        email,
+        password: hashedPassword,
+        role: role || 'user',
+        status: status || 'active',
+        payRate: payRate || '0.00',
+      }).returning();
 
-    const newUser = await db.insert(users).values({
-      name,
-      email,
-      password: hashedPassword,
-      role: role || 'user',
-      status: status || 'active',
-      payRate: payRate || '0.00',
-    }).returning();
+      return new Response(JSON.stringify(newUser[0]), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
-    return new Response(JSON.stringify(newUser[0]), {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    // If no password, create invitation
+    try {
+      // Create invitation token
+      const token = await createInvitationToken(email);
+      
+      // Create user with temporary password (will be changed during setup)
+      const tempPassword = await hashPassword('temp_' + Math.random().toString(36).substring(2));
+      const newUser = await db.insert(users).values({
+        name,
+        email,
+        password: tempPassword,
+        role: role || 'user',
+        status: 'invited', // New status for invited users
+        payRate: payRate || '0.00',
+      }).returning();
+
+      // Send invitation email
+      const baseUrl = process.env.BASE_URL || 'http://localhost:4321';
+      const invitationUrl = `${baseUrl}/setup-account?token=${token}`;
+      
+      await sendInvitationEmail({
+        email,
+        name,
+        role: role || 'user',
+        invitationUrl,
+        invitedBy: invitedBy || 'Team Administrator',
+      });
+
+      return new Response(JSON.stringify({ 
+        ...newUser[0], 
+        message: 'Invitation sent successfully',
+        invitationSent: true 
+      }), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch (emailError) {
+      console.error('Error sending invitation email:', emailError);
+      // If email fails, delete the user and return error
+      await db.delete(users).where(eq(users.email, email));
+      return new Response(JSON.stringify({ error: 'Failed to send invitation email' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
   } catch (error) {
     console.error('Error creating user:', error);
     return new Response(JSON.stringify({ error: 'Failed to create user' }), {

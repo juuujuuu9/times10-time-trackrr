@@ -4,7 +4,23 @@ A modern time tracking application built with Astro, React, and PostgreSQL. Focu
 
 ## 🔐 Authentication & User Roles
 
-The application now supports a comprehensive authentication system with three user roles:
+The application now supports a comprehensive authentication system with three user roles and email invitations for team onboarding.
+
+### Team Invitations
+
+Admins can invite new team members by:
+1. Going to the Team Members page (`/admin/users`)
+2. Clicking "Invite Team Member"
+3. Filling out the invitation form with name, email, role, and pay rate
+4. The invitee receives an email with a secure link to set up their account
+5. The invitee clicks the link and creates their password
+6. Their account is activated and they can log in
+
+**Invitation Features:**
+- Secure invitation tokens that expire in 24 hours
+- Professional email templates with Times10 branding
+- Automatic account activation upon password setup
+- Status tracking (invited → active)
 
 ### User Roles
 
@@ -72,7 +88,16 @@ Enter time as simply as typing `2h` or `3.5hr` - no need to worry about start an
    Create a `.env` file with:
    ```env
    DATABASE_URL=your_postgresql_connection_string
+   RESEND_API_KEY=your_resend_api_key_here
+   BASE_URL=http://localhost:4321
+   VERIFIED_EMAIL=your_verified_email@example.com
    ```
+   
+   **Email Service Setup:**
+   - Sign up for a free account at [Resend](https://resend.com)
+   - Get your API key from the dashboard
+   - Add it to your `.env` file as `RESEND_API_KEY`
+   - The `BASE_URL` should match your application's URL
 
 4. **Set up the database**
    ```bash

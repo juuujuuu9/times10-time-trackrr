@@ -1,0 +1,196 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+// Get token from URL params
+const url = new URL(Astro.request.url);
+const token = url.searchParams.get('token');
+
+if (!token) {
+  return Astro.redirect('/login');
+}
+---
+
+<Layout title="Set Up Your Account - Times10">
+  <div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
+    <div class="max-w-md w-full">
+      <!-- Logo and Header -->
+      <div class="text-center mb-8">
+        <div class="w-20 h-20 bg-gradient-to-r from-[#4F46E5] to-[#3730A3] rounded-full flex items-center justify-center mx-auto mb-6">
+          <span class="text-white text-3xl">🚀</span>
+        </div>
+        <h1 class="text-3xl font-bold text-white mb-2">Welcome to Times10!</h1>
+        <p class="text-gray-300">Set up your account to get started</p>
+      </div>
+
+      <!-- Setup Form -->
+      <div class="bg-gray-800 rounded-xl shadow-xl border border-gray-700 p-8">
+        <form id="setupForm" class="space-y-6">
+          <div>
+            <label for="password" class="block text-sm font-semibold text-gray-300 mb-2">
+              Create Your Password
+            </label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              required
+              minlength="8"
+              class="w-full px-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition-all duration-200 bg-gray-700 text-white"
+              placeholder="Enter your password"
+            />
+            <p class="text-xs text-gray-400 mt-1">Password must be at least 8 characters long</p>
+          </div>
+
+          <div>
+            <label for="confirmPassword" class="block text-sm font-semibold text-gray-300 mb-2">
+              Confirm Password
+            </label>
+            <input
+              type="password"
+              id="confirmPassword"
+              name="confirmPassword"
+              required
+              class="w-full px-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition-all duration-200 bg-gray-700 text-white"
+              placeholder="Confirm your password"
+            />
+          </div>
+
+          <div id="errorMessage" class="hidden">
+            <div class="bg-red-900/50 border border-red-700 rounded-lg p-4">
+              <p class="text-red-300 text-sm" id="errorText"></p>
+            </div>
+          </div>
+
+          <div id="successMessage" class="hidden">
+            <div class="bg-green-900/50 border border-green-700 rounded-lg p-4">
+              <p class="text-green-300 text-sm">Account setup successful! Redirecting to login...</p>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            id="submitBtn"
+            class="w-full bg-gradient-to-r from-[#4F46E5] to-[#3730A3] hover:from-[#3730A3] hover:to-[#312E81] text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg"
+          >
+            <span id="submitText">Set Up Account</span>
+            <span id="loadingText" class="hidden">Setting up...</span>
+          </button>
+        </form>
+
+        <div class="mt-6 text-center">
+          <p class="text-sm text-gray-400">
+            Already have an account? 
+            <a href="/login" class="text-[#4F46E5] hover:text-[#3730A3] font-medium">Sign in here</a>
+          </p>
+        </div>
+      </div>
+
+      <!-- Features Preview -->
+      <div class="mt-8 text-center">
+        <h3 class="text-lg font-semibold text-white mb-4">What you can do with Times10:</h3>
+        <div class="grid grid-cols-1 gap-4 text-sm text-gray-300">
+          <div class="flex items-center justify-center space-x-2">
+            <span class="text-[#4F46E5]">⏱️</span>
+            <span>Track time on projects and tasks</span>
+          </div>
+          <div class="flex items-center justify-center space-x-2">
+            <span class="text-[#4F46E5]">📊</span>
+            <span>View detailed reports and analytics</span>
+          </div>
+          <div class="flex items-center justify-center space-x-2">
+            <span class="text-[#4F46E5]">👥</span>
+            <span>Collaborate with your team</span>
+          </div>
+          <div class="flex items-center justify-center space-x-2">
+            <span class="text-[#4F46E5]">📋</span>
+            <span>Manage projects and clients</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const token = new URLSearchParams(window.location.search).get('token');
+    const form = document.getElementById('setupForm') as HTMLFormElement;
+    const submitBtn = document.getElementById('submitBtn') as HTMLButtonElement;
+    const submitText = document.getElementById('submitText');
+    const loadingText = document.getElementById('loadingText');
+    const errorMessage = document.getElementById('errorMessage');
+    const errorText = document.getElementById('errorText');
+    const successMessage = document.getElementById('successMessage');
+
+    if (!token) {
+      window.location.href = '/login';
+    }
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const password = (document.getElementById('password') as HTMLInputElement)?.value;
+      const confirmPassword = (document.getElementById('confirmPassword') as HTMLInputElement)?.value;
+
+      // Hide previous messages
+      errorMessage?.classList.add('hidden');
+      successMessage?.classList.add('hidden');
+
+      // Validate passwords
+      if (!password || password.length < 8) {
+        showError('Password must be at least 8 characters long');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showError('Passwords do not match');
+        return;
+      }
+
+      // Show loading state
+      if (submitBtn) submitBtn.disabled = true;
+      submitText?.classList.add('hidden');
+      loadingText?.classList.remove('hidden');
+
+      try {
+        const response = await fetch('/api/setup-account', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            token,
+            password,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          showSuccess();
+          // Redirect to login after 2 seconds
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 2000);
+        } else {
+          showError(data.error || 'Failed to set up account');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        showError('Network error. Please try again.');
+      } finally {
+        // Reset loading state
+        if (submitBtn) submitBtn.disabled = false;
+        submitText?.classList.remove('hidden');
+        loadingText?.classList.add('hidden');
+      }
+    });
+
+    function showError(message: string) {
+      if (errorText) errorText.textContent = message;
+      errorMessage?.classList.remove('hidden');
+    }
+
+    function showSuccess() {
+      successMessage?.classList.remove('hidden');
+    }
+  </script>
+</Layout> 
