@@ -109,31 +109,107 @@ const user = await requireAuth('/login')(Astro) as any;
                 >
                   View Reports
                 </button>
-                <a
-                  href="/test-enhanced-timer"
-                  class="w-full bg-green-100 text-green-700 px-4 py-2 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium text-center block"
-                >
-                  Test Enhanced Timer
-                </a>
-                <a
-                  href="/test-timer-persistence"
-                  class="w-full bg-purple-100 text-purple-700 px-4 py-2 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium text-center block"
-                >
-                  Test Timer Persistence
-                </a>
+
               </div>
             </div>
 
-            <!-- Recent Projects -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Projects</h3>
-              <div id="recentProjects" class="space-y-3">
-                <div class="text-center py-4">
-                  <p class="text-gray-500 text-sm">Loading projects...</p>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Manual Time Entry Modal -->
+  <div id="timeEntryModal" class="fixed inset-0 bg-black/50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-200 flex flex-col">
+        <div class="px-6 py-4 border-b border-gray-200 flex-shrink-0">
+          <h3 class="text-lg font-medium text-gray-900">Add Manual Time Entry</h3>
+        </div>
+        <div class="flex-1 overflow-y-auto">
+          <form id="timeEntryForm" class="px-6 py-4">
+            <div class="mb-4">
+              <label for="timeEntryTask" class="block text-sm font-medium text-gray-700 mb-1">
+                Task <span class="text-gray-500 font-normal">(required)</span>
+              </label>
+              <div class="relative">
+                <input
+                  type="text"
+                  id="timeEntryTask"
+                  placeholder="Search for a task..."
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <input type="hidden" id="timeEntryTaskId" />
+                <div id="taskDropdown" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto hidden">
+                  <!-- Task results will be populated here -->
                 </div>
               </div>
             </div>
-          </div>
+            <div class="mb-4">
+              <label for="timeEntryDuration" class="block text-sm font-medium text-gray-700 mb-1">
+                Duration <span class="text-gray-500 font-normal">(required)</span>
+              </label>
+              <input
+                type="text"
+                id="timeEntryDuration"
+                placeholder="e.g., 2h, 3.5hr, 4:15, 90m"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <p class="text-xs text-gray-500 mt-1">
+                Supported formats: 2h, 2hr, 3.5hr, 4:15, 90m, 5400s, etc.
+              </p>
+            </div>
+            <div class="mb-4">
+              <label for="timeEntryDate" class="block text-sm font-medium text-gray-700 mb-1">
+                Task Date <span class="text-gray-500 font-normal">(required)</span>
+              </label>
+              <input
+                type="date"
+                id="timeEntryDate"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <p class="text-xs text-gray-500 mt-1">
+                When did this task actually occur? (defaults to today)
+              </p>
+            </div>
+            <div class="mb-6">
+              <label for="timeEntryNotes" class="block text-sm font-medium text-gray-700 mb-1">
+                Notes
+              </label>
+              <textarea
+                id="timeEntryNotes"
+                rows="3"
+                placeholder="Optional notes about this time entry..."
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              ></textarea>
+            </div>
+            <div class="flex justify-end space-x-3">
+              <button
+                type="button"
+                id="cancelTimeEntryBtn"
+                class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                id="saveTimeEntryBtn"
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center space-x-2"
+              >
+                <span id="saveButtonText">Save Entry</span>
+                <svg id="saveButtonSpinner" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <!-- Alternative spinner for debugging -->
+                <div id="saveButtonSpinnerAlt" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin hidden"></div>
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
@@ -208,12 +284,7 @@ const user = await requireAuth('/login')(Astro) as any;
         updateWeeklyStats(statsData);
       }
 
-      // Load recent projects
-      const projectsResponse = await fetch('/api/projects?recent=true&userId=' + encodeURIComponent(userId));
-      if (projectsResponse.ok) {
-        const projectsData = await projectsResponse.json();
-        updateRecentProjects(projectsData.data || []);
-      }
+
 
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -276,25 +347,7 @@ const user = await requireAuth('/login')(Astro) as any;
     if (weeklyProjects) weeklyProjects.textContent = stats.activeProjects || 0;
   }
 
-  function updateRecentProjects(projects: any[]) {
-    const container = document.getElementById('recentProjects');
-    if (!container) return;
 
-    if (projects.length === 0) {
-      container.innerHTML = '<p class="text-gray-500 text-sm">No recent projects</p>';
-      return;
-    }
-
-    container.innerHTML = projects.slice(0, 3).map((project: any) => `
-      <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-        <div>
-          <p class="font-medium text-gray-900 text-sm">${project.name}</p>
-          <p class="text-xs text-gray-600">${project.clientName || 'Unknown Client'}</p>
-        </div>
-        <span class="w-2 h-2 bg-green-500 rounded-full"></span>
-      </div>
-    `).join('');
-  }
 
   function formatDuration(seconds: number): string {
     const hours = Math.floor(seconds / 3600);
@@ -323,4 +376,269 @@ const user = await requireAuth('/login')(Astro) as any;
 
   // Load data when page loads
   document.addEventListener('DOMContentLoaded', loadDashboardData);
+
+  // Test spinner functionality
+  const testSpinnerBtn = document.getElementById('testSpinnerBtn');
+  if (testSpinnerBtn) {
+    testSpinnerBtn.addEventListener('click', () => {
+      console.log('Testing spinner...');
+      const spinner = document.getElementById('saveButtonSpinner');
+      const spinnerAlt = document.getElementById('saveButtonSpinnerAlt');
+      
+      if (spinner) {
+        console.log('Found spinner, toggling hidden class');
+        spinner.classList.toggle('hidden');
+        console.log('Spinner hidden:', spinner.classList.contains('hidden'));
+      }
+      
+      if (spinnerAlt) {
+        console.log('Found alt spinner, toggling hidden class');
+        spinnerAlt.classList.toggle('hidden');
+        console.log('Alt spinner hidden:', spinnerAlt.classList.contains('hidden'));
+      }
+    });
+  }
+
+  // Time Entry Modal Functionality
+  const addTimeEntryBtn = document.getElementById('addTimeEntryBtn');
+  const timeEntryModal = document.getElementById('timeEntryModal');
+  const timeEntryForm = document.getElementById('timeEntryForm');
+  const cancelTimeEntryBtn = document.getElementById('cancelTimeEntryBtn');
+  const timeEntryTask = document.getElementById('timeEntryTask');
+  const timeEntryTaskId = document.getElementById('timeEntryTaskId');
+  const taskDropdown = document.getElementById('taskDropdown');
+
+  // Show modal when Add Manual Time Entry button is clicked
+  if (addTimeEntryBtn) {
+    addTimeEntryBtn.addEventListener('click', () => {
+      if (timeEntryModal) {
+        timeEntryModal.classList.remove('hidden');
+        // Set default date to today
+        const dateInput = document.getElementById('timeEntryDate') as HTMLInputElement;
+        if (dateInput) {
+          const today = new Date().toISOString().split('T')[0];
+          dateInput.value = today;
+        }
+      }
+    });
+  }
+
+  // Close modal when Cancel button is clicked
+  if (cancelTimeEntryBtn) {
+    cancelTimeEntryBtn.addEventListener('click', closeTimeEntryModal);
+  }
+
+  // Close modal when clicking outside
+  document.addEventListener('click', (e) => {
+    if (timeEntryModal && e.target === timeEntryModal) {
+      closeTimeEntryModal();
+    }
+  });
+
+  // Close modal with Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && timeEntryModal && !timeEntryModal.classList.contains('hidden')) {
+      closeTimeEntryModal();
+    }
+  });
+
+  function closeTimeEntryModal() {
+    if (timeEntryModal) {
+      timeEntryModal.classList.add('hidden');
+      if (timeEntryForm && timeEntryForm instanceof HTMLFormElement) {
+        timeEntryForm.reset();
+      }
+      if (timeEntryTaskId && timeEntryTaskId instanceof HTMLInputElement) {
+        timeEntryTaskId.value = '';
+      }
+      if (taskDropdown) {
+        taskDropdown.classList.add('hidden');
+      }
+    }
+  }
+
+  // Task search functionality
+  if (timeEntryTask) {
+    timeEntryTask.addEventListener('input', debounce(async (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      const searchTerm = target.value.trim();
+      
+      if (searchTerm.length < 2) {
+        if (taskDropdown) {
+          taskDropdown.classList.add('hidden');
+        }
+        return;
+      }
+
+      try {
+        const userId = await getCurrentUserId();
+        if (!userId) {
+          console.error('No user ID available for task search');
+          return;
+        }
+
+        const response = await fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=10`);
+        if (response.ok) {
+          const data = await response.json();
+          const tasks = data.data || [];
+          
+          // Filter tasks based on search term
+          const filteredTasks = tasks.filter((task: any) => 
+            task.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            task.projectName.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+
+          displayTaskDropdown(filteredTasks);
+        }
+      } catch (error) {
+        console.error('Error searching tasks:', error);
+      }
+    }, 300));
+  }
+
+  function displayTaskDropdown(tasks: any[]) {
+    if (!taskDropdown) return;
+
+    if (tasks.length === 0) {
+      taskDropdown.innerHTML = '<div class="px-3 py-2 text-gray-500 text-sm">No tasks found</div>';
+      taskDropdown.classList.remove('hidden');
+      return;
+    }
+
+    taskDropdown.innerHTML = tasks.map((task: any) => `
+      <div 
+        class="px-3 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+        data-task-id="${task.id}"
+        data-task-name="${task.name}"
+        data-project-name="${task.projectName}"
+      >
+        <div class="font-medium text-gray-900">${task.name}</div>
+        <div class="text-sm text-gray-600">${task.projectName}</div>
+      </div>
+    `).join('');
+
+    taskDropdown.classList.remove('hidden');
+
+    // Add click handlers to task items
+    taskDropdown.querySelectorAll('[data-task-id]').forEach((item: Element) => {
+      item.addEventListener('click', () => {
+        const taskId = item.getAttribute('data-task-id');
+        const taskName = item.getAttribute('data-task-name');
+        const projectName = item.getAttribute('data-project-name');
+
+        if (timeEntryTask && timeEntryTask instanceof HTMLInputElement) {
+          timeEntryTask.value = `${taskName} (${projectName})`;
+        }
+        if (timeEntryTaskId && timeEntryTaskId instanceof HTMLInputElement) {
+          timeEntryTaskId.value = taskId || '';
+        }
+        if (taskDropdown) {
+          taskDropdown.classList.add('hidden');
+        }
+      });
+    });
+  }
+
+  // Debounce function
+  function debounce(func: Function, wait: number) {
+    let timeout: NodeJS.Timeout;
+    return function executedFunction(...args: any[]) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+
+  // Handle form submission
+  if (timeEntryForm) {
+    timeEntryForm.addEventListener('submit', async (e: Event) => {
+      e.preventDefault();
+      
+      const target = e.target as HTMLFormElement;
+      const submitButton = target.querySelector('button[type="submit"]') as HTMLButtonElement;
+      const saveButtonText = document.getElementById('saveButtonText') as HTMLSpanElement;
+      const saveButtonSpinner = document.getElementById('saveButtonSpinner') as HTMLElement;
+      const saveButtonSpinnerAlt = document.getElementById('saveButtonSpinnerAlt') as HTMLElement;
+      const originalText = saveButtonText.textContent;
+      
+      // Show loading state
+      submitButton.disabled = true;
+      saveButtonText.textContent = 'Saving...';
+      saveButtonSpinner.classList.remove('hidden');
+      saveButtonSpinnerAlt.classList.remove('hidden');
+      
+      // Debug: Log to console to verify spinner state
+      console.log('Spinner element:', saveButtonSpinner);
+      console.log('Spinner classes:', saveButtonSpinner.className);
+      console.log('Spinner hidden:', saveButtonSpinner.classList.contains('hidden'));
+      console.log('Alternative spinner element:', saveButtonSpinnerAlt);
+      
+      const taskId = timeEntryTaskId instanceof HTMLInputElement ? timeEntryTaskId.value : '';
+      const durationInput = document.getElementById('timeEntryDuration') as HTMLInputElement;
+      const taskDateInput = document.getElementById('timeEntryDate') as HTMLInputElement;
+      const notesInput = document.getElementById('timeEntryNotes') as HTMLTextAreaElement;
+      
+      const duration = durationInput?.value;
+      const taskDate = taskDateInput?.value;
+      const notes = notesInput?.value;
+      
+      if (!taskId || !duration || !taskDate) {
+        alert('Please fill in all required fields');
+        submitButton.disabled = false;
+        saveButtonText.textContent = originalText;
+        saveButtonSpinner.classList.add('hidden');
+        saveButtonSpinnerAlt.classList.add('hidden');
+        return;
+      }
+
+      try {
+        const userId = await getCurrentUserId();
+        if (!userId) {
+          throw new Error('No user ID available');
+        }
+
+        const response = await fetch('/api/admin/time-entries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: parseInt(userId),
+            taskId: parseInt(taskId),
+            duration: duration,
+            taskDate: taskDate,
+            notes: notes || null
+          }),
+        });
+        
+        if (response.ok) {
+          // Show success message
+          saveButtonText.textContent = 'Saved!';
+          submitButton.classList.add('bg-green-600');
+          saveButtonSpinner.classList.add('hidden');
+          saveButtonSpinnerAlt.classList.add('hidden');
+          
+          // Close modal and reload data after a brief delay
+          setTimeout(() => {
+            closeTimeEntryModal();
+            loadDashboardData(); // Reload dashboard data to show new entry
+          }, 1000);
+        } else {
+          const errorData = await response.json();
+          alert(`Error saving time entry: ${errorData.error || 'Unknown error'}`);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error saving time entry');
+      } finally {
+        // Reset button state
+        submitButton.disabled = false;
+        saveButtonText.textContent = originalText;
+        submitButton.classList.remove('bg-green-600');
+        saveButtonSpinner.classList.add('hidden');
+        saveButtonSpinnerAlt.classList.add('hidden');
+      }
+    });
+  }
 </script> 
