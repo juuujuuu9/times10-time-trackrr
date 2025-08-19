@@ -60,4 +60,51 @@ export const GET: APIRoute = async ({ url }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   }
+};
+
+export const POST: APIRoute = async ({ request }) => {
+  try {
+    const body = await request.json();
+    const { taskId, userId, startTime, endTime, duration, notes } = body;
+
+    // Validate required fields
+    if (!taskId || !userId || !startTime || !endTime) {
+      return new Response(JSON.stringify({
+        error: 'Missing required fields: taskId, userId, startTime, endTime'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Create the time entry
+    const [newEntry] = await db
+      .insert(timeEntries)
+      .values({
+        taskId: parseInt(taskId),
+        userId: parseInt(userId),
+        startTime: new Date(startTime),
+        endTime: new Date(endTime),
+        durationManual: duration || null,
+        notes: notes || null,
+      })
+      .returning();
+
+    return new Response(JSON.stringify({
+      data: newEntry,
+      message: 'Time entry created successfully'
+    }), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+  } catch (error) {
+    console.error('Error creating time entry:', error);
+    return new Response(JSON.stringify({
+      error: 'Failed to create time entry'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 }; 

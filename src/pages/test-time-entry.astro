@@ -34,7 +34,7 @@ const sampleUsers = await db.select().from(users).limit(3);
           
           {sampleUsers.map((user) => (
             <div class="mb-4">
-              <h4 class="text-sm font-medium text-gray-300 mb-2">Quick Entry for Team Member {user.name}</h4>
+              <h4 class="text-sm font-medium text-gray-300 mb-2">Quick Entry for Team Member {user.name || 'Unknown'}</h4>
               <div id={`quick-entry-${task.id}-${user.id}`} 
                    data-task-id={task.id} 
                    data-user-id={user.id} 

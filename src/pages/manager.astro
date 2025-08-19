@@ -19,7 +19,7 @@ const user = await requireRole('manager', '/dashboard')(Astro) as any;
             </span>
           </div>
           <div class="flex items-center space-x-4">
-            <span class="text-sm text-gray-600">Welcome, {user.name}</span>
+            <span class="text-sm text-gray-600">Welcome, {user?.name || 'Manager'}</span>
             <button
               id="logoutButton"
               class="text-sm text-gray-600 hover:text-gray-900 transition-colors"

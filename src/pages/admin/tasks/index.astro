@@ -62,9 +62,12 @@ const allUsers = await db.select().from(users).orderBy(users.name);
       </div>
       <button
         id="createTaskBtn"
-        class="bg-[#4F46E5] hover:bg-[#3730A3] text-white font-medium py-2 px-4 rounded-lg transition-colors"
+        class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
       >
-        + Add Task
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+        </svg>
+        Add Task
       </button>
     </div>
 
@@ -77,14 +80,14 @@ const allUsers = await db.select().from(users).orderBy(users.name);
             type="text"
             id="search"
             placeholder="Search tasks..."
-            class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+            class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
           />
         </div>
         <div class="sm:w-48">
           <label for="statusFilter" class="block text-sm font-medium text-gray-300 mb-1">Status</label>
           <select
             id="statusFilter"
-            class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+            class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
           >
             <option value="">All Statuses</option>
             <option value="pending">Pending</option>
@@ -97,7 +100,7 @@ const allUsers = await db.select().from(users).orderBy(users.name);
           <label for="userFilter" class="block text-sm font-medium text-gray-300 mb-1">Assigned User</label>
           <select
             id="userFilter"
-            class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+            class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
           >
             <option value="">All Users</option>
             {allUsers.map((user) => (
@@ -148,10 +151,10 @@ const allUsers = await db.select().from(users).orderBy(users.name);
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                       <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        task.status === 'completed' ? 'bg-[#10B981] text-white' :
-                        task.status === 'in-progress' ? 'bg-[#F59E0B] text-white' :
+                        task.status === 'completed' ? 'bg-gray-600 text-white' :
+                        task.status === 'in-progress' ? 'bg-gray-600 text-white' :
                         task.status === 'archived' ? 'bg-gray-600 text-gray-300' :
-                        'bg-[#4F46E5] text-white'
+                        'bg-gray-600 text-white'
                       }`}>
                         {task.status}
                       </span>
@@ -165,26 +168,35 @@ const allUsers = await db.select().from(users).orderBy(users.name);
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div class="flex justify-end space-x-2">
                         <button
-                          class="text-[#4F46E5] hover:text-[#3730A3]"
+                          class="inline-flex items-center px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
                           onclick={`assignUsers(${task.id})`}
+                          title="Assign users to task"
                         >
+                          <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                          </svg>
                           Assign
                         </button>
                         <button
-                          class="text-[#EC4899] hover:text-[#DB2777]"
+                          class="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
                           onclick={`editTask(${task.id})`}
+                          title="Edit task details"
                         >
+                          <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                          </svg>
                           Edit
                         </button>
                         <button
-                          class="delete-task-btn text-red-400 hover:text-red-300 transition-colors"
+                          class="delete-task-btn inline-flex items-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
                           data-task-id={task.id}
                           data-task-name={task.name}
                           title="Delete task"
                         >
-                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                           </svg>
+                          Delete
                         </button>
                       </div>
                     </td>
@@ -203,9 +215,12 @@ const allUsers = await db.select().from(users).orderBy(users.name);
         <h3 class="text-lg font-medium text-white mb-2">No tasks yet</h3>
         <p class="text-gray-300 mb-4">Get started by adding your first task</p>
         <button
-          class="bg-[#4F46E5] hover:bg-[#3730A3] text-white font-medium py-2 px-4 rounded-lg transition-colors"
+          class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
           onclick="document.getElementById('createTaskBtn').click()"
         >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+          </svg>
           Add Your First Task
         </button>
       </div>
@@ -215,7 +230,7 @@ const allUsers = await db.select().from(users).orderBy(users.name);
   <!-- Create/Edit Task Modal -->
   <div id="taskModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col">
+      <div class="bg-gray-600 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col">
         <div class="px-6 py-4 border-b border-gray-700 flex-shrink-0">
           <h3 id="taskModalTitle" class="text-lg font-medium text-white">Add New Task</h3>
         </div>
@@ -230,7 +245,7 @@ const allUsers = await db.select().from(users).orderBy(users.name);
                 type="text"
                 id="taskName"
                 required
-                class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+                class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
               />
             </div>
             <div class="mb-4">
@@ -240,7 +255,7 @@ const allUsers = await db.select().from(users).orderBy(users.name);
               <textarea
                 id="taskDescription"
                 rows="3"
-                class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+                class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
               ></textarea>
             </div>
             <div class="mb-4">
@@ -250,7 +265,7 @@ const allUsers = await db.select().from(users).orderBy(users.name);
               <select
                 id="taskProject"
                 required
-                class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+                class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
               >
                 <option value="">Select a project</option>
                 {allProjects.map((project) => (
@@ -265,7 +280,7 @@ const allUsers = await db.select().from(users).orderBy(users.name);
               <select
                 id="taskStatus"
                 required
-                class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+                class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
               >
                 <option value="pending">Pending</option>
                 <option value="in-progress">In Progress</option>
@@ -277,14 +292,20 @@ const allUsers = await db.select().from(users).orderBy(users.name);
               <button
                 type="button"
                 onclick="closeTaskModal()"
-                class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+                class="inline-flex items-center px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-all duration-200 font-medium"
               >
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
                 Cancel
               </button>
               <button
                 type="submit"
-                class="px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-md transition-colors"
+                class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-all duration-200 font-medium shadow-sm hover:shadow-md"
               >
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
                 Save Task
               </button>
             </div>
@@ -297,7 +318,7 @@ const allUsers = await db.select().from(users).orderBy(users.name);
   <!-- User Assignment Modal -->
   <div id="assignmentModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col">
+      <div class="bg-gray-600 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col">
         <div class="px-6 py-4 border-b border-gray-700 flex-shrink-0">
           <h3 class="text-lg font-medium text-white">Assign Users to Task</h3>
         </div>
@@ -312,7 +333,7 @@ const allUsers = await db.select().from(users).orderBy(users.name);
                     <input
                       type="checkbox"
                       value={user.id}
-                      class="rounded border-gray-500 text-[#4F46E5] focus:ring-[#4F46E5] bg-gray-700"
+                      class="rounded border-gray-500 text-gray-300 focus:ring-gray-500 bg-gray-700"
                     />
                     <span class="ml-2 text-sm text-white">{user.name}</span>
                   </label>
@@ -323,14 +344,20 @@ const allUsers = await db.select().from(users).orderBy(users.name);
               <button
                 type="button"
                 onclick="closeAssignmentModal()"
-                class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+                class="inline-flex items-center px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-all duration-200 font-medium"
               >
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
                 Cancel
               </button>
               <button
                 onclick="saveAssignments()"
-                class="px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-md transition-colors"
+                class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-all duration-200 font-medium shadow-sm hover:shadow-md"
               >
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
                 Save Assignments
               </button>
             </div>

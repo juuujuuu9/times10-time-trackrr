@@ -1,6 +1,6 @@
 import { db } from './index';
 import { users, timeEntries, tasks, projects, clients } from './schema';
-import { eq, and, gte, lte, sql, sum, count } from 'drizzle-orm';
+import { eq, and, gte, lte, sql, sum, count, inArray } from 'drizzle-orm';
 import { getWeekStartDate, getWeekEndDate } from '../utils/dateUtils';
 
 // Get all active users
@@ -213,4 +213,46 @@ export async function getClientCosts(startDate: Date, endDate: Date, teamMemberI
       END
     ), 0) > 0`)
     .orderBy(clients.name);
+} 
+
+// Get user by ID
+export async function getUserById(userId: number) {
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  
+  return result[0] || null;
+}
+
+// Get task with project information by ID
+export async function getTaskWithProject(taskId: number) {
+  const result = await db
+    .select({
+      id: tasks.id,
+      name: tasks.name,
+      description: tasks.description,
+      status: tasks.status,
+      projectId: tasks.projectId,
+      projectName: projects.name,
+      clientName: clients.name,
+    })
+    .from(tasks)
+    .innerJoin(projects, eq(tasks.projectId, projects.id))
+    .innerJoin(clients, eq(projects.clientId, clients.id))
+    .where(eq(tasks.id, taskId))
+    .limit(1);
+  
+  return result[0] || null;
+}
+
+// Get users by IDs
+export async function getUsersByIds(userIds: number[]) {
+  if (userIds.length === 0) return [];
+  
+  return await db
+    .select()
+    .from(users)
+    .where(inArray(users.id, userIds));
 } 

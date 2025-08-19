@@ -13,7 +13,7 @@ const allProjects = await db
     clientId: projects.clientId,
     clientName: clients.name,
     clientArchived: clients.archived,
-    taskCount: count(tasks.id),
+    taskCount: sql<number>`COUNT(DISTINCT ${tasks.id})`,
     totalHours: sql<number>`COALESCE(SUM(EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))/3600), 0)`,
   })
   .from(projects)
@@ -56,9 +56,12 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       </div>
       <button
         id="createProjectBtn"
-        class="bg-[#4F46E5] hover:bg-[#3730A3] text-white font-medium py-2 px-4 rounded-lg transition-colors"
+        class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
       >
-        + Add Project
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+        </svg>
+        Add Project
       </button>
     </div>
 
@@ -71,14 +74,14 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
             type="text"
             id="search"
             placeholder="Search projects..."
-            class="w-[calc(100%-5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+            class="w-[calc(100%-5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
           />
         </div>
         <div class="sm:w-48">
           <label for="clientFilter" class="block text-sm font-medium text-gray-300 mb-1">Filter by Client</label>
           <select
             id="clientFilter"
-            class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+            class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
           >
             <option value="">All Clients</option>
             {allClients.map((client) => (
@@ -131,7 +134,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                       <div class="text-sm font-medium text-white">{project.name}</div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#4F46E5] text-white">
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-600 text-white">
                         {project.taskCount} tasks
                       </span>
                     </td>
@@ -145,29 +148,38 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                       <div class="flex justify-end space-x-2">
                         <button
                           type="button"
-                          class="text-[#4F46E5] hover:text-[#3730A3] view-tasks-btn"
+                          class="view-tasks-btn inline-flex items-center px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
                           data-project-id={project.id}
                           data-project-name={project.name}
+                          title="View project tasks"
                         >
+                          <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                          </svg>
                           View Tasks
                         </button>
                         <button
                           type="button"
-                          class="text-[#EC4899] hover:text-[#DB2777] edit-project-btn"
+                          class="edit-project-btn inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
                           data-project-id={project.id}
+                          title="Edit project details"
                         >
+                          <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                          </svg>
                           Edit
                         </button>
                         <button
                           type="button"
-                          class="delete-project-btn text-red-400 hover:text-red-300 transition-colors"
+                          class="delete-project-btn inline-flex items-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
                           data-project-id={project.id}
                           data-project-name={project.name}
                           title="Delete project"
                         >
-                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                           </svg>
+                          Delete
                         </button>
                       </div>
                     </td>
@@ -187,9 +199,12 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         <h3 class="text-lg font-medium text-white mb-2">No projects yet</h3>
         <p class="text-gray-300 mb-4">Get started by adding your first project</p>
         <button
-          class="bg-[#4F46E5] hover:bg-[#3730A3] text-white font-medium py-2 px-4 rounded-lg transition-colors"
+          class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
           onclick="document.getElementById('createProjectBtn').click()"
         >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+          </svg>
           Add Your First Project
         </button>
       </div>
@@ -199,7 +214,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
   <!-- Create/Edit Project Modal -->
         <div id="projectModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col" onclick="event.stopPropagation()">
+      <div class="bg-gray-600 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col" onclick="event.stopPropagation()">
         <div class="px-6 py-4 border-b border-gray-700 flex-shrink-0">
           <h3 id="projectModalTitle" class="text-lg font-medium text-white">Add New Project</h3>
         </div>
@@ -214,7 +229,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                 type="text"
                 id="projectName"
                 required
-                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
               />
             </div>
             <div class="mb-4">
@@ -225,7 +240,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                 <select
                   id="projectClient"
                   required
-                  class="flex-1 px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+                  class="flex-1 px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
                 >
                   <option value="">Select a client</option>
                   {allClients.map((client) => (
@@ -235,9 +250,12 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                 <button
                   type="button"
                   id="createClientBtn"
-                  class="px-3 py-2 bg-[#10B981] hover:bg-[#059669] text-white rounded-md transition-colors text-sm font-medium"
+                  class="inline-flex items-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md"
                 >
-                  + New
+                  <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                  </svg>
+                  New
                 </button>
               </div>
             </div>
@@ -245,14 +263,20 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               <button
                 type="button"
                 id="cancelProjectBtn"
-                class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+                class="inline-flex items-center px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-all duration-200 font-medium"
               >
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
                 Cancel
               </button>
               <button
                 type="submit"
-                class="px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-md transition-colors"
+                class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-all duration-200 font-medium shadow-sm hover:shadow-md"
               >
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
                 Save Project
               </button>
             </div>
@@ -265,7 +289,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
   <!-- Create New Client Modal -->
         <div id="clientModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col" onclick="event.stopPropagation()">
+      <div class="bg-gray-600 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col" onclick="event.stopPropagation()">
         <div class="px-6 py-4 border-b border-gray-700 flex-shrink-0">
           <h3 class="text-lg font-medium text-white">Create New Client</h3>
         </div>
@@ -279,7 +303,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                 type="text"
                 id="clientName"
                 required
-                class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+                class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
                 placeholder="Enter client name"
               />
             </div>
@@ -287,14 +311,20 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               <button
                 type="button"
                 id="cancelClientBtn"
-                class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+                class="inline-flex items-center px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-all duration-200 font-medium"
               >
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
                 Cancel
               </button>
               <button
                 type="submit"
-                class="px-4 py-2 bg-[#10B981] hover:bg-[#059669] text-white rounded-md transition-colors"
+                class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-all duration-200 font-medium shadow-sm hover:shadow-md"
               >
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
                 Create Client
               </button>
             </div>
@@ -307,7 +337,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
   <!-- Tasks Modal -->
   <div id="tasksModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] border border-gray-700 flex flex-col" onclick="event.stopPropagation()">
+      <div class="bg-gray-600 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] border border-gray-700 flex flex-col" onclick="event.stopPropagation()">
         <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center flex-shrink-0">
           <h3 id="tasksModalTitle" class="text-lg font-medium text-white">Project Tasks</h3>
           <button
@@ -328,9 +358,12 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               <button
                 type="button"
                 id="addTaskBtn"
-                class="bg-[#4F46E5] hover:bg-[#3730A3] text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                class="inline-flex items-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
               >
-                + Add Task
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                Add Task
               </button>
             </div>
           </div>
@@ -348,7 +381,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
   <!-- Add Task Modal -->
   <div id="addTaskModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-[#1F2937] rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col" onclick="event.stopPropagation()">
+      <div class="bg-gray-600 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col" onclick="event.stopPropagation()">
         <div class="px-6 py-4 border-b border-gray-700 flex-shrink-0">
           <h3 class="text-lg font-medium text-white">Add New Task</h3>
         </div>
@@ -363,7 +396,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                 type="text"
                 id="taskName"
                 required
-                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
                 placeholder="Enter task name"
               />
             </div>
@@ -374,7 +407,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               <textarea
                 id="taskDescription"
                 rows="3"
-                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
                 placeholder="Enter task description"
               ></textarea>
             </div>
@@ -384,7 +417,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               </label>
               <select
                 id="taskStatus"
-                class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+                class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
               >
                 <option value="pending">Pending</option>
                 <option value="in-progress">In Progress</option>
@@ -403,7 +436,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                     type="text"
                     id="addTaskUserSearch"
                     placeholder="Search users to assign..."
-                    class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white"
+                    class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
                   />
                   <div id="addTaskUserSuggestions" class="absolute z-10 w-full bg-gray-800 border border-gray-600 rounded-md mt-1 max-h-32 overflow-y-auto hidden">
                     <!-- Suggestions will appear here -->
@@ -426,7 +459,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               </button>
               <button
                 type="submit"
-                class="px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-md transition-colors"
+                class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-900 rounded-md transition-colors"
               >
                 Create Task
               </button>
@@ -479,6 +512,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
           const response = await fetch('/api/admin/projects', {
             method: method,
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ 
               id: projectId, 
               name: projectName, 
@@ -520,7 +554,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       const projectModal = document.getElementById('projectModal');
       
       // Fetch project details
-      fetch(`/api/admin/projects/${id}`)
+      fetch(`/api/admin/projects/${id}`, { credentials: 'include' })
         .then(response => {
           if (response.ok) {
             return response.json();
@@ -546,7 +580,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
     
     function deleteProject(id: number) {
       if (confirm('Are you sure you want to delete this project?')) {
-        fetch(`/api/admin/projects/${id}`, { method: 'DELETE' })
+        fetch(`/api/admin/projects/${id}`, { method: 'DELETE', credentials: 'include' })
           .then(response => {
             if (response.ok) {
               window.location.reload();
@@ -633,6 +667,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
           const response = await fetch('/api/admin/clients', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ name: clientName }),
           });
           
@@ -784,9 +819,13 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
     // Load all users for assignment
     async function loadUsers() {
       try {
-        const response = await fetch('/api/admin/users');
+        console.log('Loading users...');
+        const response = await fetch('/api/admin/users', { credentials: 'include' });
         if (response.ok) {
           allUsers = await response.json();
+          console.log('Users loaded:', allUsers.length, 'users');
+        } else {
+          console.error('Error loading users:', response.status, response.statusText);
         }
       } catch (error) {
         console.error('Error loading users:', error);
@@ -796,7 +835,13 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
     // Load tasks for a project
     async function loadProjectTasks(projectId: number) {
       try {
-        const response = await fetch(`/api/admin/projects/${projectId}/tasks`);
+        // Ensure users are loaded first
+        if (allUsers.length === 0) {
+          console.log('Users not loaded yet, loading users first...');
+          await loadUsers();
+        }
+        
+        const response = await fetch(`/api/admin/projects/${projectId}/tasks`, { credentials: 'include' });
         if (response.ok) {
           const tasks = await response.json();
           displayTasks(tasks);
@@ -810,6 +855,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
 
     // Display tasks in the modal
     function displayTasks(tasks: any[]) {
+      console.log('Displaying tasks:', tasks);
       const tasksList = document.getElementById('tasksList');
       if (!tasksList) return;
 
@@ -870,7 +916,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                   type="text"
                   id="userSearch-${task.id}"
                   placeholder="Search users to assign..."
-                  class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4F46E5] bg-gray-700 text-white text-sm"
+                  class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white text-sm"
                 />
                 <div id="userSuggestions-${task.id}" class="absolute z-10 w-full bg-gray-800 border border-gray-600 rounded-md mt-1 max-h-32 overflow-y-auto hidden">
                   <!-- Suggestions will appear here -->
@@ -878,7 +924,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               </div>
               <button
                 type="button"
-                class="assign-user-btn px-3 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-md transition-colors text-sm"
+                class="assign-user-btn px-3 py-2 bg-gray-300 hover:bg-gray-400 text-gray-900 rounded-md transition-colors text-sm"
                 data-task-id="${task.id}"
                 data-task-name="${task.name}"
               >
@@ -887,9 +933,11 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
             </div>
             <div id="assignedUsers-${task.id}" class="flex flex-wrap gap-2">
               ${task.assignedUserIds ? task.assignedUserIds.split(',').map((userId: string) => {
+                console.log('Processing assigned user ID:', userId, 'allUsers:', allUsers);
                 const user = allUsers.find(u => u.id.toString() === userId.trim());
+                console.log('Found user for ID', userId, ':', user);
                 return user ? `
-                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-[#4F46E5] text-white">
+                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-600 text-white">
                     ${user.name}
                     <button
                       type="button"
@@ -919,12 +967,16 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         
         // Add event listener directly to assign button
         if (assignButton) {
-          assignButton.addEventListener('click', (e) => {
+          // Remove any existing event listeners
+          const newAssignBtn = assignButton.cloneNode(true) as HTMLButtonElement;
+          assignButton.parentNode?.replaceChild(newAssignBtn, assignButton);
+          
+          newAssignBtn.addEventListener('click', (e) => {
             console.log('Assign button clicked directly!');
             e.preventDefault();
             e.stopPropagation();
             
-            const taskId = parseInt(assignButton.getAttribute('data-task-id') || '0');
+            const taskId = parseInt(newAssignBtn.getAttribute('data-task-id') || '0');
             const searchInput = document.getElementById(`userSearch-${taskId}`) as HTMLInputElement;
             const selectedUserId = searchInput?.getAttribute('data-selected-user-id');
             const selectedUserName = searchInput?.getAttribute('data-selected-user-name');
@@ -951,19 +1003,24 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         // Add event listeners for remove user buttons
         const removeButtons = document.querySelectorAll(`[data-task-id="${task.id}"].remove-user-btn`);
         console.log(`Found ${removeButtons.length} remove buttons for task ${task.id}`);
+        console.log('Remove buttons:', removeButtons);
         
         removeButtons.forEach(button => {
           const removeBtn = button as HTMLButtonElement;
           console.log('Adding event listener to remove button:', removeBtn);
           
-          removeBtn.addEventListener('click', (e) => {
+          // Remove any existing event listeners
+          const newBtn = removeBtn.cloneNode(true) as HTMLButtonElement;
+          removeBtn.parentNode?.replaceChild(newBtn, removeBtn);
+          
+          newBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
             console.log('Remove button clicked directly!');
             
-            const taskId = parseInt(removeBtn.getAttribute('data-task-id') || '0');
-            const userId = parseInt(removeBtn.getAttribute('data-user-id') || '0');
-            const userName = removeBtn.getAttribute('data-user-name') || '';
+            const taskId = parseInt(newBtn.getAttribute('data-task-id') || '0');
+            const userId = parseInt(newBtn.getAttribute('data-user-id') || '0');
+            const userName = newBtn.getAttribute('data-user-name') || '';
             
             console.log('Remove button clicked:', { taskId, userId, userName });
             
@@ -981,13 +1038,17 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
           const deleteBtn = button as HTMLButtonElement;
           console.log('Adding event listener to delete button:', deleteBtn);
           
-          deleteBtn.addEventListener('click', (e) => {
+          // Remove any existing event listeners
+          const newDeleteBtn = deleteBtn.cloneNode(true) as HTMLButtonElement;
+          deleteBtn.parentNode?.replaceChild(newDeleteBtn, deleteBtn);
+          
+          newDeleteBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
             console.log('Delete button clicked directly!');
             
-            const taskId = parseInt(deleteBtn.getAttribute('data-task-id') || '0');
-            const taskName = deleteBtn.getAttribute('data-task-name') || 'Unknown Task';
+            const taskId = parseInt(newDeleteBtn.getAttribute('data-task-id') || '0');
+            const taskName = newDeleteBtn.getAttribute('data-task-name') || 'Unknown Task';
             
             console.log('Delete button clicked:', { taskId, taskName });
             
@@ -1085,7 +1146,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
     }
 
     // Show tasks modal
-    function showTasksModal(projectId: number, projectName: string) {
+    async function showTasksModal(projectId: number, projectName: string) {
       currentProjectId = projectId;
       const modalTitle = document.getElementById('tasksModalTitle');
       const tasksModal = document.getElementById('tasksModal');
@@ -1094,6 +1155,12 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       if (tasksModal) {
         tasksModal.classList.remove('hidden');
         tasksModal.style.display = 'block';
+      }
+      
+      // Ensure users are loaded before loading tasks
+      if (allUsers.length === 0) {
+        console.log('Loading users before showing tasks...');
+        await loadUsers();
       }
       
       loadProjectTasks(projectId);
@@ -1268,7 +1335,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       }
       
       const userTag = document.createElement('span');
-      userTag.className = 'inline-flex items-center px-2 py-1 rounded-full text-xs bg-[#4F46E5] text-white';
+      userTag.className = 'inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-600 text-white';
       userTag.setAttribute('data-user-id', userId.toString());
       userTag.innerHTML = `
         ${userName}
@@ -1324,6 +1391,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         const taskResponse = await fetch('/api/admin/tasks', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({
             name: taskName,
             description: taskDescription || null,
@@ -1342,6 +1410,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
             const assignResponse = await fetch('/api/admin/tasks/assign', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
+              credentials: 'include', // Include cookies
               body: JSON.stringify({
                 taskId: newTask.id,
                 userIds: selectedUsers
@@ -1377,6 +1446,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
     async function assignUserToTask(taskId: number, userId: number, userName: string) {
       try {
         console.log('assignUserToTask called with:', { taskId, userId, userName });
+        console.log('Current project ID:', currentProjectId);
         
         // Get current assignments from the task data we already have
         const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
@@ -1406,6 +1476,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         const response = await fetch('/api/admin/tasks/assign', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include', // Include cookies
           body: JSON.stringify(requestBody),
         });
 
@@ -1431,10 +1502,15 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
     // Remove user from task
     async function removeUserFromTask(taskId: number, userId: number, userName: string) {
       try {
+        console.log('removeUserFromTask called with:', { taskId, userId, userName });
+        console.log('Current project ID:', currentProjectId);
+        
         // Get current assignments from the task data we already have
         const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+        console.log('Task element found:', taskElement);
         const currentAssignedUserIds = taskElement?.getAttribute('data-assigned-user-ids') || '';
         const currentUserIds = currentAssignedUserIds ? currentAssignedUserIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id)) : [];
+        console.log('Current assignments:', { currentAssignedUserIds, currentUserIds });
         
         // Remove the user from assignments
         const updatedUserIds = currentUserIds.filter((id: number) => id !== userId);
@@ -1442,6 +1518,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         const response = await fetch('/api/admin/tasks/assign', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include', // Include cookies
           body: JSON.stringify({
             taskId: taskId,
             userIds: updatedUserIds
@@ -1469,6 +1546,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
           const response = await fetch(`/api/admin/tasks/${taskId}`, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
           });
 
           if (response.ok) {
@@ -1552,7 +1630,9 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       if (target.classList.contains('assign-user-btn')) {
         console.log('Assign button detected!');
         const taskId = parseInt(target.getAttribute('data-task-id') || '0');
+        console.log('Task ID from button:', taskId);
         const searchInput = document.getElementById(`userSearch-${taskId}`) as HTMLInputElement;
+        console.log('Search input found:', searchInput);
         const selectedUserId = searchInput?.getAttribute('data-selected-user-id');
         const selectedUserName = searchInput?.getAttribute('data-selected-user-name');
         
@@ -1584,7 +1664,9 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
 
       // Handle remove user button
       if (target.classList.contains('remove-user-btn') || target.closest('.remove-user-btn')) {
+        console.log('Remove user button detected in global listener');
         const button = target.classList.contains('remove-user-btn') ? target : target.closest('.remove-user-btn') as HTMLElement;
+        console.log('Button element:', button);
         const taskId = parseInt(button?.getAttribute('data-task-id') || '0');
         const userId = parseInt(button?.getAttribute('data-user-id') || '0');
         const userName = button?.getAttribute('data-user-name') || '';

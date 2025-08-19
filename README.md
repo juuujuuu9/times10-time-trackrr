@@ -22,6 +22,22 @@ Admins can invite new team members by:
 - Automatic account activation upon password setup
 - Status tracking (invited → active)
 
+### Task Assignment Notifications
+
+When tasks are assigned to users, they automatically receive email notifications with:
+- Task name and description
+- Project and client information
+- Who assigned the task
+- Direct link to the dashboard
+- Professional email template with Times10 branding
+
+**Notification Features:**
+- Automatic email sending when tasks are assigned
+- Includes task details and project context
+- Direct dashboard links for quick access
+- Graceful fallback for missing email configuration
+- Console logging for development and testing
+
 ### User Roles
 
 1. **Admin** (`admin`)
@@ -112,10 +128,20 @@ Enter time as simply as typing `2h` or `3.5hr` - no need to worry about start an
    npm run dev
    ```
 
-7. **Access the application**
+7. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+8. **Access the application**
    - Visit `http://localhost:4321`
    - Use the demo credentials to log in
    - Each role will be redirected to their appropriate dashboard
+
+9. **Test email notifications** (optional)
+   - Visit `/test-task-notifications` to test the email notification system
+   - This page allows you to send test task assignment emails
+   - Check the console for email delivery status when RESEND_API_KEY is not configured
 
 ## 📁 Project Structure
 
@@ -165,12 +191,14 @@ Enter time as simply as typing `2h` or `3.5hr` - no need to worry about start an
 - `/manager` - Manager dashboard (requires manager role)
 - `/admin` - Admin dashboard (requires admin role)
 - `/admin/*` - Admin management pages
+- `/test-task-notifications` - Test email notification system (requires authentication)
 
 ### API Endpoints
 - `/api/auth/login` - User authentication
 - `/api/auth/logout` - User logout
 - `/api/auth/me` - Get current user session
 - `/api/setup-demo-users` - Create demo users
+- `/api/test-task-notification` - Test task assignment email notifications
 
 ## 🔒 Security Features
 

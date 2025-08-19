@@ -231,7 +231,7 @@ const getChartSubtitle = () => {
         <div class="relative">
           <select 
             id="periodSelect" 
-            class="appearance-none bg-gray-800 border border-gray-600 text-white px-4 py-2 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
+            class="appearance-none bg-gray-800 border border-gray-600 text-white px-4 py-2 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
             onchange="handlePeriodChange(this.value)"
           >
             <option value="last30" selected={period === 'last30'}>Last 30 Days</option>
@@ -253,7 +253,7 @@ const getChartSubtitle = () => {
             type="date" 
             id="startDate" 
             value={customStartDate || ''}
-            class="bg-gray-800 border border-gray-600 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent text-sm"
+            class="bg-gray-800 border border-gray-600 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-sm"
             placeholder="Start Date"
           />
           <span class="text-gray-400">to</span>
@@ -261,12 +261,12 @@ const getChartSubtitle = () => {
             type="date" 
             id="endDate" 
             value={customEndDate || ''}
-            class="bg-gray-800 border border-gray-600 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent text-sm"
+            class="bg-gray-800 border border-gray-600 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-sm"
             placeholder="End Date"
           />
           <button 
             onclick="applyCustomRange()"
-            class="bg-[#4F46E5] hover:bg-[#4338CA] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
+            class="bg-gray-300 hover:bg-gray-400 text-gray-900 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
           >
             Apply
           </button>
@@ -276,7 +276,7 @@ const getChartSubtitle = () => {
         <div class="relative">
           <select 
             id="viewSelect" 
-            class="appearance-none bg-gray-800 border border-gray-600 text-white px-4 py-2 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
+            class="appearance-none bg-gray-800 border border-gray-600 text-white px-4 py-2 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
             onchange="handleViewChange(this.value)"
           >
             <option value="project" selected={viewType === 'project'}>By Project</option>
@@ -293,7 +293,7 @@ const getChartSubtitle = () => {
         <div class="relative">
           <select 
             id="teamMemberSelect" 
-            class="appearance-none bg-gray-800 border border-gray-600 text-white px-4 py-2 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
+            class="appearance-none bg-gray-800 border border-gray-600 text-white px-4 py-2 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
             onchange="handleTeamMemberChange(this.value)"
           >
             <option value="all" selected={selectedTeamMember === 'all'}>All Team Members</option>
@@ -326,7 +326,7 @@ const getChartSubtitle = () => {
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <div class="bg-gray-800 rounded-lg shadow border border-gray-700 p-6">
         <div class="flex items-center">
-          <div class="p-2 bg-[#4F46E5] rounded-lg">
+          <div class="p-2 bg-gray-600 rounded-lg">
             <span class="text-2xl text-white">⏱️</span>
           </div>
           <div class="ml-4">
@@ -339,7 +339,7 @@ const getChartSubtitle = () => {
 
       <div class="bg-gray-800 rounded-lg shadow border border-gray-700 p-6">
         <div class="flex items-center">
-          <div class="p-2 bg-[#10B981] rounded-lg">
+          <div class="p-2 bg-gray-600 rounded-lg">
             <span class="text-2xl text-white">💰</span>
           </div>
           <div class="ml-4">
@@ -352,7 +352,7 @@ const getChartSubtitle = () => {
 
       <div class="bg-gray-800 rounded-lg shadow border border-gray-700 p-6">
         <div class="flex items-center">
-          <div class="p-2 bg-[#EC4899] rounded-lg">
+          <div class="p-2 bg-gray-600 rounded-lg">
             <span class="text-2xl text-white">📁</span>
           </div>
           <div class="ml-4">
@@ -364,7 +364,7 @@ const getChartSubtitle = () => {
 
       <div class="bg-gray-800 rounded-lg shadow border border-gray-700 p-6">
         <div class="flex items-center">
-          <div class="p-2 bg-[#F59E0B] rounded-lg">
+          <div class="p-2 bg-gray-600 rounded-lg">
             <span class="text-2xl text-white">👤</span>
           </div>
           <div class="ml-4">
@@ -400,7 +400,7 @@ const getChartSubtitle = () => {
                 </div>
                 <div class="w-full bg-gray-700 rounded-full h-3">
                   <div 
-                    class="bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] h-3 rounded-full transition-all duration-300"
+                    class="bg-gradient-to-r from-gray-600 to-gray-500 h-3 rounded-full transition-all duration-300"
                     style={`width: ${maxCost > 0 ? (item.totalCost / maxCost) * 100 : 0}%`}
                   ></div>
                 </div>
@@ -421,7 +421,7 @@ const getChartSubtitle = () => {
                 </div>
                 <div class="w-full bg-gray-700 rounded-full h-3">
                   <div 
-                    class="bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] h-3 rounded-full transition-all duration-300"
+                    class="bg-gradient-to-r from-gray-600 to-gray-500 h-3 rounded-full transition-all duration-300"
                     style={`width: ${maxCost > 0 ? (item.totalCost / maxCost) * 100 : 0}%`}
                   ></div>
                 </div>

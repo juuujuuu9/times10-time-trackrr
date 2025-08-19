@@ -9,126 +9,128 @@ const user = await requireAuth('/login')(Astro) as any;
 
 <Layout title="Dashboard - Times10 Time Tracker">
   <div class="min-h-screen bg-gray-50">
-    <!-- Header -->
-    <header class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center py-4">
-          <div class="flex items-center">
-            <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
-            <span class="ml-3 px-3 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full capitalize">
-              {user.role}
-            </span>
-          </div>
-          <div class="flex items-center space-x-4">
-            <span class="text-sm text-gray-600">Welcome, {user.name}</span>
-            <button
-              id="logoutButton"
-              class="text-sm text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
+    <!-- Loading State (shown immediately) -->
+    <div id="loadingState" class="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div class="text-center">
+        <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p class="text-gray-600 text-lg">Loading dashboard...</p>
       </div>
-    </header>
+    </div>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Main Content -->
-        <div class="lg:col-span-2 space-y-8">
-          <!-- Timer Section -->
-          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 class="text-xl font-semibold text-gray-900 mb-6">Time Tracker</h2>
-            <Timer client:load />
-          </div>
-
-          <!-- Recent Time Entries -->
-          <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200">
-              <h2 class="text-xl font-semibold text-gray-900">Recent Time Entries</h2>
+    <!-- Dashboard Content (hidden initially) -->
+    <div id="dashboardContent" class="hidden">
+      <!-- Header -->
+      <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex justify-between items-center py-4">
+            <div class="flex items-center">
+              <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+              <span class="ml-3 px-3 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full capitalize">
+                {user.role}
+              </span>
             </div>
-            <div class="p-6">
-              <div id="recentEntries" class="space-y-4">
-                <div class="text-center py-8">
-                  <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span class="text-gray-400 text-xl">⏱️</span>
-                  </div>
-                  <p class="text-gray-500">Loading your recent time entries...</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- My Tasks -->
-          <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200">
-              <h2 class="text-xl font-semibold text-gray-900">My Tasks</h2>
-            </div>
-            <div class="p-6">
-              <div id="myTasks" class="space-y-4">
-                <div class="text-center py-8">
-                  <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span class="text-gray-400 text-xl">📋</span>
-                  </div>
-                  <p class="text-gray-500">Loading your assigned tasks...</p>
-                </div>
-              </div>
+            <div class="flex items-center space-x-4">
+              <span class="text-sm text-gray-600">Welcome, {user?.name || 'User'}</span>
+              <button
+                id="logoutButton"
+                class="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Sign Out
+              </button>
             </div>
           </div>
         </div>
+      </header>
 
-        <!-- Sidebar -->
-        <div class="space-y-6">
-          <!-- Quick Stats -->
-          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">This Week</h3>
-            <div class="space-y-4">
-              <div class="flex justify-between items-center">
-                <span class="text-sm text-gray-600">Hours Tracked</span>
-                <span id="weeklyHours" class="text-lg font-semibold text-gray-900">-</span>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <!-- Main Content -->
+          <div class="lg:col-span-2 space-y-8">
+            <!-- Timer Section -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h2 class="text-xl font-semibold text-gray-900 mb-6">Task Timer</h2>
+              <Timer client:load />
+            </div>
+
+            <!-- Recent Time Entries -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-xl font-semibold text-gray-900">Recent Time Entries</h2>
               </div>
-              <div class="flex justify-between items-center">
-                <span class="text-sm text-gray-600">Tasks Completed</span>
-                <span id="weeklyTasks" class="text-lg font-semibold text-gray-900">-</span>
-              </div>
-              <div class="flex justify-between items-center">
-                <span class="text-sm text-gray-600">Projects</span>
-                <span id="weeklyProjects" class="text-lg font-semibold text-gray-900">-</span>
+              <div class="p-6">
+                <div id="recentEntries" class="space-y-4">
+                  <div class="text-center py-8">
+                    <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <span class="text-gray-400 text-xl">⏱️</span>
+                    </div>
+                    <p class="text-gray-500">Loading your recent time entries...</p>
+                  </div>
+                </div>
               </div>
             </div>
+
+
           </div>
 
-          <!-- Quick Actions -->
-          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-            <div class="space-y-3">
-              <button
-                id="startTimerBtn"
-                class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-              >
-                Start Timer
-              </button>
-              <button
-                id="addTimeEntryBtn"
-                class="w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-              >
-                Add Time Entry
-              </button>
-              <button
-                id="viewReportsBtn"
-                class="w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-              >
-                View Reports
-              </button>
+          <!-- Sidebar -->
+          <div class="space-y-6">
+            <!-- Quick Stats -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 class="text-lg font-semibold text-gray-900 mb-4">This Week</h3>
+              <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                  <span class="text-sm text-gray-600">Hours Tracked</span>
+                  <span id="weeklyHours" class="text-lg font-semibold text-gray-900">-</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-sm text-gray-600">Tasks Completed</span>
+                  <span id="weeklyTasks" class="text-lg font-semibold text-gray-900">-</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-sm text-gray-600">Projects</span>
+                  <span id="weeklyProjects" class="text-lg font-semibold text-gray-900">-</span>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <!-- Recent Projects -->
-          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Projects</h3>
-            <div id="recentProjects" class="space-y-3">
-              <div class="text-center py-4">
-                <p class="text-gray-500 text-sm">Loading projects...</p>
+            <!-- Quick Actions -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+              <div class="space-y-3">
+                <button
+                  id="addTimeEntryBtn"
+                  class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                >
+                  Add Manual Time Entry
+                </button>
+                <button
+                  id="viewReportsBtn"
+                  class="w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                >
+                  View Reports
+                </button>
+                <a
+                  href="/test-enhanced-timer"
+                  class="w-full bg-green-100 text-green-700 px-4 py-2 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium text-center block"
+                >
+                  Test Enhanced Timer
+                </a>
+                <a
+                  href="/test-timer-persistence"
+                  class="w-full bg-purple-100 text-purple-700 px-4 py-2 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium text-center block"
+                >
+                  Test Timer Persistence
+                </a>
+              </div>
+            </div>
+
+            <!-- Recent Projects -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Projects</h3>
+              <div id="recentProjects" class="space-y-3">
+                <div class="text-center py-4">
+                  <p class="text-gray-500 text-sm">Loading projects...</p>
+                </div>
               </div>
             </div>
           </div>
@@ -139,13 +141,38 @@ const user = await requireAuth('/login')(Astro) as any;
 </Layout>
 
 <script>
+  // Show dashboard content after a brief delay to prevent flash
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      const loadingState = document.getElementById('loadingState');
+      const dashboardContent = document.getElementById('dashboardContent');
+      
+      if (loadingState && dashboardContent) {
+        loadingState.classList.add('hidden');
+        dashboardContent.classList.remove('hidden');
+      }
+    }, 100); // Brief delay to ensure smooth transition
+  });
+
   // Get current user ID from session
   async function getCurrentUserId() {
     try {
       const response = await fetch('/api/auth/me');
       if (response.ok) {
         const data = await response.json();
-        return data.user.id;
+        if (data.success && data.user) {
+          return data.user.id;
+        } else {
+          console.error('Invalid response format:', data);
+          return null;
+        }
+      } else if (response.status === 401) {
+        // If unauthorized, redirect to login
+        window.location.href = '/login';
+        return null;
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Auth error:', errorData.error || 'Unknown error');
       }
     } catch (error) {
       console.error('Error getting current user:', error);
@@ -159,6 +186,8 @@ const user = await requireAuth('/login')(Astro) as any;
       const userId = await getCurrentUserId();
       if (!userId) {
         console.error('No user ID available');
+        // Show error state for the sections
+        updateRecentEntries([]);
         return;
       }
 
@@ -167,13 +196,9 @@ const user = await requireAuth('/login')(Astro) as any;
       if (entriesResponse.ok) {
         const entriesData = await entriesResponse.json();
         updateRecentEntries(entriesData.data || []);
-      }
-
-      // Load user's tasks
-      const tasksResponse = await fetch('/api/tasks?assignedTo=' + encodeURIComponent(userId));
-      if (tasksResponse.ok) {
-        const tasksData = await tasksResponse.json();
-        updateMyTasks(tasksData.data || []);
+      } else {
+        console.error('Failed to load time entries:', entriesResponse.status);
+        updateRecentEntries([]);
       }
 
       // Load weekly stats
@@ -192,6 +217,11 @@ const user = await requireAuth('/login')(Astro) as any;
 
     } catch (error) {
       console.error('Error loading dashboard data:', error);
+      // Retry loading after a delay if there was an error
+      setTimeout(() => {
+        console.log('Retrying dashboard data load...');
+        loadDashboardData();
+      }, 2000);
     }
   }
 
@@ -232,44 +262,6 @@ const user = await requireAuth('/login')(Astro) as any;
             ${new Date(entry.startTime).toLocaleDateString()}
           </p>
         </div>
-      </div>
-    `).join('');
-  }
-
-  function updateMyTasks(tasks: any[]) {
-    const container = document.getElementById('myTasks');
-    if (!container) return;
-
-    if (tasks.length === 0) {
-      container.innerHTML = `
-        <div class="text-center py-8">
-          <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span class="text-gray-400 text-xl">📋</span>
-          </div>
-          <p class="text-gray-500">No tasks assigned</p>
-          <p class="text-gray-400 text-sm mt-1">Contact your manager to get assigned tasks</p>
-        </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = tasks.slice(0, 5).map((task: any) => `
-      <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-        <div class="flex items-center">
-          <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-4">
-            <span class="text-green-600 text-lg">✅</span>
-          </div>
-          <div>
-            <p class="font-medium text-gray-900">${task.name}</p>
-            <p class="text-sm text-gray-600">${task.projectName || 'Unknown Project'}</p>
-            <span class="inline-block mt-1 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-              ${task.status}
-            </span>
-          </div>
-        </div>
-        <button class="text-blue-600 hover:text-blue-700 text-sm font-medium">
-          Start
-        </button>
       </div>
     `).join('');
   }
