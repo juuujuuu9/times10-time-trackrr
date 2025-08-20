@@ -35,7 +35,6 @@ interface ChartData {
   clientName?: string;
   totalCost: number;
   totalHours: number;
-  projectCount?: number;
 }
 
 interface TimeSeriesData {
@@ -47,7 +46,7 @@ interface TimeSeriesData {
 interface ReportsChartsProps {
   projectCosts: ChartData[];
   clientCosts: ChartData[];
-  timeSeriesData?: TimeSeriesData[];
+  timeSeriesData: TimeSeriesData[];
   period: string;
   viewType: 'project' | 'client';
 }
@@ -67,9 +66,9 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
       {
         label: 'Cost ($)',
         data: sortedData.map(item => item.totalCost),
-        backgroundColor: 'rgba(59, 130, 246, 0.8)',
-        borderColor: 'rgba(59, 130, 246, 1)',
-        borderWidth: 1,
+        backgroundColor: 'rgba(31, 41, 55, 0.8)',
+        borderColor: 'rgba(31, 41, 55, 1)',
+        borderWidth: 2,
         borderRadius: 4,
         borderSkipped: false,
       },
@@ -81,24 +80,23 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-
       legend: {
         display: false, // Hide legend for cleaner look
       },
       title: {
         display: true,
         text: title,
-        color: '#ffffff',
+        color: '#1F2937',
         font: {
           size: 16,
           weight: 'bold' as const,
         },
       },
       tooltip: {
-        backgroundColor: 'rgba(31, 41, 55, 0.95)',
-        titleColor: '#ffffff',
-        bodyColor: '#e5e7eb',
-        borderColor: '#4b5563',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        titleColor: '#1F2937',
+        bodyColor: '#374151',
+        borderColor: '#D1D5DB',
         borderWidth: 1,
         callbacks: {
           title: function(context: any) {
@@ -114,7 +112,7 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
         },
       },
       datalabels: {
-        color: '#ffffff',
+        color: '#1F2937',
         anchor: 'end' as const,
         align: 'right' as const,
         offset: 8,
@@ -133,18 +131,18 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
         display: true,
         position: 'bottom' as const,
         ticks: {
-          color: '#9ca3af',
+          color: '#6B7280',
           callback: function(value: any) {
             return `$${value.toLocaleString()}`;
           },
         },
         grid: {
-          color: '#374151',
+          color: '#E5E7EB',
         },
         title: {
           display: true,
           text: 'Cost ($)',
-          color: '#9ca3af',
+          color: '#6B7280',
           font: {
             size: 12,
           },
@@ -155,7 +153,7 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
         display: true,
         position: 'left' as const,
         ticks: {
-          color: '#9ca3af',
+          color: '#6B7280',
           maxRotation: 0,
           font: {
             size: 11,
@@ -179,7 +177,7 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
   };
 
   return (
-    <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
+    <div className="bg-white rounded-lg border border-gray-300 p-6 shadow-sm">
       <div className="h-96"> {/* Increased height for better readability */}
         <Bar data={chartData} options={options} />
       </div>
@@ -194,18 +192,18 @@ export const CostBarChart: React.FC<{ data: ChartData[]; title: string; period: 
       {
         label: 'Cost ($)',
         data: data.map(item => item.totalCost),
-        backgroundColor: 'rgba(59, 130, 246, 0.8)',
-        borderColor: 'rgba(59, 130, 246, 1)',
-        borderWidth: 1,
+        backgroundColor: 'rgba(31, 41, 55, 0.8)',
+        borderColor: 'rgba(31, 41, 55, 1)',
+        borderWidth: 2,
         borderRadius: 4,
         borderSkipped: false,
       },
       {
         label: 'Hours',
         data: data.map(item => item.totalHours / 3600), // Convert seconds to hours
-        backgroundColor: 'rgba(16, 185, 129, 0.8)',
-        borderColor: 'rgba(16, 185, 129, 1)',
-        borderWidth: 1,
+        backgroundColor: 'rgba(107, 114, 128, 0.8)',
+        borderColor: 'rgba(107, 114, 128, 1)',
+        borderWidth: 2,
         borderRadius: 4,
         borderSkipped: false,
         yAxisID: 'y1',
@@ -220,7 +218,7 @@ export const CostBarChart: React.FC<{ data: ChartData[]; title: string; period: 
       legend: {
         position: 'top' as const,
         labels: {
-          color: '#e5e7eb',
+          color: '#374151',
           font: {
             size: 12,
           },
@@ -229,17 +227,17 @@ export const CostBarChart: React.FC<{ data: ChartData[]; title: string; period: 
       title: {
         display: true,
         text: title,
-        color: '#ffffff',
+        color: '#1F2937',
         font: {
           size: 16,
           weight: 'bold' as const,
         },
       },
       tooltip: {
-        backgroundColor: 'rgba(31, 41, 55, 0.95)',
-        titleColor: '#ffffff',
-        bodyColor: '#e5e7eb',
-        borderColor: '#4b5563',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        titleColor: '#1F2937',
+        bodyColor: '#374151',
+        borderColor: '#D1D5DB',
         borderWidth: 1,
         callbacks: {
           label: function(context: any) {
@@ -255,11 +253,11 @@ export const CostBarChart: React.FC<{ data: ChartData[]; title: string; period: 
     scales: {
       x: {
         ticks: {
-          color: '#9ca3af',
+          color: '#6B7280',
           maxRotation: 45,
         },
         grid: {
-          color: '#374151',
+          color: '#E5E7EB',
         },
       },
       y: {
@@ -267,13 +265,13 @@ export const CostBarChart: React.FC<{ data: ChartData[]; title: string; period: 
         display: true,
         position: 'left' as const,
         ticks: {
-          color: '#9ca3af',
+          color: '#6B7280',
           callback: function(value: any) {
             return `$${value.toLocaleString()}`;
           },
         },
         grid: {
-          color: '#374151',
+          color: '#E5E7EB',
         },
       },
       y1: {
@@ -281,7 +279,7 @@ export const CostBarChart: React.FC<{ data: ChartData[]; title: string; period: 
         display: true,
         position: 'right' as const,
         ticks: {
-          color: '#9ca3af',
+          color: '#6B7280',
           callback: function(value: any) {
             return `${value.toFixed(1)}h`;
           },
@@ -294,7 +292,7 @@ export const CostBarChart: React.FC<{ data: ChartData[]; title: string; period: 
   };
 
   return (
-    <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
+    <div className="bg-white rounded-lg border border-gray-300 p-6 shadow-sm">
       <div className="h-80">
         <Bar data={chartData} options={options} />
       </div>
@@ -304,14 +302,14 @@ export const CostBarChart: React.FC<{ data: ChartData[]; title: string; period: 
 
 export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string }> = ({ data, title }) => {
   const colors = [
-    'rgba(59, 130, 246, 0.8)',
-    'rgba(16, 185, 129, 0.8)',
-    'rgba(245, 158, 11, 0.8)',
-    'rgba(239, 68, 68, 0.8)',
-    'rgba(139, 92, 246, 0.8)',
-    'rgba(236, 72, 153, 0.8)',
-    'rgba(14, 165, 233, 0.8)',
-    'rgba(34, 197, 94, 0.8)',
+    'rgba(31, 41, 55, 0.8)',
+    'rgba(107, 114, 128, 0.8)',
+    'rgba(156, 163, 175, 0.8)',
+    'rgba(209, 213, 219, 0.8)',
+    'rgba(75, 85, 99, 0.8)',
+    'rgba(55, 65, 81, 0.8)',
+    'rgba(17, 24, 39, 0.8)',
+    'rgba(3, 7, 18, 0.8)',
   ];
 
   const chartData = {
@@ -334,7 +332,7 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string }> =
       legend: {
         position: 'bottom' as const,
         labels: {
-          color: '#e5e7eb',
+          color: '#374151',
           font: {
             size: 11,
           },
@@ -344,17 +342,17 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string }> =
       title: {
         display: true,
         text: title,
-        color: '#ffffff',
+        color: '#1F2937',
         font: {
           size: 16,
           weight: 'bold' as const,
         },
       },
       tooltip: {
-        backgroundColor: 'rgba(31, 41, 55, 0.95)',
-        titleColor: '#ffffff',
-        bodyColor: '#e5e7eb',
-        borderColor: '#4b5563',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        titleColor: '#1F2937',
+        bodyColor: '#374151',
+        borderColor: '#D1D5DB',
         borderWidth: 1,
         callbacks: {
           label: function(context: any) {
@@ -365,7 +363,7 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string }> =
         },
       },
       datalabels: {
-        color: '#ffffff',
+        color: '#1F2937',
         font: {
           weight: 'bold' as const,
           size: 11,
@@ -380,7 +378,7 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string }> =
   };
 
   return (
-    <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
+    <div className="bg-white rounded-lg border border-gray-300 p-6 shadow-sm">
       <div className="h-80">
         <Doughnut data={chartData} options={options} />
       </div>
@@ -395,12 +393,12 @@ export const TimeSeriesChart: React.FC<{ data: TimeSeriesData[]; period: string 
       {
         label: 'Hours',
         data: data.map(item => item.hours / 3600), // Convert seconds to hours
-        borderColor: 'rgba(59, 130, 246, 1)',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        borderColor: 'rgba(31, 41, 55, 1)',
+        backgroundColor: 'rgba(31, 41, 55, 0.1)',
         borderWidth: 2,
         fill: true,
         tension: 0.4,
-        pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+        pointBackgroundColor: 'rgba(31, 41, 55, 1)',
         pointBorderColor: '#ffffff',
         pointBorderWidth: 2,
         pointRadius: 4,
@@ -409,12 +407,12 @@ export const TimeSeriesChart: React.FC<{ data: TimeSeriesData[]; period: string 
       {
         label: 'Cost ($)',
         data: data.map(item => item.cost),
-        borderColor: 'rgba(16, 185, 129, 1)',
-        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        borderColor: 'rgba(107, 114, 128, 1)',
+        backgroundColor: 'rgba(107, 114, 128, 0.1)',
         borderWidth: 2,
         fill: true,
         tension: 0.4,
-        pointBackgroundColor: 'rgba(16, 185, 129, 1)',
+        pointBackgroundColor: 'rgba(107, 114, 128, 1)',
         pointBorderColor: '#ffffff',
         pointBorderWidth: 2,
         pointRadius: 4,
@@ -431,7 +429,7 @@ export const TimeSeriesChart: React.FC<{ data: TimeSeriesData[]; period: string 
       legend: {
         position: 'top' as const,
         labels: {
-          color: '#e5e7eb',
+          color: '#374151',
           font: {
             size: 12,
           },
@@ -440,17 +438,17 @@ export const TimeSeriesChart: React.FC<{ data: TimeSeriesData[]; period: string 
       title: {
         display: true,
         text: `Time & Cost Trends - ${period}`,
-        color: '#ffffff',
+        color: '#1F2937',
         font: {
           size: 16,
           weight: 'bold' as const,
         },
       },
       tooltip: {
-        backgroundColor: 'rgba(31, 41, 55, 0.95)',
-        titleColor: '#ffffff',
-        bodyColor: '#e5e7eb',
-        borderColor: '#4b5563',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        titleColor: '#1F2937',
+        bodyColor: '#374151',
+        borderColor: '#D1D5DB',
         borderWidth: 1,
         callbacks: {
           label: function(context: any) {
@@ -466,10 +464,10 @@ export const TimeSeriesChart: React.FC<{ data: TimeSeriesData[]; period: string 
     scales: {
       x: {
         ticks: {
-          color: '#9ca3af',
+          color: '#6B7280',
         },
         grid: {
-          color: '#374151',
+          color: '#E5E7EB',
         },
       },
       y: {
@@ -477,13 +475,13 @@ export const TimeSeriesChart: React.FC<{ data: TimeSeriesData[]; period: string 
         display: true,
         position: 'left' as const,
         ticks: {
-          color: '#9ca3af',
+          color: '#6B7280',
           callback: function(value: any) {
             return `${value.toFixed(1)}h`;
           },
         },
         grid: {
-          color: '#374151',
+          color: '#E5E7EB',
         },
       },
       y1: {
@@ -491,7 +489,7 @@ export const TimeSeriesChart: React.FC<{ data: TimeSeriesData[]; period: string 
         display: true,
         position: 'right' as const,
         ticks: {
-          color: '#9ca3af',
+          color: '#6B7280',
           callback: function(value: any) {
             return `$${value.toLocaleString()}`;
           },
@@ -504,7 +502,7 @@ export const TimeSeriesChart: React.FC<{ data: TimeSeriesData[]; period: string 
   };
 
   return (
-    <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
+    <div className="bg-white rounded-lg border border-gray-300 p-6 shadow-sm">
       <div className="h-80">
         <Line data={chartData} options={options} />
       </div>
@@ -542,18 +540,16 @@ export const ReportsCharts: React.FC<ReportsChartsProps> = ({
         </div>
       )}
 
-
-
-      {/* No Data Message */}
-      {currentData.length === 0 && (
-        <div className="bg-gray-800 rounded-lg border border-gray-700 p-12 text-center">
+              {/* No Data Message */}
+        {currentData.length === 0 && (
+          <div className="bg-white rounded-lg border border-gray-300 p-12 text-center shadow-sm">
           <div className="text-gray-400 mb-4">
             <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-white mb-2">No Data Available</h3>
-          <p className="text-gray-400">
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No Data Available</h3>
+          <p className="text-gray-500">
             No {viewType === 'project' ? 'project' : 'client'} costs for this time period
           </p>
         </div>
