@@ -25,8 +25,8 @@ const user = await requireAuth('/login')(Astro) as any;
           <div class="flex justify-between items-center py-4">
             <div class="flex items-center">
               <img src="/logo-black.png" alt="Times10 Logo" class="w-auto mr-3" style="height: 25px;" />
-              <span class="px-3 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full capitalize">
-                {user.role}
+              <span class="px-3 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
+                Team Member
               </span>
             </div>
             <div class="flex items-center space-x-4">
@@ -97,7 +97,12 @@ const user = await requireAuth('/login')(Astro) as any;
               <div class="space-y-3 mt-4">
                 <button
                   id="addTimeEntryBtn"
-                  class="w-full bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
+                  class="w-full text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                  style={{
+                    backgroundColor: '#1F292E'
+                  }}
+                  onmouseover="this.style.backgroundColor='#000000'"
+                  onmouseout="this.style.backgroundColor='#1F292E'"
                 >
                   Add Manual Time Entry
                 </button>

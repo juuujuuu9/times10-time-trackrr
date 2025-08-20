@@ -586,8 +586,11 @@ export default function Timer() {
             className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
               !selectedTask || loading || !currentUserId
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-gray-600 hover:bg-gray-700 text-white'
+                : 'text-white hover:bg-green-600'
             }`}
+            style={{
+              backgroundColor: !selectedTask || loading || !currentUserId ? '#D1D5DB' : '#49D449'
+            }}
           >
             {loading ? 'Saving...' : 'Start'}
           </button>
@@ -598,8 +601,11 @@ export default function Timer() {
             className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
               loading
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-gray-800 hover:bg-gray-900 text-white'
+                : 'text-white hover:bg-red-700'
             }`}
+            style={{
+              backgroundColor: loading ? '#D1D5DB' : '#E24236'
+            }}
           >
             {loading ? 'Saving...' : 'Stop'}
           </button>
@@ -609,8 +615,18 @@ export default function Timer() {
       {/* Status */}
       {isRunning && (
         <div className="mt-4 text-center">
-          <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
-            <div className="w-2 h-2 bg-gray-500 rounded-full mr-2 animate-pulse"></div>
+          <div 
+            className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-gray-800"
+            style={{
+              backgroundColor: 'rgba(237, 194, 94, 0.5)' // #EDC25E at 50% opacity
+            }}
+          >
+            <div 
+              className="w-2 h-2 rounded-full mr-2 animate-pulse"
+              style={{
+                backgroundColor: '#49D449'
+              }}
+            ></div>
             Tracking time...
           </div>
         </div>
