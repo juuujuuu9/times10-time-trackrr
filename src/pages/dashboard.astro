@@ -12,7 +12,7 @@ const user = await requireAuth('/login')(Astro) as any;
     <!-- Loading State (shown immediately) -->
     <div id="loadingState" class="min-h-screen bg-gray-50 flex items-center justify-center">
       <div class="text-center">
-        <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <div class="w-12 h-12 border-4 border-gray-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
         <p class="text-gray-600 text-lg">Loading dashboard...</p>
       </div>
     </div>
@@ -25,7 +25,7 @@ const user = await requireAuth('/login')(Astro) as any;
           <div class="flex justify-between items-center py-4">
             <div class="flex items-center">
               <img src="/logo-black.png" alt="Times10 Logo" class="w-auto mr-3" style="height: 25px;" />
-              <span class="px-3 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full capitalize">
+              <span class="px-3 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full capitalize">
                 {user.role}
               </span>
             </div>
@@ -58,7 +58,7 @@ const user = await requireAuth('/login')(Astro) as any;
                 <h2 class="text-xl font-semibold text-gray-900">Recent Time Entries</h2>
                 <button
                   id="viewAllEntriesBtn"
-                  class="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                  class="text-sm text-gray-600 hover:text-gray-800 font-medium transition-colors"
                 >
                   View All
                 </button>
@@ -97,7 +97,7 @@ const user = await requireAuth('/login')(Astro) as any;
               <div class="space-y-3 mt-4">
                 <button
                   id="addTimeEntryBtn"
-                  class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  class="w-full bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
                 >
                   Add Manual Time Entry
                 </button>
@@ -137,7 +137,7 @@ const user = await requireAuth('/login')(Astro) as any;
                   id="timeEntryTask"
                   placeholder="Search for a task..."
                   required
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
                 />
                 <input type="hidden" id="timeEntryTaskId" />
                 <div id="taskDropdown" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto hidden">
@@ -154,7 +154,7 @@ const user = await requireAuth('/login')(Astro) as any;
                 id="timeEntryDuration"
                 placeholder="e.g., 2h, 3.5hr, 4:15, 90m"
                 required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
               />
               <p class="text-xs text-gray-500 mt-1">
                 Supported formats: 2h, 2hr, 3.5hr, 4:15, 90m, 5400s, etc.
@@ -168,7 +168,7 @@ const user = await requireAuth('/login')(Astro) as any;
                 type="date"
                 id="timeEntryDate"
                 required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
               />
               <p class="text-xs text-gray-500 mt-1">
                 When did this task actually occur? (defaults to today)
@@ -182,7 +182,7 @@ const user = await requireAuth('/login')(Astro) as any;
                 id="timeEntryNotes"
                 rows="3"
                 placeholder="Optional notes about this time entry..."
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
               ></textarea>
             </div>
             <div class="flex justify-end space-x-3">
@@ -196,7 +196,7 @@ const user = await requireAuth('/login')(Astro) as any;
               <button
                 type="submit"
                 id="saveTimeEntryBtn"
-                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center space-x-2"
+                class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors flex items-center space-x-2"
               >
                 <span id="saveButtonText">Save Entry</span>
                 <svg id="saveButtonSpinner" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24">
@@ -248,7 +248,7 @@ const user = await requireAuth('/login')(Astro) as any;
                 <input
                   type="datetime-local"
                   id="editStartTime"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
                 />
               </div>
               <div>
@@ -258,7 +258,7 @@ const user = await requireAuth('/login')(Astro) as any;
                 <input
                   type="datetime-local"
                   id="editEndTime"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
                 />
               </div>
             </div>
@@ -273,7 +273,7 @@ const user = await requireAuth('/login')(Astro) as any;
                   type="text"
                   id="editDuration"
                   placeholder="e.g., 2h, 3.5hr, 4:15, 90m"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
                 />
                 <p class="text-xs text-gray-500 mt-1">
                   Supported formats: 2h, 2hr, 3.5hr, 4:15, 90m, 5400s, etc.
@@ -289,7 +289,7 @@ const user = await requireAuth('/login')(Astro) as any;
                 id="editNotes"
                 rows="3"
                 placeholder="Optional notes about this time entry..."
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
               ></textarea>
             </div>
 
@@ -297,7 +297,7 @@ const user = await requireAuth('/login')(Astro) as any;
               <button
                 type="button"
                 id="deleteTimeEntryBtn"
-                class="px-4 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors border border-red-200"
+                class="px-4 py-2 text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors border border-gray-200"
               >
                 Delete Entry
               </button>
@@ -312,7 +312,7 @@ const user = await requireAuth('/login')(Astro) as any;
                 <button
                   type="submit"
                   id="saveEditTimeEntryBtn"
-                  class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center space-x-2"
+                  class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors flex items-center space-x-2"
                 >
                   <span id="saveEditButtonText">Save Changes</span>
                   <svg id="saveEditButtonSpinner" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24">
@@ -769,7 +769,7 @@ const user = await requireAuth('/login')(Astro) as any;
         if (response.ok) {
           // Show success message
           saveButtonText.textContent = 'Saved!';
-          submitButton.classList.add('bg-green-600');
+          submitButton.classList.add('bg-gray-800');
           saveButtonSpinner.classList.add('hidden');
           saveButtonSpinnerAlt.classList.add('hidden');
           
@@ -789,7 +789,7 @@ const user = await requireAuth('/login')(Astro) as any;
         // Reset button state
         submitButton.disabled = false;
         saveButtonText.textContent = originalText;
-        submitButton.classList.remove('bg-green-600');
+        submitButton.classList.remove('bg-gray-800');
         saveButtonSpinner.classList.add('hidden');
         saveButtonSpinnerAlt.classList.add('hidden');
       }
@@ -980,7 +980,7 @@ const user = await requireAuth('/login')(Astro) as any;
         if (response.ok) {
           // Show success message
           saveButtonText.textContent = 'Saved!';
-          submitButton.classList.add('bg-green-600');
+          submitButton.classList.add('bg-gray-800');
           saveButtonSpinner.classList.add('hidden');
           
           // Close modal and reload data after a brief delay
@@ -999,7 +999,7 @@ const user = await requireAuth('/login')(Astro) as any;
         // Reset button state
         submitButton.disabled = false;
         saveButtonText.textContent = originalText;
-        submitButton.classList.remove('bg-green-600');
+        submitButton.classList.remove('bg-gray-800');
         saveButtonSpinner.classList.add('hidden');
       }
     });

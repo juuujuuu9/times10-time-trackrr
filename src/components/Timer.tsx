@@ -510,7 +510,7 @@ export default function Timer() {
       <div className="bg-white p-6 rounded-lg shadow-lg">
         <h2 className="text-2xl font-bold text-gray-800 mb-4">Time Tracker</h2>
         <div className="text-center py-8">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-8 h-8 border-4 border-gray-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading timer data...</p>
         </div>
       </div>
@@ -547,7 +547,7 @@ export default function Timer() {
           value={selectedTask || ''}
           onChange={(e) => setSelectedTask(e.target.value ? parseInt(e.target.value) : null)}
           disabled={isRunning}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 disabled:bg-gray-100"
         >
           <option value="">Choose a task...</option>
           {tasks.map((task) => (
@@ -563,17 +563,17 @@ export default function Timer() {
 
       {/* Active Task Display */}
       {isRunning && selectedTask && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm font-medium text-blue-900">Currently tracking:</p>
-          <p className="text-sm text-blue-700">{getSelectedTaskName()}</p>
-          <p className="text-xs text-blue-600 mt-1">
+        <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+          <p className="text-sm font-medium text-gray-900">Currently tracking:</p>
+          <p className="text-sm text-gray-700">{getSelectedTaskName()}</p>
+          <p className="text-xs text-gray-600 mt-1">
             Started at: {startTime?.toLocaleTimeString()}
           </p>
         </div>
       )}
 
       {/* Timer Display */}
-      <div className="text-4xl font-mono text-center mb-6 text-blue-600">
+      <div className="text-4xl font-mono text-center mb-6 text-gray-600">
         {formatTime(time)}
       </div>
 
@@ -586,7 +586,7 @@ export default function Timer() {
             className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
               !selectedTask || loading || !currentUserId
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-green-500 hover:bg-green-600 text-white'
+                : 'bg-gray-600 hover:bg-gray-700 text-white'
             }`}
           >
             {loading ? 'Saving...' : 'Start'}
@@ -598,7 +598,7 @@ export default function Timer() {
             className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
               loading
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-red-500 hover:bg-red-600 text-white'
+                : 'bg-gray-800 hover:bg-gray-900 text-white'
             }`}
           >
             {loading ? 'Saving...' : 'Stop'}
@@ -609,8 +609,8 @@ export default function Timer() {
       {/* Status */}
       {isRunning && (
         <div className="mt-4 text-center">
-          <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-            <div className="w-2 h-2 bg-red-500 rounded-full mr-2 animate-pulse"></div>
+          <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+            <div className="w-2 h-2 bg-gray-500 rounded-full mr-2 animate-pulse"></div>
             Tracking time...
           </div>
         </div>
