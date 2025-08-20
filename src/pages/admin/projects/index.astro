@@ -109,54 +109,54 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         const isArchived = firstProject?.clientArchived || false;
         
         return (
-        <div class="bg-gray-800 rounded-lg shadow border border-gray-700 overflow-hidden" data-archived={isArchived}>
-          <div class="px-6 py-4 bg-gray-700 border-b border-gray-600">
-            <h3 class="text-lg font-medium text-white">{clientName}</h3>
-            <p class="text-sm text-gray-300">{clientProjects.length} projects</p>
+        <div class="bg-admin-dark-gray rounded-lg shadow border border-admin-mid-gray overflow-hidden hover:shadow-lg transition-all duration-200 hover:border-admin-light-gray" data-archived={isArchived}>
+          <div class="px-6 py-4 bg-admin-black border-b border-admin-mid-gray">
+            <h3 class="text-lg font-medium text-admin-light-gray">{clientName}</h3>
+            <p class="text-sm text-admin-mid-gray">{clientProjects.length} projects</p>
           </div>
           <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-700">
-              <thead class="bg-gray-700">
+            <table class="min-w-full divide-y divide-admin-mid-gray">
+              <thead class="bg-admin-black">
                 <tr>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-admin-mid-gray uppercase tracking-wider">
                     Project Name
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-admin-mid-gray uppercase tracking-wider">
                     Tasks
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-admin-mid-gray uppercase tracking-wider">
                     Total Hours
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-admin-mid-gray uppercase tracking-wider">
                     Created Date
                   </th>
-                  <th class="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  <th class="px-6 py-3 text-right text-xs font-medium text-admin-mid-gray uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody class="bg-gray-800 divide-y divide-gray-700">
+              <tbody class="bg-admin-dark-gray divide-y divide-admin-mid-gray">
                 {clientProjects.map((project) => (
-                  <tr class="hover:bg-gray-700">
+                  <tr class="hover:bg-admin-black">
                     <td class="px-6 py-4 whitespace-nowrap">
-                      <div class="text-sm font-medium text-white">{project.name}</div>
+                      <div class="text-sm font-medium text-admin-light-gray">{project.name}</div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-600 text-white">
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-admin-mid-gray text-admin-black">
                         {project.taskCount} tasks
                       </span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-admin-light-gray">
                       {project.totalHours ? Math.round(project.totalHours * 10) / 10 : 0} hours
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-admin-mid-gray">
                       {new Date(project.createdAt).toLocaleDateString()}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div class="flex justify-end space-x-2">
                         <button
                           type="button"
-                          class="view-tasks-btn inline-flex items-center px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+                          class="view-tasks-btn inline-flex items-center px-3 py-2 bg-admin-mid-gray hover:bg-admin-light-gray text-admin-black text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
                           data-project-id={project.id}
                           data-project-name={project.name}
                           title="View project tasks"
@@ -168,7 +168,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                         </button>
                         <button
                           type="button"
-                          class="edit-project-btn inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+                          class="edit-project-btn inline-flex items-center px-3 py-2 bg-admin-dark-gray hover:bg-admin-mid-gray text-admin-light-gray text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-admin-mid-gray"
                           data-project-id={project.id}
                           title="Edit project details"
                         >
@@ -179,15 +179,14 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                         </button>
                         <button
                           type="button"
-                          class="delete-project-btn inline-flex items-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+                          class="delete-project-btn text-red-400 hover:text-red-300 transition-colors p-2 rounded-lg hover:bg-red-400/10"
                           data-project-id={project.id}
                           data-project-name={project.name}
                           title="Delete project"
                         >
-                          <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                           </svg>
-                          Delete
                         </button>
                       </div>
                     </td>
@@ -204,10 +203,10 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
     {Object.keys(activeProjectsByClient).length === 0 && (
       <div class="text-center py-12">
         <div class="text-6xl mb-4">📁</div>
-        <h3 class="text-lg font-medium text-white mb-2">No projects yet</h3>
-        <p class="text-gray-300 mb-4">Get started by adding your first project</p>
+        <h3 class="text-lg font-medium text-admin-light-gray mb-2">No projects yet</h3>
+        <p class="text-admin-mid-gray mb-4">Get started by adding your first project</p>
         <button
-          class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+          class="inline-flex items-center px-4 py-2 bg-admin-dark-gray hover:bg-admin-mid-gray text-admin-light-gray font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-admin-mid-gray"
           onclick="document.getElementById('createProjectBtn').click()"
         >
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -222,33 +221,33 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
   <!-- Create/Edit Project Modal -->
         <div id="projectModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-gray-600 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col" onclick="event.stopPropagation()">
-        <div class="px-6 py-4 border-b border-gray-700 flex-shrink-0">
-          <h3 id="projectModalTitle" class="text-lg font-medium text-white">Add New Project</h3>
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-300 flex flex-col" onclick="event.stopPropagation()">
+        <div class="px-6 py-4 border-b border-gray-300 flex-shrink-0">
+          <h3 id="projectModalTitle" class="text-lg font-medium text-gray-900">Add New Project</h3>
         </div>
-        <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
+        <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #9CA3AF #E5E7EB;">
           <form id="projectForm" class="px-6 py-4">
             <input type="hidden" id="projectId" />
             <div class="mb-4">
-              <label for="projectName" class="block text-sm font-medium text-gray-300 mb-1">
+              <label for="projectName" class="block text-sm font-medium text-gray-700 mb-1">
                 Project Name
               </label>
               <input
                 type="text"
                 id="projectName"
                 required
-                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
+                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
               />
             </div>
             <div class="mb-4">
-              <label for="projectClient" class="block text-sm font-medium text-gray-300 mb-1">
+              <label for="projectClient" class="block text-sm font-medium text-gray-700 mb-1">
                 Client
               </label>
               <div class="flex space-x-2">
                 <select
                   id="projectClient"
                   required
-                  class="flex-1 px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
+                  class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
                 >
                   <option value="">Select a client</option>
                   {allClients.map((client) => (
@@ -258,7 +257,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                 <button
                   type="button"
                   id="createClientBtn"
-                  class="inline-flex items-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md"
+                  class="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md"
                 >
                   <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -271,7 +270,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               <button
                 type="button"
                 id="cancelProjectBtn"
-                class="inline-flex items-center px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-all duration-200 font-medium"
+                class="inline-flex items-center px-4 py-2 text-gray-700 bg-white hover:bg-gray-50 rounded-md transition-all duration-200 font-medium border border-gray-300"
               >
                 <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -297,21 +296,21 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
   <!-- Create New Client Modal -->
         <div id="clientModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-gray-600 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col" onclick="event.stopPropagation()">
-        <div class="px-6 py-4 border-b border-gray-700 flex-shrink-0">
-          <h3 class="text-lg font-medium text-white">Create New Client</h3>
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-300 flex flex-col" onclick="event.stopPropagation()">
+        <div class="px-6 py-4 border-b border-gray-300 flex-shrink-0">
+          <h3 class="text-lg font-medium text-gray-900">Create New Client</h3>
         </div>
-        <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
+        <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #9CA3AF #E5E7EB;">
           <form id="clientForm" class="px-6 py-4">
             <div class="mb-4">
-              <label for="clientName" class="block text-sm font-medium text-gray-300 mb-1">
+              <label for="clientName" class="block text-sm font-medium text-gray-700 mb-1">
                 Client Name
               </label>
               <input
                 type="text"
                 id="clientName"
                 required
-                class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
                 placeholder="Enter client name"
               />
             </div>
@@ -319,7 +318,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               <button
                 type="button"
                 id="cancelClientBtn"
-                class="inline-flex items-center px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-all duration-200 font-medium"
+                class="inline-flex items-center px-4 py-2 text-gray-700 bg-white hover:bg-gray-50 rounded-md transition-all duration-200 font-medium border border-gray-300"
               >
                 <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -345,13 +344,13 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
   <!-- Tasks Modal -->
   <div id="tasksModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-gray-600 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] border border-gray-700 flex flex-col" onclick="event.stopPropagation()">
-        <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center flex-shrink-0">
-          <h3 id="tasksModalTitle" class="text-lg font-medium text-white">Project Tasks</h3>
+      <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] border border-gray-300 flex flex-col" onclick="event.stopPropagation()">
+        <div class="px-6 py-4 border-b border-gray-300 flex justify-between items-center flex-shrink-0">
+          <h3 id="tasksModalTitle" class="text-lg font-medium text-gray-900">Project Tasks</h3>
           <button
             type="button"
             id="closeTasksModalBtn"
-            class="text-gray-400 hover:text-white"
+            class="text-gray-500 hover:text-gray-700"
           >
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -362,11 +361,11 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         <div class="flex-1 overflow-hidden flex flex-col">
           <div class="px-6 py-4 flex-shrink-0">
             <div class="flex justify-between items-center">
-              <h4 class="text-md font-medium text-white">Tasks</h4>
+              <h4 class="text-md font-medium text-gray-900">Tasks</h4>
               <button
                 type="button"
                 id="addTaskBtn"
-                class="inline-flex items-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+                class="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
               >
                 <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -376,7 +375,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
             </div>
           </div>
           
-          <div class="px-6 pb-6 flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
+          <div class="px-6 pb-6 flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #9CA3AF #E5E7EB;">
             <div id="tasksList" class="space-y-3">
               <!-- Tasks will be loaded here -->
             </div>
@@ -389,43 +388,43 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
   <!-- Add Task Modal -->
   <div id="addTaskModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-gray-600 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col" onclick="event.stopPropagation()">
-        <div class="px-6 py-4 border-b border-gray-700 flex-shrink-0">
-          <h3 class="text-lg font-medium text-white">Add New Task</h3>
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-300 flex flex-col" onclick="event.stopPropagation()">
+        <div class="px-6 py-4 border-b border-gray-300 flex-shrink-0">
+          <h3 class="text-lg font-medium text-gray-900">Add New Task</h3>
         </div>
-        <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
+        <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #9CA3AF #E5E7EB;">
           <form id="addTaskForm" class="px-6 py-4">
             <input type="hidden" id="taskProjectId" />
             <div class="mb-4">
-              <label for="taskName" class="block text-sm font-medium text-gray-300 mb-1">
+              <label for="taskName" class="block text-sm font-medium text-gray-700 mb-1">
                 Task Name
               </label>
               <input
                 type="text"
                 id="taskName"
                 required
-                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
+                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
                 placeholder="Enter task name"
               />
             </div>
             <div class="mb-4">
-              <label for="taskDescription" class="block text-sm font-medium text-gray-300 mb-1">
+              <label for="taskDescription" class="block text-sm font-medium text-gray-700 mb-1">
                 Description
               </label>
               <textarea
                 id="taskDescription"
                 rows="3"
-                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
+                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
                 placeholder="Enter task description"
               ></textarea>
             </div>
             <div class="mb-4">
-              <label for="taskStatus" class="block text-sm font-medium text-gray-300 mb-1">
+              <label for="taskStatus" class="block text-sm font-medium text-gray-700 mb-1">
                 Status
               </label>
               <select
                 id="taskStatus"
-                class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
               >
                 <option value="pending">Pending</option>
                 <option value="in-progress">In Progress</option>
@@ -434,7 +433,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               </select>
             </div>
             <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-300 mb-1">
+              <label class="block text-sm font-medium text-gray-700 mb-1">
                 Assign Users
               </label>
               <div class="space-y-3">
@@ -444,9 +443,9 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                     type="text"
                     id="addTaskUserSearch"
                     placeholder="Search users to assign..."
-                    class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
+                    class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
                   />
-                  <div id="addTaskUserSuggestions" class="absolute z-10 w-full bg-gray-800 border border-gray-600 rounded-md mt-1 max-h-32 overflow-y-auto hidden">
+                  <div id="addTaskUserSuggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 max-h-32 overflow-y-auto hidden">
                     <!-- Suggestions will appear here -->
                   </div>
                 </div>
@@ -461,13 +460,13 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               <button
                 type="button"
                 id="cancelAddTaskBtn"
-                class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+                class="px-4 py-2 text-gray-700 bg-white hover:bg-gray-50 rounded-md transition-colors border border-gray-300"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-900 rounded-md transition-colors"
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
               >
                 Create Task
               </button>
@@ -721,7 +720,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         const searchTerm = target.value.toLowerCase();
         
         // Get all client sections
-        const clientSections = document.querySelectorAll('.bg-gray-800.rounded-lg.shadow.border.border-gray-700.overflow-hidden');
+        const clientSections = document.querySelectorAll('.bg-admin-dark-gray.rounded-lg.shadow.border.border-admin-mid-gray.overflow-hidden');
         
         clientSections.forEach(section => {
           const rows = section.querySelectorAll('tbody tr');
@@ -789,7 +788,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
     // Client filter functionality
     if (clientFilter) {
       // Hide archived clients by default
-      const clientSections = document.querySelectorAll('.bg-gray-800.rounded-lg.shadow.border.border-gray-700.overflow-hidden');
+      const clientSections = document.querySelectorAll('.bg-admin-dark-gray.rounded-lg.shadow.border.border-admin-mid-gray.overflow-hidden');
       clientSections.forEach(section => {
         const isArchived = section.getAttribute('data-archived') === 'true';
         if (isArchived) {
@@ -800,7 +799,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       clientFilter.addEventListener('change', (e) => {
         const target = e.target as HTMLSelectElement;
         const selectedClient = target.value;
-        const clientSections = document.querySelectorAll('.bg-gray-800.rounded-lg.shadow.border.border-gray-700.overflow-hidden');
+        const clientSections = document.querySelectorAll('.bg-admin-dark-gray.rounded-lg.shadow.border.border-admin-mid-gray.overflow-hidden');
         
         clientSections.forEach(section => {
           const clientName = section.querySelector('h3')?.textContent || '';
@@ -871,31 +870,31 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         tasksList.innerHTML = `
           <div class="text-center py-8">
             <div class="text-4xl mb-2">📋</div>
-            <p class="text-gray-300">No tasks yet for this project</p>
-            <p class="text-gray-400 text-sm">Click "Add Task" to create the first task</p>
+            <p class="text-admin-mid-gray">No tasks yet for this project</p>
+            <p class="text-admin-mid-gray text-sm">Click "Add Task" to create the first task</p>
           </div>
         `;
         return;
       }
 
       tasksList.innerHTML = tasks.map((task, index) => `
-        <div class="bg-gray-700 rounded-lg p-4 border border-gray-600" data-task-id="${task.id}" data-assigned-user-ids="${task.assignedUserIds || ''}">
+        <div class="bg-gray-50 rounded-lg p-4 border border-gray-300" data-task-id="${task.id}" data-assigned-user-ids="${task.assignedUserIds || ''}">
           <div class="flex justify-between items-start mb-2">
             <div class="flex-1">
-              <h5 class="font-medium text-white">${task.name}</h5>
+              <h5 class="font-medium text-gray-900">${task.name}</h5>
             </div>
             <div class="flex items-center space-x-2">
               <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                task.status === 'completed' ? 'bg-green-600 text-white' :
-                task.status === 'in-progress' ? 'bg-blue-600 text-white' :
-                task.status === 'cancelled' ? 'bg-red-600 text-white' :
-                'bg-yellow-600 text-white'
+                task.status === 'completed' ? 'bg-green-100 text-green-800' :
+                task.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
+                task.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                'bg-gray-100 text-gray-800'
               }">
                 ${task.status.replace('-', ' ')}
               </span>
               <button
                 type="button"
-                class="delete-task-btn text-red-400 hover:text-red-300 transition-colors"
+                class="delete-task-btn text-red-600 hover:text-red-700 transition-colors"
                 data-task-id="${task.id}"
                 data-task-name="${task.name}"
                 title="Delete task"
@@ -906,33 +905,33 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               </button>
             </div>
           </div>
-          ${task.description ? `<p class="text-gray-300 text-sm mb-2">${task.description}</p>` : ''}
+          ${task.description ? `<p class="text-gray-600 text-sm mb-2">${task.description}</p>` : ''}
           <div class="flex justify-between items-center text-sm mb-3">
-            <div class="text-gray-400">
+            <div class="text-gray-600">
               ${task.assignedUsers ? `Assigned to: ${task.assignedUsers}` : 'No assignments'}
             </div>
-            <div class="text-gray-400">
+            <div class="text-gray-600">
               ${task.totalHours ? Math.round(task.totalHours * 10) / 10 : 0} hours
             </div>
           </div>
           
           <!-- User Assignment Section -->
-          <div class="border-t border-gray-600 pt-3">
+          <div class="border-t border-gray-300 pt-3">
             <div class="flex items-center space-x-2 mb-2">
               <div class="flex-1 relative mr-10">
                 <input
                   type="text"
                   id="userSearch-${task.id}"
                   placeholder="Search users to assign..."
-                  class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white text-sm"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 text-sm"
                 />
-                <div id="userSuggestions-${task.id}" class="absolute z-10 w-full bg-gray-800 border border-gray-600 rounded-md mt-1 max-h-32 overflow-y-auto hidden">
+                <div id="userSuggestions-${task.id}" class="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 max-h-32 overflow-y-auto hidden">
                   <!-- Suggestions will appear here -->
                 </div>
               </div>
               <button
                 type="button"
-                class="assign-user-btn px-3 py-2 bg-gray-300 hover:bg-gray-400 text-gray-900 rounded-md transition-colors text-sm"
+                class="assign-user-btn px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors text-sm"
                 data-task-id="${task.id}"
                 data-task-name="${task.name}"
               >
@@ -945,11 +944,11 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                 const user = allUsers.find(u => u.id.toString() === userId.trim());
                 console.log('Found user for ID', userId, ':', user);
                 return user ? `
-                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-600 text-white">
+                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
                     ${user.name}
                     <button
                       type="button"
-                      class="ml-1 remove-user-btn hover:text-red-300 transition-colors"
+                      class="ml-1 remove-user-btn hover:text-red-600 transition-colors"
                       data-task-id="${task.id}"
                       data-user-id="${user.id}"
                       data-user-name="${user.name}"
@@ -1087,7 +1086,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
             if (filteredUsers.length > 0) {
               suggestionsDiv.innerHTML = filteredUsers.map(user => `
                 <div
-                  class="px-3 py-2 hover:bg-gray-700 cursor-pointer text-white text-sm user-suggestion"
+                  class="px-3 py-2 hover:bg-gray-100 cursor-pointer text-gray-900 text-sm user-suggestion"
                   data-user-id="${user.id}"
                   data-user-name="${user.name}"
                   data-user-email="${user.email}"
@@ -1293,7 +1292,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         if (filteredUsers.length > 0) {
           suggestionsDiv.innerHTML = filteredUsers.map(user => `
             <div
-              class="px-3 py-2 hover:bg-gray-700 cursor-pointer text-white text-sm add-task-user-suggestion"
+              class="px-3 py-2 hover:bg-gray-100 cursor-pointer text-gray-900 text-sm add-task-user-suggestion"
               data-user-id="${user.id}"
               data-user-name="${user.name}"
               data-user-email="${user.email}"
@@ -1343,13 +1342,13 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       }
       
       const userTag = document.createElement('span');
-      userTag.className = 'inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-600 text-white';
+      userTag.className = 'inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800';
       userTag.setAttribute('data-user-id', userId.toString());
       userTag.innerHTML = `
         ${userName}
         <button
           type="button"
-          class="ml-1 remove-add-task-user-btn hover:text-red-300 transition-colors"
+          class="ml-1 remove-add-task-user-btn hover:text-red-600 transition-colors"
           data-user-id="${userId}"
           data-user-name="${userName}"
           title="Remove ${userName} from task"

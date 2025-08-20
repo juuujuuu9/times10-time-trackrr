@@ -1,24 +1,43 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { db } from '../../../db/index';
-import { clients, users, projects } from '../../../db/schema';
-import { count, sql } from 'drizzle-orm';
+import { clients, users, projects, timeEntries, tasks } from '../../../db/schema';
+import { count, sql, sum, desc } from 'drizzle-orm';
 
-// Get all clients with project counts and creator info (including archived)
+// Get all clients with enhanced information
 const allClients = await db
   .select({
     id: clients.id,
     name: clients.name,
     createdAt: clients.createdAt,
+    updatedAt: clients.updatedAt,
     createdByName: users.name,
     archived: clients.archived,
     projectCount: count(projects.id),
+    totalHours: sql<number>`COALESCE(SUM(
+      CASE 
+        WHEN ${timeEntries.endTime} IS NOT NULL 
+        THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))
+        ELSE COALESCE(${timeEntries.durationManual}, 0)
+      END
+    ), 0)`.as('total_hours'),
+    totalCost: sql<number>`COALESCE(SUM(
+      CASE 
+        WHEN ${timeEntries.endTime} IS NOT NULL 
+        THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime})) / 3600 * COALESCE(${users.payRate}, 0)
+        ELSE COALESCE(${timeEntries.durationManual}, 0) / 3600 * COALESCE(${users.payRate}, 0)
+      END
+    ), 0)`.as('total_cost'),
+    lastActivity: sql<Date>`MAX(${timeEntries.startTime})`.as('last_activity'),
+    activeProjects: count(sql`DISTINCT CASE WHEN ${projects.archived} = false THEN ${projects.id} END`).as('active_projects'),
   })
   .from(clients)
   .leftJoin(users, sql`${clients.createdBy} = ${users.id}`)
   .leftJoin(projects, sql`${clients.id} = ${projects.clientId}`)
+  .leftJoin(tasks, sql`${projects.id} = ${tasks.projectId}`)
+  .leftJoin(timeEntries, sql`${tasks.id} = ${timeEntries.taskId}`)
   .groupBy(clients.id, users.name, clients.archived)
-  .orderBy(clients.createdAt);
+  .orderBy(desc(clients.createdAt));
 ---
 
 <AdminLayout title="Clients" currentPage="clients">
@@ -31,13 +50,80 @@ const allClients = await db
       </div>
       <button
         id="createClientBtn"
-        class="inline-flex items-center px-4 py-2 bg-admin-dark-gray hover:bg-admin-mid-gray text-admin-light-gray font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+        class="inline-flex items-center px-4 py-2 bg-admin-dark-gray hover:bg-admin-mid-gray text-admin-light-gray font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-admin-mid-gray"
       >
         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
         </svg>
         Add Client
       </button>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="bg-admin-dark-gray rounded-lg shadow border border-admin-mid-gray p-4">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="w-8 h-8 bg-admin-mid-gray rounded-lg flex items-center justify-center">
+              <svg class="w-5 h-5 text-admin-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-admin-mid-gray">Total Clients</p>
+            <p class="text-2xl font-bold text-admin-light-gray">{allClients.length}</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-admin-dark-gray rounded-lg shadow border border-admin-mid-gray p-4">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="w-8 h-8 bg-admin-light-gray rounded-lg flex items-center justify-center">
+              <svg class="w-5 h-5 text-admin-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-admin-mid-gray">Active Clients</p>
+            <p class="text-2xl font-bold text-admin-light-gray">{allClients.filter(c => !c.archived).length}</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-admin-dark-gray rounded-lg shadow border border-admin-mid-gray p-4">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="w-8 h-8 bg-admin-mid-gray rounded-lg flex items-center justify-center">
+              <svg class="w-5 h-5 text-admin-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-admin-mid-gray">Total Projects</p>
+            <p class="text-2xl font-bold text-admin-light-gray">{allClients.reduce((sum, client) => sum + Number(client.projectCount), 0)}</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-admin-dark-gray rounded-lg shadow border border-admin-mid-gray p-4">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="w-8 h-8 bg-admin-light-gray rounded-lg flex items-center justify-center">
+              <svg class="w-5 h-5 text-admin-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-admin-mid-gray">Total Revenue</p>
+            <p class="text-2xl font-bold text-admin-light-gray">${allClients.reduce((sum, client) => sum + Number(client.totalCost), 0).toFixed(2)}</p>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Filters -->
@@ -61,6 +147,8 @@ const allClients = await db
             <option value="name">Name</option>
             <option value="created">Created Date</option>
             <option value="projects">Project Count</option>
+            <option value="revenue">Revenue</option>
+            <option value="activity">Last Activity</option>
           </select>
         </div>
         <div class="sm:w-48">
@@ -77,113 +165,151 @@ const allClients = await db
       </div>
     </div>
 
-    <!-- Clients Table -->
-    <div class="bg-admin-dark-gray rounded-lg shadow border border-admin-mid-gray overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-admin-mid-gray">
-          <thead class="bg-admin-black">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-admin-mid-gray uppercase tracking-wider rounded-tl-md rounded-tr-0 rounded-br-0 rounded-bl-0">
-                Client Name
-              </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-admin-mid-gray uppercase tracking-wider">
-                Projects
-              </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-admin-mid-gray uppercase tracking-wider">
-                Created By
-              </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-admin-mid-gray uppercase tracking-wider">
-                Created Date
-              </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-admin-mid-gray uppercase tracking-wider">
-                Status
-              </th>
-              <th class="px-6 py-3 text-right text-xs font-medium text-admin-mid-gray uppercase tracking-wider rounded-tr-md rounded-br-0 rounded-tl-0 rounded-bl-0">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody class="bg-admin-dark-gray divide-y divide-admin-mid-gray">
-            {allClients.map((client) => (
-              <tr class="hover:bg-admin-black">
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm font-medium text-admin-light-gray">{client.name}</div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-admin-mid-gray text-admin-black" data-client-id={client.id}>
-                    {client.projectCount} projects
+    <!-- Clients Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+      {allClients.map((client) => (
+        <div 
+          class="bg-admin-dark-gray rounded-lg shadow border border-admin-mid-gray overflow-hidden hover:shadow-lg transition-all duration-200 hover:border-admin-light-gray"
+          data-client-id={client.id}
+          data-project-count={client.projectCount}
+          data-revenue={client.totalCost}
+          data-created-date={client.createdAt.toISOString()}
+          data-last-activity={client.lastActivity ? new Date(client.lastActivity).toISOString() : ''}
+        >
+          <!-- Client Header -->
+          <div class="px-6 py-4 border-b border-admin-mid-gray bg-admin-black">
+            <div class="flex justify-between items-start">
+              <div class="flex-1">
+                <h3 class="text-lg font-semibold text-admin-light-gray truncate">{client.name}</h3>
+                <p class="text-sm text-admin-mid-gray">Created by {client.createdByName}</p>
+              </div>
+              <div class="flex items-center space-x-2">
+                {client.archived ? (
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-admin-mid-gray text-admin-black">
+                    Archived
                   </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-admin-light-gray">
-                  {client.createdByName}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-admin-mid-gray">
-                  {new Date(client.createdAt).toLocaleDateString()}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  {client.archived ? (
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-admin-mid-gray text-admin-black">
-                      Archived
-                    </span>
-                  ) : (
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-admin-light-gray text-admin-black">
-                      Active
-                    </span>
-                  )}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <div class="flex justify-end space-x-2">
-                    <button
-                      class="inline-flex items-center px-3 py-2 bg-admin-mid-gray hover:bg-admin-light-gray text-admin-black text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
-                      onclick={`viewProjects(${client.id}, '${client.name}', ${client.archived})`}
-                      title="View client projects"
-                    >
-                      <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-                      </svg>
-                      Projects
-                    </button>
-                    <button
-                      class="inline-flex items-center px-3 py-2 bg-admin-dark-gray hover:bg-admin-mid-gray text-admin-light-gray text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
-                      onclick={`editClient(${client.id})`}
-                      title="Edit client details"
-                    >
-                      <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                      </svg>
-                      Edit
-                    </button>
-                    <button
-                      class={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 ${
-                        client.archived 
-                          ? "bg-admin-light-gray hover:bg-admin-mid-gray text-admin-black" 
-                          : "bg-admin-mid-gray hover:bg-admin-light-gray text-admin-black"
-                      }`}
-                      onclick={client.archived ? `unarchiveClient(${client.id})` : `archiveClient(${client.id})`}
-                      title={client.archived ? "Restore client" : "Archive client"}
-                    >
-                      <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={client.archived ? "M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" : "M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"}></path>
-                      </svg>
-                      {client.archived ? 'Restore' : 'Archive'}
-                    </button>
-                    <button
-                      class="delete-client-btn text-red-400 hover:text-red-300 transition-colors"
-                      data-client-id={client.id}
-                      data-client-name={client.name}
-                      title="Delete client"
-                    >
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                      </svg>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                ) : (
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-admin-light-gray text-admin-black">
+                    Active
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <!-- Client Stats -->
+          <div class="px-6 py-4 space-y-4">
+            <!-- Projects Info -->
+            <div class="flex items-center justify-between py-2 border-b border-admin-mid-gray/30">
+              <div class="flex items-center">
+                <svg class="w-4 h-4 text-admin-mid-gray mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                </svg>
+                <span class="text-sm text-admin-mid-gray">Projects</span>
+              </div>
+              <div class="text-right">
+                <span class="text-sm font-medium text-admin-light-gray">{client.projectCount}</span>
+                {client.activeProjects > 0 && (
+                  <span class="text-xs text-admin-mid-gray ml-1">({client.activeProjects} active)</span>
+                )}
+              </div>
+            </div>
+
+            <!-- Hours Info -->
+            <div class="flex items-center justify-between py-2 border-b border-admin-mid-gray/30">
+              <div class="flex items-center">
+                <svg class="w-4 h-4 text-admin-mid-gray mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span class="text-sm text-admin-mid-gray">Total Hours</span>
+              </div>
+              <span class="text-sm font-medium text-admin-light-gray">
+                {Number(client.totalHours) > 0 ? (Number(client.totalHours) / 3600).toFixed(1) : '0'}h
+              </span>
+            </div>
+
+            <!-- Revenue Info -->
+            <div class="flex items-center justify-between py-2 border-b border-admin-mid-gray/30">
+              <div class="flex items-center">
+                <svg class="w-4 h-4 text-admin-mid-gray mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                </svg>
+                <span class="text-sm text-admin-mid-gray">Revenue</span>
+              </div>
+              <span class="text-sm font-medium text-admin-light-gray">
+                ${Number(client.totalCost).toFixed(2)}
+              </span>
+            </div>
+
+            <!-- Last Activity -->
+            <div class="flex items-center justify-between py-2">
+              <div class="flex items-center">
+                <svg class="w-4 h-4 text-admin-mid-gray mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+                <span class="text-sm text-admin-mid-gray">Last Activity</span>
+              </div>
+              <span class="text-sm text-admin-light-gray">
+                {client.lastActivity ? new Date(client.lastActivity).toLocaleDateString() : 'Never'}
+              </span>
+            </div>
+          </div>
+
+          <!-- Client Actions -->
+          <div class="px-6 py-4 bg-admin-black border-t border-admin-mid-gray">
+            <div class="flex justify-between items-center">
+              <div class="flex space-x-2">
+                <button
+                  class="inline-flex items-center px-3 py-2 bg-admin-mid-gray hover:bg-admin-light-gray text-admin-black text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+                  onclick={`viewProjects(${client.id}, '${client.name}', ${client.archived})`}
+                  title="View client projects"
+                >
+                  <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                  </svg>
+                  Projects
+                </button>
+                <button
+                  class="inline-flex items-center px-3 py-2 bg-admin-dark-gray hover:bg-admin-mid-gray text-admin-light-gray text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-admin-mid-gray"
+                  onclick={`editClient(${client.id})`}
+                  title="Edit client details"
+                >
+                  <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                  </svg>
+                  Edit
+                </button>
+              </div>
+              <div class="flex space-x-2">
+                <button
+                  class={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border ${
+                    client.archived 
+                      ? "bg-admin-light-gray hover:bg-admin-mid-gray text-admin-black border-admin-light-gray" 
+                      : "bg-admin-mid-gray hover:bg-admin-light-gray text-admin-black border-admin-mid-gray"
+                  }`}
+                  onclick={client.archived ? `unarchiveClient(${client.id})` : `archiveClient(${client.id})`}
+                  title={client.archived ? "Restore client" : "Archive client"}
+                >
+                  <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={client.archived ? "M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" : "M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"}></path>
+                  </svg>
+                  {client.archived ? 'Restore' : 'Archive'}
+                </button>
+                <button
+                  class="delete-client-btn text-red-400 hover:text-red-300 transition-colors p-2 rounded-lg hover:bg-red-400/10"
+                  data-client-id={client.id}
+                  data-client-name={client.name}
+                  title="Delete client"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
 
     <div id="emptyState" class="text-center py-12 hidden">
@@ -191,7 +317,7 @@ const allClients = await db
       <h3 class="text-lg font-medium text-admin-light-gray mb-2">No clients yet</h3>
       <p class="text-admin-mid-gray mb-4">Get started by adding your first client</p>
       <button
-        class="bg-admin-mid-gray hover:bg-admin-light-gray text-admin-black font-medium py-2 px-4 rounded-lg transition-colors"
+        class="bg-admin-mid-gray hover:bg-admin-light-gray text-admin-black font-medium py-2 px-4 rounded-lg transition-colors border border-admin-mid-gray"
         onclick="document.getElementById('createClientBtn').click()"
       >
         Add Your First Client
@@ -202,35 +328,35 @@ const allClients = await db
   <!-- Create/Edit Client Modal -->
   <div id="clientModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-gray-600 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col">
-        <div class="px-6 py-4 border-b border-gray-700 flex-shrink-0">
-          <h3 id="modalTitle" class="text-lg font-medium text-white">Add New Client</h3>
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-200 flex flex-col">
+        <div class="px-6 py-4 border-b border-gray-200 flex-shrink-0">
+          <h3 id="modalTitle" class="text-lg font-medium text-gray-900">Add New Client</h3>
         </div>
-        <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
+        <div class="flex-1 overflow-y-auto">
           <form id="clientForm" class="p-6">
             <input type="hidden" id="clientId" />
             <div class="mb-4">
-              <label for="clientName" class="block text-sm font-medium text-gray-300 mb-1">
+              <label for="clientName" class="block text-sm font-medium text-gray-700 mb-1">
                 Client Name
               </label>
               <input
                 type="text"
                 id="clientName"
                 required
-                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 placeholder-gray-500"
               />
             </div>
             <div class="flex justify-end space-x-3">
               <button
                 type="button"
                 onclick="closeModal()"
-                class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+                class="px-4 py-2 text-gray-700 bg-white hover:bg-gray-50 rounded-md transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-900 rounded-md transition-colors"
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors"
               >
                 Save Client
               </button>
@@ -244,12 +370,12 @@ const allClients = await db
   <!-- Projects Modal -->
   <div id="projectsModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-gray-600 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] border border-gray-700 flex flex-col">
-        <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center flex-shrink-0">
-          <h3 id="projectsModalTitle" class="text-lg font-medium text-white">Projects</h3>
+      <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] border border-gray-200 flex flex-col">
+        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
+          <h3 id="projectsModalTitle" class="text-lg font-medium text-gray-900">Projects</h3>
           <button
             onclick="closeProjectsModal()"
-            class="text-gray-400 hover:text-white"
+            class="text-gray-400 hover:text-gray-600 transition-colors"
           >
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -260,19 +386,22 @@ const allClients = await db
           <div class="px-6 py-4 flex-shrink-0">
             <div class="flex justify-between items-center">
               <div>
-                <h4 id="clientNameHeader" class="text-xl font-semibold text-white"></h4>
-                <p id="clientDescription" class="text-gray-300">Manage projects for this client</p>
+                <h4 id="clientNameHeader" class="text-xl font-semibold text-gray-900"></h4>
+                <p id="clientDescription" class="text-gray-600">Manage projects for this client</p>
               </div>
               <button
                 id="newProjectBtn"
-                class="bg-gray-300 hover:bg-gray-400 text-gray-900 font-medium py-2 px-4 rounded-lg transition-colors"
+                class="text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                style="background-color: #d63a2e;"
+                onmouseover="this.style.backgroundColor='#b83228'"
+                onmouseout="this.style.backgroundColor='#d63a2e'"
               >
                 + New Project
               </button>
             </div>
           </div>
           
-          <div class="px-6 pb-6 flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
+          <div class="px-6 pb-6 flex-1 overflow-y-auto">
             <div id="projectsList" class="space-y-3">
               <!-- Projects will be loaded here -->
             </div>
@@ -285,35 +414,35 @@ const allClients = await db
   <!-- New Project Modal -->
   <div id="newProjectModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-gray-600 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col">
-        <div class="px-6 py-4 border-b border-gray-700 flex-shrink-0">
-          <h3 class="text-lg font-medium text-white">Add New Project</h3>
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-200 flex flex-col">
+        <div class="px-6 py-4 border-b border-gray-200 flex-shrink-0">
+          <h3 class="text-lg font-medium text-gray-900">Add New Project</h3>
         </div>
-        <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
+        <div class="flex-1 overflow-y-auto">
           <form id="newProjectForm" class="px-6 py-4">
             <input type="hidden" id="projectClientId" />
             <div class="mb-4">
-              <label for="projectName" class="block text-sm font-medium text-gray-300 mb-1">
+              <label for="projectName" class="block text-sm font-medium text-gray-700 mb-1">
                 Project Name
               </label>
               <input
                 type="text"
                 id="projectName"
                 required
-                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 placeholder-gray-500"
               />
             </div>
             <div class="flex justify-end space-x-3">
               <button
                 type="button"
                 onclick="closeNewProjectModal()"
-                class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+                class="px-4 py-2 text-gray-700 bg-white hover:bg-gray-50 rounded-md transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-900 rounded-md transition-colors"
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors"
               >
                 Create Project
               </button>
@@ -475,19 +604,22 @@ const allClients = await db
 
     // Search and filter functionality
     const archiveFilter = document.getElementById('archiveFilter') as HTMLSelectElement;
+    const sortSelect = document.getElementById('sort') as HTMLSelectElement;
     
     function filterClients() {
       const searchTerm = (searchInput as HTMLInputElement)?.value.toLowerCase() || '';
       const archiveStatus = archiveFilter?.value || 'active';
-      const rows = document.querySelectorAll('tbody tr');
+      const sortBy = sortSelect?.value || 'name';
+      const clientCards = document.querySelectorAll('.grid > div');
       
       let visibleCount = 0;
+      const visibleCards: HTMLElement[] = [];
       
-      rows.forEach((row, index) => {
-        const firstCell = row.querySelector('td:first-child');
-        const statusCell = row.querySelector('td:nth-child(5)'); // Status column (5th column)
-        const clientName = firstCell?.textContent?.toLowerCase() || '';
-        const status = statusCell?.textContent?.trim() || '';
+      clientCards.forEach((card) => {
+        const cardElement = card as HTMLElement;
+        const clientName = card.querySelector('h3')?.textContent?.toLowerCase() || '';
+        const statusElement = card.querySelector('span');
+        const status = statusElement?.textContent?.trim() || '';
         
         let showBySearch = clientName.includes(searchTerm);
         let showByArchive = true;
@@ -500,12 +632,16 @@ const allClients = await db
         // 'all' shows everything
         
         const shouldShow = showBySearch && showByArchive;
-        (row as HTMLElement).style.display = shouldShow ? '' : 'none';
+        cardElement.style.display = shouldShow ? '' : 'none';
         
         if (shouldShow) {
           visibleCount++;
+          visibleCards.push(cardElement);
         }
       });
+      
+      // Sort visible cards
+      sortClientCards(visibleCards, sortBy);
       
       // Show/hide empty state message
       const emptyState = document.getElementById('emptyState');
@@ -517,6 +653,48 @@ const allClients = await db
           emptyState.classList.add('hidden');
         }
       }
+    }
+    
+    function sortClientCards(cards: HTMLElement[], sortBy: string) {
+      const grid = document.querySelector('.grid');
+      if (!grid) return;
+      
+      cards.sort((a, b) => {
+        switch (sortBy) {
+          case 'name':
+            const nameA = a.querySelector('h3')?.textContent?.toLowerCase() || '';
+            const nameB = b.querySelector('h3')?.textContent?.toLowerCase() || '';
+            return nameA.localeCompare(nameB);
+            
+          case 'created':
+            const createdA = new Date(a.getAttribute('data-created-date') || '');
+            const createdB = new Date(b.getAttribute('data-created-date') || '');
+            return createdB.getTime() - createdA.getTime();
+            
+          case 'projects':
+            const projectsA = parseInt(a.getAttribute('data-project-count') || '0');
+            const projectsB = parseInt(b.getAttribute('data-project-count') || '0');
+            return projectsB - projectsA;
+            
+          case 'revenue':
+            const revenueA = parseFloat(a.getAttribute('data-revenue') || '0');
+            const revenueB = parseFloat(b.getAttribute('data-revenue') || '0');
+            return revenueB - revenueA;
+            
+          case 'activity':
+            const activityA = new Date(a.getAttribute('data-last-activity') || '');
+            const activityB = new Date(b.getAttribute('data-last-activity') || '');
+            return activityB.getTime() - activityA.getTime();
+            
+          default:
+            return 0;
+        }
+      });
+      
+      // Re-append cards in sorted order
+      cards.forEach(card => {
+        grid.appendChild(card);
+      });
     }
     
     function updateEmptyStateMessage(archiveStatus: string, searchTerm: string) {
@@ -553,6 +731,10 @@ const allClients = await db
       archiveFilter.addEventListener('change', filterClients);
     }
     
+    if (sortSelect) {
+      sortSelect.addEventListener('change', filterClients);
+    }
+    
     // Apply initial filter on page load (show only active clients by default)
     setTimeout(() => {
       filterClients();
@@ -580,7 +762,7 @@ const allClients = await db
       
       if (clientDescription) {
         if (isArchived) {
-          clientDescription.innerHTML = '<span class="text-yellow-400">⚠️ This client is archived. Projects are read-only.</span>';
+          clientDescription.innerHTML = '<span class="text-yellow-600 font-medium">⚠️ This client is archived. Projects are read-only.</span>';
         } else {
           clientDescription.textContent = 'Manage projects for this client';
         }
@@ -632,29 +814,35 @@ const allClients = await db
             projectsList.innerHTML = `
               <div class="text-center py-8">
                 <div class="text-4xl mb-4">📁</div>
-                <h3 class="text-lg font-medium text-white mb-2">No projects yet</h3>
-                <p class="text-gray-300">${message}</p>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">No projects yet</h3>
+                <p class="text-gray-600">${message}</p>
               </div>
             `;
           } else {
             projectsList.innerHTML = clientProjects.map((project: any) => `
-              <div class="bg-gray-700 rounded-lg p-4 flex justify-between items-center">
+              <div class="bg-gray-50 rounded-lg p-4 flex justify-between items-center border border-gray-200 hover:border-gray-300 transition-all duration-200">
                 <div>
-                  <h5 class="text-white font-medium">${project.name}</h5>
-                  <p class="text-gray-300 text-sm">Created ${new Date(project.createdAt).toLocaleDateString()}</p>
+                  <h5 class="text-gray-900 font-medium">${project.name}</h5>
+                  <p class="text-gray-600 text-sm">Created ${new Date(project.createdAt).toLocaleDateString()}</p>
                 </div>
                 <div class="flex space-x-2">
                   <button
-                    class="text-gray-300 hover:text-gray-300 text-sm"
+                    class="text-blue-600 hover:text-blue-700 transition-colors p-1 rounded hover:bg-blue-50"
                     onclick="console.log('Edit button clicked for project ${project.id}'); editProject(${project.id})"
+                    title="Edit project"
                   >
-                    Edit
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
                   </button>
                   <button
-                    class="text-red-400 hover:text-red-300 text-sm"
+                    class="text-red-600 hover:text-red-700 transition-colors p-1 rounded hover:bg-red-50"
                     onclick="deleteProject(${project.id})"
+                    title="Delete project"
                   >
-                    Delete
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
                   </button>
                 </div>
               </div>
@@ -667,7 +855,7 @@ const allClients = await db
         if (projectsList) {
           projectsList.innerHTML = `
             <div class="text-center py-8">
-              <p class="text-red-400">Error loading projects</p>
+              <p class="text-red-600 font-medium">Error loading projects</p>
             </div>
           `;
         }
@@ -722,15 +910,20 @@ const allClients = await db
         
         console.log('Found projects for client:', clientProjects.length);
         
-        // Find the specific project counter span by looking for the span with data-client-id in the projects column
-        const counterElement = document.querySelector(`td:nth-child(2) span[data-client-id="${clientId}"]`);
-        console.log('Counter element found:', counterElement);
-        
-        if (counterElement) {
-          counterElement.textContent = `${clientProjects.length} projects`;
-          console.log('Updated counter to:', `${clientProjects.length} projects`);
+        // Find the client card and update the project count
+        const clientCard = document.querySelector(`[data-client-id="${clientId}"]`);
+        if (clientCard) {
+          const projectCountElement = clientCard.querySelector('.text-right .text-sm.font-medium');
+          if (projectCountElement) {
+            projectCountElement.textContent = clientProjects.length.toString();
+          }
+          
+          // Update the data attribute
+          clientCard.setAttribute('data-project-count', clientProjects.length.toString());
+          
+          console.log('Updated counter to:', clientProjects.length);
         } else {
-          console.warn('Counter element not found for client:', clientId);
+          console.warn('Client card not found for client:', clientId);
         }
       } catch (error) {
         console.error('Error updating project counter:', error);
