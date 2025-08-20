@@ -42,17 +42,17 @@ const navItems = [
     <title>{title} - Times10 Admin</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
-  <body class="bg-admin-black font-sans">
+  <body class="bg-gray-50 font-sans">
     {!user || !isAdmin ? (
       <!-- Access Denied -->
-      <div class="min-h-screen bg-admin-black flex items-center justify-center">
+      <div class="min-h-screen bg-gray-50 flex items-center justify-center">
         <div class="text-center">
-          <div class="w-16 h-16 bg-admin-dark-gray rounded-full flex items-center justify-center mx-auto mb-6">
-            <span class="text-admin-light-gray text-2xl">🚫</span>
+          <div class="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
+            <span class="text-gray-700 text-2xl">🚫</span>
           </div>
-          <h1 class="text-2xl font-bold text-admin-light-gray mb-4">Access Denied</h1>
-          <p class="text-admin-mid-gray mb-6">You don't have permission to access the admin panel.</p>
-          <a href="/dashboard" class="inline-flex items-center px-4 py-2 bg-admin-dark-gray hover:bg-admin-mid-gray text-admin-light-gray font-medium rounded-lg transition-colors">
+          <h1 class="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
+          <p class="text-gray-600 mb-6">You don't have permission to access the admin panel.</p>
+          <a href="/dashboard" class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors">
             <span class="mr-2">←</span>
             Back to Dashboard
           </a>
@@ -61,10 +61,10 @@ const navItems = [
     ) : (
       <>
         <!-- Loading State (shown immediately) -->
-        <div id="loadingState" class="min-h-screen bg-admin-black flex items-center justify-center">
+        <div id="loadingState" class="min-h-screen bg-gray-50 flex items-center justify-center">
           <div class="text-center">
-            <div class="w-12 h-12 border-4 border-admin-mid-gray border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p class="text-admin-mid-gray text-lg">Loading admin panel...</p>
+            <div class="w-12 h-12 border-4 border-gray-300 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p class="text-gray-600 text-lg">Loading admin panel...</p>
           </div>
         </div>
 
@@ -72,8 +72,8 @@ const navItems = [
         <div id="adminContent" class="hidden">
       <div class="flex h-screen">
       <!-- Sidebar -->
-      <div class="w-64 bg-gradient-to-b from-admin-black to-admin-dark-gray shadow-xl border-r border-admin-dark-gray">
-        <div class="p-6 border-b border-admin-dark-gray">
+      <div class="w-64 bg-white shadow-sm border-r border-gray-200">
+        <div class="p-6 border-b border-gray-200">
           <div class="flex items-center">
             <img src="/logo-black.png" alt="Times10 Logo" class="h-8 w-auto" />
           </div>
@@ -87,8 +87,8 @@ const navItems = [
                   href={item.href}
                   class={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
                     isActive
-                      ? 'bg-admin-dark-gray text-admin-light-gray shadow-lg'
-                      : 'text-admin-mid-gray hover:bg-admin-dark-gray hover:text-admin-light-gray'
+                      ? 'bg-gray-100 text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                 >
                   <span class="mr-3 text-lg">{item.icon}</span>
@@ -100,14 +100,14 @@ const navItems = [
         </nav>
         
         <!-- Sidebar Footer -->
-        <div class="absolute bottom-0 w-56 p-4 border-t border-admin-dark-gray">
-          <div class="flex items-center text-admin-mid-gray text-sm">
-            <div class="w-8 h-8 bg-admin-dark-gray rounded-lg flex items-center justify-center mr-3">
-              <span class="text-admin-light-gray text-sm font-bold">{user?.name ? user.name.charAt(0).toUpperCase() : 'A'}</span>
+        <div class="absolute bottom-0 w-56 p-4 border-t border-gray-200">
+          <div class="flex items-center text-gray-600 text-sm">
+            <div class="w-8 h-8 bg-gray-200 rounded-lg flex items-center justify-center mr-3">
+              <span class="text-gray-700 text-sm font-bold">{user?.name ? user.name.charAt(0).toUpperCase() : 'A'}</span>
             </div>
             <div>
-              <div class="font-medium text-admin-light-gray">{user?.name || 'Admin'}</div>
-              <div class="text-admin-mid-gray text-xs">{user?.email || 'admin@times10.com'}</div>
+              <div class="font-medium text-gray-900">{user?.name || 'Admin'}</div>
+              <div class="text-gray-500 text-xs">{user?.email || 'admin@times10.com'}</div>
             </div>
           </div>
         </div>
@@ -116,26 +116,22 @@ const navItems = [
       <!-- Main content -->
       <div class="flex-1 flex flex-col overflow-hidden">
         <!-- Top bar -->
-        <header class="bg-admin-dark-gray shadow-sm border-b border-admin-dark-gray">
+        <header class="bg-white shadow-sm border-b border-gray-200">
           <div class="flex items-center justify-between px-6 py-4">
             <div class="flex items-center">
-              <h2 class="text-2xl font-bold text-admin-light-gray">{title}</h2>
-              <div class="ml-4 px-3 py-1 bg-admin-mid-gray text-admin-black text-sm font-medium rounded-full">
+              <h2 class="text-2xl font-bold text-gray-900">{title}</h2>
+              <div class="ml-4 px-3 py-1 bg-gray-100 text-gray-800 text-sm font-medium rounded-full">
                 Admin Panel
               </div>
             </div>
             <div class="flex items-center space-x-4">
-              <button class="p-2 text-admin-mid-gray hover:text-admin-light-gray transition-colors">
-                <span class="text-xl">🔔</span>
-              </button>
-              <button class="p-2 text-admin-mid-gray hover:text-admin-light-gray transition-colors">
-                <span class="text-xl">⚙️</span>
-              </button>
               <button 
                 id="logoutButton"
-                class="inline-flex items-center px-4 py-2 bg-admin-dark-gray hover:bg-admin-mid-gray text-admin-light-gray font-medium rounded-lg transition-colors"
+                class="inline-flex items-center px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
               >
-                <span class="mr-2">🚪</span>
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                </svg>
                 Sign Out
               </button>
             </div>
@@ -143,7 +139,7 @@ const navItems = [
         </header>
 
         <!-- Page content -->
-        <main class="flex-1 overflow-y-auto p-6 bg-admin-black">
+        <main class="flex-1 overflow-y-auto p-6 bg-gray-50">
           <slot />
         </main>
       </div>

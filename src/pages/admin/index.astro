@@ -9,81 +9,81 @@ const user = await requireRole('admin', '/dashboard')(Astro) as any;
 <AdminLayout title="Dashboard" currentPage="dashboard">
   <div class="space-y-8">
     <!-- Welcome Header -->
-    <div class="bg-gradient-to-r from-admin-dark-gray to-admin-mid-gray rounded-xl shadow-lg p-8 text-admin-light-gray">
+    <div class="bg-gradient-to-r from-gray-50 to-white rounded-xl shadow-lg p-8 text-gray-900 border border-gray-300">
       <div class="flex items-center justify-between">
         <div>
           <h1 class="text-3xl font-bold mb-2">Welcome back, {user?.name ? user.name.split(' ')[0] : 'Admin'}! 👋</h1>
-          <p class="text-admin-light-gray text-lg">Manage your time tracking system and monitor activity</p>
-          <p class="text-admin-mid-gray text-sm mt-2">Logged in as: {user?.email || 'Unknown'}</p>
+          <p class="text-gray-900 text-lg">Manage your time tracking system and monitor activity</p>
+          <p class="text-gray-600 text-sm mt-2">Logged in as: {user?.email || 'Unknown'}</p>
         </div>
         <div class="text-right">
           <div class="text-4xl mb-2">📊</div>
-          <div class="text-sm text-admin-light-gray">Dashboard Overview</div>
+          <div class="text-sm text-gray-700">Dashboard Overview</div>
         </div>
       </div>
     </div>
 
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <div class="bg-admin-dark-gray rounded-xl shadow-sm border border-admin-mid-gray p-6 hover:shadow-lg transition-all duration-200 transform hover:scale-105">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-300 p-6 hover:shadow-lg transition-all duration-200 transform hover:scale-105">
         <div class="flex items-center">
-          <div class="p-3 bg-gradient-to-r from-admin-mid-gray to-admin-light-gray rounded-xl">
-            <span class="text-2xl text-admin-black">👤</span>
+          <div class="p-3 bg-gradient-to-r from-gray-200 to-gray-100 rounded-xl">
+            <span class="text-2xl text-gray-700">👤</span>
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-admin-mid-gray">Total Team Members</p>
-            <p class="text-3xl font-bold text-admin-light-gray" id="user-count">-</p>
+            <p class="text-sm font-medium text-gray-600">Total Team Members</p>
+            <p class="text-3xl font-bold text-gray-900" id="user-count">-</p>
             <div class="flex items-center mt-1">
-              <span class="text-admin-mid-gray text-sm">↗</span>
-              <span class="text-admin-mid-gray text-xs ml-1">+12%</span>
+              <span class="text-gray-500 text-sm">↗</span>
+              <span class="text-gray-500 text-xs ml-1">+12%</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="bg-admin-dark-gray rounded-xl shadow-sm border border-admin-mid-gray p-6 hover:shadow-lg transition-all duration-200 transform hover:scale-105">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-300 p-6 hover:shadow-lg transition-all duration-200 transform hover:scale-105">
         <div class="flex items-center">
-          <div class="p-3 bg-gradient-to-r from-admin-mid-gray to-admin-light-gray rounded-xl">
-            <span class="text-2xl text-admin-black">👥</span>
+          <div class="p-3 bg-gradient-to-r from-gray-200 to-gray-100 rounded-xl">
+            <span class="text-2xl text-gray-700">👥</span>
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-admin-mid-gray">Total Clients</p>
-            <p class="text-3xl font-bold text-admin-light-gray" id="client-count">-</p>
+            <p class="text-sm font-medium text-gray-600">Total Clients</p>
+            <p class="text-3xl font-bold text-gray-900" id="client-count">-</p>
             <div class="flex items-center mt-1">
-              <span class="text-admin-mid-gray text-sm">↗</span>
-              <span class="text-admin-mid-gray text-xs ml-1">+8%</span>
+              <span class="text-gray-500 text-sm">↗</span>
+              <span class="text-gray-500 text-xs ml-1">+8%</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="bg-admin-dark-gray rounded-xl shadow-sm border border-admin-mid-gray p-6 hover:shadow-lg transition-all duration-200 transform hover:scale-105">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-300 p-6 hover:shadow-lg transition-all duration-200 transform hover:scale-105">
         <div class="flex items-center">
-          <div class="p-3 bg-gradient-to-r from-admin-mid-gray to-admin-light-gray rounded-xl">
-            <span class="text-2xl text-admin-black">📁</span>
+          <div class="p-3 bg-gradient-to-r from-gray-200 to-gray-100 rounded-xl">
+            <span class="text-2xl text-gray-700">📁</span>
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-admin-mid-gray">Total Projects</p>
-            <p class="text-3xl font-bold text-admin-light-gray" id="project-count">-</p>
+            <p class="text-sm font-medium text-gray-600">Total Projects</p>
+            <p class="text-3xl font-bold text-gray-900" id="project-count">-</p>
             <div class="flex items-center mt-1">
-              <span class="text-gray-300 text-sm">↗</span>
-              <span class="text-gray-300 text-xs ml-1">+15%</span>
+              <span class="text-gray-500 text-sm">↗</span>
+              <span class="text-gray-500 text-xs ml-1">+15%</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="bg-admin-dark-gray rounded-xl shadow-sm border border-admin-mid-gray p-6 hover:shadow-lg transition-all duration-200 transform hover:scale-105">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-300 p-6 hover:shadow-lg transition-all duration-200 transform hover:scale-105">
         <div class="flex items-center">
-          <div class="p-3 bg-gradient-to-r from-admin-mid-gray to-admin-light-gray rounded-xl">
-            <span class="text-2xl text-admin-black">✅</span>
+          <div class="p-3 bg-gradient-to-r from-gray-200 to-gray-100 rounded-xl">
+            <span class="text-2xl text-gray-700">✅</span>
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-admin-mid-gray">Total Tasks</p>
-            <p class="text-3xl font-bold text-admin-light-gray" id="task-count">-</p>
+            <p class="text-sm font-medium text-gray-600">Total Tasks</p>
+            <p class="text-3xl font-bold text-gray-900" id="task-count">-</p>
             <div class="flex items-center mt-1">
-              <span class="text-admin-mid-gray text-sm">↗</span>
-              <span class="text-admin-mid-gray text-xs ml-1">+23%</span>
+              <span class="text-gray-500 text-sm">↗</span>
+              <span class="text-gray-500 text-xs ml-1">+23%</span>
             </div>
           </div>
         </div>
@@ -94,15 +94,15 @@ const user = await requireRole('admin', '/dashboard')(Astro) as any;
 
     <!-- Quick Actions -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <a href="/admin/clients" class="bg-admin-dark-gray rounded-xl shadow-sm border border-admin-mid-gray p-6 hover:shadow-lg transition-all duration-200 transform hover:scale-105 group">
+      <a href="/admin/clients" class="bg-white rounded-xl shadow-sm border border-gray-300 p-6 hover:shadow-lg transition-all duration-200 transform hover:scale-105 group">
         <div class="flex items-center">
-          <div class="p-3 bg-gradient-to-r from-admin-mid-gray to-admin-light-gray rounded-xl group-hover:scale-110 transition-transform duration-200">
-            <span class="text-2xl text-admin-black">👥</span>
+          <div class="p-3 bg-gradient-to-r from-gray-200 to-gray-100 rounded-xl group-hover:scale-110 transition-transform duration-200">
+            <span class="text-2xl text-gray-700">👥</span>
           </div>
           <div class="ml-4">
-            <h3 class="font-semibold text-admin-light-gray text-lg">Manage Clients</h3>
-            <p class="text-sm text-admin-mid-gray mt-1">Add, edit, and organize clients</p>
-            <div class="flex items-center mt-2 text-admin-mid-gray text-sm font-medium">
+            <h3 class="font-semibold text-gray-900 text-lg">Manage Clients</h3>
+            <p class="text-sm text-gray-600 mt-1">Add, edit, and organize clients</p>
+            <div class="flex items-center mt-2 text-gray-600 text-sm font-medium">
               <span>Get Started</span>
               <span class="ml-1 group-hover:translate-x-1 transition-transform">→</span>
             </div>
@@ -110,15 +110,15 @@ const user = await requireRole('admin', '/dashboard')(Astro) as any;
         </div>
       </a>
 
-      <a href="/admin/projects" class="bg-admin-dark-gray rounded-xl shadow-sm border border-admin-mid-gray p-6 hover:shadow-lg transition-all duration-200 transform hover:scale-105 group">
+      <a href="/admin/projects" class="bg-white rounded-xl shadow-sm border border-gray-300 p-6 hover:shadow-lg transition-all duration-200 transform hover:scale-105 group">
         <div class="flex items-center">
-          <div class="p-3 bg-gradient-to-r from-admin-mid-gray to-admin-light-gray rounded-xl group-hover:scale-110 transition-transform duration-200">
-            <span class="text-2xl text-admin-black">📁</span>
+          <div class="p-3 bg-gradient-to-r from-gray-200 to-gray-100 rounded-xl group-hover:scale-110 transition-transform duration-200">
+            <span class="text-2xl text-gray-700">📁</span>
           </div>
           <div class="ml-4">
-            <h3 class="font-semibold text-admin-light-gray text-lg">Manage Projects</h3>
-            <p class="text-sm text-admin-mid-gray mt-1">Create and organize projects</p>
-            <div class="flex items-center mt-2 text-admin-mid-gray text-sm font-medium">
+            <h3 class="font-semibold text-gray-900 text-lg">Manage Projects</h3>
+            <p class="text-sm text-gray-600 mt-1">Create and organize projects</p>
+            <div class="flex items-center mt-2 text-gray-600 text-sm font-medium">
               <span>Get Started</span>
               <span class="ml-1 group-hover:translate-x-1 transition-transform">→</span>
             </div>
@@ -126,15 +126,15 @@ const user = await requireRole('admin', '/dashboard')(Astro) as any;
         </div>
       </a>
 
-      <a href="/admin/reports" class="bg-admin-dark-gray rounded-xl shadow-sm border border-admin-mid-gray p-6 hover:shadow-lg transition-all duration-200 transform hover:scale-105 group">
+      <a href="/admin/reports" class="bg-white rounded-xl shadow-sm border border-gray-300 p-6 hover:shadow-lg transition-all duration-200 transform hover:scale-105 group">
         <div class="flex items-center">
-          <div class="p-3 bg-gradient-to-r from-admin-mid-gray to-admin-light-gray rounded-xl group-hover:scale-110 transition-transform duration-200">
-            <span class="text-2xl text-admin-black">📈</span>
+          <div class="p-3 bg-gradient-to-r from-gray-200 to-gray-100 rounded-xl group-hover:scale-110 transition-transform duration-200">
+            <span class="text-2xl text-gray-700">📈</span>
           </div>
           <div class="ml-4">
-            <h3 class="font-semibold text-admin-light-gray text-lg">View Reports</h3>
-            <p class="text-sm text-admin-mid-gray mt-1">Analyze time tracking data</p>
-            <div class="flex items-center mt-2 text-admin-mid-gray text-sm font-medium">
+            <h3 class="font-semibold text-gray-900 text-lg">View Reports</h3>
+            <p class="text-sm text-gray-600 mt-1">Analyze time tracking data</p>
+            <div class="flex items-center mt-2 text-gray-600 text-sm font-medium">
               <span>Get Started</span>
               <span class="ml-1 group-hover:translate-x-1 transition-transform">→</span>
             </div>

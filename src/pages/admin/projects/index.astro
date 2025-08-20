@@ -59,12 +59,12 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
     <!-- Header -->
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-admin-light-gray">Projects</h1>
-        <p class="text-admin-mid-gray">Manage projects organized by client</p>
+        <h1 class="text-2xl font-bold text-gray-900">Projects</h1>
+        <p class="text-gray-600">Manage projects organized by client</p>
       </div>
       <button
         id="createProjectBtn"
-        class="inline-flex items-center px-4 py-2 bg-admin-dark-gray hover:bg-admin-mid-gray text-admin-light-gray font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+        class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
       >
         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -74,22 +74,22 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
     </div>
 
     <!-- Filters -->
-    <div class="bg-admin-dark-gray rounded-lg shadow border border-admin-mid-gray p-6">
+    <div class="bg-white rounded-lg shadow border border-gray-300 p-6">
       <div class="flex flex-col sm:flex-row gap-4">
         <div class="flex-1">
-          <label for="search" class="block text-sm font-medium text-admin-mid-gray mb-1">Search</label>
+          <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
           <input
             type="text"
             id="search"
             placeholder="Search projects..."
-            class="w-[calc(100%-5rem)] px-3 py-2 border border-admin-mid-gray rounded-md focus:outline-none focus:ring-2 focus:ring-admin-mid-gray bg-admin-black text-admin-light-gray"
+            class="w-[calc(100%-5rem)] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
           />
         </div>
         <div class="sm:w-48">
-          <label for="clientFilter" class="block text-sm font-medium text-admin-mid-gray mb-1">Filter by Client</label>
+          <label for="clientFilter" class="block text-sm font-medium text-gray-700 mb-1">Filter by Client</label>
           <select
             id="clientFilter"
-            class="w-full px-3 py-2 border border-admin-mid-gray rounded-md focus:outline-none focus:ring-2 focus:ring-admin-mid-gray bg-admin-black text-admin-light-gray"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
           >
             <option value="">All Clients</option>
             {allClients.map((client) => (
@@ -109,54 +109,54 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         const isArchived = firstProject?.clientArchived || false;
         
         return (
-        <div class="bg-admin-dark-gray rounded-lg shadow border border-admin-mid-gray overflow-hidden hover:shadow-lg transition-all duration-200 hover:border-admin-light-gray" data-archived={isArchived}>
-          <div class="px-6 py-4 bg-admin-black border-b border-admin-mid-gray">
-            <h3 class="text-lg font-medium text-admin-light-gray">{clientName}</h3>
-            <p class="text-sm text-admin-mid-gray">{clientProjects.length} projects</p>
+        <div class="bg-white rounded-lg shadow border border-gray-300 overflow-hidden hover:shadow-lg transition-all duration-200 hover:border-gray-400" data-archived={isArchived}>
+          <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">{clientName}</h3>
+            <p class="text-sm text-gray-600">{clientProjects.length} projects</p>
           </div>
           <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-admin-mid-gray">
-              <thead class="bg-admin-black">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
                 <tr>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-admin-mid-gray uppercase tracking-wider">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                     Project Name
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-admin-mid-gray uppercase tracking-wider">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                     Tasks
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-admin-mid-gray uppercase tracking-wider">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                     Total Hours
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-admin-mid-gray uppercase tracking-wider">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                     Created Date
                   </th>
-                  <th class="px-6 py-3 text-right text-xs font-medium text-admin-mid-gray uppercase tracking-wider">
+                  <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody class="bg-admin-dark-gray divide-y divide-admin-mid-gray">
+              <tbody class="bg-white divide-y divide-gray-200">
                 {clientProjects.map((project) => (
-                  <tr class="hover:bg-admin-black">
+                  <tr class="hover:bg-gray-50">
                     <td class="px-6 py-4 whitespace-nowrap">
-                      <div class="text-sm font-medium text-admin-light-gray">{project.name}</div>
+                      <div class="text-sm font-medium text-gray-900">{project.name}</div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-admin-mid-gray text-admin-black">
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
                         {project.taskCount} tasks
                       </span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-admin-light-gray">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {project.totalHours ? Math.round(project.totalHours * 10) / 10 : 0} hours
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-admin-mid-gray">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {new Date(project.createdAt).toLocaleDateString()}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div class="flex justify-end space-x-2">
                         <button
                           type="button"
-                          class="view-tasks-btn inline-flex items-center px-3 py-2 bg-admin-mid-gray hover:bg-admin-light-gray text-admin-black text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+                          class="view-tasks-btn inline-flex items-center px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
                           data-project-id={project.id}
                           data-project-name={project.name}
                           title="View project tasks"
@@ -168,7 +168,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                         </button>
                         <button
                           type="button"
-                          class="edit-project-btn inline-flex items-center px-3 py-2 bg-admin-dark-gray hover:bg-admin-mid-gray text-admin-light-gray text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-admin-mid-gray"
+                          class="edit-project-btn inline-flex items-center px-3 py-2 bg-white hover:bg-gray-100 text-gray-700 text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-gray-300"
                           data-project-id={project.id}
                           title="Edit project details"
                         >
@@ -179,7 +179,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                         </button>
                         <button
                           type="button"
-                          class="delete-project-btn text-red-400 hover:text-red-300 transition-colors p-2 rounded-lg hover:bg-red-400/10"
+                          class="delete-project-btn text-red-500 hover:text-red-600 transition-colors p-2 rounded-lg hover:bg-red-50"
                           data-project-id={project.id}
                           data-project-name={project.name}
                           title="Delete project"
@@ -203,10 +203,10 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
     {Object.keys(activeProjectsByClient).length === 0 && (
       <div class="text-center py-12">
         <div class="text-6xl mb-4">📁</div>
-        <h3 class="text-lg font-medium text-admin-light-gray mb-2">No projects yet</h3>
-        <p class="text-admin-mid-gray mb-4">Get started by adding your first project</p>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No projects yet</h3>
+        <p class="text-gray-600 mb-4">Get started by adding your first project</p>
         <button
-          class="inline-flex items-center px-4 py-2 bg-admin-dark-gray hover:bg-admin-mid-gray text-admin-light-gray font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-admin-mid-gray"
+          class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-gray-500"
           onclick="document.getElementById('createProjectBtn').click()"
         >
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -720,7 +720,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         const searchTerm = target.value.toLowerCase();
         
         // Get all client sections
-        const clientSections = document.querySelectorAll('.bg-admin-dark-gray.rounded-lg.shadow.border.border-admin-mid-gray.overflow-hidden');
+        const clientSections = document.querySelectorAll('.bg-white.rounded-lg.shadow.border.border-gray-300.overflow-hidden');
         
         clientSections.forEach(section => {
           const rows = section.querySelectorAll('tbody tr');
@@ -788,7 +788,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
     // Client filter functionality
     if (clientFilter) {
       // Hide archived clients by default
-      const clientSections = document.querySelectorAll('.bg-admin-dark-gray.rounded-lg.shadow.border.border-admin-mid-gray.overflow-hidden');
+      const clientSections = document.querySelectorAll('.bg-white.rounded-lg.shadow.border.border-gray-300.overflow-hidden');
       clientSections.forEach(section => {
         const isArchived = section.getAttribute('data-archived') === 'true';
         if (isArchived) {
@@ -799,7 +799,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       clientFilter.addEventListener('change', (e) => {
         const target = e.target as HTMLSelectElement;
         const selectedClient = target.value;
-        const clientSections = document.querySelectorAll('.bg-admin-dark-gray.rounded-lg.shadow.border.border-admin-mid-gray.overflow-hidden');
+        const clientSections = document.querySelectorAll('.bg-white.rounded-lg.shadow.border.border-gray-300.overflow-hidden');
         
         clientSections.forEach(section => {
           const clientName = section.querySelector('h3')?.textContent || '';
@@ -870,8 +870,8 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         tasksList.innerHTML = `
           <div class="text-center py-8">
             <div class="text-4xl mb-2">📋</div>
-            <p class="text-admin-mid-gray">No tasks yet for this project</p>
-            <p class="text-admin-mid-gray text-sm">Click "Add Task" to create the first task</p>
+            <p class="text-gray-600">No tasks yet for this project</p>
+            <p class="text-gray-600 text-sm">Click "Add Task" to create the first task</p>
           </div>
         `;
         return;

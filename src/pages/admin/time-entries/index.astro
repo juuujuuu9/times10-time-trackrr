@@ -50,13 +50,13 @@ const allTasks = await db
     <!-- Header -->
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-admin-light-gray">Time Entries</h1>
-        <p class="text-admin-mid-gray">View and manage time tracking data</p>
+        <h1 class="text-2xl font-bold text-gray-900">Time Entries</h1>
+        <p class="text-gray-600">View and manage time tracking data</p>
       </div>
       <div class="flex space-x-3">
         <button
           id="exportCsvBtn"
-          class="inline-flex items-center px-4 py-2 bg-admin-mid-gray hover:bg-admin-light-gray text-admin-black font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+          class="inline-flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
         >
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -65,7 +65,7 @@ const allTasks = await db
         </button>
         <button
           id="addTimeEntryBtn"
-          class="inline-flex items-center px-4 py-2 bg-admin-dark-gray hover:bg-admin-mid-gray text-admin-light-gray font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+          class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
         >
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -76,22 +76,22 @@ const allTasks = await db
     </div>
 
     <!-- Filters -->
-    <div class="bg-admin-dark-gray rounded-lg shadow border border-admin-mid-gray p-6">
+    <div class="bg-white rounded-lg shadow border border-gray-300 p-6">
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div>
-          <label for="search" class="block text-sm font-medium text-admin-mid-gray mb-1">Search</label>
+          <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
           <input
             type="text"
             id="search"
             placeholder="Search entries..."
-            class="w-[calc(100%-3rem)] px-3 py-2 border border-admin-mid-gray rounded-md focus:outline-none focus:ring-2 focus:ring-admin-mid-gray bg-admin-black text-admin-light-gray"
+            class="w-[calc(100%-3rem)] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
           />
         </div>
         <div>
-          <label for="clientFilter" class="block text-sm font-medium text-admin-mid-gray mb-1">Client</label>
+          <label for="clientFilter" class="block text-sm font-medium text-gray-700 mb-1">Client</label>
           <select
             id="clientFilter"
-            class="w-full px-3 py-2 border border-admin-mid-gray rounded-md focus:outline-none focus:ring-2 focus:ring-admin-mid-gray bg-admin-black text-admin-light-gray"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
           >
             <option value="">All Clients</option>
             {allClients.map((client) => (
@@ -100,10 +100,10 @@ const allTasks = await db
           </select>
         </div>
         <div>
-          <label for="taskFilter" class="block text-sm font-medium text-gray-300 mb-1">Task</label>
+          <label for="taskFilter" class="block text-sm font-medium text-gray-700 mb-1">Task</label>
           <select
             id="taskFilter"
-            class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
           >
             <option value="">All Tasks</option>
             {allTasks.map((task) => (
@@ -112,10 +112,10 @@ const allTasks = await db
           </select>
         </div>
         <div>
-          <label for="dateRange" class="block text-sm font-medium text-gray-300 mb-1">Date Range</label>
+          <label for="dateRange" class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
           <select
             id="dateRange"
-            class="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
           >
             <option value="">All Time</option>
             <option value="today">Today</option>
@@ -127,22 +127,22 @@ const allTasks = await db
         </div>
       </div>
       <div id="customDateRange" class="hidden mt-4">
-        <label class="block text-sm font-medium text-gray-300 mb-1">Custom Date Range</label>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Custom Date Range</label>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="flex flex-col">
-            <label for="startDate" class="block text-xs text-gray-400 mb-1">Start Date</label>
+            <label for="startDate" class="block text-xs text-gray-600 mb-1">Start Date</label>
             <input
               type="date"
               id="startDate"
-              class="w-[calc(100%-3rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white text-sm"
+              class="w-[calc(100%-3rem)] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900 text-sm"
             />
           </div>
           <div>
-            <label for="endDate" class="block text-xs text-gray-400 mb-1">End Date</label>
+            <label for="endDate" class="block text-xs text-gray-600 mb-1">End Date</label>
             <input
               type="date"
               id="endDate"
-              class="w-[calc(100%-3rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white text-sm"
+              class="w-[calc(100%-3rem)] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900 text-sm"
             />
           </div>
         </div>
@@ -150,83 +150,83 @@ const allTasks = await db
     </div>
 
     <!-- Time Entries Table -->
-    <div class="bg-gray-800 rounded-lg shadow border border-gray-700 overflow-hidden">
+    <div class="bg-white rounded-lg shadow border border-gray-300 overflow-hidden">
       <!-- Results Counter -->
-      <div class="px-6 py-3 bg-gray-700 border-b border-gray-600">
+      <div class="px-6 py-3 bg-gray-50 border-b border-gray-200">
         <div class="flex justify-between items-center">
-          <span id="resultsCounter" class="text-sm text-gray-300">
+          <span id="resultsCounter" class="text-sm text-gray-700">
             Showing {allTimeEntries.length} time entries
           </span>
-          <span class="text-xs text-gray-400">
+          <span class="text-xs text-gray-500">
             Total entries: {allTimeEntries.length}
           </span>
         </div>
       </div>
       <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-700">
-          <thead class="bg-gray-700">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider rounded-tl-md rounded-tr-0 rounded-br-0 rounded-bl-0">
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider rounded-tl-md rounded-tr-0 rounded-br-0 rounded-bl-0">
                 Team Member
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                 Client
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                 Project
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                 Task
               </th>
-              <th id="dateSortBtn" class="cursor-pointer px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider hover:text-white transition-colors hover:bg-gray-600">
+              <th id="dateSortBtn" class="cursor-pointer px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider hover:text-gray-900 transition-colors hover:bg-gray-100">
                 <span>Date</span>
-                <svg id="dateSortIcon" class="w-3 h-3 text-gray-400 group-hover:text-gray-300 transition-colors ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg id="dateSortIcon" class="w-3 h-3 text-gray-500 group-hover:text-gray-700 transition-colors ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
                 </svg>
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                 Duration
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                 Notes
               </th>
-              <th class="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider rounded-tl-0 rounded-tr-md rounded-br-0 rounded-bl-0">
+              <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider rounded-tl-0 rounded-tr-md rounded-br-0 rounded-bl-0">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody class="bg-gray-800 divide-y divide-gray-700">
+          <tbody class="bg-white divide-y divide-gray-200">
             {allTimeEntries.map((entry) => {
               const taskDate = new Date(entry.startTime);
               const duration = entry.durationManual ? entry.durationManual / 3600 : 0;
               
               return (
-                <tr class="hover:bg-gray-700">
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {entry.userName}
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {entry.clientName}
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {entry.projectName}
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {entry.taskName}
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {taskDate.toLocaleDateString()}
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {duration ? Math.round(duration * 10) / 10 : 0} hours
                   </td>
-                  <td class="px-6 py-4 text-sm text-gray-400 max-w-xs truncate">
+                  <td class="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
                     {entry.notes || '-'}
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div class="flex justify-end space-x-2">
                       <button
-                        class="edit-time-entry-btn inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+                        class="edit-time-entry-btn inline-flex items-center px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
                         data-time-entry-id={entry.id}
                         title="Edit time entry"
                       >
@@ -236,7 +236,7 @@ const allTasks = await db
                         Edit
                       </button>
                       <button
-                        class="delete-time-entry-btn inline-flex items-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+                        class="delete-time-entry-btn inline-flex items-center px-3 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
                         data-time-entry-id={entry.id}
                         data-time-entry-notes={entry.notes || 'No notes'}
                         title="Delete time entry"
@@ -259,10 +259,10 @@ const allTasks = await db
     {allTimeEntries.length === 0 && (
       <div class="text-center py-12">
         <div class="text-6xl mb-4">⏱️</div>
-        <h3 class="text-lg font-medium text-white mb-2">No time entries yet</h3>
-        <p class="text-gray-300 mb-4">Start tracking time to see entries here</p>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No time entries yet</h3>
+        <p class="text-gray-600 mb-4">Start tracking time to see entries here</p>
         <button
-          class="bg-gray-300 hover:bg-gray-400 text-gray-900 font-medium py-2 px-4 rounded-lg transition-colors"
+          class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
           onclick="document.getElementById('addTimeEntryBtn').click()"
         >
           Add Your First Entry
@@ -274,16 +274,16 @@ const allTasks = await db
   <!-- Add/Edit Time Entry Modal -->
   <div id="timeEntryModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-gray-600 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-700 flex flex-col">
-        <div class="px-6 py-4 border-b border-gray-700 flex-shrink-0">
-          <h3 id="timeEntryModalTitle" class="text-lg font-medium text-white">Add Time Entry</h3>
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-300 flex flex-col">
+        <div class="px-6 py-4 border-b border-gray-200 flex-shrink-0">
+          <h3 id="timeEntryModalTitle" class="text-lg font-medium text-gray-900">Add Time Entry</h3>
         </div>
-        <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
+        <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #9CA3AF #E5E7EB;">
           <form id="timeEntryForm" class="px-6 py-4">
             <input type="hidden" id="timeEntryId" />
             <div class="mb-4">
-              <label for="timeEntryUser" class="block text-sm font-medium text-gray-300 mb-1">
-                Team Member <span id="currentUser" class="text-gray-400 font-normal"></span>
+              <label for="timeEntryUser" class="block text-sm font-medium text-gray-700 mb-1">
+                Team Member <span id="currentUser" class="text-gray-500 font-normal"></span>
               </label>
               <div class="relative">
                 <input
@@ -291,17 +291,17 @@ const allTasks = await db
                   id="timeEntryUser"
                   placeholder="Search for a team member..."
                   required
-                  class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
+                  class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
                 />
                 <input type="hidden" id="timeEntryUserId" />
-                <div id="userDropdown" class="absolute z-10 w-full mt-1 bg-gray-700 border border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto hidden">
+                <div id="userDropdown" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto hidden">
                   <!-- Team Member results will be populated here -->
                 </div>
               </div>
             </div>
             <div class="mb-4">
-              <label for="timeEntryTask" class="block text-sm font-medium text-gray-300 mb-1">
-                Task <span id="currentTask" class="text-gray-400 font-normal"></span>
+              <label for="timeEntryTask" class="block text-sm font-medium text-gray-700 mb-1">
+                Task <span id="currentTask" class="text-gray-500 font-normal"></span>
               </label>
               <div class="relative">
                 <input
@@ -309,64 +309,64 @@ const allTasks = await db
                   id="timeEntryTask"
                   placeholder="Search for a task..."
                   required
-                  class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
+                  class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
                 />
                 <input type="hidden" id="timeEntryTaskId" />
-                <div id="taskDropdown" class="absolute z-10 w-full mt-1 bg-gray-700 border border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto hidden">
+                <div id="taskDropdown" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto hidden">
                   <!-- Task results will be populated here -->
                 </div>
               </div>
             </div>
             <div class="mb-4">
-              <label for="timeEntryDuration" class="block text-sm font-medium text-gray-300 mb-1">
-                Duration <span id="currentDuration" class="text-gray-400 font-normal"></span>
+              <label for="timeEntryDuration" class="block text-sm font-medium text-gray-700 mb-1">
+                Duration <span id="currentDuration" class="text-gray-500 font-normal"></span>
               </label>
               <input
                 type="text"
                 id="timeEntryDuration"
                 placeholder="e.g., 2h, 3.5hr, 4:15, 90m"
                 required
-                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
+                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
               />
-              <p class="text-xs text-gray-400 mt-1">
+              <p class="text-xs text-gray-500 mt-1">
                 Supported formats: 2h, 2hr, 3.5hr, 4:15, 90m, 5400s, etc.
               </p>
             </div>
             <div class="mb-4">
-              <label for="timeEntryDate" class="block text-sm font-medium text-gray-300 mb-1">
-                Task Date <span id="currentDate" class="text-gray-400 font-normal"></span>
+              <label for="timeEntryDate" class="block text-sm font-medium text-gray-700 mb-1">
+                Task Date <span id="currentDate" class="text-gray-500 font-normal"></span>
               </label>
               <input
                 type="date"
                 id="timeEntryDate"
                 required
-                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
+                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
               />
-              <p class="text-xs text-gray-400 mt-1">
+              <p class="text-xs text-gray-500 mt-1">
                 When did this task actually occur? (defaults to today)
               </p>
             </div>
             <div class="mb-4">
-              <label for="timeEntryNotes" class="block text-sm font-medium text-gray-300 mb-1">
+              <label for="timeEntryNotes" class="block text-sm font-medium text-gray-700 mb-1">
                 Notes
               </label>
               <textarea
                 id="timeEntryNotes"
                 rows="3"
-                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 bg-gray-700 text-white"
+                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
               ></textarea>
             </div>
             <div class="flex justify-end space-x-3">
               <button
                 type="button"
                 id="cancelTimeEntryBtn"
-                class="px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+                class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-900 rounded-md transition-colors"
+                class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors"
               >
                 Save Entry
               </button>
