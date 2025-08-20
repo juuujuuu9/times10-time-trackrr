@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../db';
-import { tasks, taskAssignments, projects, users } from '../../db/schema';
+import { tasks, taskAssignments, projects, users, clients } from '../../db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 
 export const GET: APIRoute = async ({ url }) => {
@@ -28,11 +28,14 @@ export const GET: APIRoute = async ({ url }) => {
         createdAt: tasks.createdAt,
         updatedAt: tasks.updatedAt,
         projectName: projects.name,
-        projectId: projects.id
+        projectId: projects.id,
+        clientName: clients.name,
+        clientId: clients.id
       })
       .from(tasks)
       .innerJoin(taskAssignments, eq(tasks.id, taskAssignments.taskId))
       .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(clients, eq(projects.clientId, clients.id))
       .where(and(
         eq(taskAssignments.userId, parseInt(assignedTo)),
         eq(tasks.archived, false)

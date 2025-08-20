@@ -48,7 +48,6 @@ const user = await requireAuth('/login')(Astro) as any;
           <div class="lg:col-span-2 space-y-8">
             <!-- Timer Section -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 class="text-xl font-semibold text-gray-900 mb-6">Task Timer</h2>
               <Timer client:load />
             </div>
 

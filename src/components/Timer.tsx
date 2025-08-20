@@ -4,6 +4,7 @@ interface Task {
   id: number;
   name: string;
   projectName: string;
+  clientName: string;
   status: string;
 }
 
@@ -501,7 +502,7 @@ export default function Timer() {
   const getSelectedTaskName = () => {
     if (!selectedTask) return '';
     const task = tasks.find(t => t.id === selectedTask);
-    return task ? `${task.name} - ${task.projectName}` : '';
+    return task ? `${task.clientName} - ${task.projectName} - ${task.name}` : '';
   };
 
   // Show loading state while data is being loaded
@@ -552,7 +553,7 @@ export default function Timer() {
           <option value="">Choose a task...</option>
           {tasks.map((task) => (
             <option key={task.id} value={task.id}>
-              {task.name} - {task.projectName}
+              {task.clientName} - {task.projectName} - {task.name}
             </option>
           ))}
         </select>

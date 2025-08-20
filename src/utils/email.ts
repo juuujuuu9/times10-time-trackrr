@@ -42,7 +42,7 @@ export async function sendInvitationEmail(data: InvitationEmailData) {
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Times10 Invitation</title>
           <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            body { font-family: 'Istok Web', system-ui, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { background: linear-gradient(135deg, #4F46E5 0%, #3730A3 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
             .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
@@ -147,7 +147,7 @@ export async function sendTaskAssignmentEmail(data: TaskAssignmentEmailData) {
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>New Task Assignment</title>
           <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            body { font-family: 'Istok Web', system-ui, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
             .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }

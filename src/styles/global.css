@@ -1,35 +1,35 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Istok+Web:wght@400;700&display=swap');
 
 /* Base styles */
 html {
-  font-family: 'Poppins', system-ui, sans-serif !important;
+  font-family: 'Istok Web', system-ui, sans-serif !important;
 }
 
 body {
   margin: 0;
   padding: 0;
   line-height: 1.6;
-  font-family: 'Poppins', system-ui, sans-serif !important;
+  font-family: 'Istok Web', system-ui, sans-serif !important;
 }
 
 * {
-  font-family: 'Poppins', system-ui, sans-serif !important;
+  font-family: 'Istok Web', system-ui, sans-serif !important;
 }
 
 /* Override any Tailwind font classes */
 .font-sans {
-  font-family: 'Poppins', system-ui, sans-serif !important;
+  font-family: 'Istok Web', system-ui, sans-serif !important;
 }
 
-/* Force Poppins on all elements */
+/* Force Istok Web on all elements */
 div, span, p, h1, h2, h3, h4, h5, h6, a, button, input, textarea, select, label {
-  font-family: 'Poppins', system-ui, sans-serif !important;
+  font-family: 'Istok Web', system-ui, sans-serif !important;
 }
 
 /* Override Tailwind's default font classes */
 .font-sans, .font-serif, .font-mono {
-  font-family: 'Poppins', system-ui, sans-serif !important;
+  font-family: 'Istok Web', system-ui, sans-serif !important;
 }
 
 /* Reset heading margins */

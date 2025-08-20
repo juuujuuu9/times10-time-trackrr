@@ -38,7 +38,7 @@ const navItems = [
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <title>{title} - Times10 Admin</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
@@ -230,14 +230,18 @@ const navItems = [
   @import "tailwindcss";
   @import "../styles/global.css";
   
-  /* Force Poppins font on admin pages */
-  html, body, div, span, p, h1, h2, h3, h4, h5, h6, a, button, input, textarea, select, label, nav, header, main, aside {
-    font-family: 'Poppins', system-ui, sans-serif !important;
+  /* Force Istok Web font on admin pages */
+  * {
+    font-family: 'Istok Web', system-ui, sans-serif !important;
+  }
+
+  html, body {
+    font-family: 'Istok Web', system-ui, sans-serif !important;
   }
   
   /* Override any Tailwind font classes in admin */
   .font-sans, .font-serif, .font-mono {
-    font-family: 'Poppins', system-ui, sans-serif !important;
+    font-family: 'Istok Web', system-ui, sans-serif !important;
   }
   
   /* Additional admin-specific styles with dark theme */
