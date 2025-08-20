@@ -57,12 +57,12 @@ const allUsers = await db.select().from(users).orderBy(users.name);
     <!-- Header -->
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-admin-light-gray">Tasks</h1>
-        <p class="text-admin-mid-gray">Manage tasks organized by project</p>
+        <h1 class="text-2xl font-bold text-white">Tasks</h1>
+        <p class="text-gray-300">Manage tasks organized by project</p>
       </div>
       <button
         id="createTaskBtn"
-        class="inline-flex items-center px-4 py-2 bg-admin-dark-gray hover:bg-admin-mid-gray text-admin-light-gray font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+        class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
       >
         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -72,22 +72,22 @@ const allUsers = await db.select().from(users).orderBy(users.name);
     </div>
 
     <!-- Filters -->
-    <div class="bg-admin-dark-gray rounded-lg shadow border border-admin-mid-gray p-6">
+    <div class="bg-times10-gray rounded-lg shadow border border-times10-gray p-6">
       <div class="flex flex-col sm:flex-row gap-4">
         <div class="flex-1">
-          <label for="search" class="block text-sm font-medium text-admin-mid-gray mb-1">Search</label>
+          <label for="search" class="block text-sm font-medium text-times10-light mb-1">Search</label>
           <input
             type="text"
             id="search"
             placeholder="Search tasks..."
-            class="w-full px-3 py-2 border border-admin-mid-gray rounded-md focus:outline-none focus:ring-2 focus:ring-admin-mid-gray bg-admin-black text-admin-light-gray"
+            class="w-full px-3 py-2 border border-times10-gray rounded-md focus:outline-none focus:ring-2 focus:ring-times10-accent bg-times10-dark text-times10-light"
           />
         </div>
         <div class="sm:w-48">
-          <label for="statusFilter" class="block text-sm font-medium text-admin-mid-gray mb-1">Status</label>
+          <label for="statusFilter" class="block text-sm font-medium text-times10-light mb-1">Status</label>
           <select
             id="statusFilter"
-            class="w-full px-3 py-2 border border-admin-mid-gray rounded-md focus:outline-none focus:ring-2 focus:ring-admin-mid-gray bg-admin-black text-admin-light-gray"
+            class="w-full px-3 py-2 border border-times10-gray rounded-md focus:outline-none focus:ring-2 focus:ring-times10-accent bg-times10-dark text-times10-light"
           >
             <option value="">All Statuses</option>
             <option value="pending">Pending</option>
@@ -97,10 +97,10 @@ const allUsers = await db.select().from(users).orderBy(users.name);
           </select>
         </div>
         <div class="sm:w-48">
-          <label for="userFilter" class="block text-sm font-medium text-admin-mid-gray mb-1">Assigned User</label>
+          <label for="userFilter" class="block text-sm font-medium text-times10-light mb-1">Assigned User</label>
           <select
             id="userFilter"
-            class="w-full px-3 py-2 border border-admin-mid-gray rounded-md focus:outline-none focus:ring-2 focus:ring-admin-mid-gray bg-admin-black text-admin-light-gray"
+            class="w-full px-3 py-2 border border-times10-gray rounded-md focus:outline-none focus:ring-2 focus:ring-times10-accent bg-times10-dark text-times10-light"
           >
             <option value="">All Users</option>
             {allUsers.map((user) => (
@@ -114,61 +114,61 @@ const allUsers = await db.select().from(users).orderBy(users.name);
     <!-- Tasks by Project -->
     <div class="space-y-6">
       {Object.entries(tasksByProject).map(([projectKey, projectTasks]) => (
-        <div class="bg-admin-dark-gray rounded-lg shadow border border-admin-mid-gray overflow-hidden">
-          <div class="px-6 py-4 bg-admin-black border-b border-admin-mid-gray">
-            <h3 class="text-lg font-medium text-admin-light-gray">{projectKey}</h3>
-            <p class="text-sm text-admin-mid-gray">{projectTasks.length} tasks</p>
+        <div class="bg-gray-800 rounded-lg shadow border border-gray-700 overflow-hidden">
+          <div class="px-6 py-4 bg-gray-700 border-b border-gray-600">
+            <h3 class="text-lg font-medium text-white">{projectKey}</h3>
+            <p class="text-sm text-gray-300">{projectTasks.length} tasks</p>
           </div>
           <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-admin-mid-gray">
-              <thead class="bg-admin-black">
+            <table class="min-w-full divide-y divide-gray-700">
+              <thead class="bg-gray-700">
                 <tr>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-admin-mid-gray uppercase tracking-wider">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Task Name
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-admin-mid-gray uppercase tracking-wider">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Status
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-admin-mid-gray uppercase tracking-wider">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Assigned Users
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-admin-mid-gray uppercase tracking-wider">
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Time Logged
                   </th>
-                  <th class="px-6 py-3 text-right text-xs font-medium text-admin-mid-gray uppercase tracking-wider">
+                  <th class="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody class="bg-admin-dark-gray divide-y divide-admin-mid-gray">
+              <tbody class="bg-gray-800 divide-y divide-gray-700">
                 {projectTasks.map((task) => (
-                  <tr class="hover:bg-admin-black">
+                  <tr class="hover:bg-gray-700">
                     <td class="px-6 py-4 whitespace-nowrap">
-                      <div class="text-sm font-medium text-admin-light-gray">{task.name}</div>
+                      <div class="text-sm font-medium text-white">{task.name}</div>
                       {task.description && (
-                        <div class="text-sm text-admin-mid-gray truncate max-w-xs">{task.description}</div>
+                        <div class="text-sm text-gray-400 truncate max-w-xs">{task.description}</div>
                       )}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                       <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        task.status === 'completed' ? 'bg-admin-light-gray text-admin-black' :
-                        task.status === 'in-progress' ? 'bg-admin-mid-gray text-admin-black' :
-                        task.status === 'archived' ? 'bg-admin-mid-gray text-admin-black' :
-                        'bg-admin-mid-gray text-admin-black'
+                        task.status === 'completed' ? 'bg-gray-600 text-white' :
+                        task.status === 'in-progress' ? 'bg-gray-600 text-white' :
+                        task.status === 'archived' ? 'bg-gray-600 text-gray-300' :
+                        'bg-gray-600 text-white'
                       }`}>
                         {task.status}
                       </span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-admin-light-gray">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
                       {task.assignedUsers || 'Unassigned'}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-admin-light-gray">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
                       {task.timeLogged ? Math.round(task.timeLogged * 10) / 10 : 0} hours
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div class="flex justify-end space-x-2">
                         <button
-                          class="inline-flex items-center px-3 py-2 bg-admin-mid-gray hover:bg-admin-light-gray text-admin-black text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+                          class="inline-flex items-center px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
                           onclick={`assignUsers(${task.id})`}
                           title="Assign users to task"
                         >
@@ -178,7 +178,7 @@ const allUsers = await db.select().from(users).orderBy(users.name);
                           Assign
                         </button>
                         <button
-                          class="inline-flex items-center px-3 py-2 bg-admin-dark-gray hover:bg-admin-mid-gray text-admin-light-gray text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+                          class="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
                           onclick={`editTask(${task.id})`}
                           title="Edit task details"
                         >
@@ -188,7 +188,7 @@ const allUsers = await db.select().from(users).orderBy(users.name);
                           Edit
                         </button>
                         <button
-                          class="delete-task-btn inline-flex items-center px-3 py-2 bg-admin-dark-gray hover:bg-admin-mid-gray text-admin-light-gray text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+                          class="delete-task-btn inline-flex items-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
                           data-task-id={task.id}
                           data-task-name={task.name}
                           title="Delete task"

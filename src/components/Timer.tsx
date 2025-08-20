@@ -574,7 +574,15 @@ export default function Timer() {
       )}
 
       {/* Timer Display */}
-      <div className="text-4xl font-mono text-center mb-6 text-gray-600">
+      <div 
+        className="text-[3rem] text-center mb-6 text-black"
+        style={{ 
+          fontFamily: 'RadiolandTest, monospace',
+          fontWeight: 'bold',
+          fontStyle: 'normal',
+          marginTop: '3rem'
+        }}
+      >
         {formatTime(time)}
       </div>
 

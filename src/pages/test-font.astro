@@ -1,0 +1,55 @@
+---
+// Test page for font debugging
+---
+
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="viewport" content="width=device-width" />
+  <meta name="generator" content={Astro.generator} />
+  <title>Font Test</title>
+  <style>
+    @font-face {
+      font-family: 'RadiolandTest';
+      src: url('/RADIOLAND.TTF') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+      font-display: block;
+    }
+    
+    .radioland-test {
+      font-family: 'RadiolandTest', monospace;
+      font-size: 4.5rem;
+      color: black;
+      border: 2px solid blue;
+      padding: 20px;
+      margin: 20px;
+    }
+    
+    .default-font {
+      font-family: monospace;
+      font-size: 4.5rem;
+      color: black;
+      border: 2px solid green;
+      padding: 20px;
+      margin: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Font Test Page</h1>
+  
+  <div class="radioland-test">
+    Radioland Font: 12:34:56
+  </div>
+  
+  <div class="default-font">
+    Default Font: 12:34:56
+  </div>
+  
+  <div style="font-family: 'RadiolandTest', monospace; font-size: 4.5rem; color: black; border: 2px solid red; padding: 20px; margin: 20px;">
+    Inline Style: 12:34:56
+  </div>
+</body>
+</html>

@@ -4,8 +4,6 @@ import { db } from '../../../db/index';
 import { timeEntries, users, tasks, projects, clients } from '../../../db/schema';
 import { count, sql, sum, gte, lte, and, eq } from 'drizzle-orm';
 import { getProjectCosts, getClientCosts } from '../../../db/queries';
-import { ReportsCharts } from '../../../components/ReportsCharts';
-import { DashboardWidgets } from '../../../components/DashboardWidgets';
 
 // Get the selected time period from query params, default to 'last30' (more likely to have data)
 const period = Astro.url.searchParams.get('period') || 'last30';
@@ -188,194 +186,269 @@ const getPeriodDisplayName = (period: string) => {
 
 const periodDisplayName = getPeriodDisplayName(period);
 
-// Get time series data for charts
-const timeSeriesUrl = new URL('/api/reports/time-series', Astro.url);
-timeSeriesUrl.searchParams.set('period', period);
-timeSeriesUrl.searchParams.set('teamMember', selectedTeamMember);
-if (customStartDate) timeSeriesUrl.searchParams.set('startDate', customStartDate);
-if (customEndDate) timeSeriesUrl.searchParams.set('endDate', customEndDate);
+// Calculate max cost for chart scaling
+const chartData = viewType === 'project' ? projectCosts : clientCosts;
+const maxCost = chartData.length > 0 ? Math.max(...chartData.map(item => item.totalCost)) : 0;
 
-const timeSeriesResponse = await fetch(timeSeriesUrl.toString());
-const timeSeriesData = timeSeriesResponse.ok ? await timeSeriesResponse.json() : { timeSeriesData: [] };
+// Format currency
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(amount);
+};
+
+// Get chart title and subtitle
+const getChartTitle = () => {
+  if (viewType === 'project') {
+    return 'Costs per Project';
+  } else {
+    return 'Costs per Client';
+  }
+};
+
+const getChartSubtitle = () => {
+  if (viewType === 'project') {
+    return `Cost breakdown by project for ${periodDisplayName.toLowerCase()}`;
+  } else {
+    return `Cost breakdown by client for ${periodDisplayName.toLowerCase()}`;
+  }
+};
 ---
 
 <AdminLayout title="Reports" currentPage="reports">
-  <div class="space-y-8">
-    <!-- Header with enhanced styling -->
-    <div class="bg-gradient-to-r from-admin-dark-gray to-admin-black rounded-xl border border-admin-mid-gray p-8">
-      <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center space-y-4 lg:space-y-0">
-        <div>
-          <h1 class="text-3xl font-bold text-admin-light-gray mb-2">📊 Analytics Dashboard</h1>
-          <p class="text-admin-mid-gray text-lg">Comprehensive insights into your time tracking data</p>
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 class="text-2xl font-bold text-white">Reports & Analytics</h1>
+        <p class="text-gray-300">Comprehensive insights into your time tracking data</p>
+      </div>
+      <div class="flex items-center space-x-4">
+        <!-- Time Period Dropdown -->
+        <div class="relative">
+          <select 
+            id="periodSelect" 
+            class="appearance-none bg-gray-800 border border-gray-600 text-white px-4 py-2 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
+            onchange="handlePeriodChange(this.value)"
+          >
+            <option value="last30" selected={period === 'last30'}>Last 30 Days</option>
+            <option value="week" selected={period === 'week'}>This Week</option>
+            <option value="month" selected={period === 'month'}>This Month</option>
+            <option value="year" selected={period === 'year'}>Year to Date</option>
+            <option value="custom" selected={period === 'custom'}>Custom Range</option>
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+            <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Custom Date Range Inputs -->
+        <div id="customDateRange" class={`flex items-center space-x-2 ${period === 'custom' ? '' : 'hidden'}`}>
+          <input 
+            type="date" 
+            id="startDate" 
+            value={customStartDate || ''}
+            class="bg-gray-800 border border-gray-600 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-sm"
+            placeholder="Start Date"
+          />
+          <span class="text-gray-400">to</span>
+          <input 
+            type="date" 
+            id="endDate" 
+            value={customEndDate || ''}
+            class="bg-gray-800 border border-gray-600 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-sm"
+            placeholder="End Date"
+          />
+          <button 
+            onclick="applyCustomRange()"
+            class="bg-gray-300 hover:bg-gray-400 text-gray-900 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
+          >
+            Apply
+          </button>
+        </div>
+
+        <!-- View Type Dropdown -->
+        <div class="relative">
+          <select 
+            id="viewSelect" 
+            class="appearance-none bg-gray-800 border border-gray-600 text-white px-4 py-2 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
+            onchange="handleViewChange(this.value)"
+          >
+            <option value="project" selected={viewType === 'project'}>By Project</option>
+            <option value="client" selected={viewType === 'client'}>By Client</option>
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+            <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Team Member Dropdown -->
+        <div class="relative">
+          <select 
+            id="teamMemberSelect" 
+            class="appearance-none bg-gray-800 border border-gray-600 text-white px-4 py-2 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
+            onchange="handleTeamMemberChange(this.value)"
+          >
+            <option value="all" selected={selectedTeamMember === 'all'}>All Team Members</option>
+            {allTeamMembers.map((member) => (
+              <option value={member.id} selected={selectedTeamMember === member.id.toString()}>
+                {member.name}
+              </option>
+            ))}
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+            <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Period Info -->
+    <div class="bg-gray-800 rounded-lg border border-gray-700 p-4">
+      <p class="text-sm text-gray-300">
+        <span class="font-medium">Showing data for:</span> {periodDisplayName}
+        <span class="text-gray-400 ml-2">
+          ({startDate.toLocaleDateString()} - {endDate.toLocaleDateString()})
+        </span>
+      </p>
+    </div>
+
+    <!-- Overview Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="bg-gray-800 rounded-lg shadow border border-gray-700 p-6">
+        <div class="flex items-center">
+          <div class="p-2 bg-gray-600 rounded-lg">
+            <span class="text-2xl text-white">⏱️</span>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-400">Total Hours</p>
+            <p class="text-2xl font-bold text-white">{totalHours > 0 ? totalHoursFormatted : '0h 0m'}</p>
+            <p class="text-xs text-gray-500">{totalHours > 0 ? `${totalHoursDecimal} hours` : 'No time entries'}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-gray-800 rounded-lg shadow border border-gray-700 p-6">
+        <div class="flex items-center">
+          <div class="p-2 bg-gray-600 rounded-lg">
+            <span class="text-2xl text-white">💰</span>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-400">Total Cost</p>
+            <p class="text-2xl font-bold text-white">{totalCost > 0 ? totalCostFormatted : '$0.00'}</p>
+            <p class="text-xs text-gray-500">{totalCost > 0 ? 'Based on hourly rates' : 'No billable time'}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-gray-800 rounded-lg shadow border border-gray-700 p-6">
+        <div class="flex items-center">
+          <div class="p-2 bg-gray-600 rounded-lg">
+            <span class="text-2xl text-white">📁</span>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-400">Total Projects</p>
+            <p class="text-2xl font-bold text-white">{totalProjects[0]?.count || 0}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-gray-800 rounded-lg shadow border border-gray-700 p-6">
+        <div class="flex items-center">
+          <div class="p-2 bg-gray-600 rounded-lg">
+            <span class="text-2xl text-white">👤</span>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-400">Active Team Members</p>
+            <p class="text-2xl font-bold text-white">{activeTeamMembers}</p>
+            <p class="text-xs text-gray-500">{activeTeamMembers > 0 ? 'Members with time entries' : 'No activity'}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Costs Chart -->
+    {chartData.length > 0 && (
+      <div class="bg-gray-800 rounded-lg shadow border border-gray-700 p-6">
+        <div class="mb-6">
+          <h3 class="text-lg font-medium text-white mb-2">{getChartTitle()}</h3>
+          <p class="text-sm text-gray-400">{getChartSubtitle()}</p>
         </div>
         
-        <!-- Enhanced Controls -->
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
-          <!-- Time Period Dropdown -->
-          <div class="relative">
-            <select 
-              id="periodSelect" 
-              class="appearance-none bg-admin-black border border-admin-mid-gray text-admin-light-gray px-4 py-3 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-admin-mid-gray focus:border-transparent transition-all duration-200 hover:bg-admin-dark-gray"
-              onchange="handlePeriodChange(this.value)"
-            >
-              <option value="last30" selected={period === 'last30'}>📅 Last 30 Days</option>
-              <option value="week" selected={period === 'week'}>📅 This Week</option>
-              <option value="month" selected={period === 'month'}>📅 This Month</option>
-              <option value="year" selected={period === 'year'}>📅 Year to Date</option>
-              <option value="custom" selected={period === 'custom'}>📅 Custom Range</option>
-            </select>
-            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-admin-mid-gray">
-              <svg class="fill-current h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
-              </svg>
-            </div>
-          </div>
-
-          <!-- Custom Date Range Inputs -->
-          <div id="customDateRange" class={`flex items-center space-x-2 ${period === 'custom' ? '' : 'hidden'}`}>
-            <input 
-              type="date" 
-              id="startDate" 
-              value={customStartDate || ''}
-              class="bg-admin-black border border-admin-mid-gray text-admin-light-gray px-3 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-admin-mid-gray focus:border-transparent text-sm transition-all duration-200 hover:bg-admin-dark-gray"
-              placeholder="Start Date"
-            />
-            <span class="text-admin-mid-gray">to</span>
-            <input 
-              type="date" 
-              id="endDate" 
-              value={customEndDate || ''}
-              class="bg-admin-black border border-admin-mid-gray text-admin-light-gray px-3 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-admin-mid-gray focus:border-transparent text-sm transition-all duration-200 hover:bg-admin-dark-gray"
-              placeholder="End Date"
-            />
-            <button 
-              onclick="applyCustomRange()"
-              class="bg-admin-mid-gray hover:bg-admin-light-gray text-admin-black px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-200"
-            >
-              Apply
-            </button>
-          </div>
-
-          <!-- View Type Dropdown -->
-          <div class="relative">
-            <select 
-              id="viewSelect" 
-              class="appearance-none bg-admin-black border border-admin-mid-gray text-admin-light-gray px-4 py-3 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-admin-mid-gray focus:border-transparent transition-all duration-200 hover:bg-admin-dark-gray"
-              onchange="handleViewChange(this.value)"
-            >
-              <option value="project" selected={viewType === 'project'}>📁 By Project</option>
-              <option value="client" selected={viewType === 'client'}>🏢 By Client</option>
-            </select>
-            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-admin-mid-gray">
-              <svg class="fill-current h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
-              </svg>
-            </div>
-          </div>
-
-          <!-- Team Member Dropdown -->
-          <div class="relative">
-            <select 
-              id="teamMemberSelect" 
-              class="appearance-none bg-admin-black border border-admin-mid-gray text-admin-light-gray px-4 py-3 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-admin-mid-gray focus:border-transparent transition-all duration-200 hover:bg-admin-dark-gray"
-              onchange="handleTeamMemberChange(this.value)"
-            >
-              <option value="all" selected={selectedTeamMember === 'all'}>👥 All Team Members</option>
-              {allTeamMembers.map((member) => (
-                <option value={member.id} selected={selectedTeamMember === member.id.toString()}>
-                  👤 {member.name}
-                </option>
-              ))}
-            </select>
-            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-admin-mid-gray">
-              <svg class="fill-current h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
-              </svg>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Period Info with enhanced styling -->
-    <div class="bg-gradient-to-r from-blue-900/20 to-purple-900/20 rounded-xl border border-blue-700/30 p-6">
-      <div class="flex items-center space-x-3">
-        <div class="p-2 bg-blue-600/20 rounded-lg">
-          <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-          </svg>
-        </div>
-        <div>
-          <p class="text-sm font-medium text-blue-300">
-            <span class="font-semibold">Showing data for:</span> {periodDisplayName}
-          </p>
-          <p class="text-xs text-blue-400">
-            {startDate.toLocaleDateString()} - {endDate.toLocaleDateString()}
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Metrics and Charts Layout -->
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-      <!-- Key Metrics Column -->
-      <div class="lg:col-span-1">
-        <div class="bg-gray-800 rounded-lg border border-gray-700 p-4 sticky top-6">
-          <div class="text-left mb-4">
-            <h3 class="text-sm font-medium text-gray-300 mb-1">Key Metrics</h3>
-            <p class="text-xs text-gray-500">{periodDisplayName}</p>
-          </div>
-          
-          <div class="space-y-3">
-            <!-- Total Hours -->
-            <div class="text-left p-3 bg-gray-700/30 rounded">
-              <div class="text-lg font-semibold text-white">{totalHours > 0 ? totalHoursFormatted : '0h 0m'}</div>
-              <div class="text-xs text-gray-400">Total Hours</div>
-            </div>
-
-            <!-- Total Cost -->
-            <div class="text-left p-3 bg-gray-700/30 rounded">
-              <div class="text-lg font-semibold text-white">{totalCost > 0 ? totalCostFormatted : '$0.00'}</div>
-              <div class="text-xs text-gray-400">Total Cost</div>
-            </div>
-
-            <!-- Average Hours per Member -->
-            <div class="text-left p-3 bg-gray-700/30 rounded">
-              <div class="text-lg font-semibold text-white">
-                {activeTeamMembers > 0 ? Math.round((totalHours / activeTeamMembers) / 3600 * 10) / 10 : 0}h
+        <div class="space-y-4">
+          {viewType === 'project' ? (
+            projectCosts.map((item, index) => (
+              <div class="relative">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-white truncate">{item.projectName}</p>
+                    <p class="text-xs text-gray-400">{item.clientName}</p>
+                  </div>
+                  <div class="text-right ml-4">
+                    <p class="text-sm font-medium text-white">{formatCurrency(item.totalCost)}</p>
+                    <p class="text-xs text-gray-400">{formatDurationToHours(item.totalHours)}h</p>
+                  </div>
+                </div>
+                <div class="w-full bg-gray-700 rounded-full h-3">
+                  <div 
+                    class="bg-gradient-to-r from-gray-600 to-gray-500 h-3 rounded-full transition-all duration-300"
+                    style={`width: ${maxCost > 0 ? (item.totalCost / maxCost) * 100 : 0}%`}
+                  ></div>
+                </div>
               </div>
-              <div class="text-xs text-gray-400">Avg Hours/Member</div>
-            </div>
-
-            <!-- Average Rate -->
-            <div class="text-left p-3 bg-gray-700/30 rounded">
-              <div class="text-lg font-semibold text-white">
-                {totalHours > 0 ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalCost / (totalHours / 3600)) : '$0.00'}
+            ))
+          ) : (
+            clientCosts.map((item, index) => (
+              <div class="relative">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-white truncate">{item.clientName}</p>
+                    <p class="text-xs text-gray-400">{item.projectCount} projects</p>
+                  </div>
+                  <div class="text-right ml-4">
+                    <p class="text-sm font-medium text-white">{formatCurrency(item.totalCost)}</p>
+                    <p class="text-xs text-gray-400">{formatDurationToHours(item.totalHours)}h</p>
+                  </div>
+                </div>
+                <div class="w-full bg-gray-700 rounded-full h-3">
+                  <div 
+                    class="bg-gradient-to-r from-gray-600 to-gray-500 h-3 rounded-full transition-all duration-300"
+                    style={`width: ${maxCost > 0 ? (item.totalCost / maxCost) * 100 : 0}%`}
+                  ></div>
+                </div>
               </div>
-              <div class="text-xs text-gray-400">Avg Rate/Hour</div>
-            </div>
+            ))
+          )}
+        </div>
+        
+        {chartData.length === 0 && (
+          <div class="text-center py-8">
+            <p class="text-gray-400">No {viewType === 'project' ? 'project' : 'client'} costs for this time period</p>
           </div>
-        </div>
+        )}
       </div>
+    )}
 
-      <!-- Charts Column -->
-      <div class="lg:col-span-3">
-        <div class="space-y-8">          
-          <ReportsCharts 
-            client:load
-            projectCosts={projectCosts}
-            clientCosts={clientCosts}
-            timeSeriesData={timeSeriesData.timeSeriesData}
-            period={periodDisplayName}
-            viewType={viewType as 'project' | 'client'}
-          />
-        </div>
+    <!-- Main Content Area -->
+    <div class="bg-gray-800 rounded-lg shadow border border-gray-700 p-6">
+      <div class="text-center py-12">
+        <h3 class="text-lg font-medium text-white mb-2">Reports Coming Soon</h3>
+        <p class="text-gray-400">This is a clean slate for building new reports and analytics features.</p>
       </div>
     </div>
   </div>
 
   <script is:inline>
-    // Enhanced JavaScript with better UX
+    // Make functions globally available
     window.handlePeriodChange = function(period) {
       const customDateRange = document.getElementById('customDateRange');
       const viewSelect = document.getElementById('viewSelect');

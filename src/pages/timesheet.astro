@@ -1,0 +1,463 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getSessionUser } from '../utils/session';
+import { db } from '../db/index';
+import { timeEntries, tasks, projects, clients, users, taskAssignments } from '../db/schema';
+import { eq, and, gte, lte } from 'drizzle-orm';
+
+// Get user session
+const user = await getSessionUser(Astro);
+if (!user) {
+  return Astro.redirect('/login');
+}
+
+// Get the current week (Sunday to Saturday)
+const urlParams = Astro.url.searchParams;
+const weekParam = urlParams.get('week');
+
+let startOfWeek: Date;
+if (weekParam) {
+  startOfWeek = new Date(weekParam);
+  startOfWeek.setHours(0, 0, 0, 0);
+} else {
+  const today = new Date();
+  const currentDay = today.getDay(); // 0 = Sunday, 6 = Saturday
+  startOfWeek = new Date(today);
+  startOfWeek.setDate(today.getDate() - currentDay); // Go back to Sunday
+  startOfWeek.setHours(0, 0, 0, 0);
+}
+
+const endOfWeek = new Date(startOfWeek);
+endOfWeek.setDate(startOfWeek.getDate() + 6); // Go forward to Saturday
+endOfWeek.setHours(23, 59, 59, 999);
+
+// Get all time entries for the current week for the current user
+const weekEntries = await db
+  .select({
+    id: timeEntries.id,
+    taskId: timeEntries.taskId,
+    startTime: timeEntries.startTime,
+    endTime: timeEntries.endTime,
+    durationManual: timeEntries.durationManual,
+    notes: timeEntries.notes,
+    taskName: tasks.name,
+    taskStatus: tasks.status,
+    projectName: projects.name,
+    clientName: clients.name,
+  })
+  .from(timeEntries)
+  .leftJoin(tasks, eq(timeEntries.taskId, tasks.id))
+  .leftJoin(projects, eq(tasks.projectId, projects.id))
+  .leftJoin(clients, eq(projects.clientId, clients.id))
+  .where(
+    and(
+      eq(timeEntries.userId, user.id),
+      gte(timeEntries.startTime, startOfWeek),
+      lte(timeEntries.startTime, endOfWeek)
+    )
+  )
+  .orderBy(timeEntries.startTime);
+
+// Get all tasks assigned to the user
+const userTasks = await db
+  .select({
+    id: tasks.id,
+    name: tasks.name,
+    status: tasks.status,
+    projectName: projects.name,
+    clientName: clients.name,
+  })
+  .from(tasks)
+  .innerJoin(taskAssignments, eq(tasks.id, taskAssignments.taskId))
+  .leftJoin(projects, eq(tasks.projectId, projects.id))
+  .leftJoin(clients, eq(projects.clientId, clients.id))
+  .where(eq(taskAssignments.userId, user.id))
+  .orderBy(tasks.name);
+
+// Group time entries by task and day
+const entriesByTask = new Map();
+const entriesByDay = new Map();
+
+// Initialize entries by day
+for (let i = 0; i < 7; i++) {
+  const date = new Date(startOfWeek);
+  date.setDate(startOfWeek.getDate() + i);
+  entriesByDay.set(date.toISOString().split('T')[0], []);
+}
+
+// Process time entries
+weekEntries.forEach((entry: any) => {
+  const entryDate = new Date(entry.startTime);
+  const dateKey = entryDate.toISOString().split('T')[0];
+  
+  if (!entriesByTask.has(entry.taskId)) {
+    entriesByTask.set(entry.taskId, {
+      taskId: entry.taskId,
+      taskName: entry.taskName,
+      taskStatus: entry.taskStatus,
+      projectName: entry.projectName,
+      clientName: entry.clientName,
+      entries: new Map()
+    });
+  }
+  
+  const taskData = entriesByTask.get(entry.taskId);
+  if (!taskData.entries.has(dateKey)) {
+    taskData.entries.set(dateKey, []);
+  }
+  taskData.entries.get(dateKey).push(entry);
+  
+  if (!entriesByDay.has(dateKey)) {
+    entriesByDay.set(dateKey, []);
+  }
+  entriesByDay.get(dateKey).push(entry);
+});
+
+// Calculate totals for each day
+const dayTotals = new Map();
+entriesByDay.forEach((entries, dateKey) => {
+  let totalSeconds = 0;
+  entries.forEach((entry: any) => {
+    if (entry.durationManual) {
+      totalSeconds += entry.durationManual;
+    } else if (entry.endTime) {
+      const duration = new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime();
+      totalSeconds += Math.floor(duration / 1000);
+    }
+  });
+  dayTotals.set(dateKey, totalSeconds);
+});
+
+// Calculate total for the week
+let weekTotalSeconds = 0;
+dayTotals.forEach(seconds => {
+  weekTotalSeconds += seconds;
+});
+
+// Helper function to format duration
+function formatDuration(seconds: number): string {
+  if (seconds === 0) return '0h';
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours === 0) return `${minutes}m`;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
+}
+
+// Helper function to get day name
+function getDayName(date: Date): string {
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}`;
+}
+
+// Generate week dates
+const weekDates: Date[] = [];
+for (let i = 0; i < 7; i++) {
+  const date = new Date(startOfWeek);
+  date.setDate(startOfWeek.getDate() + i);
+  weekDates.push(date);
+}
+---
+
+<Layout title="Timesheet">
+  <div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center py-4">
+          <div class="flex items-center">
+            <img src="/logo-black.png" alt="Times10 Logo" class="w-auto mr-3" style="height: 25px;" />
+            <span class="px-3 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
+              Team Member
+            </span>
+          </div>
+          <div class="flex items-center space-x-4">
+            <span class="text-sm text-gray-600">Welcome, {user?.name || 'User'}</span>
+            <button
+              id="logoutButton"
+              class="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Header -->
+      <div class="mb-8">
+        <div class="flex justify-between items-center">
+          <div>
+            <h1 class="text-3xl font-bold text-gray-900">Timesheet</h1>
+            <p class="text-gray-600 mt-2">Week of {getDayName(startOfWeek)} - {getDayName(endOfWeek)}</p>
+          </div>
+          <div class="flex space-x-3">
+            <a
+              href="/dashboard"
+              class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+            >
+              <span class="mr-2">←</span>
+              Back to Timer
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Week Navigation -->
+      <div class="flex justify-between items-center mb-6">
+        <button
+          id="prevWeekBtn"
+          class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+        >
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          </svg>
+          Previous Week
+        </button>
+        
+        <div class="flex items-center space-x-4">
+          <button
+            id="currentWeekBtn"
+            class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          >
+            Current Week
+          </button>
+        </div>
+        
+        <button
+          id="nextWeekBtn"
+          class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+        >
+          Next Week
+          <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Timesheet Grid -->
+      <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <!-- Header Row -->
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-80">
+                  Task / Location
+                </th>
+                {weekDates.map(date => {
+                  const dateKey = date.toISOString().split('T')[0];
+                  const totalSeconds = dayTotals.get(dateKey) || 0;
+                  return (
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <div class="text-center">
+                        <div class="font-medium">{getDayName(date)}</div>
+                        <div class="text-sm text-gray-400">{formatDuration(totalSeconds)}</div>
+                        {totalSeconds > 0 && (
+                          <div class="mt-1 w-full bg-gray-200 rounded-full h-1">
+                            <div 
+                              class="bg-blue-600 h-1 rounded-full" 
+                              style={`width: ${Math.min((totalSeconds / (8 * 3600)) * 100, 100)}%`}
+                            ></div>
+                          </div>
+                        )}
+                      </div>
+                    </th>
+                  );
+                })}
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <div class="text-center">
+                    <div class="font-medium">Total</div>
+                    <div class="text-sm text-gray-400">{formatDuration(weekTotalSeconds)}</div>
+                    {weekTotalSeconds > 0 && (
+                      <div class="mt-1 w-full bg-gray-200 rounded-full h-1">
+                        <div 
+                          class="bg-blue-600 h-1 rounded-full" 
+                          style={`width: ${Math.min((weekTotalSeconds / (40 * 3600)) * 100, 100)}%`}
+                        ></div>
+                      </div>
+                    )}
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            
+            <!-- Task Rows -->
+            <tbody class="bg-white divide-y divide-gray-200">
+              {userTasks.length === 0 ? (
+                <tr>
+                  <td colspan="9" class="px-6 py-12 text-center">
+                    <div class="text-gray-500">
+                      <div class="text-4xl mb-4">📋</div>
+                      <h3 class="text-lg font-medium text-gray-900 mb-2">No tasks assigned</h3>
+                      <p class="text-gray-500">You don't have any tasks assigned to you yet.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                userTasks.map(task => {
+                  const taskData = entriesByTask.get(task.id);
+                  let taskTotalSeconds = 0;
+                  
+                  return (
+                    <tr class="hover:bg-gray-50">
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                          <div class="flex-shrink-0">
+                            <button class="text-gray-400 hover:text-gray-600">
+                              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                              </svg>
+                            </button>
+                          </div>
+                          <div class="ml-3">
+                            <div class="text-sm font-medium text-gray-900">{task.name}</div>
+                            <div class="text-sm text-gray-500">
+                              {task.status === 'complete' ? (
+                                <span class="inline-flex items-center">
+                                  <svg class="w-4 h-4 text-green-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                  </svg>
+                                  Complete
+                                </span>
+                              ) : (
+                                <span class="inline-flex items-center">
+                                  <svg class="w-4 h-4 text-gray-400 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+                                  </svg>
+                                  To Do
+                                </span>
+                              )}
+                              • {task.clientName} / {task.projectName}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      
+                      {weekDates.map(date => {
+                        const dateKey = date.toISOString().split('T')[0];
+                        const dayEntries = taskData?.entries.get(dateKey) || [];
+                        let dayTotalSeconds = 0;
+                        
+                        dayEntries.forEach((entry: any) => {
+                          if (entry.durationManual) {
+                            dayTotalSeconds += entry.durationManual;
+                          } else if (entry.endTime) {
+                            const duration = new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime();
+                            dayTotalSeconds += Math.floor(duration / 1000);
+                          }
+                        });
+                        
+                        taskTotalSeconds += dayTotalSeconds;
+                        
+                        return (
+                          <td class="px-6 py-4 text-center">
+                            {dayTotalSeconds > 0 ? (
+                              <div class="flex items-center justify-center space-x-2">
+                                <span class="text-sm text-gray-900">{formatDuration(dayTotalSeconds)}</span>
+                                {dayEntries.some((entry: any) => !entry.endTime) && (
+                                  <button class="text-red-500 hover:text-red-700" title="Stop timer">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd"></path>
+                                    </svg>
+                                  </button>
+                                )}
+                              </div>
+                            ) : (
+                              <div class="flex items-center justify-center">
+                                <span class="text-gray-400">—</span>
+                                <button class="ml-2 text-gray-400 hover:text-gray-600" title="Start timer">
+                                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                  </svg>
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        );
+                      })}
+                      
+                      <td class="px-6 py-4 text-center">
+                        <span class="text-sm font-medium text-gray-900">{formatDuration(taskTotalSeconds)}</span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Add Task Button -->
+      <div class="mt-6 text-center">
+        <button
+          id="addTaskBtn"
+          class="inline-flex items-center px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors shadow-sm hover:shadow-md"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+          </svg>
+          + Add task
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Week navigation functionality
+    let currentWeekStart = new Date('{startOfWeek.toISOString()}');
+    
+    document.getElementById('prevWeekBtn')?.addEventListener('click', () => {
+      currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+      updateTimesheet();
+    });
+    
+    document.getElementById('nextWeekBtn')?.addEventListener('click', () => {
+      currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+      updateTimesheet();
+    });
+    
+    document.getElementById('currentWeekBtn')?.addEventListener('click', () => {
+      const today = new Date();
+      const currentDay = today.getDay();
+      currentWeekStart = new Date(today);
+      currentWeekStart.setDate(today.getDate() - currentDay);
+      currentWeekStart.setHours(0, 0, 0, 0);
+      updateTimesheet();
+    });
+    
+    function updateTimesheet() {
+      const startDate = currentWeekStart.toISOString().split('T')[0];
+      window.location.href = `/timesheet?week=${startDate}`;
+    }
+    
+    // Add task button functionality
+    document.getElementById('addTaskBtn')?.addEventListener('click', () => {
+      // Redirect to task creation or show modal
+      window.location.href = '/admin/tasks';
+    });
+
+    // Logout functionality
+    document.getElementById('logoutButton')?.addEventListener('click', async () => {
+      try {
+        const response = await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (response.ok) {
+          window.location.href = '/login';
+        } else {
+          console.error('Logout failed');
+        }
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    });
+  </script>
+</Layout>

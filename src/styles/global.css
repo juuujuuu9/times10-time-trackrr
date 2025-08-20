@@ -1,5 +1,33 @@
 @import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Istok+Web:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+/* Radioland font - try with absolute path */
+@font-face {
+  font-family: 'Radioland';
+  src: url('/RADIOLAND.TTF') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Alternative Radioland font declaration */
+@font-face {
+  font-family: 'RadiolandAlt';
+  src: url('/RADIOLAND.TTF') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Direct font loading test */
+@font-face {
+  font-family: 'RadiolandTest';
+  src: url('/RADIOLAND.TTF') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
 
 /* Base styles */
 html {
@@ -31,6 +59,53 @@ div, span, p, h1, h2, h3, h4, h5, h6, a, button, input, textarea, select, label 
 .font-sans, .font-serif, .font-mono {
   font-family: 'Istok Web', system-ui, sans-serif !important;
 }
+
+/* VT323 font override - must come after the general overrides */
+.font-vt323 {
+  font-family: 'VT323', monospace !important;
+}
+
+/* More specific VT323 override for timer display */
+div.font-vt323 {
+  font-family: 'VT323', monospace !important;
+}
+
+/* Force VT323 on timer display */
+div[class*="font-vt323"] {
+  font-family: 'VT323', monospace !important;
+}
+
+/* Radioland font class - must be more specific than the general override */
+.font-radioland {
+  font-family: 'Radioland', monospace !important;
+}
+
+/* Force Radioland on timer display */
+div[class*="font-radioland"] {
+  font-family: 'Radioland', monospace !important;
+}
+
+/* More specific override for timer display */
+div.text-\[4\.5rem\].font-radioland {
+  font-family: 'Radioland', monospace !important;
+}
+
+/* Even more specific override */
+div.text-\[4\.5rem\].font-radioland.text-center {
+  font-family: 'Radioland', monospace !important;
+}
+
+/* Maximum specificity override for timer */
+div.text-\[4\.5rem\].font-radioland.text-center.mb-6.text-black {
+  font-family: 'Radioland', monospace !important;
+}
+
+/* Direct timer override - highest priority */
+div[class*="text-[4.5rem]"][class*="font-radioland"] {
+  font-family: 'Radioland', monospace !important;
+}
+
+
 
 /* Reset heading margins */
 h1, h2, h3, h4, h5, h6 {

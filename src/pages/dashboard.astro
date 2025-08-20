@@ -55,12 +55,20 @@ const user = await requireAuth('/login')(Astro) as any;
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                 <h2 class="text-xl font-semibold text-gray-900">Recent Time Entries</h2>
-                <button
-                  id="viewAllEntriesBtn"
-                  class="text-sm text-gray-600 hover:text-gray-800 font-medium transition-colors"
-                >
-                  View All
-                </button>
+                <div class="flex space-x-4">
+                  <button
+                    id="viewAllEntriesBtn"
+                    class="text-sm text-gray-600 hover:text-gray-800 font-medium transition-colors"
+                  >
+                    View All
+                  </button>
+                  <button
+                    id="viewTimesheetBtn"
+                    class="text-sm text-gray-600 hover:text-gray-800 font-medium transition-colors"
+                  >
+                    Timesheet
+                  </button>
+                </div>
               </div>
               <div class="overflow-x-auto">
                 <div id="recentEntries" class="min-w-full">
@@ -556,6 +564,11 @@ const user = await requireAuth('/login')(Astro) as any;
   // View All Entries button functionality
   document.getElementById('viewAllEntriesBtn')?.addEventListener('click', () => {
     window.location.href = '/time-entries';
+  });
+
+  // View Timesheet button functionality
+  document.getElementById('viewTimesheetBtn')?.addEventListener('click', () => {
+    window.location.href = '/timesheet';
   });
 
   // View Reports button functionality
