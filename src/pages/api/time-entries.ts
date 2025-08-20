@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../db';
-import { timeEntries, users, tasks, projects } from '../../db/schema';
+import { timeEntries, users, tasks, projects, clients } from '../../db/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 
 export const GET: APIRoute = async ({ url }) => {
@@ -30,18 +30,22 @@ export const GET: APIRoute = async ({ url }) => {
         userName: users.name,
         taskName: tasks.name,
         projectName: projects.name,
+        clientName: clients.name,
         duration: sql<number>`CASE 
+          WHEN ${timeEntries.durationManual} IS NOT NULL 
+          THEN ${timeEntries.durationManual}
           WHEN ${timeEntries.endTime} IS NOT NULL 
           THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))
-          ELSE COALESCE(${timeEntries.durationManual}, 0)
+          ELSE 0
         END`.as('duration')
       })
       .from(timeEntries)
       .innerJoin(users, eq(timeEntries.userId, users.id))
       .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
       .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(clients, eq(projects.clientId, clients.id))
       .where(eq(timeEntries.userId, parseInt(userId)))
-      .orderBy(desc(timeEntries.startTime))
+      .orderBy(desc(timeEntries.createdAt))
       .limit(limit);
 
     return new Response(JSON.stringify({

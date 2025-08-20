@@ -1,5 +1,5 @@
 ---
-import { requireRole } from '../utils/session';
+import { getSessionUser } from '../utils/session';
 
 export interface Props {
   title: string;
@@ -8,8 +8,11 @@ export interface Props {
 
 const { title, currentPage = 'dashboard' } = Astro.props;
 
-// Require admin role
-const user = await requireRole('admin', '/dashboard')(Astro) as any;
+// Get user session
+const user = await getSessionUser(Astro);
+const isAdmin = user && user.role === 'admin';
+
+// If not authenticated or not admin, we'll handle this in the template
 
 const navItems = [
   { name: 'Dashboard', href: '/admin', icon: '📊' },
@@ -33,29 +36,46 @@ const navItems = [
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <title>{title} - Times10 Admin</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body class="bg-gray-900 font-sans">
-    <!-- Loading State (shown immediately) -->
-    <div id="loadingState" class="min-h-screen bg-gray-900 flex items-center justify-center">
-      <div class="text-center">
-        <div class="w-12 h-12 border-4 border-gray-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p class="text-gray-300 text-lg">Loading admin panel...</p>
+    {!user || !isAdmin ? (
+      <!-- Access Denied -->
+      <div class="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div class="text-center">
+          <div class="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <span class="text-white text-2xl">🚫</span>
+          </div>
+          <h1 class="text-2xl font-bold text-white mb-4">Access Denied</h1>
+          <p class="text-gray-300 mb-6">You don't have permission to access the admin panel.</p>
+          <a href="/dashboard" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
+            <span class="mr-2">←</span>
+            Back to Dashboard
+          </a>
+        </div>
       </div>
-    </div>
+    ) : (
+      <>
+        <!-- Loading State (shown immediately) -->
+        <div id="loadingState" class="min-h-screen bg-gray-900 flex items-center justify-center">
+          <div class="text-center">
+            <div class="w-12 h-12 border-4 border-gray-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p class="text-gray-300 text-lg">Loading admin panel...</p>
+          </div>
+        </div>
 
-    <!-- Admin Content (hidden initially) -->
-    <div id="adminContent" class="hidden">
+        <!-- Admin Content (hidden initially) -->
+        <div id="adminContent" class="hidden">
       <div class="flex h-screen">
       <!-- Sidebar -->
       <div class="w-64 bg-gradient-to-b from-gray-900 to-gray-800 shadow-xl border-r border-gray-700">
         <div class="p-6 border-b border-gray-700">
           <div class="flex items-center">
-            <div class="w-8 h-8 bg-gray-600 rounded-lg flex items-center justify-center mr-3 shadow-lg">
-              <span class="text-white font-bold text-lg">T</span>
-            </div>
-            <h1 class="text-xl font-bold text-white">Times10 Admin</h1>
+            <img src="/logo.png" alt="Times10 Logo" class="h-8 w-auto shadow-lg" />
           </div>
         </div>
         <nav class="mt-6 px-4">
@@ -128,7 +148,9 @@ const navItems = [
         </main>
       </div>
     </div>
-    </div>
+        </div>
+      </>
+    )}
   </body>
 
   <script>
@@ -207,6 +229,16 @@ const navItems = [
 <style>
   @import "tailwindcss";
   @import "../styles/global.css";
+  
+  /* Force Poppins font on admin pages */
+  html, body, div, span, p, h1, h2, h3, h4, h5, h6, a, button, input, textarea, select, label, nav, header, main, aside {
+    font-family: 'Poppins', system-ui, sans-serif !important;
+  }
+  
+  /* Override any Tailwind font classes in admin */
+  .font-sans, .font-serif, .font-mono {
+    font-family: 'Poppins', system-ui, sans-serif !important;
+  }
   
   /* Additional admin-specific styles with dark theme */
   .admin-sidebar {

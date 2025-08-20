@@ -1,6 +1,5 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import Timer from '../components/Timer';
 import { getSessionUser } from '../utils/session';
 
 // Check if user is logged in
@@ -43,7 +42,15 @@ if (user) {
 					<strong>✅ Database Connected!</strong> Your Neon PostgreSQL database is ready for time tracking.
 				</div>
 			</div>
-			<Timer client:load />
+			<div class="bg-white rounded-lg shadow-lg p-6 max-w-md mx-auto">
+				<h2 class="text-xl font-semibold text-gray-800 mb-4">Get Started</h2>
+				<p class="text-gray-600 mb-4">
+					Sign in to start tracking your time and managing your tasks efficiently.
+				</p>
+				<a href="/login" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors inline-block text-center">
+					Sign In to Continue
+				</a>
+			</div>
 		</div>
 	</main>
 </Layout>

@@ -14,7 +14,15 @@ const allProjects = await db
     clientName: clients.name,
     clientArchived: clients.archived,
     taskCount: sql<number>`COUNT(DISTINCT ${tasks.id})`,
-    totalHours: sql<number>`COALESCE(SUM(EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))/3600), 0)`,
+    totalHours: sql<number>`COALESCE(SUM(
+      CASE 
+        WHEN ${timeEntries.durationManual} IS NOT NULL 
+        THEN ${timeEntries.durationManual} / 3600
+        WHEN ${timeEntries.endTime} IS NOT NULL 
+        THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime})) / 3600
+        ELSE 0
+      END
+    ), 0)`,
   })
   .from(projects)
   .leftJoin(clients, sql`${projects.clientId} = ${clients.id}`)

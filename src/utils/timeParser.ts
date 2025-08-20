@@ -35,6 +35,15 @@ export function parseTimeInput(input: string): number {
     return hours * 3600 + minutes * 60 + seconds;
   }
   
+  // Handle combined hours and minutes: "0h 30m", "2h 15m", etc.
+  const combinedMatch = trimmed.match(/^(\d+(?:\.\d+)?)\s*(h|hr|hour|hours)\s+(\d+(?:\.\d+)?)\s*(m|min|minute|minutes)(?:\s+(\d+(?:\.\d+)?)\s*(s|sec|second|seconds))?$/);
+  if (combinedMatch) {
+    const hours = parseFloat(combinedMatch[1]);
+    const minutes = parseFloat(combinedMatch[3]);
+    const seconds = combinedMatch[5] ? parseFloat(combinedMatch[5]) : 0;
+    return Math.round(hours * 3600 + minutes * 60 + seconds);
+  }
+  
   // Handle decimal hours: "2.5" (assumes hours)
   const decimalMatch = trimmed.match(/^(\d+(?:\.\d+)?)$/);
   if (decimalMatch) {
@@ -42,7 +51,7 @@ export function parseTimeInput(input: string): number {
     return Math.round(hours * 3600);
   }
   
-  throw new Error(`Invalid time format: ${input}. Supported formats: 2h, 2hr, 3.5hr, 4:15, 90m, 5400s, etc.`);
+  throw new Error(`Invalid time format: ${input}. Supported formats: 2h, 2hr, 3.5hr, 4:15, 90m, 5400s, 0h 30m, etc.`);
 }
 
 /**

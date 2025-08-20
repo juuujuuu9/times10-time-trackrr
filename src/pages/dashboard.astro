@@ -24,8 +24,8 @@ const user = await requireAuth('/login')(Astro) as any;
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div class="flex justify-between items-center py-4">
             <div class="flex items-center">
-              <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
-              <span class="ml-3 px-3 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full capitalize">
+              <img src="/logo-black.png" alt="Times10 Logo" class="w-auto mr-3" style="height: 25px;" />
+              <span class="px-3 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full capitalize">
                 {user.role}
               </span>
             </div>
@@ -54,11 +54,17 @@ const user = await requireAuth('/login')(Astro) as any;
 
             <!-- Recent Time Entries -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div class="px-6 py-4 border-b border-gray-200">
+              <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                 <h2 class="text-xl font-semibold text-gray-900">Recent Time Entries</h2>
+                <button
+                  id="viewAllEntriesBtn"
+                  class="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                >
+                  View All
+                </button>
               </div>
-              <div class="p-6">
-                <div id="recentEntries" class="space-y-4">
+              <div class="overflow-x-auto">
+                <div id="recentEntries" class="min-w-full">
                   <div class="text-center py-8">
                     <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <span class="text-gray-400 text-xl">⏱️</span>
@@ -82,21 +88,13 @@ const user = await requireAuth('/login')(Astro) as any;
                   <span class="text-sm text-gray-600">Hours Tracked</span>
                   <span id="weeklyHours" class="text-lg font-semibold text-gray-900">-</span>
                 </div>
-                <div class="flex justify-between items-center">
-                  <span class="text-sm text-gray-600">Tasks Completed</span>
-                  <span id="weeklyTasks" class="text-lg font-semibold text-gray-900">-</span>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="text-sm text-gray-600">Projects</span>
-                  <span id="weeklyProjects" class="text-lg font-semibold text-gray-900">-</span>
-                </div>
               </div>
             </div>
 
             <!-- Quick Actions -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-              <div class="space-y-3">
+              <div class="space-y-3 mt-4">
                 <button
                   id="addTimeEntryBtn"
                   class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
@@ -214,6 +212,121 @@ const user = await requireAuth('/login')(Astro) as any;
       </div>
     </div>
   </div>
+
+  <!-- Edit Time Entry Modal -->
+  <div id="editTimeEntryModal" class="fixed inset-0 bg-black/50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-200 flex flex-col">
+        <div class="px-6 py-4 border-b border-gray-200 flex-shrink-0">
+          <h3 class="text-lg font-medium text-gray-900">Edit Time Entry</h3>
+        </div>
+        <div class="flex-1 overflow-y-auto">
+          <form id="editTimeEntryForm" class="px-6 py-4">
+            <input type="hidden" id="editTimeEntryId" />
+            
+            <!-- Time Entry Method Selection -->
+            <div class="mb-6">
+              <label class="block text-sm font-medium text-gray-700 mb-3">Edit Method</label>
+              <div class="space-y-3">
+                <label class="flex items-center">
+                  <input type="radio" name="editMethod" value="times" class="mr-2" checked>
+                  <span class="text-sm">Adjust start/end times</span>
+                </label>
+                <label class="flex items-center">
+                  <input type="radio" name="editMethod" value="duration" class="mr-2">
+                  <span class="text-sm">Manual duration entry</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Start/End Times Section -->
+            <div id="timesSection" class="space-y-4">
+              <div>
+                <label for="editStartTime" class="block text-sm font-medium text-gray-700 mb-1">
+                  Start Time
+                </label>
+                <input
+                  type="datetime-local"
+                  id="editStartTime"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label for="editEndTime" class="block text-sm font-medium text-gray-700 mb-1">
+                  End Time
+                </label>
+                <input
+                  type="datetime-local"
+                  id="editEndTime"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <!-- Duration Section -->
+            <div id="durationSection" class="hidden">
+              <div>
+                <label for="editDuration" class="block text-sm font-medium text-gray-700 mb-1">
+                  Duration
+                </label>
+                <input
+                  type="text"
+                  id="editDuration"
+                  placeholder="e.g., 2h, 3.5hr, 4:15, 90m"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <p class="text-xs text-gray-500 mt-1">
+                  Supported formats: 2h, 2hr, 3.5hr, 4:15, 90m, 5400s, etc.
+                </p>
+              </div>
+            </div>
+
+            <div class="mb-6">
+              <label for="editNotes" class="block text-sm font-medium text-gray-700 mb-1">
+                Notes
+              </label>
+              <textarea
+                id="editNotes"
+                rows="3"
+                placeholder="Optional notes about this time entry..."
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              ></textarea>
+            </div>
+
+            <div class="flex justify-between">
+              <button
+                type="button"
+                id="deleteTimeEntryBtn"
+                class="px-4 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors border border-red-200"
+              >
+                Delete Entry
+              </button>
+              <div class="flex space-x-3">
+                <button
+                  type="button"
+                  id="cancelEditTimeEntryBtn"
+                  class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  id="saveEditTimeEntryBtn"
+                  class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center space-x-2"
+                >
+                  <span id="saveEditButtonText">Save Changes</span>
+                  <svg id="saveEditButtonSpinner" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
 </Layout>
 
 <script>
@@ -313,38 +426,87 @@ const user = await requireAuth('/login')(Astro) as any;
       return;
     }
 
-    container.innerHTML = entries.slice(0, 5).map((entry: any) => `
-      <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-        <div class="flex items-center">
-          <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
-            <span class="text-blue-600 text-lg">📝</span>
-          </div>
-          <div>
-            <p class="font-medium text-gray-900">${entry.taskName || 'Unknown Task'}</p>
-            <p class="text-sm text-gray-600">${entry.projectName || 'Unknown Project'}</p>
-            ${entry.notes ? `<p class="text-sm text-gray-500 mt-1 italic">"${entry.notes}"</p>` : ''}
-          </div>
-        </div>
-        <div class="text-right">
-          <p class="text-sm font-medium text-gray-900">
-            ${formatDuration(entry.duration || 0)}
-          </p>
-          <p class="text-xs text-gray-500">
-            ${new Date(entry.startTime).toLocaleDateString()}
-          </p>
-        </div>
-      </div>
-    `).join('');
+    // Show more entries in table format
+    const displayEntries = entries.slice(0, 10);
+    
+    container.innerHTML = `
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Client
+            </th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Project
+            </th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Task
+            </th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Date
+            </th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Duration
+            </th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Notes
+            </th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          ${displayEntries.map((entry: any) => {
+            const taskDate = new Date(entry.startTime);
+            const durationHours = entry.duration ? (entry.duration / 3600).toFixed(1) : '0';
+            
+                         return `
+               <tr class="hover:bg-gray-50">
+                 <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                   ${entry.clientName || 'Unknown Client'}
+                 </td>
+                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                   ${entry.projectName || 'Unknown Project'}
+                 </td>
+                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                   ${entry.taskName || 'Unknown Task'}
+                 </td>
+                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                   ${taskDate.toLocaleDateString()}
+                 </td>
+                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                   ${durationHours} hours
+                 </td>
+                 <td class="px-4 py-3 text-sm text-gray-500 max-w-xs truncate" title="${entry.notes || ''}">
+                   ${entry.notes || '-'}
+                 </td>
+                 <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                   <button
+                     class="edit-time-entry-btn p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                     data-entry-id="${entry.id}"
+                     data-entry='${JSON.stringify(entry)}'
+                     title="Edit time entry"
+                   >
+                     <img src="/icons/pencil.svg" alt="Edit" class="w-4 h-4" />
+                   </button>
+                 </td>
+               </tr>
+             `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
   }
 
   function updateWeeklyStats(stats: any) {
     const weeklyHours = document.getElementById('weeklyHours');
-    const weeklyTasks = document.getElementById('weeklyTasks');
-    const weeklyProjects = document.getElementById('weeklyProjects');
 
-    if (weeklyHours) weeklyHours.textContent = formatHours(stats.totalHours || 0);
-    if (weeklyTasks) weeklyTasks.textContent = stats.completedTasks || 0;
-    if (weeklyProjects) weeklyProjects.textContent = stats.activeProjects || 0;
+    if (weeklyHours) {
+      // Convert seconds to hours for display
+      const hoursFromSeconds = (stats.totalHours || 0) / 3600;
+      weeklyHours.textContent = formatHours(hoursFromSeconds);
+    }
   }
 
 
@@ -356,12 +518,22 @@ const user = await requireAuth('/login')(Astro) as any;
   }
 
   function formatHours(hours: number): string {
-    return hours.toFixed(1) + 'h';
+    const totalMinutes = Math.round(hours * 60);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return `${h.toString().padStart(2, '0')} hr., ${m.toString().padStart(2, '0')} min`;
   }
 
   // Logout functionality
   document.getElementById('logoutButton')?.addEventListener('click', async () => {
     try {
+      // Get current user ID and clear only their timer state
+      const userId = await getCurrentUserId();
+      if (userId) {
+        const timerStateKey = `timerState_${userId}`;
+        localStorage.removeItem(timerStateKey);
+      }
+
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
       });
@@ -377,27 +549,15 @@ const user = await requireAuth('/login')(Astro) as any;
   // Load data when page loads
   document.addEventListener('DOMContentLoaded', loadDashboardData);
 
-  // Test spinner functionality
-  const testSpinnerBtn = document.getElementById('testSpinnerBtn');
-  if (testSpinnerBtn) {
-    testSpinnerBtn.addEventListener('click', () => {
-      console.log('Testing spinner...');
-      const spinner = document.getElementById('saveButtonSpinner');
-      const spinnerAlt = document.getElementById('saveButtonSpinnerAlt');
-      
-      if (spinner) {
-        console.log('Found spinner, toggling hidden class');
-        spinner.classList.toggle('hidden');
-        console.log('Spinner hidden:', spinner.classList.contains('hidden'));
-      }
-      
-      if (spinnerAlt) {
-        console.log('Found alt spinner, toggling hidden class');
-        spinnerAlt.classList.toggle('hidden');
-        console.log('Alt spinner hidden:', spinnerAlt.classList.contains('hidden'));
-      }
-    });
-  }
+  // View All Entries button functionality
+  document.getElementById('viewAllEntriesBtn')?.addEventListener('click', () => {
+    window.location.href = '/time-entries';
+  });
+
+  // View Reports button functionality
+  document.getElementById('viewReportsBtn')?.addEventListener('click', () => {
+    window.location.href = '/admin/reports';
+  });
 
   // Time Entry Modal Functionality
   const addTimeEntryBtn = document.getElementById('addTimeEntryBtn');
@@ -570,12 +730,6 @@ const user = await requireAuth('/login')(Astro) as any;
       saveButtonSpinner.classList.remove('hidden');
       saveButtonSpinnerAlt.classList.remove('hidden');
       
-      // Debug: Log to console to verify spinner state
-      console.log('Spinner element:', saveButtonSpinner);
-      console.log('Spinner classes:', saveButtonSpinner.className);
-      console.log('Spinner hidden:', saveButtonSpinner.classList.contains('hidden'));
-      console.log('Alternative spinner element:', saveButtonSpinnerAlt);
-      
       const taskId = timeEntryTaskId instanceof HTMLInputElement ? timeEntryTaskId.value : '';
       const durationInput = document.getElementById('timeEntryDuration') as HTMLInputElement;
       const taskDateInput = document.getElementById('timeEntryDate') as HTMLInputElement;
@@ -638,6 +792,249 @@ const user = await requireAuth('/login')(Astro) as any;
         submitButton.classList.remove('bg-green-600');
         saveButtonSpinner.classList.add('hidden');
         saveButtonSpinnerAlt.classList.add('hidden');
+      }
+    });
+  }
+
+  // Edit Time Entry Modal Functionality
+  const editTimeEntryModal = document.getElementById('editTimeEntryModal');
+  const editTimeEntryForm = document.getElementById('editTimeEntryForm');
+  const cancelEditTimeEntryBtn = document.getElementById('cancelEditTimeEntryBtn');
+  const deleteTimeEntryBtn = document.getElementById('deleteTimeEntryBtn');
+
+  // Add event listeners for edit buttons (delegated event handling)
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const editBtn = target.closest('.edit-time-entry-btn') as HTMLElement;
+    
+    if (editBtn) {
+      const entryId = editBtn.getAttribute('data-entry-id');
+      const entryData = editBtn.getAttribute('data-entry');
+      
+      if (entryId && entryData) {
+        try {
+          const entry = JSON.parse(entryData);
+          openEditTimeEntryModal(entry);
+        } catch (error) {
+          console.error('Error parsing entry data:', error);
+        }
+      }
+    }
+  });
+
+  function openEditTimeEntryModal(entry: any) {
+    if (!editTimeEntryModal) return;
+
+    // Populate form fields
+    const entryIdInput = document.getElementById('editTimeEntryId') as HTMLInputElement;
+    const startTimeInput = document.getElementById('editStartTime') as HTMLInputElement;
+    const endTimeInput = document.getElementById('editEndTime') as HTMLInputElement;
+    const durationInput = document.getElementById('editDuration') as HTMLInputElement;
+    const notesInput = document.getElementById('editNotes') as HTMLTextAreaElement;
+
+    if (entryIdInput) entryIdInput.value = entry.id;
+    if (notesInput) notesInput.value = entry.notes || '';
+
+    // Format datetime-local inputs
+    if (startTimeInput && entry.startTime) {
+      const startDate = new Date(entry.startTime);
+      startTimeInput.value = startDate.toISOString().slice(0, 16);
+    }
+    
+    if (endTimeInput && entry.endTime) {
+      const endDate = new Date(entry.endTime);
+      endTimeInput.value = endDate.toISOString().slice(0, 16);
+    }
+
+    // Set duration based on entry duration
+    if (durationInput && entry.duration) {
+      const hours = Math.floor(entry.duration / 3600);
+      const minutes = Math.floor((entry.duration % 3600) / 60);
+      durationInput.value = `${hours}h ${minutes}m`;
+    }
+
+    // Ensure correct sections are shown based on default radio selection
+    const timesSection = document.getElementById('timesSection');
+    const durationSection = document.getElementById('durationSection');
+    
+    // Default to "times" method (start/end times)
+    timesSection?.classList.remove('hidden');
+    durationSection?.classList.add('hidden');
+
+    // Show modal
+    editTimeEntryModal.classList.remove('hidden');
+  }
+
+  function closeEditTimeEntryModal() {
+    if (editTimeEntryModal) {
+      editTimeEntryModal.classList.add('hidden');
+      if (editTimeEntryForm && editTimeEntryForm instanceof HTMLFormElement) {
+        editTimeEntryForm.reset();
+      }
+      
+      // Reset radio button to default selection
+      const timesRadio = document.querySelector('input[name="editMethod"][value="times"]') as HTMLInputElement;
+      if (timesRadio) {
+        timesRadio.checked = true;
+      }
+      
+      // Ensure correct sections are shown
+      const timesSection = document.getElementById('timesSection');
+      const durationSection = document.getElementById('durationSection');
+      timesSection?.classList.remove('hidden');
+      durationSection?.classList.add('hidden');
+    }
+  }
+
+  // Close edit modal when Cancel button is clicked
+  if (cancelEditTimeEntryBtn) {
+    cancelEditTimeEntryBtn.addEventListener('click', closeEditTimeEntryModal);
+  }
+
+  // Close edit modal when clicking outside
+  document.addEventListener('click', (e) => {
+    if (editTimeEntryModal && e.target === editTimeEntryModal) {
+      closeEditTimeEntryModal();
+    }
+  });
+
+  // Close edit modal with Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && editTimeEntryModal && !editTimeEntryModal.classList.contains('hidden')) {
+      closeEditTimeEntryModal();
+    }
+  });
+
+  // Handle edit method radio button changes
+  document.addEventListener('change', (e) => {
+    const target = e.target as HTMLInputElement;
+    if (target.name === 'editMethod') {
+      const timesSection = document.getElementById('timesSection');
+      const durationSection = document.getElementById('durationSection');
+      
+      if (target.value === 'times') {
+        timesSection?.classList.remove('hidden');
+        durationSection?.classList.add('hidden');
+      } else {
+        timesSection?.classList.add('hidden');
+        durationSection?.classList.remove('hidden');
+      }
+    }
+  });
+
+  // Handle edit form submission
+  if (editTimeEntryForm) {
+    editTimeEntryForm.addEventListener('submit', async (e: Event) => {
+      e.preventDefault();
+      
+      const target = e.target as HTMLFormElement;
+      const submitButton = target.querySelector('button[type="submit"]') as HTMLButtonElement;
+      const saveButtonText = document.getElementById('saveEditButtonText') as HTMLSpanElement;
+      const saveButtonSpinner = document.getElementById('saveEditButtonSpinner') as HTMLElement;
+      const originalText = saveButtonText.textContent;
+      
+      // Show loading state
+      submitButton.disabled = true;
+      saveButtonText.textContent = 'Saving...';
+      saveButtonSpinner.classList.remove('hidden');
+      
+      const entryId = document.getElementById('editTimeEntryId') as HTMLInputElement;
+      const editMethod = document.querySelector('input[name="editMethod"]:checked') as HTMLInputElement;
+      const startTimeInput = document.getElementById('editStartTime') as HTMLInputElement;
+      const endTimeInput = document.getElementById('editEndTime') as HTMLInputElement;
+      const durationInput = document.getElementById('editDuration') as HTMLInputElement;
+      const notesInput = document.getElementById('editNotes') as HTMLTextAreaElement;
+      
+      let updateData: any = {
+        notes: notesInput?.value || null
+      };
+
+      if (editMethod?.value === 'times') {
+        if (!startTimeInput?.value || !endTimeInput?.value) {
+          alert('Please fill in both start and end times');
+          submitButton.disabled = false;
+          saveButtonText.textContent = originalText;
+          saveButtonSpinner.classList.add('hidden');
+          return;
+        }
+        updateData.startTime = startTimeInput.value;
+        updateData.endTime = endTimeInput.value;
+      } else {
+        if (!durationInput?.value) {
+          alert('Please enter a duration');
+          submitButton.disabled = false;
+          saveButtonText.textContent = originalText;
+          saveButtonSpinner.classList.add('hidden');
+          return;
+        }
+        updateData.duration = durationInput.value;
+      }
+
+      try {
+        const response = await fetch(`/api/admin/time-entries/${entryId?.value}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updateData),
+        });
+        
+        if (response.ok) {
+          // Show success message
+          saveButtonText.textContent = 'Saved!';
+          submitButton.classList.add('bg-green-600');
+          saveButtonSpinner.classList.add('hidden');
+          
+          // Close modal and reload data after a brief delay
+          setTimeout(() => {
+            closeEditTimeEntryModal();
+            loadDashboardData(); // Reload dashboard data to show updated entry
+          }, 1000);
+        } else {
+          const errorData = await response.json();
+          alert(`Error updating time entry: ${errorData.error || 'Unknown error'}`);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error updating time entry');
+      } finally {
+        // Reset button state
+        submitButton.disabled = false;
+        saveButtonText.textContent = originalText;
+        submitButton.classList.remove('bg-green-600');
+        saveButtonSpinner.classList.add('hidden');
+      }
+    });
+  }
+
+  // Handle delete time entry
+  if (deleteTimeEntryBtn) {
+    deleteTimeEntryBtn.addEventListener('click', async () => {
+      const entryId = document.getElementById('editTimeEntryId') as HTMLInputElement;
+      
+      if (!entryId?.value) {
+        alert('No time entry selected for deletion');
+        return;
+      }
+
+      if (!confirm('Are you sure you want to delete this time entry? This action cannot be undone.')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/admin/time-entries/${entryId.value}`, {
+          method: 'DELETE',
+        });
+        
+        if (response.ok) {
+          // Close modal and reload data
+          closeEditTimeEntryModal();
+          loadDashboardData(); // Reload dashboard data to reflect deletion
+        } else {
+          const errorData = await response.json();
+          alert(`Error deleting time entry: ${errorData.error || 'Unknown error'}`);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error deleting time entry');
       }
     });
   }

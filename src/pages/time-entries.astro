@@ -1,0 +1,520 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { requireAuth } from '../utils/session';
+import { db } from '../db/index';
+import { timeEntries, users, tasks, projects, clients } from '../db/schema';
+import { sql, eq } from 'drizzle-orm';
+
+// Require authentication
+const user = await requireAuth('/login')(Astro) as any;
+
+// Get current user's time entries with related data
+const userTimeEntries = await db
+  .select({
+    id: timeEntries.id,
+    startTime: timeEntries.startTime,
+    endTime: timeEntries.endTime,
+    durationManual: timeEntries.durationManual,
+    notes: timeEntries.notes,
+    createdAt: timeEntries.createdAt,
+    userName: users.name,
+    taskName: tasks.name,
+    projectName: projects.name,
+    clientName: clients.name,
+  })
+  .from(timeEntries)
+  .innerJoin(users, sql`${timeEntries.userId} = ${users.id}`)
+  .innerJoin(tasks, sql`${timeEntries.taskId} = ${tasks.id}`)
+  .innerJoin(projects, sql`${tasks.projectId} = ${projects.id}`)
+  .innerJoin(clients, sql`${projects.clientId} = ${clients.id}`)
+  .where(eq(timeEntries.userId, user.id))
+  .orderBy(sql`${timeEntries.createdAt} DESC`);
+
+// Get all clients for filtering (only those the user has worked on)
+const userClients = await db
+  .selectDistinct({ name: clients.name })
+  .from(timeEntries)
+  .innerJoin(tasks, sql`${timeEntries.taskId} = ${tasks.id}`)
+  .innerJoin(projects, sql`${tasks.projectId} = ${projects.id}`)
+  .innerJoin(clients, sql`${projects.clientId} = ${clients.id}`)
+  .where(eq(timeEntries.userId, user.id))
+  .orderBy(clients.name);
+
+// Get all tasks for filtering (only those the user has worked on)
+const userTasks = await db
+  .selectDistinct({
+    id: tasks.id,
+    name: tasks.name,
+    projectName: projects.name,
+    clientName: clients.name,
+  })
+  .from(timeEntries)
+  .innerJoin(tasks, sql`${timeEntries.taskId} = ${tasks.id}`)
+  .innerJoin(projects, sql`${tasks.projectId} = ${projects.id}`)
+  .innerJoin(clients, sql`${projects.clientId} = ${clients.id}`)
+  .where(eq(timeEntries.userId, user.id))
+  .orderBy(clients.name, projects.name, tasks.name);
+---
+
+<Layout title="My Time Entries - Times10 Time Tracker">
+  <div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center py-4">
+          <div class="flex items-center">
+            <img src="/logo-black.png" alt="Times10 Logo" class="w-auto mr-3" style="height: 25px;" />
+            <span class="px-3 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full capitalize">
+              {user.role}
+            </span>
+          </div>
+          <div class="flex items-center space-x-4">
+            <span class="text-sm text-gray-600">Welcome, {user?.name || 'User'}</span>
+            <button
+              id="logoutButton"
+              class="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="space-y-6">
+        <!-- Header -->
+        <div class="flex justify-between items-center">
+          <div>
+            <h1 class="text-2xl font-bold text-gray-900">My Time Entries</h1>
+            <p class="text-gray-600">View and manage your time tracking data</p>
+          </div>
+          <div class="flex space-x-3">
+            <button
+              id="exportCsvBtn"
+              class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+            >
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              Export CSV
+            </button>
+            <a
+              href="/dashboard"
+              class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+            >
+              <span class="mr-2">←</span>
+              Back to Dashboard
+            </a>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+              <input
+                type="text"
+                id="search"
+                placeholder="Search entries..."
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label for="clientFilter" class="block text-sm font-medium text-gray-700 mb-1">Client</label>
+              <select
+                id="clientFilter"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">All Clients</option>
+                {userClients.map((client) => (
+                  <option value={client.name}>{client.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label for="taskFilter" class="block text-sm font-medium text-gray-700 mb-1">Task</label>
+              <select
+                id="taskFilter"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">All Tasks</option>
+                {userTasks.map((task) => (
+                  <option value={task.name}>{task.clientName} - {task.projectName} - {task.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label for="dateRange" class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+              <select
+                id="dateRange"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+                <option value="quarter">This Quarter</option>
+                <option value="custom">Custom Range</option>
+              </select>
+            </div>
+          </div>
+          <div id="customDateRange" class="hidden mt-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Custom Date Range</label>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="flex flex-col">
+                <label for="startDate" class="block text-xs text-gray-500 mb-1">Start Date</label>
+                <input
+                  type="date"
+                  id="startDate"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+              </div>
+              <div>
+                <label for="endDate" class="block text-xs text-gray-500 mb-1">End Date</label>
+                <input
+                  type="date"
+                  id="endDate"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Time Entries Table -->
+        <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+          <!-- Results Counter -->
+          <div class="px-6 py-3 bg-gray-50 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+              <span id="resultsCounter" class="text-sm text-gray-600">
+                Showing {userTimeEntries.length} time entries
+              </span>
+              <span class="text-xs text-gray-500">
+                Total entries: {userTimeEntries.length}
+              </span>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Client
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Project
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Task
+                  </th>
+                  <th id="dateSortBtn" class="cursor-pointer px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors">
+                    <span>Date</span>
+                    <svg id="dateSortIcon" class="w-3 h-3 text-gray-400 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                    </svg>
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Duration
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Notes
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                {userTimeEntries.map((entry) => {
+                  const taskDate = new Date(entry.startTime);
+                  const duration = entry.durationManual ? entry.durationManual / 3600 : 0;
+                  
+                  return (
+                    <tr class="hover:bg-gray-50">
+                      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {entry.clientName}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {entry.projectName}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {entry.taskName}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {taskDate.toLocaleDateString()}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {duration ? Math.round(duration * 10) / 10 : 0} hours
+                      </td>
+                      <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                        {entry.notes || '-'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {userTimeEntries.length === 0 && (
+          <div class="text-center py-12">
+            <div class="text-6xl mb-4">⏱️</div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No time entries yet</h3>
+            <p class="text-gray-600 mb-4">Start tracking time to see entries here</p>
+            <a
+              href="/dashboard"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+            >
+              Go to Dashboard
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Export CSV functionality
+    document.getElementById('exportCsvBtn')?.addEventListener('click', () => {
+      const rows = document.querySelectorAll('tbody tr:not([style*="display: none"])');
+      let csv = 'Client,Project,Task,Date,Duration,Notes\n';
+      
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const rowData = Array.from(cells).map(cell => {
+          const text = cell.textContent?.trim() || '';
+          return `"${text.replace(/"/g, '""')}"`;
+        });
+        csv += rowData.join(',') + '\n';
+      });
+      
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'my-time-entries.csv';
+      a.click();
+      window.URL.revokeObjectURL(url);
+    });
+
+    // Logout functionality
+    document.getElementById('logoutButton')?.addEventListener('click', async () => {
+      try {
+        const response = await fetch('/api/auth/logout', {
+          method: 'POST',
+        });
+        
+        if (response.ok) {
+          window.location.href = '/login';
+        }
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    });
+
+    // Search functionality
+    const searchInput = document.getElementById('search');
+    const clientFilter = document.getElementById('clientFilter');
+    const taskFilter = document.getElementById('taskFilter');
+    const dateRange = document.getElementById('dateRange');
+
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const target = e.target;
+        const searchTerm = target.value.toLowerCase();
+        const rows = document.querySelectorAll('tbody tr');
+        
+        rows.forEach(row => {
+          const text = row.textContent?.toLowerCase() || '';
+          row.style.display = text.includes(searchTerm) ? '' : 'none';
+        });
+        
+        updateResultsCounter();
+      });
+    }
+
+    // Client filter functionality
+    if (clientFilter) {
+      clientFilter.addEventListener('change', (e) => {
+        const target = e.target;
+        const selectedClient = target.value;
+        const rows = document.querySelectorAll('tbody tr');
+        
+        rows.forEach(row => {
+          const clientCell = row.querySelector('td:nth-child(1)');
+          const clientName = clientCell?.textContent?.trim() || '';
+          if (!selectedClient || clientName === selectedClient) {
+            row.style.display = '';
+          } else {
+            row.style.display = 'none';
+          }
+        });
+        
+        updateResultsCounter();
+      });
+    }
+
+    // Task filter functionality
+    if (taskFilter) {
+      taskFilter.addEventListener('change', (e) => {
+        const target = e.target;
+        const selectedTask = target.value;
+        const rows = document.querySelectorAll('tbody tr');
+        
+        rows.forEach(row => {
+          const taskCell = row.querySelector('td:nth-child(3)');
+          const task = taskCell?.textContent?.trim() || '';
+          if (!selectedTask || task === selectedTask) {
+            row.style.display = '';
+          } else {
+            row.style.display = 'none';
+          }
+        });
+        
+        updateResultsCounter();
+      });
+    }
+
+    // Date range filter functionality
+    if (dateRange) {
+      dateRange.addEventListener('change', (e) => {
+        const target = e.target;
+        const selectedRange = target.value;
+        const customDateRange = document.getElementById('customDateRange');
+        
+        if (selectedRange === 'custom') {
+          customDateRange.classList.remove('hidden');
+        } else {
+          customDateRange.classList.add('hidden');
+        }
+        
+        applyDateRangeFilter();
+      });
+    }
+
+    // Custom date range inputs
+    const startDate = document.getElementById('startDate');
+    const endDate = document.getElementById('endDate');
+    const dateSortBtn = document.getElementById('dateSortBtn');
+    const dateSortIcon = document.getElementById('dateSortIcon');
+    
+    // Date sorting functionality
+    let dateSortDirection = 'desc';
+    
+    if (dateSortBtn) {
+      dateSortBtn.addEventListener('click', () => {
+        dateSortDirection = dateSortDirection === 'desc' ? 'asc' : 'desc';
+        
+        if (dateSortIcon) {
+          if (dateSortDirection === 'desc') {
+            dateSortIcon.style.transform = 'rotate(0deg)';
+          } else {
+            dateSortIcon.style.transform = 'rotate(180deg)';
+          }
+        }
+        
+        sortTableByDate();
+      });
+    }
+    
+    function sortTableByDate() {
+      const tbody = document.querySelector('tbody');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      
+      rows.sort((a, b) => {
+        const dateTextA = a.querySelector('td:nth-child(4)').textContent.trim();
+        const dateTextB = b.querySelector('td:nth-child(4)').textContent.trim();
+        
+        const dateA = new Date(dateTextA);
+        const dateB = new Date(dateTextB);
+        
+        if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
+          return 0;
+        }
+        
+        if (dateSortDirection === 'desc') {
+          return dateB - dateA;
+        } else {
+          return dateA - dateB;
+        }
+      });
+      
+      rows.forEach(row => tbody.appendChild(row));
+      updateResultsCounter();
+    }
+
+    if (startDate) {
+      startDate.addEventListener('change', applyDateRangeFilter);
+    }
+
+    if (endDate) {
+      endDate.addEventListener('change', applyDateRangeFilter);
+    }
+
+    function updateResultsCounter() {
+      const visibleRows = document.querySelectorAll('tbody tr:not([style*="display: none"])');
+      const resultsCounter = document.getElementById('resultsCounter');
+      
+      if (resultsCounter) {
+        resultsCounter.textContent = `Showing ${visibleRows.length} time entries`;
+      }
+    }
+
+    function applyDateRangeFilter() {
+      const selectedRange = dateRange?.value;
+      const rows = document.querySelectorAll('tbody tr');
+      const now = new Date();
+      
+      rows.forEach(row => {
+        const dateCell = row.querySelector('td:nth-child(4)');
+        const dateText = dateCell?.textContent?.trim() || '';
+        const entryDate = new Date(dateText);
+        
+        let show = true;
+        
+        if (selectedRange === 'today') {
+          show = entryDate.toDateString() === now.toDateString();
+        } else if (selectedRange === 'week') {
+          const dayOfWeek = now.getDay();
+          const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek;
+          const weekStart = new Date(now);
+          weekStart.setDate(now.getDate() - daysToSubtract);
+          weekStart.setHours(0, 0, 0, 0);
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekStart.getDate() + 6);
+          weekEnd.setHours(23, 59, 59, 999);
+          show = entryDate >= weekStart && entryDate <= weekEnd;
+        } else if (selectedRange === 'month') {
+          const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1);
+          show = entryDate >= monthAgo;
+        } else if (selectedRange === 'quarter') {
+          const quarterAgo = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+          show = entryDate >= quarterAgo;
+        } else if (selectedRange === 'custom') {
+          const customStartDate = document.getElementById('startDate')?.value;
+          const customEndDate = document.getElementById('endDate')?.value;
+          
+          if (customStartDate && customEndDate) {
+            const start = new Date(customStartDate);
+            const end = new Date(customEndDate);
+            end.setHours(23, 59, 59, 999);
+            show = entryDate >= start && entryDate <= end;
+          } else if (customStartDate) {
+            const start = new Date(customStartDate);
+            show = entryDate >= start;
+          } else if (customEndDate) {
+            const end = new Date(customEndDate);
+            end.setHours(23, 59, 59, 999);
+            show = entryDate <= end;
+          } else {
+            show = true;
+          }
+        }
+        
+        row.style.display = show ? '' : 'none';
+      });
+      
+      updateResultsCounter();
+    }
+  </script>
+</Layout>

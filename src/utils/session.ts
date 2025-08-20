@@ -63,7 +63,12 @@ export function requireAuth(redirectTo: string = '/login') {
     const user = await getSessionUser(context);
     
     if (!user) {
-      return context.redirect(redirectTo);
+      try {
+        return context.redirect(redirectTo);
+      } catch (error) {
+        // If redirect fails (response already sent), throw an error to prevent rendering
+        throw new Error('Authentication required');
+      }
     }
     
     return user;
@@ -75,7 +80,12 @@ export function requireRole(requiredRole: string, redirectTo: string = '/dashboa
     const user = await getSessionUser(context);
     
     if (!user) {
-      return context.redirect('/login');
+      try {
+        return context.redirect('/login');
+      } catch (error) {
+        // If redirect fails (response already sent), throw an error to prevent rendering
+        throw new Error('Authentication required');
+      }
     }
     
     const roleHierarchy = {
@@ -88,7 +98,12 @@ export function requireRole(requiredRole: string, redirectTo: string = '/dashboa
     const requiredLevel = roleHierarchy[requiredRole as keyof typeof roleHierarchy] || 0;
     
     if (userLevel < requiredLevel) {
-      return context.redirect(redirectTo);
+      try {
+        return context.redirect(redirectTo);
+      } catch (error) {
+        // If redirect fails (response already sent), throw an error to prevent rendering
+        throw new Error('Insufficient permissions');
+      }
     }
     
     return user;
