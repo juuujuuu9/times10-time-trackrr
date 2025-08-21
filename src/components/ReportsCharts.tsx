@@ -66,8 +66,8 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
       {
         label: 'Cost ($)',
         data: sortedData.map(item => item.totalCost),
-        backgroundColor: 'rgba(31, 41, 55, 0.8)',
-        borderColor: 'rgba(31, 41, 55, 1)',
+        backgroundColor: 'rgba(214, 58, 46, 0.8)',
+        borderColor: 'rgba(214, 58, 46, 1)',
         borderWidth: 2,
         borderRadius: 4,
         borderSkipped: false,
@@ -192,8 +192,8 @@ export const CostBarChart: React.FC<{ data: ChartData[]; title: string; period: 
       {
         label: 'Cost ($)',
         data: data.map(item => item.totalCost),
-        backgroundColor: 'rgba(31, 41, 55, 0.8)',
-        borderColor: 'rgba(31, 41, 55, 1)',
+        backgroundColor: 'rgba(214, 58, 46, 0.8)',
+        borderColor: 'rgba(214, 58, 46, 1)',
         borderWidth: 2,
         borderRadius: 4,
         borderSkipped: false,
@@ -302,21 +302,25 @@ export const CostBarChart: React.FC<{ data: ChartData[]; title: string; period: 
 
 export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string }> = ({ data, title }) => {
   const colors = [
-    'rgba(31, 41, 55, 0.8)',
-    'rgba(107, 114, 128, 0.8)',
-    'rgba(156, 163, 175, 0.8)',
-    'rgba(209, 213, 219, 0.8)',
-    'rgba(75, 85, 99, 0.8)',
-    'rgba(55, 65, 81, 0.8)',
-    'rgba(17, 24, 39, 0.8)',
-    'rgba(3, 7, 18, 0.8)',
+    'rgba(59, 130, 246, 0.8)',   // Blue
+    'rgba(16, 185, 129, 0.8)',   // Green
+    'rgba(245, 158, 11, 0.8)',   // Yellow
+    'rgba(239, 68, 68, 0.8)',    // Red
+    'rgba(139, 92, 246, 0.8)',   // Purple
+    'rgba(236, 72, 153, 0.8)',   // Pink
+    'rgba(14, 165, 233, 0.8)',   // Sky Blue
+    'rgba(34, 197, 94, 0.8)',    // Emerald
   ];
 
   const chartData = {
     labels: data.map(item => item.projectName || item.clientName || 'Unknown'),
     datasets: [
       {
-        data: data.map(item => item.totalCost),
+        data: data.map(item => {
+          const cost = item.totalCost;
+          console.log('Cost value:', cost, 'Type:', typeof cost);
+          return cost || 0;
+        }),
         backgroundColor: colors.slice(0, data.length),
         borderColor: colors.slice(0, data.length).map(color => color.replace('0.8', '1')),
         borderWidth: 2,
@@ -357,8 +361,9 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string }> =
         callbacks: {
           label: function(context: any) {
             const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-            const percentage = ((context.parsed / total) * 100).toFixed(1);
-            return `${context.label}: $${context.parsed.toLocaleString()} (${percentage}%)`;
+            const value = context.parsed || 0;
+            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+            return `${context.label}: $${value.toLocaleString()} (${percentage}%)`;
           },
         },
       },
@@ -370,8 +375,10 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string }> =
         },
         formatter: function(value: any, context: any) {
           const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-          const percentage = ((value / total) * 100).toFixed(1);
-          return `${percentage}%\n$${parseFloat(value).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+          const numValue = parseFloat(value) || 0;
+          const percentage = total > 0 ? ((numValue / total) * 100).toFixed(1) : '0.0';
+          const formattedValue = numValue.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+          return `${percentage}%\n$${formattedValue}`;
         },
       },
     },
@@ -393,12 +400,12 @@ export const TimeSeriesChart: React.FC<{ data: TimeSeriesData[]; period: string 
       {
         label: 'Hours',
         data: data.map(item => item.hours / 3600), // Convert seconds to hours
-        borderColor: 'rgba(31, 41, 55, 1)',
-        backgroundColor: 'rgba(31, 41, 55, 0.1)',
+        borderColor: 'rgba(214, 58, 46, 1)',
+        backgroundColor: 'rgba(214, 58, 46, 0.1)',
         borderWidth: 2,
         fill: true,
         tension: 0.4,
-        pointBackgroundColor: 'rgba(31, 41, 55, 1)',
+        pointBackgroundColor: 'rgba(214, 58, 46, 1)',
         pointBorderColor: '#ffffff',
         pointBorderWidth: 2,
         pointRadius: 4,

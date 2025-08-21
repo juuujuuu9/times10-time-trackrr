@@ -120,6 +120,7 @@ export async function getProjectCosts(startDate: Date, endDate: Date, teamMember
   return await db
     .select({
       projectId: projects.id,
+      clientId: clients.id,
       projectName: projects.name,
       clientName: clients.name,
       totalCost: sql<number>`COALESCE(SUM(
@@ -154,7 +155,7 @@ export async function getProjectCosts(startDate: Date, endDate: Date, teamMember
             lte(timeEntries.startTime, endDate)
           )
     )
-    .groupBy(projects.id, projects.name, clients.name)
+    .groupBy(projects.id, projects.name, clients.id, clients.name)
     .having(sql`COALESCE(SUM(
       CASE 
         WHEN ${timeEntries.endTime} IS NOT NULL 

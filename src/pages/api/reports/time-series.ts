@@ -8,6 +8,8 @@ export const GET: APIRoute = async ({ url }) => {
     const searchParams = url.searchParams;
     const period = searchParams.get('period') || 'last30';
     const teamMemberId = searchParams.get('teamMember');
+    const projectId = searchParams.get('project');
+    const clientId = searchParams.get('client');
     const customStartDate = searchParams.get('startDate');
     const customEndDate = searchParams.get('endDate');
 
@@ -17,6 +19,27 @@ export const GET: APIRoute = async ({ url }) => {
     let endDate: Date;
 
     switch (period) {
+      case 'last7':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 7);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(now);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      case 'last14':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 14);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(now);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      case 'last30':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 30);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(now);
+        endDate.setHours(23, 59, 59, 999);
+        break;
       case 'week':
         const dayOfWeek = now.getDay();
         const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek;
@@ -35,13 +58,6 @@ export const GET: APIRoute = async ({ url }) => {
         startDate = new Date(now.getFullYear(), 0, 1);
         endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
         break;
-      case 'last30':
-        startDate = new Date(now);
-        startDate.setDate(now.getDate() - 30);
-        startDate.setHours(0, 0, 0, 0);
-        endDate = new Date(now);
-        endDate.setHours(23, 59, 59, 999);
-        break;
       case 'custom':
         if (customStartDate && customEndDate) {
           startDate = new Date(customStartDate);
@@ -58,7 +74,7 @@ export const GET: APIRoute = async ({ url }) => {
         break;
       default:
         startDate = new Date(now);
-        startDate.setDate(now.getDate() - 30);
+        startDate.setDate(now.getDate() - 7);
         startDate.setHours(0, 0, 0, 0);
         endDate = new Date(now);
         endDate.setHours(23, 59, 59, 999);
@@ -69,6 +85,20 @@ export const GET: APIRoute = async ({ url }) => {
 
     if (teamMemberId && teamMemberId !== 'all') {
       filterConditions.push(sql`${timeEntries.userId} = ${parseInt(teamMemberId)}`);
+    }
+
+    if (projectId) {
+      filterConditions.push(sql`${timeEntries.taskId} IN (
+        SELECT id FROM tasks WHERE project_id = ${parseInt(projectId)}
+      )`);
+    }
+
+    if (clientId) {
+      filterConditions.push(sql`${timeEntries.taskId} IN (
+        SELECT t.id FROM tasks t 
+        INNER JOIN projects p ON t.project_id = p.id 
+        WHERE p.client_id = ${parseInt(clientId)}
+      )`);
     }
 
     const dateFilter = and(...filterConditions);

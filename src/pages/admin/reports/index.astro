@@ -7,12 +7,17 @@ import { getProjectCosts, getClientCosts } from '../../../db/queries';
 import { ReportsCharts } from '../../../components/ReportsCharts';
 import { DashboardWidgets } from '../../../components/DashboardWidgets';
 
-// Get the selected time period from query params, default to 'last30' (more likely to have data)
-const period = Astro.url.searchParams.get('period') || 'last30';
+// Get the selected time period from query params, default to 'last7' (more likely to have data)
+const period = Astro.url.searchParams.get('period') || 'last7';
 // Get the selected view type from query params, default to 'project'
-const viewType = Astro.url.searchParams.get('view') || 'project';
+const viewTypeParam = Astro.url.searchParams.get('view') || 'project';
+const viewType = (viewTypeParam === 'client' || viewTypeParam === 'project') ? viewTypeParam : 'project';
 // Get the selected team member from query params, default to 'all'
 const selectedTeamMember = Astro.url.searchParams.get('teamMember') || 'all';
+// Get the selected project from query params
+const selectedProject = Astro.url.searchParams.get('project');
+// Get the selected client from query params
+const selectedClient = Astro.url.searchParams.get('client');
 // Get custom date range from query params
 const customStartDate = Astro.url.searchParams.get('startDate');
 const customEndDate = Astro.url.searchParams.get('endDate');
@@ -23,6 +28,30 @@ let startDate: Date | null = null;
 let endDate: Date | null = null;
 
 switch (period) {
+  case 'last7':
+    // Last 7 days
+    startDate = new Date(now);
+    startDate.setDate(now.getDate() - 7);
+    startDate.setHours(0, 0, 0, 0);
+    endDate = new Date(now);
+    endDate.setHours(23, 59, 59, 999);
+    break;
+  case 'last14':
+    // Last 14 days
+    startDate = new Date(now);
+    startDate.setDate(now.getDate() - 14);
+    startDate.setHours(0, 0, 0, 0);
+    endDate = new Date(now);
+    endDate.setHours(23, 59, 59, 999);
+    break;
+  case 'last30':
+    // Last 30 days
+    startDate = new Date(now);
+    startDate.setDate(now.getDate() - 30);
+    startDate.setHours(0, 0, 0, 0);
+    endDate = new Date(now);
+    endDate.setHours(23, 59, 59, 999);
+    break;
   case 'week':
     // This week (Sunday to Saturday)
     const dayOfWeek = now.getDay();
@@ -44,14 +73,6 @@ switch (period) {
     startDate = new Date(now.getFullYear(), 0, 1);
     endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
     break;
-  case 'last30':
-    // Last 30 days
-    startDate = new Date(now);
-    startDate.setDate(now.getDate() - 30);
-    startDate.setHours(0, 0, 0, 0);
-    endDate = new Date(now);
-    endDate.setHours(23, 59, 59, 999);
-    break;
   case 'custom':
     // Custom period - use provided dates or default to last 30 days
     if (customStartDate && customEndDate) {
@@ -69,14 +90,11 @@ switch (period) {
     }
     break;
   default:
-    // Default to week if invalid period
-    const defaultDayOfWeek = now.getDay();
-    const defaultDaysToSubtract = defaultDayOfWeek === 0 ? 0 : defaultDayOfWeek;
+    // Default to last 7 days if invalid period
     startDate = new Date(now);
-    startDate.setDate(now.getDate() - defaultDaysToSubtract);
+    startDate.setDate(now.getDate() - 7);
     startDate.setHours(0, 0, 0, 0);
-    endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 6);
+    endDate = new Date(now);
     endDate.setHours(23, 59, 59, 999);
 }
 
@@ -86,6 +104,16 @@ let filterConditions = [gte(timeEntries.startTime, startDate), lte(timeEntries.s
 // Add team member filter if a specific member is selected
 if (selectedTeamMember !== 'all') {
   filterConditions.push(eq(timeEntries.userId, parseInt(selectedTeamMember)));
+}
+
+// Add project filter if a specific project is selected
+if (selectedProject) {
+  filterConditions.push(eq(projects.id, parseInt(selectedProject)));
+}
+
+// Add client filter if a specific client is selected
+if (selectedClient) {
+  filterConditions.push(eq(clients.id, parseInt(selectedClient)));
 }
 
 const dateFilter = and(...filterConditions);
@@ -106,46 +134,147 @@ const totalProjects = await db.select({ count: count() }).from(projects);
 const totalTasks = await db.select({ count: count() }).from(tasks);
 
 // Get total hours from time entries (with date filter)
-const totalHoursResult = await db
-  .select({
-    totalSeconds: sql<number>`COALESCE(SUM(
-      CASE 
-        WHEN ${timeEntries.endTime} IS NOT NULL 
-        THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))
-        ELSE COALESCE(${timeEntries.durationManual}, 0)
-      END
-    ), 0)`.as('total_seconds')
-  })
-  .from(timeEntries)
-  .where(dateFilter);
+let totalHoursResult;
+if (selectedProject || selectedClient) {
+  totalHoursResult = await db
+    .select({
+      totalSeconds: sql<number>`COALESCE(SUM(
+        CASE 
+          WHEN ${timeEntries.endTime} IS NOT NULL 
+          THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))
+          ELSE COALESCE(${timeEntries.durationManual}, 0)
+        END
+      ), 0)`.as('total_seconds')
+    })
+    .from(timeEntries)
+    .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+    .innerJoin(projects, eq(tasks.projectId, projects.id))
+    .innerJoin(clients, eq(projects.clientId, clients.id))
+    .where(dateFilter);
+} else {
+  totalHoursResult = await db
+    .select({
+      totalSeconds: sql<number>`COALESCE(SUM(
+        CASE 
+          WHEN ${timeEntries.endTime} IS NOT NULL 
+          THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))
+          ELSE COALESCE(${timeEntries.durationManual}, 0)
+        END
+      ), 0)`.as('total_seconds')
+    })
+    .from(timeEntries)
+    .where(dateFilter);
+}
 
 // Get total cost from time entries (with date filter)
-const totalCostResult = await db
-  .select({
-    totalCost: sql<number>`COALESCE(SUM(
-      CASE 
-        WHEN ${timeEntries.endTime} IS NOT NULL 
-        THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime})) / 3600 * COALESCE(${users.payRate}, 0)
-        ELSE COALESCE(${timeEntries.durationManual}, 0) / 3600 * COALESCE(${users.payRate}, 0)
-      END
-    ), 0)`.as('total_cost')
-  })
-  .from(timeEntries)
-  .innerJoin(users, sql`${timeEntries.userId} = ${users.id}`)
-  .where(dateFilter);
+let totalCostResult;
+if (selectedProject || selectedClient) {
+  totalCostResult = await db
+    .select({
+      totalCost: sql<number>`COALESCE(SUM(
+        CASE 
+          WHEN ${timeEntries.endTime} IS NOT NULL 
+          THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime})) / 3600 * COALESCE(${users.payRate}, 0)
+          ELSE COALESCE(${timeEntries.durationManual}, 0) / 3600 * COALESCE(${users.payRate}, 0)
+        END
+      ), 0)`.as('total_cost')
+    })
+    .from(timeEntries)
+    .innerJoin(users, sql`${timeEntries.userId} = ${users.id}`)
+    .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+    .innerJoin(projects, eq(tasks.projectId, projects.id))
+    .innerJoin(clients, eq(projects.clientId, clients.id))
+    .where(dateFilter);
+} else {
+  totalCostResult = await db
+    .select({
+      totalCost: sql<number>`COALESCE(SUM(
+        CASE 
+          WHEN ${timeEntries.endTime} IS NOT NULL 
+          THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime})) / 3600 * COALESCE(${users.payRate}, 0)
+          ELSE COALESCE(${timeEntries.durationManual}, 0) / 3600 * COALESCE(${users.payRate}, 0)
+        END
+      ), 0)`.as('total_cost')
+    })
+    .from(timeEntries)
+    .innerJoin(users, sql`${timeEntries.userId} = ${users.id}`)
+    .where(dateFilter);
+}
 
 // Get active team members (users with time entries, with date filter)
-const activeTeamMembersResult = await db
-  .select({
-    count: count(sql`DISTINCT ${timeEntries.userId}`)
-  })
-  .from(timeEntries)
-  .where(dateFilter);
+let activeTeamMembersResult;
+if (selectedProject || selectedClient) {
+  activeTeamMembersResult = await db
+    .select({
+      count: count(sql`DISTINCT ${timeEntries.userId}`)
+    })
+    .from(timeEntries)
+    .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+    .innerJoin(projects, eq(tasks.projectId, projects.id))
+    .innerJoin(clients, eq(projects.clientId, clients.id))
+    .where(dateFilter);
+} else {
+  activeTeamMembersResult = await db
+    .select({
+      count: count(sql`DISTINCT ${timeEntries.userId}`)
+    })
+    .from(timeEntries)
+    .where(dateFilter);
+}
 
-// Get data based on view type
+// Get data based on project/client selection
 const teamMemberId = selectedTeamMember !== 'all' ? parseInt(selectedTeamMember) : undefined;
-const projectCosts = viewType === 'project' ? await getProjectCosts(startDate, endDate, teamMemberId) : [];
-const clientCosts = viewType === 'client' ? await getClientCosts(startDate, endDate, teamMemberId) : [];
+let projectCosts: Array<{
+  projectId: number;
+  clientId: number;
+  projectName: string;
+  clientName: string;
+  totalCost: number;
+  totalHours: number;
+}> = [];
+let clientCosts: Array<{
+  clientId: number;
+  clientName: string;
+  totalCost: number;
+  totalHours: number;
+  projectCount: number;
+}> = [];
+
+try {
+  if (selectedProject) {
+    // If a specific project is selected, only show project data
+    projectCosts = await getProjectCosts(startDate, endDate, teamMemberId);
+    // Filter to only show the selected project
+    projectCosts = projectCosts.filter(project => project.projectId === parseInt(selectedProject));
+    clientCosts = []; // No client costs when specific project is selected
+  } else if (selectedClient) {
+    // If a specific client is selected, show all projects for that client
+    projectCosts = await getProjectCosts(startDate, endDate, teamMemberId);
+    // Filter to only show projects for the selected client
+    projectCosts = projectCosts.filter(project => project.clientId === parseInt(selectedClient));
+    clientCosts = []; // No client costs when specific client is selected
+  } else {
+    // If no project or client is selected, show data based on view type
+    if (viewType === 'client') {
+      // Show only client costs
+      projectCosts = [];
+      clientCosts = await getClientCosts(startDate, endDate, teamMemberId);
+    } else if (viewType === 'project') {
+      // Show only project costs
+      projectCosts = await getProjectCosts(startDate, endDate, teamMemberId);
+      clientCosts = [];
+    } else {
+      // Default: show both project and client data
+      projectCosts = await getProjectCosts(startDate, endDate, teamMemberId);
+      clientCosts = await getClientCosts(startDate, endDate, teamMemberId);
+    }
+  }
+} catch (error) {
+  console.error('Error fetching project/client data:', error);
+  // Set empty arrays as fallback
+  projectCosts = [];
+  clientCosts = [];
+}
 
 // Format the data for display
 const totalHours = totalHoursResult[0]?.totalSeconds || 0;
@@ -173,16 +302,18 @@ const totalCostFormatted = new Intl.NumberFormat('en-US', {
 // Get period display name
 const getPeriodDisplayName = (period: string) => {
   switch (period) {
+    case 'last7': return 'Last 7 Days';
+    case 'last14': return 'Last 14 Days';
+    case 'last30': return 'Last 30 Days';
     case 'week': return 'This Week';
     case 'month': return 'This Month';
     case 'year': return 'Year to Date';
-    case 'last30': return 'Last 30 Days';
     case 'custom': 
       if (customStartDate && customEndDate) {
         return `Custom Range (${new Date(customStartDate).toLocaleDateString()} - ${new Date(customEndDate).toLocaleDateString()})`;
       }
       return 'Last 30 Days';
-    default: return 'This Week';
+    default: return 'Last 7 Days';
   }
 };
 
@@ -192,11 +323,20 @@ const periodDisplayName = getPeriodDisplayName(period);
 const timeSeriesUrl = new URL('/api/reports/time-series', Astro.url);
 timeSeriesUrl.searchParams.set('period', period);
 timeSeriesUrl.searchParams.set('teamMember', selectedTeamMember);
+if (selectedProject) timeSeriesUrl.searchParams.set('project', selectedProject);
+if (selectedClient) timeSeriesUrl.searchParams.set('client', selectedClient);
 if (customStartDate) timeSeriesUrl.searchParams.set('startDate', customStartDate);
 if (customEndDate) timeSeriesUrl.searchParams.set('endDate', customEndDate);
 
-const timeSeriesResponse = await fetch(timeSeriesUrl.toString());
-const timeSeriesData = timeSeriesResponse.ok ? await timeSeriesResponse.json() : { timeSeriesData: [] };
+let timeSeriesData = { timeSeriesData: [] };
+try {
+  const timeSeriesResponse = await fetch(timeSeriesUrl.toString());
+  if (timeSeriesResponse.ok) {
+    timeSeriesData = await timeSeriesResponse.json();
+  }
+} catch (error) {
+  console.error('Error fetching time series data:', error);
+}
 ---
 
 <AdminLayout title="Reports" currentPage="reports">
@@ -211,6 +351,41 @@ const timeSeriesData = timeSeriesResponse.ok ? await timeSeriesResponse.json() :
         
         <!-- Enhanced Controls -->
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
+          <!-- Project Search -->
+          <div class="relative">
+            <div class="flex items-center space-x-2">
+              <div class="relative flex-1">
+                <input 
+                  type="text" 
+                  id="projectSearch" 
+                  placeholder="🔍 Search projects & clients..." 
+                  class="appearance-none bg-white border border-gray-300 text-gray-900 px-4 py-3 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent transition-all duration-200 hover:bg-gray-50 w-64"
+                  oninput="handleProjectSearch(this.value)"
+                  onfocus="showProjectDropdown()"
+                  onblur="hideProjectDropdown()"
+                />
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                  <svg id="dropdownArrow" class="fill-current h-5 w-5 transition-transform duration-200 cursor-pointer pointer-events-auto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" onclick="toggleDropdown()">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                  </svg>
+                </div>
+              </div>
+              <!-- Clear Project Button -->
+              <button 
+                id="clearProjectBtn"
+                onclick="clearProjectFilter()"
+                class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-3 rounded-lg text-sm font-medium transition-colors duration-200 hidden"
+                title="Clear project filter"
+              >
+                ✕
+              </button>
+            </div>
+            <!-- Project Dropdown -->
+            <div id="projectDropdown" class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto hidden">
+              <!-- Project options will be populated here -->
+            </div>
+          </div>
+
           <!-- Time Period Dropdown -->
           <div class="relative">
             <select 
@@ -218,6 +393,8 @@ const timeSeriesData = timeSeriesResponse.ok ? await timeSeriesResponse.json() :
               class="appearance-none bg-white border border-gray-300 text-gray-900 px-4 py-3 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent transition-all duration-200 hover:bg-gray-50"
               onchange="handlePeriodChange(this.value)"
             >
+              <option value="last7" selected={period === 'last7'}>📅 Last 7 Days</option>
+              <option value="last14" selected={period === 'last14'}>📅 Last 14 Days</option>
               <option value="last30" selected={period === 'last30'}>📅 Last 30 Days</option>
               <option value="week" selected={period === 'week'}>📅 This Week</option>
               <option value="month" selected={period === 'month'}>📅 This Month</option>
@@ -254,23 +431,6 @@ const timeSeriesData = timeSeriesResponse.ok ? await timeSeriesResponse.json() :
             >
               Apply
             </button>
-          </div>
-
-          <!-- View Type Dropdown -->
-          <div class="relative">
-            <select 
-              id="viewSelect" 
-              class="appearance-none bg-white border border-gray-300 text-gray-900 px-4 py-3 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent transition-all duration-200 hover:bg-gray-50"
-              onchange="handleViewChange(this.value)"
-            >
-              <option value="project" selected={viewType === 'project'}>📁 By Project</option>
-              <option value="client" selected={viewType === 'client'}>🏢 By Client</option>
-            </select>
-            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-              <svg class="fill-current h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
-              </svg>
-            </div>
           </div>
 
           <!-- Team Member Dropdown -->
@@ -367,7 +527,7 @@ const timeSeriesData = timeSeriesResponse.ok ? await timeSeriesResponse.json() :
             clientCosts={clientCosts}
             timeSeriesData={timeSeriesData.timeSeriesData}
             period={periodDisplayName}
-            viewType={viewType as 'project' | 'client'}
+            viewType={viewType}
           />
         </div>
       </div>
@@ -378,9 +538,8 @@ const timeSeriesData = timeSeriesResponse.ok ? await timeSeriesResponse.json() :
     // Enhanced JavaScript with better UX
     window.handlePeriodChange = function(period) {
       const customDateRange = document.getElementById('customDateRange');
-      const viewSelect = document.getElementById('viewSelect');
       
-      if (!customDateRange || !viewSelect) return;
+      if (!customDateRange) return;
       
       if (period === 'custom') {
         customDateRange.classList.remove('hidden');
@@ -402,10 +561,20 @@ const timeSeriesData = timeSeriesResponse.ok ? await timeSeriesResponse.json() :
         const teamMemberSelect = document.getElementById('teamMemberSelect');
         const currentUrl = new URL(window.location);
         currentUrl.searchParams.set('period', period);
-        currentUrl.searchParams.set('view', viewSelect.value);
         if (teamMemberSelect) {
           currentUrl.searchParams.set('teamMember', teamMemberSelect.value);
         }
+        
+        // Preserve project/client selection if it exists
+        const currentProject = new URLSearchParams(window.location.search).get('project');
+        const currentClient = new URLSearchParams(window.location.search).get('client');
+        if (currentProject) {
+          currentUrl.searchParams.set('project', currentProject);
+        }
+        if (currentClient) {
+          currentUrl.searchParams.set('client', currentClient);
+        }
+        
         window.location.href = currentUrl.toString();
       }
     };
@@ -413,10 +582,9 @@ const timeSeriesData = timeSeriesResponse.ok ? await timeSeriesResponse.json() :
     window.applyCustomRange = function() {
       const startDateEl = document.getElementById('startDate');
       const endDateEl = document.getElementById('endDate');
-      const viewSelect = document.getElementById('viewSelect');
       const teamMemberSelect = document.getElementById('teamMemberSelect');
       
-      if (!startDateEl || !endDateEl || !viewSelect || !teamMemberSelect) return;
+      if (!startDateEl || !endDateEl || !teamMemberSelect) return;
       
       const startDate = startDateEl.value;
       const endDate = endDateEl.value;
@@ -431,10 +599,205 @@ const timeSeriesData = timeSeriesResponse.ok ? await timeSeriesResponse.json() :
         return;
       }
       
-      window.location.href = `/admin/reports?period=custom&view=${viewSelect.value}&teamMember=${teamMemberSelect.value}&startDate=${startDate}&endDate=${endDate}`;
+      let url = `/admin/reports?period=custom&teamMember=${teamMemberSelect.value}&startDate=${startDate}&endDate=${endDate}`;
+      
+      // Preserve project/client selection if it exists
+      const currentProject = new URLSearchParams(window.location.search).get('project');
+      const currentClient = new URLSearchParams(window.location.search).get('client');
+      if (currentProject) {
+        url += `&project=${currentProject}`;
+      }
+      if (currentClient) {
+        url += `&client=${currentClient}`;
+      }
+      
+      window.location.href = url;
     };
 
-    window.handleViewChange = function(view) {
+    // Project search functionality
+    let searchTimeout;
+    let dropdownOpen = false;
+    
+    window.handleProjectSearch = function(searchTerm) {
+      clearTimeout(searchTimeout);
+      
+      if (searchTerm.length < 2) {
+        hideProjectDropdown();
+        return;
+      }
+      
+      searchTimeout = setTimeout(() => {
+        searchProjects(searchTerm);
+      }, 300);
+    };
+    
+    window.toggleDropdown = function() {
+      const searchInput = document.getElementById('projectSearch');
+      if (!searchInput) return;
+      
+      if (dropdownOpen) {
+        hideProjectDropdown();
+      } else {
+        // Show all projects and clients
+        searchAllProjects();
+        showProjectDropdown();
+      }
+    };
+    
+    window.searchProjects = async function(searchTerm) {
+      try {
+        const response = await fetch(`/api/admin/reports/search-projects?q=${encodeURIComponent(searchTerm)}&limit=10`);
+        const projects = await response.json();
+        
+        const dropdown = document.getElementById('projectDropdown');
+        if (!dropdown) return;
+        
+        dropdown.innerHTML = '';
+        
+        if (projects.length === 0) {
+          dropdown.innerHTML = '<div class="px-4 py-2 text-gray-500 text-sm">No projects found</div>';
+        } else {
+          projects.forEach(project => {
+            const option = document.createElement('div');
+            option.className = 'px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm';
+            if (project.type === 'project') {
+              option.innerHTML = `
+                <div class="font-medium text-black">${project.displayName}</div>
+                <div class="text-xs text-black">${project.description}</div>
+              `;
+            } else {
+              option.innerHTML = `
+                <div class="font-medium">${project.displayName}</div>
+                <div class="text-xs text-gray-500">${project.description}</div>
+              `;
+            }
+            option.onclick = () => selectProject(project);
+            dropdown.appendChild(option);
+          });
+        }
+        
+        showProjectDropdown();
+      } catch (error) {
+        console.error('Error searching projects:', error);
+      }
+    };
+    
+    window.searchAllProjects = async function() {
+      try {
+        const response = await fetch(`/api/admin/reports/search-projects?all=true&limit=20`);
+        const projects = await response.json();
+        
+        const dropdown = document.getElementById('projectDropdown');
+        if (!dropdown) return;
+        
+        dropdown.innerHTML = '';
+        
+        if (projects.length === 0) {
+          dropdown.innerHTML = '<div class="px-4 py-2 text-gray-500 text-sm">No projects or clients found</div>';
+        } else {
+          // Add "All Clients" and "All Projects" options at the top
+          const allClientsOption = projects.find(item => item.type === 'all-clients');
+          const allProjectsOption = projects.find(item => item.type === 'all-projects');
+          
+          if (allClientsOption) {
+            const option = document.createElement('div');
+            option.className = 'px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm font-medium border-b border-gray-200';
+            option.innerHTML = `
+              <div class="font-semibold">${allClientsOption.displayName}</div>
+              <div class="text-xs text-gray-500">${allClientsOption.description}</div>
+            `;
+            option.onclick = () => selectProject(allClientsOption);
+            dropdown.appendChild(option);
+          }
+          
+          if (allProjectsOption) {
+            const option = document.createElement('div');
+            option.className = 'px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm font-medium border-b border-gray-200';
+            option.innerHTML = `
+              <div class="font-semibold">${allProjectsOption.displayName}</div>
+              <div class="text-xs text-gray-500">${allProjectsOption.description}</div>
+            `;
+            option.onclick = () => selectProject(allProjectsOption);
+            dropdown.appendChild(option);
+          }
+          
+          // Add a header for clients
+          let hasClients = false;
+          let hasProjects = false;
+          
+          projects.forEach(item => {
+            if (item.type === 'client') hasClients = true;
+            if (item.type === 'project') hasProjects = true;
+          });
+          
+          if (hasClients) {
+            const clientHeader = document.createElement('div');
+            clientHeader.className = 'px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600 uppercase tracking-wide';
+            clientHeader.textContent = 'Clients (All Projects)';
+            dropdown.appendChild(clientHeader);
+          }
+          
+          projects.forEach(item => {
+            if (item.type === 'client') {
+              const option = document.createElement('div');
+              option.className = 'px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm pl-6';
+              option.innerHTML = `
+                <div class="font-medium">${item.displayName}</div>
+                <div class="text-xs text-gray-500">${item.description}</div>
+              `;
+              option.onclick = () => selectProject(item);
+              dropdown.appendChild(option);
+            }
+          });
+          
+          if (hasProjects) {
+            const projectHeader = document.createElement('div');
+            projectHeader.className = 'px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600 uppercase tracking-wide';
+            projectHeader.textContent = 'Individual Projects';
+            dropdown.appendChild(projectHeader);
+          }
+          
+          projects.forEach(item => {
+            if (item.type === 'project') {
+              const option = document.createElement('div');
+              option.className = 'px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm pl-6';
+              option.innerHTML = `
+                <div class="font-medium text-black">${item.displayName}</div>
+                <div class="text-xs text-black">${item.description}</div>
+              `;
+              option.onclick = () => selectProject(item);
+              dropdown.appendChild(option);
+            }
+          });
+        }
+        
+        showProjectDropdown();
+      } catch (error) {
+        console.error('Error fetching all projects:', error);
+      }
+    };
+    
+    window.selectProject = function(item) {
+      const searchInput = document.getElementById('projectSearch');
+      const clearBtn = document.getElementById('clearProjectBtn');
+      
+      if (searchInput) {
+        // Create display name based on type
+        let displayName = item.displayName;
+        if (item.type === 'project') {
+          displayName = `${item.displayName} - ${item.description}`;
+        } else if (item.type === 'client') {
+          displayName = `${item.displayName} ${item.description}`;
+        }
+        searchInput.value = displayName;
+      }
+      if (clearBtn) {
+        clearBtn.classList.remove('hidden');
+      }
+      
+      hideProjectDropdown();
+      
+      // Navigate to the selected project or client
       const periodSelect = document.getElementById('periodSelect');
       const teamMemberSelect = document.getElementById('teamMemberSelect');
       
@@ -442,8 +805,88 @@ const timeSeriesData = timeSeriesResponse.ok ? await timeSeriesResponse.json() :
       
       const currentUrl = new URL(window.location);
       currentUrl.searchParams.set('period', periodSelect.value);
-      currentUrl.searchParams.set('view', view);
       currentUrl.searchParams.set('teamMember', teamMemberSelect.value);
+      
+      // Clear existing project/client params
+      currentUrl.searchParams.delete('project');
+      currentUrl.searchParams.delete('client');
+      
+      // Set the appropriate parameter based on type
+      if (item.type === 'project') {
+        currentUrl.searchParams.set('project', item.projectId.toString());
+      } else if (item.type === 'client') {
+        currentUrl.searchParams.set('client', item.clientId.toString());
+      } else if (item.type === 'all-clients') {
+        // Show client costs view
+        currentUrl.searchParams.set('view', 'client');
+      } else if (item.type === 'all-projects') {
+        // Show all projects view
+        currentUrl.searchParams.set('view', 'project');
+      }
+      
+      // Preserve custom date range if it exists
+      const startDate = document.getElementById('startDate');
+      const endDate = document.getElementById('endDate');
+      if (startDate && endDate && startDate.value && endDate.value) {
+        currentUrl.searchParams.set('startDate', startDate.value);
+        currentUrl.searchParams.set('endDate', endDate.value);
+      }
+      
+      window.location.href = currentUrl.toString();
+    };
+    
+    window.showProjectDropdown = function() {
+      const dropdown = document.getElementById('projectDropdown');
+      const arrow = document.getElementById('dropdownArrow');
+      if (dropdown) {
+        dropdown.classList.remove('hidden');
+        dropdownOpen = true;
+      }
+      if (arrow) {
+        arrow.style.transform = 'rotate(180deg)';
+      }
+    };
+    
+    window.hideProjectDropdown = function() {
+      // Small delay to allow clicking on dropdown items
+      setTimeout(() => {
+        const dropdown = document.getElementById('projectDropdown');
+        const arrow = document.getElementById('dropdownArrow');
+        if (dropdown) {
+          dropdown.classList.add('hidden');
+          dropdownOpen = false;
+        }
+        if (arrow) {
+          arrow.style.transform = 'rotate(0deg)';
+        }
+      }, 150);
+    };
+    
+    window.clearProjectFilter = function() {
+      const searchInput = document.getElementById('projectSearch');
+      const clearBtn = document.getElementById('clearProjectBtn');
+      
+      if (searchInput) {
+        searchInput.value = '';
+      }
+      if (clearBtn) {
+        clearBtn.classList.add('hidden');
+      }
+      
+      // Reset dropdown state
+      dropdownOpen = false;
+      
+      // Navigate to remove project/client filter
+      const periodSelect = document.getElementById('periodSelect');
+      const teamMemberSelect = document.getElementById('teamMemberSelect');
+      
+      if (!periodSelect || !teamMemberSelect) return;
+      
+      const currentUrl = new URL(window.location);
+      currentUrl.searchParams.set('period', periodSelect.value);
+      currentUrl.searchParams.set('teamMember', teamMemberSelect.value);
+      currentUrl.searchParams.delete('project');
+      currentUrl.searchParams.delete('client');
       
       // Preserve custom date range if it exists
       const startDate = document.getElementById('startDate');
@@ -458,14 +901,22 @@ const timeSeriesData = timeSeriesResponse.ok ? await timeSeriesResponse.json() :
 
     window.handleTeamMemberChange = function(teamMember) {
       const periodSelect = document.getElementById('periodSelect');
-      const viewSelect = document.getElementById('viewSelect');
       
-      if (!periodSelect || !viewSelect) return;
+      if (!periodSelect) return;
       
       const currentUrl = new URL(window.location);
       currentUrl.searchParams.set('period', periodSelect.value);
-      currentUrl.searchParams.set('view', viewSelect.value);
       currentUrl.searchParams.set('teamMember', teamMember);
+      
+      // Preserve project/client selection if it exists
+      const currentProject = new URLSearchParams(window.location.search).get('project');
+      const currentClient = new URLSearchParams(window.location.search).get('client');
+      if (currentProject) {
+        currentUrl.searchParams.set('project', currentProject);
+      }
+      if (currentClient) {
+        currentUrl.searchParams.set('client', currentClient);
+      }
       
       // Preserve custom date range if it exists
       const startDate = document.getElementById('startDate');
@@ -485,6 +936,44 @@ const timeSeriesData = timeSeriesResponse.ok ? await timeSeriesResponse.json() :
       
       if (periodSelect && customDateRange && periodSelect.value === 'custom') {
         customDateRange.classList.remove('hidden');
+      }
+      
+      // Initialize project/client search with current selection
+      const currentProject = new URLSearchParams(window.location.search).get('project');
+      const currentClient = new URLSearchParams(window.location.search).get('client');
+      
+      if (currentProject || currentClient) {
+        // Fetch the project/client details to display the name
+        fetch(`/api/admin/reports/search-projects?q=&limit=50`)
+          .then(response => response.json())
+          .then(items => {
+            let selectedItem = null;
+            
+            if (currentProject) {
+              selectedItem = items.find(item => item.type === 'project' && item.projectId.toString() === currentProject);
+            } else if (currentClient) {
+              selectedItem = items.find(item => item.type === 'client' && item.clientId.toString() === currentClient);
+            }
+            
+            if (selectedItem) {
+              const searchInput = document.getElementById('projectSearch');
+              const clearBtn = document.getElementById('clearProjectBtn');
+              if (searchInput) {
+                // Create display name based on type
+                let displayName = selectedItem.displayName;
+                if (selectedItem.type === 'project') {
+                  displayName = `${selectedItem.displayName} - ${selectedItem.description}`;
+                } else if (selectedItem.type === 'client') {
+                  displayName = `${selectedItem.displayName} ${selectedItem.description}`;
+                }
+                searchInput.value = displayName;
+              }
+              if (clearBtn) {
+                clearBtn.classList.remove('hidden');
+              }
+            }
+          })
+          .catch(error => console.error('Error fetching project/client details:', error));
       }
     });
   </script>
