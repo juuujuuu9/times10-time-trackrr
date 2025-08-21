@@ -1,0 +1,1 @@
+ALTER TABLE "tasks" ADD COLUMN "priority" varchar(20) DEFAULT 'regular' NOT NULL;

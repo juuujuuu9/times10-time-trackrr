@@ -142,6 +142,21 @@ const user = await requireRole('admin', '/dashboard')(Astro) as any;
         </div>
       </a>
 
+      <button id="addOngoingTimersBtn" class="bg-white rounded-xl shadow-sm border border-gray-300 p-6 hover:shadow-lg transition-all duration-200 transform hover:scale-105 group text-left">
+        <div class="flex items-center">
+          <div class="p-3 bg-gradient-to-r from-blue-200 to-blue-100 rounded-xl group-hover:scale-110 transition-transform duration-200">
+            <span class="text-2xl text-blue-700">⏱️</span>
+          </div>
+          <div class="ml-4">
+            <h3 class="font-semibold text-gray-900 text-lg">Add Ongoing Timers</h3>
+            <p class="text-sm text-gray-600 mt-1">Start timers for all users</p>
+            <div class="flex items-center mt-2 text-gray-600 text-sm font-medium">
+              <span>Add Timers</span>
+              <span class="ml-1 group-hover:translate-x-1 transition-transform">→</span>
+            </div>
+          </div>
+        </div>
+      </button>
 
     </div>
 
@@ -153,31 +168,117 @@ const user = await requireRole('admin', '/dashboard')(Astro) as any;
   // Load dashboard data
   async function loadDashboardData() {
     try {
-      // Test database connection
-      const dbResponse = await fetch('/api/test-db');
-      if (dbResponse.ok) {
-        const dbData = await dbResponse.json();
-        
-        // Update counts
-        const userCountEl = document.getElementById('user-count');
-        const clientCountEl = document.getElementById('client-count');
-        const projectCountEl = document.getElementById('project-count');
-        const taskCountEl = document.getElementById('task-count');
-        
-        if (userCountEl) userCountEl.textContent = dbData.counts.users;
-        if (clientCountEl) clientCountEl.textContent = dbData.counts.clients;
-        if (projectCountEl) projectCountEl.textContent = dbData.counts.projects;
-        if (taskCountEl) taskCountEl.textContent = dbData.counts.tasks;
-      } else {
-        throw new Error('Database connection failed');
+      // Load data from individual API endpoints
+      const [usersResponse, clientsResponse, projectsResponse, tasksResponse] = await Promise.all([
+        fetch('/api/admin/users'),
+        fetch('/api/admin/clients'),
+        fetch('/api/admin/projects'),
+        fetch('/api/admin/tasks')
+      ]);
+      
+      // Update counts
+      const userCountEl = document.getElementById('user-count');
+      const clientCountEl = document.getElementById('client-count');
+      const projectCountEl = document.getElementById('project-count');
+      const taskCountEl = document.getElementById('task-count');
+      
+      if (usersResponse.ok) {
+        const users = await usersResponse.json();
+        if (userCountEl) userCountEl.textContent = users.length;
+      }
+      
+      if (clientsResponse.ok) {
+        const clients = await clientsResponse.json();
+        if (clientCountEl) clientCountEl.textContent = clients.length;
+      }
+      
+      if (projectsResponse.ok) {
+        const projects = await projectsResponse.json();
+        if (projectCountEl) projectCountEl.textContent = projects.length;
+      }
+      
+      if (tasksResponse.ok) {
+        const tasks = await tasksResponse.json();
+        if (taskCountEl) taskCountEl.textContent = tasks.length;
       }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
+      // Set default values if API calls fail
+      const userCountEl = document.getElementById('user-count');
+      const clientCountEl = document.getElementById('client-count');
+      const projectCountEl = document.getElementById('project-count');
+      const taskCountEl = document.getElementById('task-count');
       
-
+      if (userCountEl) userCountEl.textContent = '0';
+      if (clientCountEl) clientCountEl.textContent = '0';
+      if (projectCountEl) projectCountEl.textContent = '0';
+      if (taskCountEl) taskCountEl.textContent = '0';
     }
   }
 
   // Load data when page loads
   document.addEventListener('DOMContentLoaded', loadDashboardData);
+
+  // Add ongoing timers functionality
+  const addOngoingTimersBtn = document.getElementById('addOngoingTimersBtn') as HTMLButtonElement;
+  if (addOngoingTimersBtn) {
+    addOngoingTimersBtn.addEventListener('click', async () => {
+      if (confirm('Are you sure you want to add ongoing timers for all users? This will create tasks and start timers for each active user.')) {
+        try {
+          addOngoingTimersBtn.disabled = true;
+          addOngoingTimersBtn.innerHTML = `
+            <div class="flex items-center">
+              <div class="p-3 bg-gradient-to-r from-blue-200 to-blue-100 rounded-xl">
+                <span class="text-2xl text-blue-700">⏱️</span>
+              </div>
+              <div class="ml-4">
+                <h3 class="font-semibold text-gray-900 text-lg">Adding Timers...</h3>
+                <p class="text-sm text-gray-600 mt-1">Please wait</p>
+                <div class="flex items-center mt-2 text-gray-600 text-sm font-medium">
+                  <span>Processing</span>
+                  <span class="ml-1 animate-spin">⟳</span>
+                </div>
+              </div>
+            </div>
+          `;
+
+          const response = await fetch('/api/add-ongoing-timers', {
+            method: 'POST',
+            credentials: 'include'
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            alert(`Success! Added ${result.summary.addedTimers.length} ongoing timers for ${result.summary.usersWithTimers} users.`);
+            // Reload dashboard data to show updated counts
+            loadDashboardData();
+          } else {
+            alert(`Error: ${result.message}`);
+          }
+        } catch (error) {
+          console.error('Error adding ongoing timers:', error);
+          alert('Error adding ongoing timers. Please try again.');
+        } finally {
+          // Reset button
+          addOngoingTimersBtn.disabled = false;
+          addOngoingTimersBtn.innerHTML = `
+            <div class="flex items-center">
+              <div class="p-3 bg-gradient-to-r from-blue-200 to-blue-100 rounded-xl group-hover:scale-110 transition-transform duration-200">
+                <span class="text-2xl text-blue-700">⏱️</span>
+              </div>
+              <div class="ml-4">
+                <h3 class="font-semibold text-gray-900 text-lg">Add Ongoing Timers</h3>
+                <p class="text-sm text-gray-600 mt-1">Start timers for all users</p>
+                <div class="flex items-center mt-2 text-gray-600 text-sm font-medium">
+                  <span>Add Timers</span>
+                  <span class="ml-1 group-hover:translate-x-1 transition-transform">→</span>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+      }
+    });
+  }
 </script> 

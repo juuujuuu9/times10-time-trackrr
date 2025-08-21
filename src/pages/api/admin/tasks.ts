@@ -22,7 +22,7 @@ export const GET: APIRoute = async () => {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { name, description, projectId, status } = body;
+    const { name, description, projectId, status, priority } = body;
 
     if (!name || !projectId) {
       return new Response(JSON.stringify({ error: 'Task name and project ID are required' }), {
@@ -36,6 +36,7 @@ export const POST: APIRoute = async ({ request }) => {
       description: description || null,
       projectId: parseInt(projectId),
       status: status || 'pending',
+      priority: priority || 'regular',
     }).returning();
 
     return new Response(JSON.stringify(newTask[0]), {
@@ -54,7 +55,7 @@ export const POST: APIRoute = async ({ request }) => {
 export const PUT: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { id, name, description, projectId, status } = body;
+    const { id, name, description, projectId, status, priority } = body;
 
     console.log('PUT /api/admin/tasks - Request body:', body);
 
@@ -75,6 +76,7 @@ export const PUT: APIRoute = async ({ request }) => {
         description: description || null,
         projectId: parseInt(projectId),
         status: status || 'pending',
+        priority: priority || 'regular',
         updatedAt: new Date() 
       })
       .where(eq(tasks.id, parseInt(id)))
@@ -98,6 +100,47 @@ export const PUT: APIRoute = async ({ request }) => {
   } catch (error) {
     console.error('PUT /api/admin/tasks - Error updating task:', error);
     return new Response(JSON.stringify({ error: 'Failed to update task', details: error instanceof Error ? error.message : 'Unknown error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+};
+
+export const PATCH: APIRoute = async ({ request }) => {
+  try {
+    const body = await request.json();
+    const { id, priority } = body;
+
+    if (!id || !priority) {
+      return new Response(JSON.stringify({ error: 'Task ID and priority are required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const updatedTask = await db
+      .update(tasks)
+      .set({ 
+        priority: priority,
+        updatedAt: new Date() 
+      })
+      .where(eq(tasks.id, parseInt(id)))
+      .returning();
+
+    if (updatedTask.length === 0) {
+      return new Response(JSON.stringify({ error: 'Task not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify(updatedTask[0]), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Error updating task priority:', error);
+    return new Response(JSON.stringify({ error: 'Failed to update task priority' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
