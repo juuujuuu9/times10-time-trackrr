@@ -5,6 +5,8 @@ import { projects, clients, tasks, timeEntries } from '../../../db/schema';
 import { count, sql, eq } from 'drizzle-orm';
 
 // Get all projects with client info, task counts, and total hours
+// For now, we'll include all projects from active clients (both archived and non-archived)
+// The filtering will be done on the client side
 const allProjects = await db
   .select({
     id: projects.id,
@@ -13,6 +15,7 @@ const allProjects = await db
     clientId: projects.clientId,
     clientName: clients.name,
     clientArchived: clients.archived,
+    projectArchived: projects.archived,
     taskCount: sql<number>`COUNT(DISTINCT ${tasks.id})`,
     totalHours: sql<number>`COALESCE(SUM(
       CASE 
@@ -28,8 +31,9 @@ const allProjects = await db
   .leftJoin(clients, sql`${projects.clientId} = ${clients.id}`)
   .leftJoin(tasks, sql`${projects.id} = ${tasks.projectId}`)
   .leftJoin(timeEntries, sql`${tasks.id} = ${timeEntries.taskId}`)
-  .groupBy(projects.id, clients.name, clients.archived)
-  .orderBy(clients.name, projects.name);
+  .where(eq(clients.archived, false)) // Only show projects from active clients
+  .groupBy(projects.id, clients.name, clients.archived, projects.archived)
+  .orderBy(projects.name);
 
 // Group projects by client
 const projectsByClient = allProjects.reduce((acc, project) => {
@@ -98,6 +102,23 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
             <option value="archived">[Archived Clients]</option>
           </select>
         </div>
+        <div class="sm:w-48">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Show Archived Projects</label>
+          <div class="flex items-center">
+            <button
+              id="showArchivedToggle"
+              class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+              role="switch"
+              aria-checked="false"
+            >
+              <span
+                id="toggleThumb"
+                class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-sm"
+              ></span>
+            </button>
+            <span id="toggleLabel" class="ml-2 text-sm text-gray-600">Off</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -137,9 +158,16 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
                 {clientProjects.map((project) => (
-                  <tr class="hover:bg-gray-50">
+                  <tr class="hover:bg-gray-50" data-project-archived={project.projectArchived}>
                     <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center">
                       <div class="text-sm font-medium text-gray-900">{project.name}</div>
+                        {project.projectArchived && (
+                          <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                            Archived
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                       <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
@@ -179,6 +207,23 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                         </button>
                         <button
                           type="button"
+                          class="archive-project-btn inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border"
+                          data-project-id={project.id}
+                          data-project-name={project.name}
+                          data-project-archived={project.projectArchived}
+                          class={project.projectArchived 
+                            ? "bg-green-100 hover:bg-green-200 text-green-800 border-green-300" 
+                            : "bg-gray-200 hover:bg-gray-300 text-gray-700 border-gray-300"
+                          }
+                          title={project.projectArchived ? "Restore project" : "Archive project"}
+                        >
+                          <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={project.projectArchived ? "M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" : "M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"}></path>
+                          </svg>
+                          {project.projectArchived ? 'Restore' : 'Archive'}
+                        </button>
+                        <button
+                          type="button"
                           class="delete-project-btn text-red-500 hover:text-red-600 transition-colors p-2 rounded-lg hover:bg-red-50"
                           data-project-id={project.id}
                           data-project-name={project.name}
@@ -199,23 +244,6 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         );
       })}
     </div>
-
-    {Object.keys(activeProjectsByClient).length === 0 && (
-      <div class="text-center py-12">
-        <div class="text-6xl mb-4">📁</div>
-        <h3 class="text-lg font-medium text-gray-900 mb-2">No projects yet</h3>
-        <p class="text-gray-600 mb-4">Get started by adding your first project</p>
-        <button
-          class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-gray-500"
-          onclick="document.getElementById('createProjectBtn').click()"
-        >
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-          </svg>
-          Add Your First Project
-        </button>
-      </div>
-    )}
   </div>
 
   <!-- Create/Edit Project Modal -->
@@ -341,211 +369,6 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
     </div>
   </div>
 
-  <!-- Tasks Modal -->
-  <div id="tasksModal" class="fixed inset-0 bg-black/50 hidden z-50">
-    <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] border border-gray-300 flex flex-col" onclick="event.stopPropagation()">
-        <div class="px-6 py-4 border-b border-gray-300 flex justify-between items-center flex-shrink-0">
-          <h3 id="tasksModalTitle" class="text-lg font-medium text-gray-900">Project Tasks</h3>
-          <button
-            type="button"
-            id="closeTasksModalBtn"
-            class="text-gray-500 hover:text-gray-700"
-          >
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
-        </div>
-        
-        <div class="flex-1 overflow-hidden flex flex-col">
-          <div class="px-6 py-4 flex-shrink-0">
-            <div class="flex justify-between items-center">
-              <h4 class="text-md font-medium text-gray-900">Tasks</h4>
-              <button
-                type="button"
-                id="addTaskBtn"
-                class="inline-flex items-center px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
-              >
-                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                </svg>
-                Add Task
-              </button>
-            </div>
-          </div>
-          
-          <div class="px-6 pb-6 flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #9CA3AF #E5E7EB;">
-            <div id="tasksList" class="space-y-3">
-              <!-- Tasks will be loaded here -->
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Add Task Modal -->
-  <div id="addTaskModal" class="fixed inset-0 bg-black/50 hidden z-50">
-    <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-300 flex flex-col" onclick="event.stopPropagation()">
-        <div class="px-6 py-4 border-b border-gray-300 flex-shrink-0">
-          <h3 class="text-lg font-medium text-gray-900">Add New Task</h3>
-        </div>
-        <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #9CA3AF #E5E7EB;">
-          <form id="addTaskForm" class="px-6 py-4">
-            <input type="hidden" id="taskProjectId" />
-            <div class="mb-4">
-              <label for="taskName" class="block text-sm font-medium text-gray-700 mb-1">
-                Task Name
-              </label>
-              <input
-                type="text"
-                id="taskName"
-                required
-                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-                placeholder="Enter task name"
-              />
-            </div>
-            <div class="mb-4">
-              <label for="taskDescription" class="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
-              <textarea
-                id="taskDescription"
-                rows="3"
-                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-                placeholder="Enter task description"
-              ></textarea>
-            </div>
-            <div class="mb-4">
-              <label for="taskStatus" class="block text-sm font-medium text-gray-700 mb-1">
-                Status
-              </label>
-              <select
-                id="taskStatus"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-              >
-                <option value="pending">Pending</option>
-                <option value="in-progress">In Progress</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-            </div>
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">
-                Assign Users
-              </label>
-              <div class="space-y-3">
-                <!-- User Search Input -->
-                <div class="relative">
-                  <input
-                    type="text"
-                    id="addTaskUserSearch"
-                    placeholder="Search users to assign..."
-                    class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-                  />
-                  <div id="addTaskUserSuggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 max-h-32 overflow-y-auto hidden">
-                    <!-- Suggestions will appear here -->
-                  </div>
-                </div>
-                
-                <!-- Selected Users Display -->
-                <div id="addTaskSelectedUsers" class="flex flex-wrap gap-2">
-                  <!-- Selected users will appear here -->
-                </div>
-              </div>
-            </div>
-            <div class="flex justify-end space-x-3">
-              <button
-                type="button"
-                id="cancelAddTaskBtn"
-                class="px-4 py-2 text-gray-700 bg-white hover:bg-gray-50 rounded-md transition-colors border border-gray-300"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md transition-colors"
-              >
-                Create Task
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Edit Task Modal -->
-  <div id="editTaskModal" class="fixed inset-0 bg-black/50 hidden z-50">
-    <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-300 flex flex-col" onclick="event.stopPropagation()">
-        <div class="px-6 py-4 border-b border-gray-300 flex-shrink-0">
-          <h3 class="text-lg font-medium text-gray-900">Edit Task</h3>
-        </div>
-        <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #9CA3AF #E5E7EB;">
-          <form id="editTaskForm" class="px-6 py-4">
-            <input type="hidden" id="editTaskId" />
-            <input type="hidden" id="editTaskProjectId" />
-            <div class="mb-4">
-              <label for="editTaskName" class="block text-sm font-medium text-gray-700 mb-1">
-                Task Name
-              </label>
-              <input
-                type="text"
-                id="editTaskName"
-                required
-                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-                placeholder="Enter task name"
-              />
-            </div>
-            <div class="mb-4">
-              <label for="editTaskDescription" class="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
-              <textarea
-                id="editTaskDescription"
-                rows="3"
-                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-                placeholder="Enter task description"
-              ></textarea>
-            </div>
-            <div class="mb-4">
-              <label for="editTaskStatus" class="block text-sm font-medium text-gray-700 mb-1">
-                Status
-              </label>
-              <select
-                id="editTaskStatus"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-              >
-                <option value="pending">Pending</option>
-                <option value="in-progress">In Progress</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-            </div>
-            <div class="flex justify-end space-x-3">
-              <button
-                type="button"
-                id="cancelEditTaskBtn"
-                class="px-4 py-2 text-gray-700 bg-white hover:bg-gray-50 rounded-md transition-colors border border-gray-300"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md transition-colors"
-              >
-                Update Task
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <script>
     // Project management JavaScript
     document.addEventListener('DOMContentLoaded', function() {
@@ -553,6 +376,84 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       const projectForm = document.getElementById('projectForm');
       const searchInput = document.getElementById('search');
       const clientFilter = document.getElementById('clientFilter');
+      const showArchivedToggle = document.getElementById('showArchivedToggle');
+      const toggleThumb = document.getElementById('toggleThumb');
+      const toggleLabel = document.getElementById('toggleLabel');
+
+      // Toggle functionality for showing archived projects
+      let showArchivedProjects = localStorage.getItem('showArchivedProjects') === 'true';
+      
+      // Set initial toggle state
+      if (showArchivedProjects) {
+        showArchivedToggle?.classList.remove('bg-gray-200');
+        showArchivedToggle?.classList.add('bg-gray-600');
+        toggleThumb?.classList.add('translate-x-5');
+        toggleLabel!.textContent = 'On';
+        showArchivedToggle?.setAttribute('aria-checked', 'true');
+      }
+
+      if (showArchivedToggle && toggleThumb && toggleLabel) {
+        showArchivedToggle.addEventListener('click', async () => {
+          showArchivedProjects = !showArchivedProjects;
+          
+          // Update toggle appearance
+          if (showArchivedProjects) {
+            showArchivedToggle.classList.remove('bg-gray-200');
+            showArchivedToggle.classList.add('bg-gray-600');
+            toggleThumb.classList.add('translate-x-5');
+            toggleLabel.textContent = 'On';
+          } else {
+            showArchivedToggle.classList.remove('bg-gray-600');
+            showArchivedToggle.classList.add('bg-gray-200');
+            toggleThumb.classList.remove('translate-x-5');
+            toggleLabel.textContent = 'Off';
+          }
+          
+          // Update aria-checked attribute
+          showArchivedToggle.setAttribute('aria-checked', showArchivedProjects.toString());
+          
+          // Save state to localStorage
+          localStorage.setItem('showArchivedProjects', showArchivedProjects.toString());
+          
+          // Apply filtering
+          filterProjects();
+        });
+      }
+
+      // Function to filter projects based on current settings
+      function filterProjects() {
+        console.log('Filtering projects, showArchivedProjects:', showArchivedProjects);
+        const clientSections = document.querySelectorAll('.bg-white.rounded-lg.shadow.border.border-gray-300.overflow-hidden');
+        
+        clientSections.forEach(section => {
+          const isClientArchived = section.getAttribute('data-archived') === 'true';
+          const projectRows = section.querySelectorAll('tbody tr');
+          let hasVisibleProjects = false;
+          
+          projectRows.forEach(row => {
+            const isProjectArchived = row.getAttribute('data-project-archived') === 'true';
+            
+            // Show project if:
+            // 1. Client is not archived AND (project is not archived OR showArchivedProjects is true)
+            // 2. OR if we're showing archived clients (handled by client filter)
+            const shouldShow = !isClientArchived && (!isProjectArchived || showArchivedProjects);
+            
+            console.log('Project row:', {
+              projectName: row.querySelector('td:first-child')?.textContent?.trim(),
+              isProjectArchived,
+              shouldShow
+            });
+            
+            (row as HTMLElement).style.display = shouldShow ? '' : 'none';
+            if (shouldShow) {
+              hasVisibleProjects = true;
+            }
+          });
+          
+          // Hide the entire client section if no projects match the filter
+          (section as HTMLElement).style.display = hasVisibleProjects ? '' : 'none';
+        });
+      }
 
     if (createProjectBtn) {
       createProjectBtn.addEventListener('click', () => {
@@ -617,7 +518,6 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       const projectModal = document.getElementById('projectModal');
       if (projectModal) {
         projectModal.classList.add('hidden');
-        // Also set display to none as a fallback
         projectModal.style.display = 'none';
       }
     }
@@ -667,6 +567,33 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
           .catch(error => {
             console.error('Error:', error);
             alert('Error deleting project');
+            });
+        }
+      }
+
+      // Archive/restore project function
+      function toggleProjectArchive(id: number, isArchived: boolean) {
+        const action = isArchived ? 'restore' : 'archive';
+        if (confirm(`Are you sure you want to ${action} this project?`)) {
+          fetch('/api/admin/projects', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ 
+              id: id, 
+              archived: !isArchived 
+            }),
+          })
+          .then(response => {
+            if (response.ok) {
+              window.location.reload();
+            } else {
+              alert(`Error ${action}ing project`);
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert(`Error ${action}ing project`);
           });
       }
     }
@@ -675,6 +602,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
     (window as any).closeProjectModal = closeProjectModal;
     (window as any).editProject = editProject;
     (window as any).deleteProject = deleteProject;
+      (window as any).toggleProjectArchive = toggleProjectArchive;
 
     // Add escape key handler and modal backdrop click handler
     document.addEventListener('keydown', (e) => {
@@ -780,8 +708,6 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       }
     }
 
-
-
     // Search functionality
     if (searchInput) {
       searchInput.addEventListener('input', (e) => {
@@ -830,6 +756,15 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         (window as any).editProject(projectId);
         return;
       }
+        
+        // Handle archive/restore project buttons
+        if (target.classList.contains('archive-project-btn') || target.closest('.archive-project-btn')) {
+          const button = target.classList.contains('archive-project-btn') ? target : target.closest('.archive-project-btn') as HTMLElement;
+          const projectId = parseInt(button?.getAttribute('data-project-id') || '0');
+          const isArchived = button?.getAttribute('data-project-archived') === 'true';
+          (window as any).toggleProjectArchive(projectId, isArchived);
+          return;
+        }
       
       // Handle delete project buttons
       if (target.classList.contains('delete-project-btn') || target.closest('.delete-project-btn')) {
@@ -885,1154 +820,14 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
             (section as HTMLElement).style.display = clientName === selectedClient ? '' : 'none';
           }
         });
-      });
-    }
-
-    // Tasks Modal Functionality
-    let currentProjectId: number | null = null;
-    let allUsers: any[] = [];
-
-    // Load all users for assignment
-    async function loadUsers() {
-      try {
-        console.log('Loading users...');
-        const response = await fetch('/api/admin/users', { credentials: 'include' });
-        if (response.ok) {
-          allUsers = await response.json();
-          console.log('Users loaded:', allUsers.length, 'users');
-        } else {
-          console.error('Error loading users:', response.status, response.statusText);
-        }
-      } catch (error) {
-        console.error('Error loading users:', error);
-      }
-    }
-
-    // Load tasks for a project
-    async function loadProjectTasks(projectId: number) {
-      try {
-        // Ensure users are loaded first
-        if (allUsers.length === 0) {
-          console.log('Users not loaded yet, loading users first...');
-          await loadUsers();
-        }
-        
-        const response = await fetch(`/api/admin/projects/${projectId}/tasks`, { credentials: 'include' });
-        if (response.ok) {
-          const tasks = await response.json();
-          displayTasks(tasks);
-        } else {
-          console.error('Error loading tasks');
-        }
-      } catch (error) {
-        console.error('Error loading tasks:', error);
-      }
-    }
-
-    // Display tasks in the modal
-    function displayTasks(tasks: any[]) {
-      console.log('Displaying tasks:', tasks);
-      const tasksList = document.getElementById('tasksList');
-      if (!tasksList) return;
-
-      if (tasks.length === 0) {
-        tasksList.innerHTML = `
-          <div class="text-center py-8">
-            <div class="text-4xl mb-2">📋</div>
-            <p class="text-gray-600">No tasks yet for this project</p>
-            <p class="text-gray-600 text-sm">Click "Add Task" to create the first task</p>
-          </div>
-        `;
-        return;
-      }
-
-      tasksList.innerHTML = tasks.map((task, index) => `
-        <div class="bg-gray-50 rounded-lg p-4 border border-gray-300" data-task-id="${task.id}" data-assigned-user-ids="${task.assignedUserIds || ''}">
-          <div class="flex justify-between items-start mb-2">
-            <div class="flex-1">
-              <h5 class="font-medium text-gray-900">${task.name}</h5>
-            </div>
-            <div class="flex items-center space-x-2">
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                task.status === 'completed' ? 'bg-green-100 text-green-800' :
-                task.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
-                task.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                'text-gray-800'
-              }" style="${
-                task.status === 'pending' ? 'background-color: #EDC25E;' : ''
-              }">
-                ${task.status.replace('-', ' ')}
-              </span>
-              <button
-                type="button"
-                class="edit-task-btn text-blue-600 hover:text-blue-700 transition-colors"
-                data-task-id="${task.id}"
-                data-task-name="${task.name}"
-                data-task-description="${task.description || ''}"
-                data-task-status="${task.status}"
-                title="Edit task"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                </svg>
-              </button>
-              <button
-                type="button"
-                class="delete-task-btn text-red-600 hover:text-red-700 transition-colors"
-                data-task-id="${task.id}"
-                data-task-name="${task.name}"
-                title="Delete task"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                </svg>
-              </button>
-            </div>
-          </div>
-          ${task.description ? `<p class="text-gray-600 text-sm mb-2">${task.description}</p>` : ''}
-          <div class="flex justify-between items-center text-sm mb-3">
-            <div class="text-gray-600">
-              ${task.assignedUsers ? `Assigned to: ${task.assignedUsers}` : 'No assignments'}
-            </div>
-            <div class="text-gray-600">
-              ${task.totalHours ? Math.round(task.totalHours * 10) / 10 : 0} hours
-            </div>
-          </div>
           
-          <!-- User Assignment Section -->
-          <div class="border-t border-gray-300 pt-3">
-            <div class="flex items-center space-x-2 mb-2">
-              <div class="flex-1 relative mr-10">
-                <input
-                  type="text"
-                  id="userSearch-${task.id}"
-                  placeholder="Search users to assign..."
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 text-sm"
-                />
-                <div id="userSuggestions-${task.id}" class="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 max-h-32 overflow-y-auto hidden">
-                  <!-- Suggestions will appear here -->
-                </div>
-              </div>
-              <button
-                type="button"
-                class="assign-user-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md transition-colors text-sm"
-                data-task-id="${task.id}"
-                data-task-name="${task.name}"
-              >
-                Assign
-              </button>
-            </div>
-            <div id="assignedUsers-${task.id}" class="flex flex-wrap gap-2">
-              ${task.assignedUserIds ? task.assignedUserIds.split(',').map((userId: string) => {
-                console.log('Processing assigned user ID:', userId, 'allUsers:', allUsers);
-                const user = allUsers.find(u => u.id.toString() === userId.trim());
-                console.log('Found user for ID', userId, ':', user);
-                return user ? `
-                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-200 text-gray-800 font-medium shadow-sm">
-                    ${user.name}
-                    <button
-                      type="button"
-                      class="ml-1 remove-user-btn hover:text-red-600 transition-colors"
-                      data-task-id="${task.id}"
-                      data-user-id="${user.id}"
-                      data-user-name="${user.name}"
-                      title="Remove ${user.name} from task"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ` : '';
-              }).join('') : ''}
-            </div>
-          </div>
-        </div>
-      `).join('');
-
-      // Add event listeners for user search functionality and assign buttons
-      tasks.forEach(task => {
-        const searchInput = document.getElementById(`userSearch-${task.id}`) as HTMLInputElement;
-        const suggestionsDiv = document.getElementById(`userSuggestions-${task.id}`);
-        const assignButton = document.querySelector(`[data-task-id="${task.id}"].assign-user-btn`) as HTMLButtonElement;
-        
-        console.log('Looking for assign button for task', task.id, 'Found:', assignButton);
-        
-        // Add event listener directly to assign button
-        if (assignButton) {
-          // Remove any existing event listeners
-          const newAssignBtn = assignButton.cloneNode(true) as HTMLButtonElement;
-          assignButton.parentNode?.replaceChild(newAssignBtn, assignButton);
-          
-          newAssignBtn.addEventListener('click', (e) => {
-            console.log('Assign button clicked directly!');
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const taskId = parseInt(newAssignBtn.getAttribute('data-task-id') || '0');
-            const searchInput = document.getElementById(`userSearch-${taskId}`) as HTMLInputElement;
-            const selectedUserId = searchInput?.getAttribute('data-selected-user-id');
-            const selectedUserName = searchInput?.getAttribute('data-selected-user-name');
-            
-            console.log('Direct assign button clicked:', { taskId, selectedUserId, selectedUserName });
-            
-            if (selectedUserId && selectedUserName) {
-              console.log('Calling assignUserToTask directly with:', { taskId, selectedUserId, selectedUserName });
-              try {
-                (window as any).assignUserToTask(taskId, parseInt(selectedUserId), selectedUserName);
-                searchInput.value = '';
-                searchInput.removeAttribute('data-selected-user-id');
-                searchInput.removeAttribute('data-selected-user-name');
-              } catch (error) {
-                console.error('Error calling assignUserToTask:', error);
-                alert('Error assigning user to task');
-              }
-            } else {
-              alert('Please select a user first');
-            }
-          });
-        }
-        
-        // Add event listeners for remove user buttons
-        const removeButtons = document.querySelectorAll(`[data-task-id="${task.id}"].remove-user-btn`);
-        console.log(`Found ${removeButtons.length} remove buttons for task ${task.id}`);
-        console.log('Remove buttons:', removeButtons);
-        
-        removeButtons.forEach(button => {
-          const removeBtn = button as HTMLButtonElement;
-          console.log('Adding event listener to remove button:', removeBtn);
-          
-          // Remove any existing event listeners
-          const newBtn = removeBtn.cloneNode(true) as HTMLButtonElement;
-          removeBtn.parentNode?.replaceChild(newBtn, removeBtn);
-          
-          newBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Remove button clicked directly!');
-            
-            const taskId = parseInt(newBtn.getAttribute('data-task-id') || '0');
-            const userId = parseInt(newBtn.getAttribute('data-user-id') || '0');
-            const userName = newBtn.getAttribute('data-user-name') || '';
-            
-            console.log('Remove button clicked:', { taskId, userId, userName });
-            
-            if (confirm(`Remove ${userName} from this task?`)) {
-              (window as any).removeUserFromTask(taskId, userId, userName);
-            }
-          });
-        });
-        
-        // Add event listeners for edit task buttons
-        const editButtons = document.querySelectorAll(`[data-task-id="${task.id}"].edit-task-btn`);
-        console.log(`Found ${editButtons.length} edit buttons for task ${task.id}`);
-        
-        editButtons.forEach(button => {
-          const editBtn = button as HTMLButtonElement;
-          console.log('Adding event listener to edit button:', editBtn);
-          
-          // Remove any existing event listeners
-          const newEditBtn = editBtn.cloneNode(true) as HTMLButtonElement;
-          editBtn.parentNode?.replaceChild(newEditBtn, editBtn);
-          
-          newEditBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Edit button clicked directly!');
-            
-            const taskId = parseInt(newEditBtn.getAttribute('data-task-id') || '0');
-            const taskName = newEditBtn.getAttribute('data-task-name') || 'Unknown Task';
-            const taskDescription = newEditBtn.getAttribute('data-task-description') || '';
-            const taskStatus = newEditBtn.getAttribute('data-task-status') || 'pending';
-            
-            console.log('Edit button clicked:', { taskId, taskName, taskDescription, taskStatus, currentProjectId });
-            
-            (window as any).showEditTaskModal(taskId, taskName, taskDescription, taskStatus, currentProjectId);
-          });
-        });
-
-        // Add event listeners for delete task buttons
-        const deleteButtons = document.querySelectorAll(`[data-task-id="${task.id}"].delete-task-btn`);
-        console.log(`Found ${deleteButtons.length} delete buttons for task ${task.id}`);
-        
-        deleteButtons.forEach(button => {
-          const deleteBtn = button as HTMLButtonElement;
-          console.log('Adding event listener to delete button:', deleteBtn);
-          
-          // Remove any existing event listeners
-          const newDeleteBtn = deleteBtn.cloneNode(true) as HTMLButtonElement;
-          deleteBtn.parentNode?.replaceChild(newDeleteBtn, deleteBtn);
-          
-          newDeleteBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Delete button clicked directly!');
-            
-            const taskId = parseInt(newDeleteBtn.getAttribute('data-task-id') || '0');
-            const taskName = newDeleteBtn.getAttribute('data-task-name') || 'Unknown Task';
-            
-            console.log('Delete button clicked:', { taskId, taskName });
-            
-            if (confirm(`Are you sure you want to delete the task "${taskName}"? This action cannot be undone.`)) {
-              (window as any).deleteTask(taskId, taskName);
-            }
-          });
-        });
-        
-        if (searchInput && suggestionsDiv) {
-          searchInput.addEventListener('input', (e) => {
-            console.log('Search input event triggered:', (e.target as HTMLInputElement).value);
-            const query = (e.target as HTMLInputElement).value.toLowerCase();
-            console.log('Query:', query);
-            if (query.length < 2) {
-              console.log('Query too short, hiding suggestions');
-              suggestionsDiv.classList.add('hidden');
-              return;
-            }
-            
-            const filteredUsers = allUsers.filter(user => 
-              user.name.toLowerCase().includes(query) || 
-              user.email.toLowerCase().includes(query)
-            );
-            
-            console.log('Filtered users:', filteredUsers);
-            
-            if (filteredUsers.length > 0) {
-              suggestionsDiv.innerHTML = filteredUsers.map(user => `
-                <div
-                  class="px-3 py-2 hover:bg-gray-100 cursor-pointer text-gray-900 text-sm user-suggestion"
-                  data-user-id="${user.id}"
-                  data-user-name="${user.name}"
-                  data-user-email="${user.email}"
-                >
-                  ${user.name} (${user.email})
-                </div>
-              `).join('');
-              suggestionsDiv.classList.remove('hidden');
-            } else {
-              suggestionsDiv.classList.add('hidden');
-            }
-          });
-
-          // Handle suggestion clicks
-          suggestionsDiv.addEventListener('click', (e) => {
-            console.log('Suggestion div clicked:', e.target);
-            const target = e.target as HTMLElement;
-            console.log('Target element:', target);
-            console.log('Target classes:', target.classList.toString());
-            console.log('Contains user-suggestion:', target.classList.contains('user-suggestion'));
-            if (target.classList.contains('user-suggestion')) {
-              const userId = target.getAttribute('data-user-id');
-              const userName = target.getAttribute('data-user-name');
-              const userEmail = target.getAttribute('data-user-email');
-              
-              console.log('User selected:', { userId, userName, userEmail });
-              
-              if (userId && userName) {
-                searchInput.value = userName;
-                suggestionsDiv.classList.add('hidden');
-                
-                // Store selected user for assignment
-                searchInput.setAttribute('data-selected-user-id', userId);
-                searchInput.setAttribute('data-selected-user-name', userName);
-                
-                console.log('User stored in input:', {
-                  'data-selected-user-id': searchInput.getAttribute('data-selected-user-id'),
-                  'data-selected-user-name': searchInput.getAttribute('data-selected-user-name')
-                });
-                
-                // Verify the attributes were set correctly
-                setTimeout(() => {
-                  console.log('Verification - User stored in input:', {
-                    'data-selected-user-id': searchInput.getAttribute('data-selected-user-id'),
-                    'data-selected-user-name': searchInput.getAttribute('data-selected-user-name')
-                  });
-                }, 100);
-                
-                // Also log the input element to make sure it's the right one
-                console.log('Search input element after selection:', searchInput);
-                console.log('Search input ID:', searchInput.id);
-              }
-            }
-          });
-
-          // Hide suggestions when clicking outside
-          document.addEventListener('click', (e) => {
-            if (!searchInput.contains(e.target as Node) && !suggestionsDiv.contains(e.target as Node)) {
-              suggestionsDiv.classList.add('hidden');
-            }
-          });
-        }
-      });
-    }
-
-    // Show tasks modal
-    async function showTasksModal(projectId: number, projectName: string) {
-      currentProjectId = projectId;
-      const modalTitle = document.getElementById('tasksModalTitle');
-      const tasksModal = document.getElementById('tasksModal');
-      
-      if (modalTitle) modalTitle.textContent = `Tasks - ${projectName}`;
-      if (tasksModal) {
-        tasksModal.classList.remove('hidden');
-        tasksModal.style.display = 'block';
-      }
-      
-      // Ensure users are loaded before loading tasks
-      if (allUsers.length === 0) {
-        console.log('Loading users before showing tasks...');
-        await loadUsers();
-      }
-      
-      loadProjectTasks(projectId);
-      
-      // Add direct event listener for the Add Task button after modal is shown
-      setTimeout(() => {
-        const addTaskBtn = document.getElementById('addTaskBtn');
-        if (addTaskBtn) {
-          addTaskBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Add Task button clicked directly!');
-            (window as any).showAddTaskModal();
-          });
-        }
-      }, 100);
-    }
-
-    // Close tasks modal
-    function closeTasksModal() {
-      const tasksModal = document.getElementById('tasksModal');
-      if (tasksModal) {
-        tasksModal.classList.add('hidden');
-        tasksModal.style.display = 'none';
-      }
-      currentProjectId = null;
-    }
-
-    // Show add task modal
-    function showAddTaskModal() {
-      console.log('showAddTaskModal called!');
-      const addTaskModal = document.getElementById('addTaskModal');
-      const taskProjectId = document.getElementById('taskProjectId') as HTMLInputElement;
-      const taskName = document.getElementById('taskName') as HTMLInputElement;
-      const taskDescription = document.getElementById('taskDescription') as HTMLTextAreaElement;
-      const taskStatus = document.getElementById('taskStatus') as HTMLSelectElement;
-      
-      console.log('Modal elements found:', { addTaskModal, taskProjectId, taskName, taskDescription, taskStatus });
-      console.log('Current project ID:', currentProjectId);
-      
-      if (taskProjectId && currentProjectId) taskProjectId.value = currentProjectId.toString();
-      if (taskName) taskName.value = '';
-      if (taskDescription) taskDescription.value = '';
-      if (taskStatus) taskStatus.value = 'pending';
-      
-      // Load users for assignment
-      loadUsersForAssignment();
-      
-      if (addTaskModal) {
-        addTaskModal.classList.remove('hidden');
-        addTaskModal.style.display = 'block';
-        console.log('Add task modal should now be visible');
-        
-        // Add direct event listener for the cancel button after modal is shown
-        setTimeout(() => {
-          const cancelAddTaskBtn = document.getElementById('cancelAddTaskBtn');
-          if (cancelAddTaskBtn) {
-            cancelAddTaskBtn.addEventListener('click', (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              console.log('Cancel Add Task button clicked directly!');
-              (window as any).closeAddTaskModal();
-            });
-          }
-        }, 100);
-      } else {
-        console.error('Add task modal not found!');
-      }
-    }
-
-    // Close add task modal
-    function closeAddTaskModal() {
-      const addTaskModal = document.getElementById('addTaskModal');
-      if (addTaskModal) {
-        addTaskModal.classList.add('hidden');
-        addTaskModal.style.display = 'none';
-      }
-    }
-
-    // Load users for assignment (now handled by search functionality)
-    function loadUsersForAssignment() {
-      // Clear any existing selected users
-      const selectedUsersContainer = document.getElementById('addTaskSelectedUsers');
-      if (selectedUsersContainer) {
-        selectedUsersContainer.innerHTML = '';
-      }
-      
-      // Clear search input
-      const searchInput = document.getElementById('addTaskUserSearch') as HTMLInputElement;
-      if (searchInput) {
-        searchInput.value = '';
-      }
-      
-      // Set up search functionality
-      setupAddTaskUserSearch();
-    }
-
-    // Set up user search functionality for add task modal
-    function setupAddTaskUserSearch() {
-      const searchInput = document.getElementById('addTaskUserSearch') as HTMLInputElement;
-      const suggestionsDiv = document.getElementById('addTaskUserSuggestions');
-      
-      if (!searchInput || !suggestionsDiv) return;
-      
-      // Clear any existing event listeners
-      const newSearchInput = searchInput.cloneNode(true) as HTMLInputElement;
-      searchInput.parentNode?.replaceChild(newSearchInput, searchInput);
-      
-      newSearchInput.addEventListener('input', (e) => {
-        const query = (e.target as HTMLInputElement).value.toLowerCase();
-        
-        if (query.length < 2) {
-          suggestionsDiv.classList.add('hidden');
-          return;
-        }
-        
-        const filteredUsers = allUsers.filter(user => 
-          user.name.toLowerCase().includes(query) || 
-          user.email.toLowerCase().includes(query)
-        );
-        
-        if (filteredUsers.length > 0) {
-          suggestionsDiv.innerHTML = filteredUsers.map(user => `
-            <div
-              class="px-3 py-2 hover:bg-gray-100 cursor-pointer text-gray-900 text-sm add-task-user-suggestion"
-              data-user-id="${user.id}"
-              data-user-name="${user.name}"
-              data-user-email="${user.email}"
-            >
-              ${user.name} (${user.email})
-            </div>
-          `).join('');
-          suggestionsDiv.classList.remove('hidden');
-        } else {
-          suggestionsDiv.classList.add('hidden');
-        }
-      });
-
-      // Handle suggestion clicks
-      suggestionsDiv.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement;
-        if (target.classList.contains('add-task-user-suggestion')) {
-          const userId = target.getAttribute('data-user-id');
-          const userName = target.getAttribute('data-user-name');
-          const userEmail = target.getAttribute('data-user-email');
-          
-          if (userId && userName) {
-            addUserToTaskSelection(parseInt(userId), userName, userEmail || '');
-            newSearchInput.value = '';
-            suggestionsDiv.classList.add('hidden');
-          }
-        }
-      });
-
-      // Hide suggestions when clicking outside
-      document.addEventListener('click', (e) => {
-        if (!newSearchInput.contains(e.target as Node) && !suggestionsDiv.contains(e.target as Node)) {
-          suggestionsDiv.classList.add('hidden');
-        }
-      });
-    }
-
-    // Add user to task selection
-    function addUserToTaskSelection(userId: number, userName: string, userEmail: string) {
-      const selectedUsersContainer = document.getElementById('addTaskSelectedUsers');
-      if (!selectedUsersContainer) return;
-      
-      // Check if user is already selected
-      const existingUser = selectedUsersContainer.querySelector(`[data-user-id="${userId}"]`);
-      if (existingUser) {
-        return; // User already selected
-      }
-      
-      const userTag = document.createElement('span');
-      userTag.className = 'inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-200 text-gray-800 font-medium shadow-sm';
-      userTag.setAttribute('data-user-id', userId.toString());
-      userTag.innerHTML = `
-        ${userName}
-        <button
-          type="button"
-          class="ml-1 remove-add-task-user-btn hover:text-red-600 transition-colors"
-          data-user-id="${userId}"
-          data-user-name="${userName}"
-          title="Remove ${userName} from task"
-        >
-          ×
-        </button>
-      `;
-      
-      selectedUsersContainer.appendChild(userTag);
-      console.log(`Added user ${userName} (ID: ${userId}) to selection. Total selected:`, selectedUsersContainer.children.length);
-      
-      // Add event listener for remove button
-      const removeBtn = userTag.querySelector('.remove-add-task-user-btn') as HTMLButtonElement;
-      if (removeBtn) {
-        removeBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          userTag.remove();
-          console.log(`Removed user ${userName} (ID: ${userId}) from selection. Total selected:`, selectedUsersContainer.children.length);
+          // Apply project filtering after client filtering
+          filterProjects();
         });
       }
-    }
 
-    // Handle add task form submission
-    async function handleAddTask(e: Event) {
-      e.preventDefault();
-      
-      const taskName = (document.getElementById('taskName') as HTMLInputElement)?.value;
-      const taskDescription = (document.getElementById('taskDescription') as HTMLTextAreaElement)?.value;
-      const taskStatus = (document.getElementById('taskStatus') as HTMLSelectElement)?.value;
-      const taskProjectId = (document.getElementById('taskProjectId') as HTMLInputElement)?.value;
-      
-      // Get selected users from the new interface - only select span elements, not buttons
-      const selectedUserElements = document.querySelectorAll('#addTaskSelectedUsers span[data-user-id]');
-      console.log('Found selected user elements:', selectedUserElements.length);
-      
-      const selectedUsers = Array.from(selectedUserElements).map((userTag: any) => {
-        const userId = parseInt(userTag.getAttribute('data-user-id'));
-        console.log('User tag:', userTag, 'User ID:', userId);
-        return userId;
-      });
-
-      console.log('Creating task with selected users:', selectedUsers);
-
-      try {
-        // Create the task
-        const taskResponse = await fetch('/api/admin/tasks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            name: taskName,
-            description: taskDescription || null,
-            projectId: parseInt(taskProjectId),
-            status: taskStatus
-          }),
-        });
-
-        if (taskResponse.ok) {
-          const newTask = await taskResponse.json();
-          console.log('Task created successfully:', newTask);
-          
-          // Assign users if any are selected
-          if (selectedUsers.length > 0) {
-            console.log('Assigning users to task:', selectedUsers);
-            const assignResponse = await fetch('/api/admin/tasks/assign', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include', // Include cookies
-              body: JSON.stringify({
-                taskId: newTask.id,
-                userIds: selectedUsers
-              }),
-            });
-            
-            if (assignResponse.ok) {
-              console.log('Users assigned successfully');
-            } else {
-              const errorText = await assignResponse.text();
-              console.error('Error assigning users:', errorText);
-              alert('Task created but failed to assign users');
-            }
-          }
-          
-          // Close add task modal and reload tasks
-          closeAddTaskModal();
-          if (currentProjectId) {
-            loadProjectTasks(currentProjectId);
-          }
-        } else {
-          const errorText = await taskResponse.text();
-          console.error('Error creating task:', errorText);
-          alert('Error creating task');
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        alert('Error creating task');
-      }
-    }
-
-    // Assign user to task
-    async function assignUserToTask(taskId: number, userId: number, userName: string) {
-      try {
-        console.log('assignUserToTask called with:', { taskId, userId, userName });
-        console.log('Current project ID:', currentProjectId);
-        
-        // Get current assignments from the task data we already have
-        const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
-        console.log('Task element found:', taskElement);
-        
-        const currentAssignedUserIds = taskElement?.getAttribute('data-assigned-user-ids') || '';
-        const currentUserIds = currentAssignedUserIds ? currentAssignedUserIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id)) : [];
-        
-        console.log('Current assignments:', { currentAssignedUserIds, currentUserIds });
-        console.log('User to assign:', { userId, userName });
-        console.log('All users available:', allUsers.map(u => ({ id: u.id, name: u.name })));
-        
-        // Validate that the user exists in our user list
-        const userExists = allUsers.find(u => u.id === userId);
-        if (!userExists) {
-          console.error('User not found in user list:', { userId, userName, allUserIds: allUsers.map(u => u.id) });
-          alert(`User ${userName} not found in the system`);
-          return;
-        }
-        
-        // Check if user is already assigned
-        if (currentUserIds.includes(userId)) {
-          alert(`${userName} is already assigned to this task`);
-          return;
-        }
-        
-        // Add new user to existing assignments
-        const updatedUserIds = [...currentUserIds, userId];
-        console.log('Updated user IDs:', updatedUserIds);
-        
-        const requestBody = {
-          taskId: taskId,
-          userIds: updatedUserIds
-        };
-        console.log('Sending request:', requestBody);
-        console.log('Request body JSON:', JSON.stringify(requestBody));
-        
-        const response = await fetch('/api/admin/tasks/assign', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include', // Include cookies
-          body: JSON.stringify(requestBody),
-        });
-
-        console.log('Response status:', response.status);
-        
-        if (response.ok) {
-          console.log('Assignment successful, reloading tasks...');
-          // Reload tasks to show updated assignments
-          if (currentProjectId) {
-            loadProjectTasks(currentProjectId);
-          }
-        } else {
-          const errorText = await response.text();
-          console.error('Error response. Status:', response.status, 'Response:', errorText);
-          try {
-            const errorData = JSON.parse(errorText);
-            const errorMessage = errorData.error || errorData.details || 'Unknown error';
-            
-            if (response.status === 401) {
-              alert('Authentication required. Please log in again.');
-              // Optionally redirect to login
-              window.location.href = '/login';
-            } else {
-              alert(`Error assigning user to task: ${errorMessage}`);
-            }
-          } catch (parseError) {
-            alert(`Error assigning user to task: ${errorText}`);
-          }
-        }
-      } catch (error) {
-        console.error('Error in assignUserToTask:', error);
-        alert(`Error assigning user to task: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
-    }
-
-    // Remove user from task
-    async function removeUserFromTask(taskId: number, userId: number, userName: string) {
-      try {
-        console.log('removeUserFromTask called with:', { taskId, userId, userName });
-        console.log('Current project ID:', currentProjectId);
-        
-        // Get current assignments from the task data we already have
-        const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
-        console.log('Task element found:', taskElement);
-        const currentAssignedUserIds = taskElement?.getAttribute('data-assigned-user-ids') || '';
-        const currentUserIds = currentAssignedUserIds ? currentAssignedUserIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id)) : [];
-        console.log('Current assignments:', { currentAssignedUserIds, currentUserIds });
-        
-        // Remove the user from assignments
-        const updatedUserIds = currentUserIds.filter((id: number) => id !== userId);
-        
-        const response = await fetch('/api/admin/tasks/assign', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include', // Include cookies
-          body: JSON.stringify({
-            taskId: taskId,
-            userIds: updatedUserIds
-          }),
-        });
-
-        if (response.ok) {
-          // Reload tasks to show updated assignments
-          if (currentProjectId) {
-            loadProjectTasks(currentProjectId);
-          }
-        } else {
-          alert('Error removing user from task');
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        alert('Error removing user from task');
-      }
-    }
-
-    // Delete task
-    async function deleteTask(taskId: number, taskName: string) {
-      if (confirm(`Are you sure you want to delete the task "${taskName}"? This action cannot be undone.`)) {
-        try {
-          const response = await fetch(`/api/admin/tasks/${taskId}`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-          });
-
-          if (response.ok) {
-            console.log('Task deleted successfully');
-            // Reload tasks to show updated list
-            if (currentProjectId) {
-              loadProjectTasks(currentProjectId);
-            }
-          } else {
-            const errorText = await response.text();
-            console.error('Error response:', errorText);
-            alert('Error deleting task');
-          }
-        } catch (error) {
-          console.error('Error deleting task:', error);
-          alert('Error deleting task');
-        }
-      }
-    }
-
-    // Show edit task modal
-    function showEditTaskModal(taskId: number, taskName: string, taskDescription: string, taskStatus: string, taskProjectId: number) {
-      const editTaskModal = document.getElementById('editTaskModal');
-      const editTaskId = document.getElementById('editTaskId') as HTMLInputElement;
-      const editTaskProjectId = document.getElementById('editTaskProjectId') as HTMLInputElement;
-      const editTaskName = document.getElementById('editTaskName') as HTMLInputElement;
-      const editTaskDescription = document.getElementById('editTaskDescription') as HTMLTextAreaElement;
-      const editTaskStatus = document.getElementById('editTaskStatus') as HTMLSelectElement;
-      
-      if (editTaskId) editTaskId.value = taskId.toString();
-      if (editTaskProjectId) editTaskProjectId.value = taskProjectId.toString();
-      if (editTaskName) editTaskName.value = taskName;
-      if (editTaskDescription) editTaskDescription.value = taskDescription;
-      if (editTaskStatus) editTaskStatus.value = taskStatus;
-      
-      if (editTaskModal) {
-        editTaskModal.classList.remove('hidden');
-        editTaskModal.style.display = 'block';
-      }
-    }
-
-    // Close edit task modal
-    function closeEditTaskModal() {
-      const editTaskModal = document.getElementById('editTaskModal');
-      if (editTaskModal) {
-        editTaskModal.classList.add('hidden');
-        editTaskModal.style.display = 'none';
-      }
-    }
-
-    // Handle edit task form submission
-    async function handleEditTask(e: Event) {
-      e.preventDefault();
-      
-      const taskId = (document.getElementById('editTaskId') as HTMLInputElement)?.value;
-      const taskName = (document.getElementById('editTaskName') as HTMLInputElement)?.value;
-      const taskDescription = (document.getElementById('editTaskDescription') as HTMLTextAreaElement)?.value;
-      const taskStatus = (document.getElementById('editTaskStatus') as HTMLSelectElement)?.value;
-      const taskProjectId = (document.getElementById('editTaskProjectId') as HTMLInputElement)?.value;
-      
-      console.log('Edit task form data:', { taskId, taskName, taskDescription, taskStatus, taskProjectId });
-      
-      try {
-        const requestBody = {
-          id: parseInt(taskId),
-          name: taskName,
-          description: taskDescription || null,
-          projectId: parseInt(taskProjectId),
-          status: taskStatus
-        };
-        
-        console.log('Sending request to API:', requestBody);
-        
-        const response = await fetch('/api/admin/tasks', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(requestBody),
-        });
-
-        console.log('Response status:', response.status);
-        
-        if (response.ok) {
-          console.log('Task updated successfully');
-          // Close edit task modal and reload tasks
-          closeEditTaskModal();
-          if (currentProjectId) {
-            loadProjectTasks(currentProjectId);
-          }
-        } else {
-          const errorText = await response.text();
-          console.error('Error updating task. Status:', response.status, 'Response:', errorText);
-          alert(`Error updating task: ${errorText}`);
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        alert('Error updating task');
-      }
-    }
-
-    // Make functions globally available
-    (window as any).showTasksModal = showTasksModal;
-    (window as any).closeTasksModal = closeTasksModal;
-    (window as any).showAddTaskModal = showAddTaskModal;
-    (window as any).closeAddTaskModal = closeAddTaskModal;
-    (window as any).showEditTaskModal = showEditTaskModal;
-    (window as any).closeEditTaskModal = closeEditTaskModal;
-    (window as any).assignUserToTask = assignUserToTask;
-    (window as any).removeUserFromTask = removeUserFromTask;
-    (window as any).deleteTask = deleteTask;
-
-    // Load users on page load
-    loadUsers();
-
-    // Add event listeners for tasks functionality
-    document.addEventListener('click', (e) => {
-      const target = e.target as HTMLElement;
-      
-      console.log('Click detected on:', target.tagName, target.className, target.id);
-      console.log('Target classes:', target.classList.toString());
-      console.log('Target contains assign-user-btn:', target.classList.contains('assign-user-btn'));
-      console.log('Target contains remove-user-btn:', target.classList.contains('remove-user-btn'));
-      console.log('Target closest remove-user-btn:', target.closest('.remove-user-btn'));
-      console.log('Target contains delete-task-btn:', target.classList.contains('delete-task-btn'));
-      console.log('Target closest delete-task-btn:', target.closest('.delete-task-btn'));
-      
-      // Debug: Log all button clicks
-      if (target.tagName === 'BUTTON') {
-        console.log('Button clicked:', target);
-        console.log('Button classes:', target.classList.toString());
-        console.log('Button text:', target.textContent);
-      }
-      
-      // Handle view tasks buttons
-      if (target.classList.contains('view-tasks-btn')) {
-        const projectId = parseInt(target.getAttribute('data-project-id') || '0');
-        const projectName = target.getAttribute('data-project-name') || '';
-        (window as any).showTasksModal(projectId, projectName);
-        return;
-      }
-      
-      // Handle add task button
-      if (target.id === 'addTaskBtn' || target.closest('#addTaskBtn')) {
-        console.log('Add Task button clicked!');
-        (window as any).showAddTaskModal();
-        return;
-      }
-      
-      // Handle close tasks modal button
-      if (target.id === 'closeTasksModalBtn' || target.closest('#closeTasksModalBtn')) {
-        (window as any).closeTasksModal();
-        return;
-      }
-      
-      // Handle cancel add task button
-      if (target.id === 'cancelAddTaskBtn' || target.closest('#cancelAddTaskBtn')) {
-        console.log('Cancel Add Task button clicked!');
-        (window as any).closeAddTaskModal();
-        return;
-      }
-
-      // Handle cancel edit task button
-      if (target.id === 'cancelEditTaskBtn' || target.closest('#cancelEditTaskBtn')) {
-        console.log('Cancel Edit Task button clicked!');
-        (window as any).closeEditTaskModal();
-        return;
-      }
-
-      // Handle assign user button
-      if (target.classList.contains('assign-user-btn')) {
-        console.log('Assign button detected!');
-        const taskId = parseInt(target.getAttribute('data-task-id') || '0');
-        console.log('Task ID from button:', taskId);
-        const searchInput = document.getElementById(`userSearch-${taskId}`) as HTMLInputElement;
-        console.log('Search input found:', searchInput);
-        const selectedUserId = searchInput?.getAttribute('data-selected-user-id');
-        const selectedUserName = searchInput?.getAttribute('data-selected-user-name');
-        
-        console.log('Assign button clicked:', { taskId, selectedUserId, selectedUserName });
-        console.log('Search input element:', searchInput);
-        console.log('All data attributes:', {
-          'data-selected-user-id': searchInput?.getAttribute('data-selected-user-id'),
-          'data-selected-user-name': searchInput?.getAttribute('data-selected-user-name')
-        });
-        
-        if (selectedUserId && selectedUserName) {
-          console.log('Calling assignUserToTask with:', { taskId, selectedUserId, selectedUserName });
-          console.log('Function exists:', typeof (window as any).assignUserToTask);
-          console.log('Function details:', (window as any).assignUserToTask);
-          try {
-            (window as any).assignUserToTask(taskId, parseInt(selectedUserId), selectedUserName);
-            searchInput.value = '';
-            searchInput.removeAttribute('data-selected-user-id');
-            searchInput.removeAttribute('data-selected-user-name');
-          } catch (error) {
-            console.error('Error calling assignUserToTask:', error);
-            alert('Error assigning user to task');
-          }
-        } else {
-          alert('Please select a user first');
-        }
-        return;
-      }
-
-      // Handle remove user button
-      if (target.classList.contains('remove-user-btn') || target.closest('.remove-user-btn')) {
-        console.log('Remove user button detected in global listener');
-        const button = target.classList.contains('remove-user-btn') ? target : target.closest('.remove-user-btn') as HTMLElement;
-        console.log('Button element:', button);
-        const taskId = parseInt(button?.getAttribute('data-task-id') || '0');
-        const userId = parseInt(button?.getAttribute('data-user-id') || '0');
-        const userName = button?.getAttribute('data-user-name') || '';
-        
-        console.log('Remove user button clicked:', { taskId, userId, userName });
-        
-        if (confirm(`Remove ${userName} from this task?`)) {
-          (window as any).removeUserFromTask(taskId, userId, userName);
-        }
-        return;
-      }
-
-      // Handle edit task button
-      if (target.classList.contains('edit-task-btn') || target.closest('.edit-task-btn')) {
-        const button = target.classList.contains('edit-task-btn') ? target : target.closest('.edit-task-btn') as HTMLElement;
-        const taskId = parseInt(button?.getAttribute('data-task-id') || '0');
-        const taskName = button?.getAttribute('data-task-name') || 'Unknown Task';
-        const taskDescription = button?.getAttribute('data-task-description') || '';
-        const taskStatus = button?.getAttribute('data-task-status') || 'pending';
-        
-        console.log('Edit task button clicked:', { taskId, taskName, taskDescription, taskStatus, currentProjectId });
-        (window as any).showEditTaskModal(taskId, taskName, taskDescription, taskStatus, currentProjectId);
-        return;
-      }
-
-      // Handle delete task button
-      if (target.classList.contains('delete-task-btn') || target.closest('.delete-task-btn')) {
-        const taskId = parseInt(target.getAttribute('data-task-id') || target.closest('.delete-task-btn')?.getAttribute('data-task-id') || '0');
-        const taskName = target.getAttribute('data-task-name') || target.closest('.delete-task-btn')?.getAttribute('data-task-name') || 'Unknown Task';
-        
-        console.log('Delete task button clicked:', { taskId, taskName });
-        (window as any).deleteTask(taskId, taskName);
-        return;
-      }
+      // Apply initial filtering
+      filterProjects();
     });
-
-    // Add task form submission
-    const addTaskForm = document.getElementById('addTaskForm');
-    if (addTaskForm) {
-      addTaskForm.addEventListener('submit', handleAddTask);
-    }
-
-    // Edit task form submission
-    const editTaskForm = document.getElementById('editTaskForm');
-    if (editTaskForm) {
-      editTaskForm.addEventListener('submit', handleEditTask);
-    }
-
-    // Add direct event listener for close tasks modal button
-    const closeTasksModalBtn = document.getElementById('closeTasksModalBtn');
-    if (closeTasksModalBtn) {
-      closeTasksModalBtn.addEventListener('click', () => {
-        (window as any).closeTasksModal();
-      });
-    }
-
-    // Add direct event listener for add task button (if it exists on page load)
-    const addTaskBtn = document.getElementById('addTaskBtn');
-    if (addTaskBtn) {
-      addTaskBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        console.log('Add Task button clicked (direct listener)!');
-        (window as any).showAddTaskModal();
-      });
-    }
-
-    // Add direct event listener for cancel add task button (if it exists on page load)
-    const cancelAddTaskBtn = document.getElementById('cancelAddTaskBtn');
-    if (cancelAddTaskBtn) {
-      cancelAddTaskBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        console.log('Cancel Add Task button clicked (direct listener)!');
-        (window as any).closeAddTaskModal();
-      });
-    }
-
-    // Add direct event listener for cancel edit task button (if it exists on page load)
-    const cancelEditTaskBtn = document.getElementById('cancelEditTaskBtn');
-    if (cancelEditTaskBtn) {
-      cancelEditTaskBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        console.log('Cancel Edit Task button clicked (direct listener)!');
-        (window as any).closeEditTaskModal();
-      });
-    }
-
-    // Add escape key handler for new modals
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        const tasksModal = document.getElementById('tasksModal');
-        if (tasksModal && !tasksModal.classList.contains('hidden')) {
-          (window as any).closeTasksModal();
-        }
-        const addTaskModal = document.getElementById('addTaskModal');
-        if (addTaskModal && !addTaskModal.classList.contains('hidden')) {
-          (window as any).closeAddTaskModal();
-        }
-        const editTaskModal = document.getElementById('editTaskModal');
-        if (editTaskModal && !editTaskModal.classList.contains('hidden')) {
-          (window as any).closeEditTaskModal();
-        }
-      }
-    });
-
-    // Add click handler for modal backdrops
-    const tasksModal = document.getElementById('tasksModal');
-    if (tasksModal) {
-      tasksModal.addEventListener('click', (e) => {
-        if (e.target === tasksModal) {
-          (window as any).closeTasksModal();
-        }
-      });
-    }
-
-    const addTaskModal = document.getElementById('addTaskModal');
-    if (addTaskModal) {
-      addTaskModal.addEventListener('click', (e) => {
-        if (e.target === addTaskModal) {
-          (window as any).closeAddTaskModal();
-        }
-      });
-    }
-
-    const editTaskModal = document.getElementById('editTaskModal');
-    if (editTaskModal) {
-      editTaskModal.addEventListener('click', (e) => {
-        if (e.target === editTaskModal) {
-          (window as any).closeEditTaskModal();
-        }
-      });
-    }
-    }); // Close DOMContentLoaded
   </script>
 </AdminLayout> 

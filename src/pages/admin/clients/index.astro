@@ -13,7 +13,7 @@ const allClients = await db
     updatedAt: clients.updatedAt,
     createdByName: users.name,
     archived: clients.archived,
-    projectCount: count(projects.id),
+    projectCount: count(sql`DISTINCT ${projects.id}`),
     totalHours: sql<number>`COALESCE(SUM(
       CASE 
         WHEN ${timeEntries.endTime} IS NOT NULL 
@@ -37,7 +37,7 @@ const allClients = await db
   .leftJoin(tasks, sql`${projects.id} = ${tasks.projectId}`)
   .leftJoin(timeEntries, sql`${tasks.id} = ${timeEntries.taskId}`)
   .groupBy(clients.id, users.name, clients.archived)
-  .orderBy(desc(clients.createdAt));
+  .orderBy(clients.name);
 ---
 
 <AdminLayout title="Clients" currentPage="clients">
@@ -144,6 +144,7 @@ const allClients = await db
             id="sort"
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
           >
+            <option value="status">Status</option>
             <option value="name">Name</option>
             <option value="created">Created Date</option>
             <option value="projects">Project Count</option>
@@ -157,7 +158,7 @@ const allClients = await db
             id="archiveFilter"
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
           >
-            <option value="active">Active</option>
+            <option value="active" selected>Active</option>
             <option value="archived">Archived</option>
             <option value="all">All</option>
           </select>
@@ -166,7 +167,7 @@ const allClients = await db
     </div>
 
     <!-- Clients Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6" id="clientsGrid">
       {allClients.map((client) => (
         <div 
           class="bg-white rounded-lg shadow border border-gray-300 overflow-hidden hover:shadow-lg transition-all duration-200 hover:border-gray-400"
@@ -610,7 +611,7 @@ const allClients = await db
       const searchTerm = (searchInput as HTMLInputElement)?.value.toLowerCase() || '';
       const archiveStatus = archiveFilter?.value || 'active';
       const sortBy = sortSelect?.value || 'name';
-      const clientCards = document.querySelectorAll('.grid > div');
+      const clientCards = document.querySelectorAll('#clientsGrid > div');
       
       let visibleCount = 0;
       const visibleCards: HTMLElement[] = [];
@@ -656,11 +657,19 @@ const allClients = await db
     }
     
     function sortClientCards(cards: HTMLElement[], sortBy: string) {
-      const grid = document.querySelector('.grid');
+      const grid = document.querySelector('#clientsGrid');
       if (!grid) return;
       
       cards.sort((a, b) => {
         switch (sortBy) {
+          case 'status':
+            const statusA = a.querySelector('span')?.textContent?.trim() || '';
+            const statusB = b.querySelector('span')?.textContent?.trim() || '';
+            // Sort active first, then archived
+            if (statusA === 'Active' && statusB === 'Archived') return -1;
+            if (statusA === 'Archived' && statusB === 'Active') return 1;
+            return 0;
+            
           case 'name':
             const nameA = a.querySelector('h3')?.textContent?.toLowerCase() || '';
             const nameB = b.querySelector('h3')?.textContent?.toLowerCase() || '';
@@ -735,8 +744,11 @@ const allClients = await db
       sortSelect.addEventListener('change', filterClients);
     }
     
-    // Apply initial filter on page load (show only active clients by default)
+    // Apply initial filter on page load (show only active clients by default, sorted by name)
     setTimeout(() => {
+      // Set default values
+      if (sortSelect) sortSelect.value = 'name';
+      if (archiveFilter) archiveFilter.value = 'active';
       filterClients();
     }, 100);
 

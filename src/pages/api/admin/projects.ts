@@ -3,10 +3,13 @@ import { db } from '../../../db/index';
 import { projects, clients } from '../../../db/schema';
 import { eq, and } from 'drizzle-orm';
 
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ url }) => {
   try {
-    // Get all projects with client information, filtering out projects from archived clients
-    const allProjects = await db
+    const urlObj = new URL(url);
+    const includeArchived = urlObj.searchParams.get('includeArchived') === 'true';
+    
+    // Build the query based on whether we want archived projects
+    let query = db
       .select({
         id: projects.id,
         name: projects.name,
@@ -17,8 +20,18 @@ export const GET: APIRoute = async () => {
         clientArchived: clients.archived,
       })
       .from(projects)
-      .leftJoin(clients, eq(projects.clientId, clients.id))
-      .where(eq(clients.archived, false)); // Only show projects from active clients
+      .leftJoin(clients, eq(projects.clientId, clients.id));
+    
+    // Only show projects from active clients, but include archived projects if requested
+    if (includeArchived) {
+      // Show all projects from active clients (both archived and non-archived projects)
+      query = query.where(eq(clients.archived, false));
+    } else {
+      // Show only non-archived projects from active clients
+      query = query.where(and(eq(clients.archived, false), eq(projects.archived, false)));
+    }
+    
+    const allProjects = await query;
     
     // Remove the clientArchived field from the response
     const cleanProjects = allProjects.map(project => ({
