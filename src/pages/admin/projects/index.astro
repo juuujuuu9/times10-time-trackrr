@@ -477,6 +477,75 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
     </div>
   </div>
 
+  <!-- Edit Task Modal -->
+  <div id="editTaskModal" class="fixed inset-0 bg-black/50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-300 flex flex-col" onclick="event.stopPropagation()">
+        <div class="px-6 py-4 border-b border-gray-300 flex-shrink-0">
+          <h3 class="text-lg font-medium text-gray-900">Edit Task</h3>
+        </div>
+        <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #9CA3AF #E5E7EB;">
+          <form id="editTaskForm" class="px-6 py-4">
+            <input type="hidden" id="editTaskId" />
+            <input type="hidden" id="editTaskProjectId" />
+            <div class="mb-4">
+              <label for="editTaskName" class="block text-sm font-medium text-gray-700 mb-1">
+                Task Name
+              </label>
+              <input
+                type="text"
+                id="editTaskName"
+                required
+                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                placeholder="Enter task name"
+              />
+            </div>
+            <div class="mb-4">
+              <label for="editTaskDescription" class="block text-sm font-medium text-gray-700 mb-1">
+                Description
+              </label>
+              <textarea
+                id="editTaskDescription"
+                rows="3"
+                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                placeholder="Enter task description"
+              ></textarea>
+            </div>
+            <div class="mb-4">
+              <label for="editTaskStatus" class="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
+              <select
+                id="editTaskStatus"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+              >
+                <option value="pending">Pending</option>
+                <option value="in-progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div class="flex justify-end space-x-3">
+              <button
+                type="button"
+                id="cancelEditTaskBtn"
+                class="px-4 py-2 text-gray-700 bg-white hover:bg-gray-50 rounded-md transition-colors border border-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+              >
+                Update Task
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     // Project management JavaScript
     document.addEventListener('DOMContentLoaded', function() {
@@ -888,10 +957,25 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                 task.status === 'completed' ? 'bg-green-100 text-green-800' :
                 task.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
                 task.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                'bg-gray-100 text-gray-800'
+                'text-gray-800'
+              }" style="${
+                task.status === 'pending' ? 'background-color: #EDC25E;' : ''
               }">
                 ${task.status.replace('-', ' ')}
               </span>
+              <button
+                type="button"
+                class="edit-task-btn text-blue-600 hover:text-blue-700 transition-colors"
+                data-task-id="${task.id}"
+                data-task-name="${task.name}"
+                data-task-description="${task.description || ''}"
+                data-task-status="${task.status}"
+                title="Edit task"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+              </button>
               <button
                 type="button"
                 class="delete-task-btn text-red-600 hover:text-red-700 transition-colors"
@@ -1037,6 +1121,34 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
           });
         });
         
+        // Add event listeners for edit task buttons
+        const editButtons = document.querySelectorAll(`[data-task-id="${task.id}"].edit-task-btn`);
+        console.log(`Found ${editButtons.length} edit buttons for task ${task.id}`);
+        
+        editButtons.forEach(button => {
+          const editBtn = button as HTMLButtonElement;
+          console.log('Adding event listener to edit button:', editBtn);
+          
+          // Remove any existing event listeners
+          const newEditBtn = editBtn.cloneNode(true) as HTMLButtonElement;
+          editBtn.parentNode?.replaceChild(newEditBtn, editBtn);
+          
+          newEditBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Edit button clicked directly!');
+            
+            const taskId = parseInt(newEditBtn.getAttribute('data-task-id') || '0');
+            const taskName = newEditBtn.getAttribute('data-task-name') || 'Unknown Task';
+            const taskDescription = newEditBtn.getAttribute('data-task-description') || '';
+            const taskStatus = newEditBtn.getAttribute('data-task-status') || 'pending';
+            
+            console.log('Edit button clicked:', { taskId, taskName, taskDescription, taskStatus, currentProjectId });
+            
+            (window as any).showEditTaskModal(taskId, taskName, taskDescription, taskStatus, currentProjectId);
+          });
+        });
+
         // Add event listeners for delete task buttons
         const deleteButtons = document.querySelectorAll(`[data-task-id="${task.id}"].delete-task-btn`);
         console.log(`Found ${deleteButtons.length} delete buttons for task ${task.id}`);
@@ -1463,6 +1575,16 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         const currentUserIds = currentAssignedUserIds ? currentAssignedUserIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id)) : [];
         
         console.log('Current assignments:', { currentAssignedUserIds, currentUserIds });
+        console.log('User to assign:', { userId, userName });
+        console.log('All users available:', allUsers.map(u => ({ id: u.id, name: u.name })));
+        
+        // Validate that the user exists in our user list
+        const userExists = allUsers.find(u => u.id === userId);
+        if (!userExists) {
+          console.error('User not found in user list:', { userId, userName, allUserIds: allUsers.map(u => u.id) });
+          alert(`User ${userName} not found in the system`);
+          return;
+        }
         
         // Check if user is already assigned
         if (currentUserIds.includes(userId)) {
@@ -1479,6 +1601,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
           userIds: updatedUserIds
         };
         console.log('Sending request:', requestBody);
+        console.log('Request body JSON:', JSON.stringify(requestBody));
         
         const response = await fetch('/api/admin/tasks/assign', {
           method: 'POST',
@@ -1497,12 +1620,25 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
           }
         } else {
           const errorText = await response.text();
-          console.error('Error response:', errorText);
-          alert('Error assigning user to task');
+          console.error('Error response. Status:', response.status, 'Response:', errorText);
+          try {
+            const errorData = JSON.parse(errorText);
+            const errorMessage = errorData.error || errorData.details || 'Unknown error';
+            
+            if (response.status === 401) {
+              alert('Authentication required. Please log in again.');
+              // Optionally redirect to login
+              window.location.href = '/login';
+            } else {
+              alert(`Error assigning user to task: ${errorMessage}`);
+            }
+          } catch (parseError) {
+            alert(`Error assigning user to task: ${errorText}`);
+          }
         }
       } catch (error) {
         console.error('Error in assignUserToTask:', error);
-        alert('Error assigning user to task');
+        alert(`Error assigning user to task: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
 
@@ -1574,11 +1710,93 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       }
     }
 
+    // Show edit task modal
+    function showEditTaskModal(taskId: number, taskName: string, taskDescription: string, taskStatus: string, taskProjectId: number) {
+      const editTaskModal = document.getElementById('editTaskModal');
+      const editTaskId = document.getElementById('editTaskId') as HTMLInputElement;
+      const editTaskProjectId = document.getElementById('editTaskProjectId') as HTMLInputElement;
+      const editTaskName = document.getElementById('editTaskName') as HTMLInputElement;
+      const editTaskDescription = document.getElementById('editTaskDescription') as HTMLTextAreaElement;
+      const editTaskStatus = document.getElementById('editTaskStatus') as HTMLSelectElement;
+      
+      if (editTaskId) editTaskId.value = taskId.toString();
+      if (editTaskProjectId) editTaskProjectId.value = taskProjectId.toString();
+      if (editTaskName) editTaskName.value = taskName;
+      if (editTaskDescription) editTaskDescription.value = taskDescription;
+      if (editTaskStatus) editTaskStatus.value = taskStatus;
+      
+      if (editTaskModal) {
+        editTaskModal.classList.remove('hidden');
+        editTaskModal.style.display = 'block';
+      }
+    }
+
+    // Close edit task modal
+    function closeEditTaskModal() {
+      const editTaskModal = document.getElementById('editTaskModal');
+      if (editTaskModal) {
+        editTaskModal.classList.add('hidden');
+        editTaskModal.style.display = 'none';
+      }
+    }
+
+    // Handle edit task form submission
+    async function handleEditTask(e: Event) {
+      e.preventDefault();
+      
+      const taskId = (document.getElementById('editTaskId') as HTMLInputElement)?.value;
+      const taskName = (document.getElementById('editTaskName') as HTMLInputElement)?.value;
+      const taskDescription = (document.getElementById('editTaskDescription') as HTMLTextAreaElement)?.value;
+      const taskStatus = (document.getElementById('editTaskStatus') as HTMLSelectElement)?.value;
+      const taskProjectId = (document.getElementById('editTaskProjectId') as HTMLInputElement)?.value;
+      
+      console.log('Edit task form data:', { taskId, taskName, taskDescription, taskStatus, taskProjectId });
+      
+      try {
+        const requestBody = {
+          id: parseInt(taskId),
+          name: taskName,
+          description: taskDescription || null,
+          projectId: parseInt(taskProjectId),
+          status: taskStatus
+        };
+        
+        console.log('Sending request to API:', requestBody);
+        
+        const response = await fetch('/api/admin/tasks', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(requestBody),
+        });
+
+        console.log('Response status:', response.status);
+        
+        if (response.ok) {
+          console.log('Task updated successfully');
+          // Close edit task modal and reload tasks
+          closeEditTaskModal();
+          if (currentProjectId) {
+            loadProjectTasks(currentProjectId);
+          }
+        } else {
+          const errorText = await response.text();
+          console.error('Error updating task. Status:', response.status, 'Response:', errorText);
+          alert(`Error updating task: ${errorText}`);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error updating task');
+      }
+    }
+
     // Make functions globally available
     (window as any).showTasksModal = showTasksModal;
     (window as any).closeTasksModal = closeTasksModal;
     (window as any).showAddTaskModal = showAddTaskModal;
     (window as any).closeAddTaskModal = closeAddTaskModal;
+    (window as any).showEditTaskModal = showEditTaskModal;
+    (window as any).closeEditTaskModal = closeEditTaskModal;
     (window as any).assignUserToTask = assignUserToTask;
     (window as any).removeUserFromTask = removeUserFromTask;
     (window as any).deleteTask = deleteTask;
@@ -1630,6 +1848,13 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       if (target.id === 'cancelAddTaskBtn' || target.closest('#cancelAddTaskBtn')) {
         console.log('Cancel Add Task button clicked!');
         (window as any).closeAddTaskModal();
+        return;
+      }
+
+      // Handle cancel edit task button
+      if (target.id === 'cancelEditTaskBtn' || target.closest('#cancelEditTaskBtn')) {
+        console.log('Cancel Edit Task button clicked!');
+        (window as any).closeEditTaskModal();
         return;
       }
 
@@ -1686,6 +1911,19 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         return;
       }
 
+      // Handle edit task button
+      if (target.classList.contains('edit-task-btn') || target.closest('.edit-task-btn')) {
+        const button = target.classList.contains('edit-task-btn') ? target : target.closest('.edit-task-btn') as HTMLElement;
+        const taskId = parseInt(button?.getAttribute('data-task-id') || '0');
+        const taskName = button?.getAttribute('data-task-name') || 'Unknown Task';
+        const taskDescription = button?.getAttribute('data-task-description') || '';
+        const taskStatus = button?.getAttribute('data-task-status') || 'pending';
+        
+        console.log('Edit task button clicked:', { taskId, taskName, taskDescription, taskStatus, currentProjectId });
+        (window as any).showEditTaskModal(taskId, taskName, taskDescription, taskStatus, currentProjectId);
+        return;
+      }
+
       // Handle delete task button
       if (target.classList.contains('delete-task-btn') || target.closest('.delete-task-btn')) {
         const taskId = parseInt(target.getAttribute('data-task-id') || target.closest('.delete-task-btn')?.getAttribute('data-task-id') || '0');
@@ -1701,6 +1939,12 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
     const addTaskForm = document.getElementById('addTaskForm');
     if (addTaskForm) {
       addTaskForm.addEventListener('submit', handleAddTask);
+    }
+
+    // Edit task form submission
+    const editTaskForm = document.getElementById('editTaskForm');
+    if (editTaskForm) {
+      editTaskForm.addEventListener('submit', handleEditTask);
     }
 
     // Add direct event listener for close tasks modal button
@@ -1733,6 +1977,17 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       });
     }
 
+    // Add direct event listener for cancel edit task button (if it exists on page load)
+    const cancelEditTaskBtn = document.getElementById('cancelEditTaskBtn');
+    if (cancelEditTaskBtn) {
+      cancelEditTaskBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Cancel Edit Task button clicked (direct listener)!');
+        (window as any).closeEditTaskModal();
+      });
+    }
+
     // Add escape key handler for new modals
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
@@ -1743,6 +1998,10 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         const addTaskModal = document.getElementById('addTaskModal');
         if (addTaskModal && !addTaskModal.classList.contains('hidden')) {
           (window as any).closeAddTaskModal();
+        }
+        const editTaskModal = document.getElementById('editTaskModal');
+        if (editTaskModal && !editTaskModal.classList.contains('hidden')) {
+          (window as any).closeEditTaskModal();
         }
       }
     });
@@ -1762,6 +2021,15 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       addTaskModal.addEventListener('click', (e) => {
         if (e.target === addTaskModal) {
           (window as any).closeAddTaskModal();
+        }
+      });
+    }
+
+    const editTaskModal = document.getElementById('editTaskModal');
+    if (editTaskModal) {
+      editTaskModal.addEventListener('click', (e) => {
+        if (e.target === editTaskModal) {
+          (window as any).closeEditTaskModal();
         }
       });
     }

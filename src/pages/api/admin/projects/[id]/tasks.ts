@@ -20,6 +20,7 @@ export const GET: APIRoute = async ({ params }) => {
     const projectTasks = await db
       .select({
         id: tasks.id,
+        projectId: tasks.projectId,
         name: tasks.name,
         description: tasks.description,
         status: tasks.status,
