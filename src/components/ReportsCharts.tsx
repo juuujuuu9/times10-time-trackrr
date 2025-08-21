@@ -360,8 +360,10 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string }> =
         borderWidth: 1,
         callbacks: {
           label: function(context: any) {
-            const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-            const value = context.parsed || 0;
+            // Convert data values to numbers for accurate calculation
+            const dataValues = context.dataset.data.map((v: any) => parseFloat(v) || 0);
+            const total = dataValues.reduce((a: number, b: number) => a + b, 0);
+            const value = parseFloat(context.parsed) || 0;
             const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
             return `${context.label}: $${value.toLocaleString()} (${percentage}%)`;
           },
@@ -374,8 +376,23 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string }> =
           size: 11,
         },
         formatter: function(value: any, context: any) {
-          const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-          const numValue = parseFloat(value) || 0;
+          // Get the actual data values from the dataset and ensure they're numbers
+          const dataValues = context.dataset.data.map((v: any) => parseFloat(v) || 0);
+          const total = dataValues.reduce((a: number, b: number) => a + b, 0);
+          
+          // Use the data index to get the correct value
+          const dataIndex = context.dataIndex;
+          const numValue = dataValues[dataIndex] || 0;
+          
+          // Debug logging
+          console.log('Datalabels formatter:', {
+            value: value,
+            dataIndex: dataIndex,
+            numValue: numValue,
+            dataValues: dataValues,
+            total: total
+          });
+          
           const percentage = total > 0 ? ((numValue / total) * 100).toFixed(1) : '0.0';
           const formattedValue = numValue.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
           return `${percentage}%\n$${formattedValue}`;

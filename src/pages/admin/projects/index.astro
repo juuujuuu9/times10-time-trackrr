@@ -257,7 +257,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                 <button
                   type="button"
                   id="createClientBtn"
-                  class="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md"
+                  class="inline-flex items-center px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md"
                 >
                   <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -279,7 +279,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               </button>
               <button
                 type="submit"
-                class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+                class="inline-flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md transition-all duration-200 font-medium shadow-sm hover:shadow-md"
               >
                 <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
@@ -327,7 +327,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               </button>
               <button
                 type="submit"
-                class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+                class="inline-flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md transition-all duration-200 font-medium shadow-sm hover:shadow-md"
               >
                 <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
@@ -365,7 +365,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               <button
                 type="button"
                 id="addTaskBtn"
-                class="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+                class="inline-flex items-center px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
               >
                 <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -466,7 +466,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               </button>
               <button
                 type="submit"
-                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md transition-colors"
               >
                 Create Task
               </button>
@@ -535,7 +535,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               </button>
               <button
                 type="submit"
-                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md transition-colors"
               >
                 Update Task
               </button>
@@ -1015,7 +1015,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               </div>
               <button
                 type="button"
-                class="assign-user-btn px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors text-sm"
+                class="assign-user-btn px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md transition-colors text-sm"
                 data-task-id="${task.id}"
                 data-task-name="${task.name}"
               >
@@ -1028,7 +1028,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                 const user = allUsers.find(u => u.id.toString() === userId.trim());
                 console.log('Found user for ID', userId, ':', user);
                 return user ? `
-                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-200 text-gray-800 font-medium shadow-sm">
                     ${user.name}
                     <button
                       type="button"
@@ -1454,7 +1454,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       }
       
       const userTag = document.createElement('span');
-      userTag.className = 'inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800';
+      userTag.className = 'inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-200 text-gray-800 font-medium shadow-sm';
       userTag.setAttribute('data-user-id', userId.toString());
       userTag.innerHTML = `
         ${userName}
