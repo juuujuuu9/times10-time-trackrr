@@ -6,7 +6,7 @@ import { timeEntries, users, tasks, projects, clients } from '../db/schema';
 import { sql, eq } from 'drizzle-orm';
 
 // Require authentication
-const user = await requireAuth('/login')(Astro) as any;
+const user = await requireAuth('/')(Astro) as any;
 
 // Get current user's time entries with related data
 const userTimeEntries = await db
@@ -310,7 +310,7 @@ const userTasks = await db
         });
         
         if (response.ok) {
-          window.location.href = '/login';
+          window.location.href = '/';
         }
       } catch (error) {
         console.error('Logout error:', error);

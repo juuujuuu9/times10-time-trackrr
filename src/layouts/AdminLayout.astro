@@ -73,7 +73,7 @@ const navItems = [
       <div class="flex h-screen">
       <!-- Sidebar -->
       <div class="w-64 bg-white shadow-sm border-gray-200">
-        <div class="h-[56px] px-4 py-2 border-b border-gray-200">
+        <div class="h-[52px] px-4 py-2 pt-3 border-b border-gray-200">
           <div class="flex items-center h-full">
             <img src="/trackr-icon.png" alt="Times10 Logo" class="h-full w-auto" />
           </div>
@@ -175,19 +175,19 @@ const navItems = [
       
       if (!response.ok) {
         console.log('Session invalid, redirecting to login...');
-        window.location.replace('/login');
+        window.location.replace('/');
         return;
       }
       
       const data = await response.json();
       if (!data.user || data.user.role !== 'admin') {
         console.log('User not admin, redirecting...');
-        window.location.replace('/login');
+        window.location.replace('/');
         return;
       }
     } catch (error) {
       console.error('Session check error:', error);
-      window.location.replace('/login');
+      window.location.replace('/');
     }
   }
 
@@ -208,16 +208,16 @@ const navItems = [
       if (response.ok) {
         console.log('Logout successful, redirecting to login...');
         // Force a hard redirect to clear any cached state
-        window.location.replace('/login');
+        window.location.replace('/');
       } else {
         console.error('Logout failed:', response.status);
         // Still redirect to login even if logout API fails
-        window.location.replace('/login');
+        window.location.replace('/');
       }
     } catch (error) {
       console.error('Logout error:', error);
       // Redirect to login even if there's an error
-      window.location.replace('/login');
+      window.location.replace('/');
     }
   });
 </script>

@@ -5,9 +5,9 @@ import Layout from '../layouts/Layout.astro';
 const url = new URL(Astro.request.url);
 const token = url.searchParams.get('token');
 
-if (!token) {
-  return Astro.redirect('/login');
-}
+  if (!token) {
+    return Astro.redirect('/');
+  }
 ---
 
 <Layout title="Set Up Your Account - Times10">
@@ -80,7 +80,7 @@ if (!token) {
         <div class="mt-6 text-center">
           <p class="text-sm text-gray-400">
             Already have an account? 
-            <a href="/login" class="text-[#4F46E5] hover:text-[#3730A3] font-medium">Sign in here</a>
+            <a href="/" class="text-[#4F46E5] hover:text-[#3730A3] font-medium">Sign in here</a>
           </p>
         </div>
       </div>
@@ -121,7 +121,7 @@ if (!token) {
     const successMessage = document.getElementById('successMessage');
 
     if (!token) {
-      window.location.href = '/login';
+      window.location.href = '/';
     }
 
     form?.addEventListener('submit', async (e) => {
@@ -168,7 +168,7 @@ if (!token) {
           showSuccess();
           // Redirect to login after 2 seconds
           setTimeout(() => {
-            window.location.href = '/login';
+            window.location.href = '/';
           }, 2000);
         } else {
           showError(data.error || 'Failed to set up account');

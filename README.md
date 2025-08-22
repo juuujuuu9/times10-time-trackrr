@@ -183,7 +183,7 @@ Enter time as simply as typing `2h` or `3.5hr` - no need to worry about start an
 
 ### Public Routes
 - `/` - Landing page (redirects to login if authenticated)
-- `/login` - Authentication page
+- `/` - Login page (redirects to appropriate dashboard if authenticated)
 - `/setup` - Demo user setup page
 
 ### Protected Routes

@@ -17,53 +17,146 @@ if (user) {
 }
 ---
 
-<Layout title="Times10 Time Tracker">
-	<main class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-		<div class="text-center">
-			<h1 class="text-6xl font-bold text-gray-800 mb-4">
-				Times10 Time Tracker
-			</h1>
-			<p class="text-xl text-gray-600 mb-8">
-				Welcome to your productivity companion
-			</p>
-			<div class="space-x-4 mb-8">
-				<a href="/login" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors inline-block">
-					Sign In
-				</a>
-				<a href="/setup" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors inline-block">
-					Setup Demo Users
-				</a>
-				<a href="/admin" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors inline-block">
-					Admin Dashboard
-				</a>
-			</div>
-			<div class="mb-8">
-				<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
-					<strong>✅ Database Connected!</strong> Your Neon PostgreSQL database is ready for time tracking.
-				</div>
-			</div>
-			<div class="bg-white rounded-lg shadow-lg p-6 max-w-md mx-auto">
-				<h2 class="text-xl font-semibold text-gray-800 mb-4">Get Started</h2>
-				<p class="text-gray-600 mb-4">
-					Sign in to start tracking your time and managing your tasks efficiently.
-				</p>
-				<a href="/login" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors inline-block text-center">
-					Sign In to Continue
-				</a>
-			</div>
-		</div>
-	</main>
-</Layout>
-<style>
-	main {
-  background: linear-gradient(-45deg, #2d24ff, #5546ff, #1ED9BD, #57FF65, #fc7eff, #a400a7);
-  background-size: 400% 400%;
-  animation: gradientShift 15s ease infinite;
-}
+<Layout title="Login - Times10 Time Tracker">
+  <main class="min-h-screen bg-[#F2F2F3] flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+      <!-- Logo and Title -->
+      <div class="text-center mb-8">
+        <img src="/logo-black.png" alt="Times10 Logo" class="mx-auto mb-4 h-6 w-auto max-w-xs" />
+        <img src="/trackr-logo.png" alt="Trackr Logo" class="mx-auto mb-4 h-16 w-auto" />
+        <p class="text-[#415058]">Sign in to your account</p>
+      </div>
 
-@keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-</style>
+      <!-- Login Form -->
+      <div class="bg-white rounded-2xl shadow-xl p-8 border border-[#C8CDD0]">
+        <form id="loginForm" class="space-y-6">
+          <div>
+            <label for="email" class="block text-sm font-medium text-[#415058] mb-2">
+              Email Address
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              required
+              class="w-full px-4 py-3 border border-[#C8CDD0] rounded-lg focus:ring-2 focus:ring-[#415058] focus:border-transparent transition-colors bg-white text-[#1F292E] placeholder-[#C8CDD0]"
+              placeholder="Enter your email"
+            />
+          </div>
+
+          <div>
+            <label for="password" class="block text-sm font-medium text-[#415058] mb-2">
+              Password
+            </label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              required
+              class="w-full px-4 py-3 border border-[#C8CDD0] rounded-lg focus:ring-2 focus:ring-[#415058] focus:border-transparent transition-colors bg-white text-[#1F292E] placeholder-[#C8CDD0]"
+              placeholder="Enter your password"
+            />
+          </div>
+
+          <div id="errorMessage" class="hidden">
+            <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              <p id="errorText"></p>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            id="loginButton"
+            class="w-full bg-[#415058] text-white font-semibold py-3 px-6 rounded-lg hover:bg-[#1F292E] focus:ring-2 focus:ring-[#415058] focus:ring-offset-2 transition-all duration-200"
+          >
+            <span id="buttonText">Sign In</span>
+            <span id="loadingSpinner" class="hidden">
+              <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Signing in...
+            </span>
+          </button>
+        </form>
+
+        <div class="mt-6 text-center">
+          <p class="text-sm text-[#415058]">
+            Don't have an account? 
+            <a href="/register" class="text-[#1F292E] hover:text-[#415058] font-medium">
+              Contact your administrator
+            </a>
+          </p>
+        </div>
+      </div>
+
+      <!-- Demo Credentials -->
+      <div class="mt-8 bg-[#F2F2F3] border border-[#C8CDD0] rounded-lg p-4">
+        <h3 class="text-sm font-medium text-[#1F292E] mb-2">Demo Credentials</h3>
+        <div class="text-xs text-[#415058] space-y-1">
+          <p><strong>Admin:</strong> admin@times10.com / admin123</p>
+          <p><strong>Manager:</strong> manager@times10.com / manager123</p>
+          <p><strong>User:</strong> user@times10.com / user123</p>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const form = e.target as HTMLFormElement;
+    const email = (form.elements.namedItem('email') as HTMLInputElement).value;
+    const password = (form.elements.namedItem('password') as HTMLInputElement).value;
+    
+    const button = document.getElementById('loginButton') as HTMLButtonElement;
+    const buttonText = document.getElementById('buttonText') as HTMLSpanElement;
+    const loadingSpinner = document.getElementById('loadingSpinner') as HTMLSpanElement;
+    const errorMessage = document.getElementById('errorMessage') as HTMLDivElement;
+    const errorText = document.getElementById('errorText') as HTMLParagraphElement;
+    
+    // Show loading state
+    button.disabled = true;
+    buttonText.classList.add('hidden');
+    loadingSpinner.classList.remove('hidden');
+    errorMessage.classList.add('hidden');
+    
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Redirect based on user role
+        if (data.user.role === 'admin') {
+          window.location.href = '/admin';
+        } else if (data.user.role === 'manager') {
+          window.location.href = '/manager';
+        } else {
+          window.location.href = '/dashboard';
+        }
+      } else {
+        // Show error message
+        errorText.textContent = data.error || 'Login failed';
+        errorMessage.classList.remove('hidden');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      errorText.textContent = 'Network error. Please try again.';
+      errorMessage.classList.remove('hidden');
+    } finally {
+      // Reset button state
+      button.disabled = false;
+      buttonText.classList.remove('hidden');
+      loadingSpinner.classList.add('hidden');
+    }
+  });
+</script>

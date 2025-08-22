@@ -3,7 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import { requireAuth } from '../utils/session';
 
 // Require authentication
-const user = await requireAuth('/login')(Astro) as any;
+const user = await requireAuth('/')(Astro) as any;
 ---
 
 <Layout title="Test Task Notifications - Times10 Time Tracker">

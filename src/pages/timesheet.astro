@@ -7,9 +7,9 @@ import { eq, and, gte, lte } from 'drizzle-orm';
 
 // Get user session
 const user = await getSessionUser(Astro);
-if (!user) {
-  return Astro.redirect('/login');
-}
+  if (!user) {
+    return Astro.redirect('/');
+  }
 
 // Get the current week (Sunday to Saturday)
 const urlParams = Astro.url.searchParams;
@@ -451,7 +451,7 @@ for (let i = 0; i < 7; i++) {
         });
         
         if (response.ok) {
-          window.location.href = '/login';
+          window.location.href = '/';
         } else {
           console.error('Logout failed');
         }

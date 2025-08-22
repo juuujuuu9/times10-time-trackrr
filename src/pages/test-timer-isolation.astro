@@ -4,7 +4,7 @@ import Timer from '../components/Timer';
 import { requireAuth } from '../utils/session';
 
 // Require authentication
-const user = await requireAuth('/login')(Astro) as any;
+const user = await requireAuth('/')(Astro) as any;
 ---
 
 <Layout title="Timer Isolation Test - Times10 Time Tracker">

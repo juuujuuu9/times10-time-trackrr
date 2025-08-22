@@ -4,7 +4,7 @@ import { requireAuth } from '../utils/session';
 import Timer from '../components/Timer';
 
 // Require authentication
-const user = await requireAuth('/login')(Astro) as any;
+const user = await requireAuth('/')(Astro) as any;
 ---
 
 <Layout title="Dashboard - Times10 Time Tracker">
@@ -369,7 +369,7 @@ const user = await requireAuth('/login')(Astro) as any;
         }
       } else if (response.status === 401) {
         // If unauthorized, redirect to login
-        window.location.href = '/login';
+        window.location.href = '/';
         return null;
       } else {
         const errorData = await response.json().catch(() => ({}));
@@ -551,7 +551,7 @@ const user = await requireAuth('/login')(Astro) as any;
       });
       
       if (response.ok) {
-        window.location.href = '/login';
+        window.location.href = '/';
       }
     } catch (error) {
       console.error('Logout error:', error);

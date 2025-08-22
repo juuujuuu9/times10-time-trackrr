@@ -2,8 +2,8 @@
 import Layout from '../layouts/Layout.astro';
 import { requireAuth } from '../utils/session';
 
-// This should redirect to /login if not authenticated
-const user = await requireAuth('/login')(Astro) as any;
+// This should redirect to / if not authenticated
+const user = await requireAuth('/')(Astro) as any;
 ---
 
 <Layout title="Auth Test - Times10 Time Tracker">
@@ -68,7 +68,7 @@ const user = await requireAuth('/login')(Astro) as any;
       });
       
       if (response.ok) {
-        window.location.href = '/login';
+        window.location.href = '/';
       }
     } catch (error) {
       console.error('Logout error:', error);

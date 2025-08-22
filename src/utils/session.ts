@@ -58,7 +58,7 @@ export async function getSessionUser(context: APIContext): Promise<Authenticated
   }
 }
 
-export function requireAuth(redirectTo: string = '/login') {
+export function requireAuth(redirectTo: string = '/') {
   return async function(context: APIContext) {
     const user = await getSessionUser(context);
     
@@ -81,7 +81,7 @@ export function requireRole(requiredRole: string, redirectTo: string = '/dashboa
     
     if (!user) {
       try {
-        return context.redirect('/login');
+        return context.redirect('/');
       } catch (error) {
         // If redirect fails (response already sent), throw an error to prevent rendering
         throw new Error('Authentication required');
