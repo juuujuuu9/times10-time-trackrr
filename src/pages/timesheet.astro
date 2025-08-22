@@ -163,24 +163,24 @@ for (let i = 0; i < 7; i++) {
 <Layout title="Timesheet">
   <div class="min-h-screen bg-gray-50">
     <!-- Header -->
-    <header class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center py-4">
-          <div class="flex items-center">
-            <img src="/logo-black.png" alt="Times10 Logo" class="w-auto mr-3" style="height: 25px;" />
-            <span class="px-3 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
-              Team Member
-            </span>
-          </div>
-          <div class="flex items-center space-x-4">
-            <span class="text-sm text-gray-600">Welcome, {user?.name || 'User'}</span>
-            <button
-              id="logoutButton"
-              class="text-sm text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              Sign Out
-            </button>
-          </div>
+    <header class="bg-white shadow-sm border-b border-gray-200 flex items-center" style="height: 58px;">
+      <div class="max-w-7xl mx-auto px-1 w-full">
+        <div class="flex justify-between items-center">
+                      <div class="flex items-center">
+              <img src="/favicon.png" alt="Times10 Logo" class="w-auto mr-3 py-2" style="height: calc(58px - 1rem);" />
+            </div>
+            <div class="flex items-center space-x-4">
+              <span class="text-sm text-gray-600">Welcome, {user?.name || 'User'}</span>
+              <span class="px-3 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
+                Team Member
+              </span>
+              <button
+                id="logoutButton"
+                class="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Sign Out
+              </button>
+            </div>
         </div>
       </div>
     </header>

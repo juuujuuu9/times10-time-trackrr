@@ -250,8 +250,18 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         <div id="projectModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
       <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-300 flex flex-col" onclick="event.stopPropagation()">
-        <div class="px-6 py-4 border-b border-gray-300 flex-shrink-0">
+        <div class="px-6 py-4 border-b border-gray-300 flex-shrink-0 flex justify-between items-center">
           <h3 id="projectModalTitle" class="text-lg font-medium text-gray-900">Add New Project</h3>
+          <button
+            type="button"
+            id="closeProjectModal"
+            class="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
+            title="Close modal"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
         </div>
         <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #9CA3AF #E5E7EB;">
           <form id="projectForm" class="px-6 py-4">
@@ -325,8 +335,18 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         <div id="clientModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
       <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-300 flex flex-col" onclick="event.stopPropagation()">
-        <div class="px-6 py-4 border-b border-gray-300 flex-shrink-0">
+        <div class="px-6 py-4 border-b border-gray-300 flex-shrink-0 flex justify-between items-center">
           <h3 class="text-lg font-medium text-gray-900">Create New Client</h3>
+          <button
+            type="button"
+            id="closeClientModal"
+            class="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
+            title="Close modal"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
         </div>
         <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #9CA3AF #E5E7EB;">
           <form id="clientForm" class="px-6 py-4">
@@ -381,7 +401,8 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
           <button
             type="button"
             id="closeTasksModal"
-            class="text-gray-400 hover:text-gray-600 transition-colors"
+            class="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
+            title="Close modal"
           >
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -410,12 +431,112 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
     </div>
   </div>
 
+  <!-- Quick Add Task Modal -->
+  <div id="quickAddTaskModal" class="fixed inset-0 bg-black/50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-300 flex flex-col" onclick="event.stopPropagation()">
+        <div class="px-6 py-4 border-b border-gray-300 flex-shrink-0 flex justify-between items-center">
+          <h3 class="text-lg font-medium text-gray-900">Quick Add Task</h3>
+          <button
+            type="button"
+            id="closeQuickAddTaskModal"
+            class="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
+            title="Close modal"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #9CA3AF #E5E7EB;">
+          <form id="quickAddTaskForm" class="px-6 py-4">
+            <input type="hidden" id="quickAddTaskProjectId" />
+            <div class="mb-4">
+              <label for="quickAddTaskName" class="block text-sm font-medium text-gray-700 mb-1">
+                Task Name
+              </label>
+              <input
+                type="text"
+                id="quickAddTaskName"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                placeholder="Enter task name"
+              />
+            </div>
+            <div class="mb-4">
+              <label for="quickAddTaskPriority" class="block text-sm font-medium text-gray-700 mb-1">
+                Priority
+              </label>
+              <select
+                id="quickAddTaskPriority"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+              >
+                <option value="regular">Regular</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
+            <div class="mb-4">
+              <label for="quickAddTaskAssignees" class="block text-sm font-medium text-gray-700 mb-1">
+                Assign Team Members
+              </label>
+              <div class="relative">
+                <input
+                  type="text"
+                  id="quickAddTaskAssignees"
+                  placeholder="Search for team members..."
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                />
+                <div id="quickAddTaskAssigneesDropdown" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto hidden">
+                  <!-- Search results will be populated here -->
+                </div>
+              </div>
+              <div id="quickAddTaskSelectedAssignees" class="mt-2 space-y-1">
+                <!-- Selected team members will be displayed here -->
+              </div>
+            </div>
+            <div class="flex justify-end space-x-3">
+              <button
+                type="button"
+                id="cancelQuickAddTaskBtn"
+                class="inline-flex items-center px-4 py-2 text-gray-700 bg-white hover:bg-gray-50 rounded-md transition-all duration-200 font-medium border border-gray-300"
+              >
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+              >
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                Add Task
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Add/Edit Task Modal -->
   <div id="taskModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
       <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-300 flex flex-col" onclick="event.stopPropagation()">
-        <div class="px-6 py-4 border-b border-gray-300 flex-shrink-0">
+        <div class="px-6 py-4 border-b border-gray-300 flex-shrink-0 flex justify-between items-center">
           <h3 id="taskModalTitle" class="text-lg font-medium text-gray-900">Add New Task</h3>
+          <button
+            type="button"
+            id="closeTaskModal"
+            class="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
+            title="Close modal"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
         </div>
         <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #9CA3AF #E5E7EB;">
           <form id="taskForm" class="px-6 py-4">
@@ -732,7 +853,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
     (window as any).deleteProject = deleteProject;
       (window as any).toggleProjectArchive = toggleProjectArchive;
 
-    // Add escape key handler and modal backdrop click handler
+    // Add escape key handler for all modals
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         const projectModal = document.getElementById('projectModal');
@@ -743,10 +864,22 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         if (clientModal && !clientModal.classList.contains('hidden')) {
           (window as any).closeClientModal();
         }
+        const tasksModal = document.getElementById('tasksModal');
+        if (tasksModal && !tasksModal.classList.contains('hidden')) {
+          (window as any).closeTasksModal();
+        }
+        const taskModal = document.getElementById('taskModal');
+        if (taskModal && !taskModal.classList.contains('hidden')) {
+          (window as any).closeTaskModal();
+        }
+        const quickAddTaskModal = document.getElementById('quickAddTaskModal');
+        if (quickAddTaskModal && !quickAddTaskModal.classList.contains('hidden')) {
+          (window as any).closeQuickAddTaskModal();
+        }
       }
     });
 
-    // Add click handler for modal backdrop
+    // Add click handlers for modal backdrops
     const projectModal = document.getElementById('projectModal');
     if (projectModal) {
       projectModal.addEventListener('click', (e) => {
@@ -756,7 +889,43 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       });
     }
 
-    // Add direct event listener for cancel button
+    const clientModal = document.getElementById('clientModal');
+    if (clientModal) {
+      clientModal.addEventListener('click', (e) => {
+        if (e.target === clientModal) {
+          (window as any).closeClientModal();
+        }
+      });
+    }
+
+    const tasksModal = document.getElementById('tasksModal');
+    if (tasksModal) {
+      tasksModal.addEventListener('click', (e) => {
+        if (e.target === tasksModal) {
+          (window as any).closeTasksModal();
+        }
+      });
+    }
+
+    const taskModal = document.getElementById('taskModal');
+    if (taskModal) {
+      taskModal.addEventListener('click', (e) => {
+        if (e.target === taskModal) {
+          (window as any).closeTaskModal();
+        }
+      });
+    }
+
+    const quickAddTaskModal = document.getElementById('quickAddTaskModal');
+    if (quickAddTaskModal) {
+      quickAddTaskModal.addEventListener('click', (e) => {
+        if (e.target === quickAddTaskModal) {
+          (window as any).closeQuickAddTaskModal();
+        }
+      });
+    }
+
+    // Add direct event listeners for cancel buttons and X buttons
     const cancelProjectBtn = document.getElementById('cancelProjectBtn');
     if (cancelProjectBtn) {
       cancelProjectBtn.addEventListener('click', () => {
@@ -764,12 +933,38 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       });
     }
 
-    const clientModal = document.getElementById('clientModal');
-    if (clientModal) {
-      clientModal.addEventListener('click', (e) => {
-        if (e.target === clientModal) {
-          (window as any).closeClientModal();
-        }
+    const closeProjectModalBtn = document.getElementById('closeProjectModal');
+    if (closeProjectModalBtn) {
+      closeProjectModalBtn.addEventListener('click', () => {
+        (window as any).closeProjectModal();
+      });
+    }
+
+    const closeClientModalBtn = document.getElementById('closeClientModal');
+    if (closeClientModalBtn) {
+      closeClientModalBtn.addEventListener('click', () => {
+        (window as any).closeClientModal();
+      });
+    }
+
+    const closeTasksModalBtn = document.getElementById('closeTasksModal');
+    if (closeTasksModalBtn) {
+      closeTasksModalBtn.addEventListener('click', () => {
+        (window as any).closeTasksModal();
+      });
+    }
+
+    const closeTaskModalBtn = document.getElementById('closeTaskModal');
+    if (closeTaskModalBtn) {
+      closeTaskModalBtn.addEventListener('click', () => {
+        (window as any).closeTaskModal();
+      });
+    }
+
+    const closeQuickAddTaskModalBtn = document.getElementById('closeQuickAddTaskModal');
+    if (closeQuickAddTaskModalBtn) {
+      closeQuickAddTaskModalBtn.addEventListener('click', () => {
+        (window as any).closeQuickAddTaskModal();
       });
     }
 
@@ -869,6 +1064,9 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
     // Add event listeners for edit and delete buttons
     document.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
+      console.log('Click event detected on:', target.tagName, target.className);
+      
+
       
       // Handle view tasks buttons
       if (target.classList.contains('view-tasks-btn') || target.closest('.view-tasks-btn')) {
@@ -913,11 +1111,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         return;
       }
       
-      // Handle cancel button
-      if (target.id === 'cancelProjectBtn') {
-        (window as any).closeProjectModal();
-        return;
-      }
+
       
       // Handle client modal cancel button
       if (target.id === 'cancelClientBtn') {
@@ -925,15 +1119,25 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         return;
       }
 
-      // Handle close tasks modal button
-      if (target.id === 'closeTasksModal') {
-        (window as any).closeTasksModal();
+      // Handle project modal cancel button
+      if (target.id === 'cancelProjectBtn') {
+        (window as any).closeProjectModal();
         return;
       }
 
       // Handle add task button
-      if (target.id === 'addTaskBtn') {
-        (window as any).openAddTaskModal();
+      if (target.id === 'addTaskBtn' || target.closest('#addTaskBtn')) {
+        console.log('Add task button clicked!');
+        console.log('Target:', target);
+        console.log('Target ID:', target.id);
+        console.log('Closest addTaskBtn:', target.closest('#addTaskBtn'));
+        (window as any).openQuickAddTaskModal();
+        return;
+      }
+
+      // Handle cancel quick add task button
+      if (target.id === 'cancelQuickAddTaskBtn') {
+        (window as any).closeQuickAddTaskModal();
         return;
       }
 
@@ -959,14 +1163,24 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         return;
       }
 
-      if (target.classList.contains('priority-toggle-btn') || target.closest('.priority-toggle-btn')) {
-        const button = target.classList.contains('priority-toggle-btn') ? target : target.closest('.priority-toggle-btn') as HTMLElement;
+      // Handle assign team member button clicks
+      if (target.classList.contains('assign-team-member-btn') || target.closest('.assign-team-member-btn')) {
+        console.log('Assign team member button clicked!');
+        const button = target.classList.contains('assign-team-member-btn') ? target : target.closest('.assign-team-member-btn') as HTMLElement;
         const taskId = parseInt(button?.getAttribute('data-task-id') || '0');
-        const currentPriority = button?.getAttribute('data-task-priority') || 'regular';
-        const newPriority = currentPriority === 'regular' ? 'urgent' : 'regular';
-        (window as any).updateTaskPriority(taskId, newPriority);
+        console.log('Task ID:', taskId);
+        console.log('Button element:', button);
+        console.log('Button classes:', button?.className);
+        if (taskId) {
+          console.log('Calling assignTeamMemberToTask with taskId:', taskId);
+          (window as any).assignTeamMemberToTask(taskId);
+        } else {
+          console.log('No task ID found on button');
+        }
         return;
       }
+
+
     });
 
     // Client filter functionality
@@ -1032,6 +1246,20 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         tasksModal.style.display = 'block';
       }
       
+      // Add event listener to the Add Task button
+      setTimeout(() => {
+        const addTaskBtn = document.getElementById('addTaskBtn');
+        if (addTaskBtn) {
+          console.log('Adding event listener to Add Task button');
+          addTaskBtn.addEventListener('click', () => {
+            console.log('Add Task button clicked via direct listener');
+            openQuickAddTaskModal();
+          });
+        } else {
+          console.error('Add Task button not found');
+        }
+      }, 100);
+      
       await loadProjectTasks(projectId);
     }
 
@@ -1046,7 +1274,6 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
           currentTasks = await response.json();
           renderTasksList();
         } else {
-          console.error('Error loading tasks');
           alert('Error loading tasks');
         }
       } catch (error) {
@@ -1079,13 +1306,11 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
             <div class="flex-1">
               <div class="flex items-center gap-3 mb-2">
                 <h5 class="text-sm font-medium text-gray-900">${task.name}</h5>
-                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                  task.priority === 'urgent' 
-                    ? 'bg-red-100 text-red-800' 
-                    : 'bg-gray-100 text-gray-800'
-                }">
-                  ${task.priority === 'urgent' ? 'Urgent' : 'Regular'}
-                </span>
+                ${task.priority === 'urgent' ? `
+                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                    Urgent
+                  </span>
+                ` : ''}
                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                   task.status === 'completed' ? 'bg-green-100 text-green-800' :
                   task.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
@@ -1096,26 +1321,64 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                  </span>
               </div>
               ${task.description ? `<p class="text-sm text-gray-600 mb-2">${task.description}</p>` : ''}
-              <div class="flex items-center gap-4 text-xs text-gray-500">
+              <div class="flex items-center gap-4 text-xs text-gray-500 mb-3">
                 <span>${task.totalHours ? Math.round(task.totalHours * 10) / 10 : 0} hours</span>
                 ${task.assignedUsers ? `<span>Assigned: ${task.assignedUsers}</span>` : ''}
                 <span>Created: ${new Date(task.createdAt).toLocaleDateString()}</span>
               </div>
+              
+              <!-- Team Member Assignment Section -->
+              <div class="border-t border-gray-100 pt-3">
+                <div class="flex items-center gap-2 mb-2">
+                  <label class="text-xs font-medium text-gray-700">Assign Team Members:</label>
+                </div>
+                <div class="flex items-center gap-2">
+                  <div class="relative flex-1">
+                    <input
+                      type="text"
+                      id="teamMemberSearch-${task.id}"
+                      placeholder="Search for team members..."
+                      class="w-full px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white text-gray-900"
+                      data-task-id="${task.id}"
+                    />
+                    <div id="teamMemberDropdown-${task.id}" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto hidden">
+                      <!-- Search results will be populated here -->
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    class="assign-team-member-btn inline-flex items-center px-2 py-1 text-xs font-medium rounded border border-blue-200 text-blue-700 hover:bg-blue-50 transition-colors"
+                    data-task-id="${task.id}"
+                    title="Assign selected team members"
+                  >
+                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Assign All
+                  </button>
+                </div>
+                <div id="selectedTeamMembers-${task.id}" class="mt-2 space-y-1">
+                  ${task.assignedUsers ? task.assignedUsers.split(', ').map((userName: string) => `
+                    <div class="flex items-center justify-between bg-gray-50 px-2 py-1 rounded text-sm border border-gray-200">
+                      <div class="flex items-center">
+                        <span class="font-medium text-gray-600">${userName}</span>
+                      </div>
+                      <button 
+                        type="button"
+                        onclick="unassignTeamMemberFromTask(${task.id}, '${userName}')"
+                        class="text-gray-400 hover:text-red-600 ml-2 p-1 rounded hover:bg-red-50"
+                        title="Unassign ${userName}"
+                      >
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                      </button>
+                    </div>
+                  `).join('') : ''}
+                </div>
+              </div>
             </div>
             <div class="flex items-center gap-2 ml-4">
-              <button
-                type="button"
-                class="priority-toggle-btn inline-flex items-center px-2 py-1 text-xs font-medium rounded border transition-colors ${
-                  task.priority === 'urgent'
-                    ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100'
-                    : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
-                }"
-                data-task-id="${task.id}"
-                data-task-priority="${task.priority}"
-                title="${task.priority === 'urgent' ? 'Mark as Regular' : 'Mark as Urgent'}"
-              >
-                ${task.priority === 'urgent' ? 'Regular' : 'Urgent'}
-              </button>
               <button
                 type="button"
                 class="edit-task-btn inline-flex items-center px-2 py-1 text-xs font-medium rounded border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
@@ -1143,6 +1406,18 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
           </div>
         </div>
       `).join('');
+      
+                // Set up team member search functionality for each task
+      currentTasks.forEach(task => {
+        console.log('Setting up team member search for task:', task.id);
+        setupTaskTeamMemberSearch(task.id);
+        
+        // Restore selected team members for this task
+        if (selectedTeamMembersByTask[task.id]) {
+          console.log(`Restoring selected team members for task ${task.id}:`, selectedTeamMembersByTask[task.id]);
+          updateSelectedTeamMembersDisplay(task.id);
+        }
+      });
     }
 
     // Close tasks modal
@@ -1155,6 +1430,446 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       currentProjectId = null;
       currentProjectName = null;
       currentTasks = [];
+    }
+
+    // Team member assignment variables
+    let selectedAssignees: { id: number; name: string; email: string }[] = [];
+    
+    // Store selected team members for each task to preserve them during re-renders
+    let selectedTeamMembersByTask: Record<number, { id: number; name: string; email: string }[]> = {};
+
+    // Open quick add task modal
+    function openQuickAddTaskModal() {
+      console.log('openQuickAddTaskModal called');
+      const quickAddTaskName = document.getElementById('quickAddTaskName') as HTMLInputElement;
+      const quickAddTaskPriority = document.getElementById('quickAddTaskPriority') as HTMLSelectElement;
+      const quickAddTaskProjectId = document.getElementById('quickAddTaskProjectId') as HTMLInputElement;
+      const quickAddTaskModal = document.getElementById('quickAddTaskModal');
+      
+      console.log('Modal elements found:', { quickAddTaskName, quickAddTaskPriority, quickAddTaskProjectId, quickAddTaskModal });
+      console.log('Current project ID:', currentProjectId);
+      
+      if (quickAddTaskName) quickAddTaskName.value = '';
+      if (quickAddTaskPriority) quickAddTaskPriority.value = 'regular';
+      if (quickAddTaskProjectId && currentProjectId) quickAddTaskProjectId.value = currentProjectId.toString();
+      
+      // Reset team member assignment
+      selectedAssignees = [];
+      updateSelectedAssigneesDisplay();
+      
+      if (quickAddTaskModal) {
+        quickAddTaskModal.classList.remove('hidden');
+        quickAddTaskModal.style.display = 'block';
+        console.log('Quick add task modal should now be visible');
+        
+        // Set up team member search functionality
+        setupTeamMemberSearch();
+      } else {
+        console.error('Quick add task modal not found!');
+      }
+    }
+
+    // Close quick add task modal
+    function closeQuickAddTaskModal() {
+      const quickAddTaskModal = document.getElementById('quickAddTaskModal');
+      if (quickAddTaskModal) {
+        quickAddTaskModal.classList.add('hidden');
+        quickAddTaskModal.style.display = 'none';
+      }
+    }
+
+    // Team member search and assignment functions
+    function setupTeamMemberSearch() {
+      const searchInput = document.getElementById('quickAddTaskAssignees') as HTMLInputElement;
+      const dropdown = document.getElementById('quickAddTaskAssigneesDropdown');
+      
+      if (searchInput && dropdown) {
+        searchInput.addEventListener('input', debounce(async (e: Event) => {
+          const searchTerm = (e.target as HTMLInputElement).value.trim();
+          
+          if (searchTerm.length < 2) {
+            dropdown.classList.add('hidden');
+            return;
+          }
+          
+          try {
+            const response = await fetch(`/api/admin/users/search?q=${encodeURIComponent(searchTerm)}&activeOnly=true&limit=10`);
+            if (response.ok) {
+              const users = await response.json();
+              displaySearchResults(users);
+            }
+          } catch (error) {
+            console.error('Error searching users:', error);
+          }
+        }, 300));
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e: Event) => {
+          if (!searchInput.contains(e.target as Node) && !dropdown.contains(e.target as Node)) {
+            dropdown.classList.add('hidden');
+          }
+        });
+      }
+    }
+
+    function displaySearchResults(users: any[]) {
+      const dropdown = document.getElementById('quickAddTaskAssigneesDropdown');
+      if (!dropdown) return;
+      
+      if (users.length === 0) {
+        dropdown.innerHTML = '<div class="px-3 py-2 text-sm text-gray-500">No team members found</div>';
+      } else {
+        dropdown.innerHTML = users
+          .filter(user => !selectedAssignees.some(selected => selected.id === user.id))
+          .map(user => `
+            <div 
+              class="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+              onclick="selectTeamMember(${user.id}, '${user.name}', '${user.email}')"
+            >
+              <div class="font-medium">${user.name}</div>
+              <div class="text-xs text-gray-500">${user.email}</div>
+            </div>
+          `).join('');
+      }
+      
+      dropdown.classList.remove('hidden');
+    }
+
+    function selectTeamMember(id: number, name: string, email: string) {
+      if (!selectedAssignees.some(user => user.id === id)) {
+        selectedAssignees.push({ id, name, email });
+        updateSelectedAssigneesDisplay();
+      }
+      
+      // Clear search input and hide dropdown
+      const searchInput = document.getElementById('quickAddTaskAssignees') as HTMLInputElement;
+      const dropdown = document.getElementById('quickAddTaskAssigneesDropdown');
+      if (searchInput) searchInput.value = '';
+      if (dropdown) dropdown.classList.add('hidden');
+    }
+
+    function removeTeamMember(id: number) {
+      selectedAssignees = selectedAssignees.filter(user => user.id !== id);
+      updateSelectedAssigneesDisplay();
+    }
+
+    function updateSelectedAssigneesDisplay() {
+      const container = document.getElementById('quickAddTaskSelectedAssignees');
+      if (!container) return;
+      
+      if (selectedAssignees.length === 0) {
+        container.innerHTML = '<div class="text-sm text-gray-500">No team members assigned</div>';
+      } else {
+        container.innerHTML = selectedAssignees.map(user => `
+          <div class="flex items-center justify-between bg-gray-50 px-2 py-1 rounded text-sm">
+            <div>
+              <span class="font-medium">${user.name}</span>
+              <span class="text-gray-500 ml-2">${user.email}</span>
+            </div>
+            <button 
+              type="button"
+              onclick="removeTeamMember(${user.id})"
+              class="text-red-500 hover:text-red-700 ml-2"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        `).join('');
+      }
+    }
+
+    function getSelectedAssignees(): number[] {
+      return selectedAssignees.map(user => user.id);
+    }
+
+    // Team member search and assignment functions for individual tasks
+    function setupTaskTeamMemberSearch(taskId: number) {
+      console.log('setupTaskTeamMemberSearch called for taskId:', taskId);
+      const searchInput = document.getElementById(`teamMemberSearch-${taskId}`) as HTMLInputElement;
+      const dropdown = document.getElementById(`teamMemberDropdown-${taskId}`);
+      
+      console.log('Search input found:', !!searchInput);
+      console.log('Dropdown found:', !!dropdown);
+      
+      if (searchInput && dropdown) {
+        searchInput.addEventListener('input', debounce(async (e: Event) => {
+          const searchTerm = (e.target as HTMLInputElement).value.trim();
+          
+          if (searchTerm.length < 2) {
+            dropdown.classList.add('hidden');
+            return;
+          }
+          
+          try {
+            const response = await fetch(`/api/admin/users/search?q=${encodeURIComponent(searchTerm)}&activeOnly=true&limit=10`);
+            if (response.ok) {
+              const users = await response.json();
+              displayTaskSearchResults(taskId, users);
+            }
+          } catch (error) {
+            console.error('Error searching users:', error);
+          }
+        }, 300));
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e: Event) => {
+          if (!searchInput.contains(e.target as Node) && !dropdown.contains(e.target as Node)) {
+            dropdown.classList.add('hidden');
+          }
+        });
+      }
+      
+      // Set up assign button click handler
+      const assignButton = document.querySelector(`[data-task-id="${taskId}"].assign-team-member-btn`) as HTMLButtonElement;
+      if (assignButton) {
+        console.log(`Setting up direct click handler for assign button on task ${taskId}`);
+        assignButton.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log(`Direct assign button click for task ${taskId}`);
+          assignTeamMemberToTask(taskId);
+        });
+      } else {
+        console.log(`Assign button not found for task ${taskId}`);
+      }
+    }
+
+    function displayTaskSearchResults(taskId: number, users: any[]) {
+      const dropdown = document.getElementById(`teamMemberDropdown-${taskId}`);
+      if (!dropdown) return;
+      
+      if (users.length === 0) {
+        dropdown.innerHTML = '<div class="px-3 py-2 text-sm text-gray-500">No team members found</div>';
+      } else {
+        dropdown.innerHTML = users.map(user => `
+          <div 
+            class="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+            onclick="selectTaskTeamMember(${taskId}, ${user.id}, '${user.name}', '${user.email}')"
+          >
+            <div class="font-medium">${user.name}</div>
+            <div class="text-xs text-gray-500">${user.email}</div>
+          </div>
+        `).join('');
+      }
+      
+      dropdown.classList.remove('hidden');
+    }
+
+    function selectTaskTeamMember(taskId: number, userId: number, userName: string, userEmail: string) {
+      console.log('selectTaskTeamMember called:', { taskId, userId, userName, userEmail });
+      
+      // Initialize the array for this task if it doesn't exist
+      if (!selectedTeamMembersByTask[taskId]) {
+        selectedTeamMembersByTask[taskId] = [];
+      }
+      
+      // Check if user is already selected
+      const existingUser = selectedTeamMembersByTask[taskId].find(user => user.id === userId);
+      if (existingUser) {
+        console.log('User already selected');
+        return;
+      }
+      
+      // Add user to the global storage
+      selectedTeamMembersByTask[taskId].push({ id: userId, name: userName, email: userEmail });
+      
+      // Update the display
+      updateSelectedTeamMembersDisplay(taskId);
+      
+      // Clear search input and hide dropdown
+      const searchInput = document.getElementById(`teamMemberSearch-${taskId}`) as HTMLInputElement;
+      const dropdown = document.getElementById(`teamMemberDropdown-${taskId}`);
+      
+      if (searchInput) {
+        searchInput.value = '';
+      }
+      
+      if (dropdown) {
+        dropdown.classList.add('hidden');
+      }
+      
+      console.log('Team member added to selected list');
+    }
+
+    // Update the display of selected team members for a specific task
+    function updateSelectedTeamMembersDisplay(taskId: number) {
+      console.log(`updateSelectedTeamMembersDisplay called for task ${taskId}`);
+      const selectedContainer = document.getElementById(`selectedTeamMembers-${taskId}`);
+      if (!selectedContainer) {
+        console.log(`Selected container not found for task ${taskId}`);
+        return;
+      }
+      
+      const selectedMembers = selectedTeamMembersByTask[taskId] || [];
+      console.log(`Selected members for task ${taskId}:`, selectedMembers);
+      
+      // Clear existing selected members (but keep currently assigned ones)
+      const existingSelectedDivs = selectedContainer.querySelectorAll('[data-user-id]');
+      console.log(`Clearing ${existingSelectedDivs.length} existing selected divs`);
+      existingSelectedDivs.forEach(div => div.remove());
+      
+      // Add selected team members to the display
+      selectedMembers.forEach(user => {
+        const userDiv = document.createElement('div');
+        userDiv.className = 'flex items-center justify-between bg-blue-50 px-2 py-1 rounded text-sm border border-blue-200';
+        userDiv.setAttribute('data-user-id', user.id.toString());
+        userDiv.innerHTML = `
+          <div class="flex items-center">
+            <span class="font-medium text-blue-800">${user.name}</span>
+            <span class="text-blue-600 ml-2 text-xs">${user.email}</span>
+          </div>
+          <button 
+            type="button"
+            onclick="unassignTeamMember(${taskId}, ${user.id}, '${user.name}')"
+            class="text-red-500 hover:text-red-700 ml-2 p-1 rounded hover:bg-red-100"
+            title="Remove ${user.name}"
+          >
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        `;
+        
+        selectedContainer.appendChild(userDiv);
+      });
+    }
+
+    async function assignTeamMemberToTask(taskId: number) {
+      console.log('assignTeamMemberToTask called with taskId:', taskId);
+      
+      // Get selected team members from global storage
+      const selectedMembers = selectedTeamMembersByTask[taskId] || [];
+      
+      if (selectedMembers.length === 0) {
+        alert('Please select at least one team member first');
+        return;
+      }
+      
+      // Extract user IDs from selected team members
+      const userIds = selectedMembers.map(user => user.id);
+      
+      console.log('Selected members:', selectedMembers);
+      console.log('Selected user IDs:', userIds);
+      console.log('Number of selected users:', userIds.length);
+      
+      try {
+        // Get current assignments for this task
+        const task = currentTasks.find(t => t.id === taskId);
+        if (!task) return;
+        
+        // Assign all selected users to the task
+        const requestBody = {
+          taskId: taskId,
+          userIds: userIds
+        };
+        console.log('Sending assignment request:', requestBody);
+        
+        const response = await fetch('/api/admin/tasks/assign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(requestBody),
+        });
+        
+        if (response.ok) {
+          // Clear all selected team members from global storage
+          selectedTeamMembersByTask[taskId] = [];
+          
+          // Reload tasks to show updated assignments
+          await loadProjectTasks(currentProjectId!);
+        } else {
+          alert('Error assigning team members to task');
+        }
+      } catch (error) {
+        console.error('Error assigning team members:', error);
+        alert('Error assigning team members to task');
+      }
+    }
+
+    // Unassign team member from selected list
+    function unassignTeamMember(taskId: number, userId: number, userName: string) {
+      console.log('unassignTeamMember called:', { taskId, userId, userName });
+      
+      // Remove from global storage
+      if (selectedTeamMembersByTask[taskId]) {
+        selectedTeamMembersByTask[taskId] = selectedTeamMembersByTask[taskId].filter(user => user.id !== userId);
+        console.log(`Removed ${userName} from selected team members`);
+        
+        // Update the display
+        updateSelectedTeamMembersDisplay(taskId);
+      }
+    }
+
+    // Unassign team member from task (remove from actual assignment)
+    async function unassignTeamMemberFromTask(taskId: number, userName: string) {
+      console.log('unassignTeamMemberFromTask called:', { taskId, userName });
+      
+      if (confirm(`Are you sure you want to unassign ${userName} from this task?`)) {
+        try {
+          // Get current task to find the user ID
+          const task = currentTasks.find(t => t.id === taskId);
+          if (!task) return;
+          
+          // Get current assigned users
+          const currentAssignedUsers = task.assignedUsers || '';
+          const assignedUserNames = currentAssignedUsers.split(', ').filter((name: string) => name.trim() !== '');
+          
+          // Remove the specific user
+          const updatedUserNames = assignedUserNames.filter((name: string) => name !== userName);
+          
+          // Get user IDs for the remaining users
+          const remainingUserIds: number[] = [];
+          for (const name of updatedUserNames) {
+            // Search for user by name to get their ID
+            try {
+              const response = await fetch(`/api/admin/users/search?q=${encodeURIComponent(name)}&activeOnly=true&limit=1`);
+              if (response.ok) {
+                const users = await response.json();
+                if (users.length > 0 && users[0].name === name) {
+                  remainingUserIds.push(users[0].id);
+                }
+              }
+            } catch (error) {
+              console.error(`Error finding user ID for ${name}:`, error);
+            }
+          }
+          
+          // Update assignments with remaining users
+          const response = await fetch('/api/admin/tasks/assign', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              taskId: taskId,
+              userIds: remainingUserIds
+            }),
+          });
+          
+          if (response.ok) {
+            await loadProjectTasks(currentProjectId!);
+          } else {
+            alert('Error unassigning team member from task');
+          }
+        } catch (error) {
+          console.error('Error unassigning team member from task:', error);
+          alert('Error unassigning team member from task');
+        }
+      }
+    }
+
+    // Debounce utility function
+    function debounce(func: Function, wait: number) {
+      let timeout: NodeJS.Timeout;
+      return function executedFunction(...args: any[]) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
     }
 
     // Open add task modal
@@ -1240,25 +1955,67 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       }
     }
 
-    // Update task priority
-    async function updateTaskPriority(taskId: number, newPriority: string) {
-      try {
-        const response = await fetch('/api/admin/tasks', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ id: taskId, priority: newPriority }),
-        });
+
+
+    // Quick add task form submission
+    const quickAddTaskForm = document.getElementById('quickAddTaskForm');
+    if (quickAddTaskForm) {
+      quickAddTaskForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const taskName = (document.getElementById('quickAddTaskName') as HTMLInputElement)?.value;
+        const taskPriority = (document.getElementById('quickAddTaskPriority') as HTMLSelectElement)?.value;
+        const taskProjectId = (document.getElementById('quickAddTaskProjectId') as HTMLInputElement)?.value;
         
-        if (response.ok) {
-          await loadProjectTasks(currentProjectId!);
-        } else {
-          alert('Error updating task priority');
+        try {
+          // First create the task
+          const taskResponse = await fetch('/api/admin/tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ 
+              name: taskName, 
+              description: '',
+              projectId: parseInt(taskProjectId), 
+              status: 'pending',
+              priority: taskPriority
+            }),
+          });
+          
+          if (taskResponse.ok) {
+            const newTask = await taskResponse.json();
+            
+            // If there are selected team members, assign them to the task
+            const selectedAssignees = getSelectedAssignees();
+            if (selectedAssignees.length > 0) {
+              try {
+                const assignmentResponse = await fetch('/api/admin/tasks/assign', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include',
+                  body: JSON.stringify({
+                    taskId: newTask.id,
+                    userIds: selectedAssignees
+                  }),
+                });
+                
+                if (!assignmentResponse.ok) {
+                  console.error('Error assigning team members to task');
+                }
+              } catch (assignmentError) {
+                console.error('Error assigning team members:', assignmentError);
+              }
+            }
+            
+            closeQuickAddTaskModal();
+            await loadProjectTasks(currentProjectId!);
+          } else {
+            alert('Error adding task');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('Error adding task');
         }
-      } catch (error) {
-        console.error('Error:', error);
-        alert('Error updating task priority');
-      }
+      });
     }
 
     // Task form submission
@@ -1303,46 +2060,26 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       });
     }
 
-    // Add modal backdrop click handlers
-    const tasksModal = document.getElementById('tasksModal');
-    if (tasksModal) {
-      tasksModal.addEventListener('click', (e) => {
-        if (e.target === tasksModal) {
-          closeTasksModal();
-        }
-      });
-    }
 
-    const taskModal = document.getElementById('taskModal');
-    if (taskModal) {
-      taskModal.addEventListener('click', (e) => {
-        if (e.target === taskModal) {
-          closeTaskModal();
-        }
-      });
-    }
 
-    // Add escape key handler for new modals
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        const tasksModalElement = document.getElementById('tasksModal');
-        if (tasksModalElement && !tasksModalElement.classList.contains('hidden')) {
-          closeTasksModal();
-        }
-        const taskModalElement = document.getElementById('taskModal');
-        if (taskModalElement && !taskModalElement.classList.contains('hidden')) {
-          closeTaskModal();
-        }
-      }
-    });
+
 
     // Make functions globally available
     (window as any).viewProjectTasks = viewProjectTasks;
     (window as any).closeTasksModal = closeTasksModal;
+    (window as any).openQuickAddTaskModal = openQuickAddTaskModal;
+    (window as any).closeQuickAddTaskModal = closeQuickAddTaskModal;
     (window as any).openAddTaskModal = openAddTaskModal;
     (window as any).closeTaskModal = closeTaskModal;
     (window as any).editTask = editTask;
     (window as any).deleteTask = deleteTask;
-    (window as any).updateTaskPriority = updateTaskPriority;
+    (window as any).selectTeamMember = selectTeamMember;
+    (window as any).removeTeamMember = removeTeamMember;
+    (window as any).selectTaskTeamMember = selectTaskTeamMember;
+    (window as any).assignTeamMemberToTask = assignTeamMemberToTask;
+    (window as any).unassignTeamMember = unassignTeamMember;
+    (window as any).unassignTeamMemberFromTask = unassignTeamMemberFromTask;
+    
+
   </script>
 </AdminLayout> 
