@@ -42,12 +42,17 @@ export async function sendInvitationEmail(data: InvitationEmailData) {
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Times10 Invitation</title>
           <style>
-            body { font-family: 'Istok Web', system-ui, sans-serif; line-height: 1.6; color: #333; }
+            body { font-family: 'Istok Web', system-ui, sans-serif; line-height: 1.6; color: #1F292E; background-color: #F2F2F3; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #4F46E5 0%, #3730A3 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; background: linear-gradient(135deg, #4F46E5 0%, #3730A3 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
-            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+            .header { background: linear-gradient(135deg, #415058 0%, #1F292E 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: white; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #C8CDD0; }
+            .button { display: inline-block; background: #d63a2e; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; transition: background-color 0.2s; }
+            .button:hover { background: #b52a24; }
+            .footer { text-align: center; margin-top: 30px; color: #415058; font-size: 14px; }
+            .highlight { color: #d63a2e; }
+            .text-dark { color: #1F292E; }
+            .text-mid { color: #415058; }
+            .text-light { color: #C8CDD0; }
           </style>
         </head>
         <body>
@@ -57,26 +62,26 @@ export async function sendInvitationEmail(data: InvitationEmailData) {
               <p>You've been invited to join our time tracking platform</p>
             </div>
             <div class="content">
-              <h2>Hi ${data.name},</h2>
-              <p>You've been invited by <strong>${data.invitedBy}</strong> to join Times10 Time Tracker as a <strong>${data.role}</strong>.</p>
+              <h2 class="text-dark">Hi ${data.name},</h2>
+              <p class="text-mid">You've been invited by <strong class="highlight">${data.invitedBy}</strong> to join Times10 Time Tracker as a <strong class="highlight">${data.role}</strong>.</p>
               
-              <p>Times10 is a powerful time tracking platform that helps teams manage their time, projects, and productivity.</p>
+              <p class="text-mid">Times10 is a powerful time tracking platform that helps teams manage their time, projects, and productivity.</p>
               
               <div style="text-align: center;">
                 <a href="${data.invitationUrl}" class="button">Set Up Your Account</a>
               </div>
               
-              <p><strong>What you can do with Times10:</strong></p>
-              <ul>
+              <p class="text-dark"><strong>What you can do with Times10:</strong></p>
+              <ul class="text-mid">
                 <li>Track time on projects and tasks</li>
                 <li>View detailed reports and analytics</li>
                 <li>Collaborate with your team</li>
                 <li>Manage projects and clients</li>
               </ul>
               
-              <p><strong>Important:</strong> This invitation link will expire in 24 hours for security reasons.</p>
+              <p class="text-mid"><strong>Important:</strong> This invitation link will expire in 24 hours for security reasons.</p>
               
-              <p>If you have any questions, please contact your team administrator.</p>
+              <p class="text-mid">If you have any questions, please contact your team administrator.</p>
             </div>
             <div class="footer">
               <p>This is an automated message from Times10 Time Tracker</p>
@@ -147,13 +152,18 @@ export async function sendTaskAssignmentEmail(data: TaskAssignmentEmailData) {
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>New Task Assignment</title>
           <style>
-            body { font-family: 'Istok Web', system-ui, sans-serif; line-height: 1.6; color: #333; }
+            body { font-family: 'Istok Web', system-ui, sans-serif; line-height: 1.6; color: #1F292E; background-color: #F2F2F3; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
-            .task-card { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 20px 0; }
-            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+            .header { background: linear-gradient(135deg, #415058 0%, #1F292E 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: white; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #C8CDD0; }
+            .button { display: inline-block; background: #d63a2e; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; transition: background-color 0.2s; }
+            .button:hover { background: #b52a24; }
+            .task-card { background: #F2F2F3; border: 1px solid #C8CDD0; border-radius: 8px; padding: 20px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 30px; color: #415058; font-size: 14px; }
+            .highlight { color: #d63a2e; }
+            .text-dark { color: #1F292E; }
+            .text-mid { color: #415058; }
+            .text-light { color: #C8CDD0; }
           </style>
         </head>
         <body>
@@ -163,28 +173,28 @@ export async function sendTaskAssignmentEmail(data: TaskAssignmentEmailData) {
               <p>You have been assigned a new task</p>
             </div>
             <div class="content">
-              <h2>Hi ${data.userName},</h2>
-              <p>You have been assigned a new task by <strong>${data.assignedBy}</strong>.</p>
+              <h2 class="text-dark">Hi ${data.userName},</h2>
+              <p class="text-mid">You have been assigned a new task by <strong class="highlight">${data.assignedBy}</strong>.</p>
               
               <div class="task-card">
-                <h3 style="margin-top: 0; color: #059669;">${data.taskName}</h3>
-                <p><strong>Project:</strong> ${data.projectName}</p>
-                ${data.taskDescription ? `<p><strong>Description:</strong> ${data.taskDescription}</p>` : ''}
+                <h3 style="margin-top: 0; color: #d63a2e;">${data.taskName}</h3>
+                <p class="text-mid"><strong>Project:</strong> ${data.projectName}</p>
+                ${data.taskDescription ? `<p class="text-mid"><strong>Description:</strong> ${data.taskDescription}</p>` : ''}
               </div>
               
               <div style="text-align: center;">
                 <a href="${data.dashboardUrl}" class="button">View Task in Dashboard</a>
               </div>
               
-              <p><strong>What you can do:</strong></p>
-              <ul>
+              <p class="text-dark"><strong>What you can do:</strong></p>
+              <ul class="text-mid">
                 <li>Start tracking time on this task</li>
                 <li>Add notes and updates</li>
                 <li>Mark the task as complete when finished</li>
                 <li>View progress and time spent</li>
               </ul>
               
-              <p>If you have any questions about this task, please contact ${data.assignedBy}.</p>
+              <p class="text-mid">If you have any questions about this task, please contact ${data.assignedBy}.</p>
             </div>
             <div class="footer">
               <p>This is an automated message from Times10 Time Tracker</p>
