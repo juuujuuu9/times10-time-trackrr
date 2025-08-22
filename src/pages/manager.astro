@@ -253,13 +253,13 @@ const user = await requireRole('manager', '/dashboard')(Astro) as any;
     container.innerHTML = projects.slice(0, 5).map((project: any) => `
       <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
         <div class="flex items-center">
-          <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
-            <span class="text-blue-600 text-lg">📁</span>
+          <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mr-4">
+            <span class="text-gray-600 text-lg">📁</span>
           </div>
           <div>
             <p class="font-medium text-gray-900">${project.name}</p>
             <p class="text-sm text-gray-600">${project.clientName || 'Unknown Client'}</p>
-            <span class="inline-block mt-1 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+            <span class="inline-block mt-1 px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
               ${project.archived ? 'Archived' : 'Active'}
             </span>
           </div>

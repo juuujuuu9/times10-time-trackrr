@@ -274,7 +274,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                 type="text"
                 id="projectName"
                 required
-                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                class="w-[calc(100%-1.5rem)] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#415058] bg-white text-gray-900"
               />
             </div>
             <div class="mb-4">
@@ -285,7 +285,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                 <select
                   id="projectClient"
                   required
-                  class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                  class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#415058] bg-white text-gray-900"
                 >
                   <option value="">Select a client</option>
                   {allClients.map((client) => (
@@ -358,7 +358,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                 type="text"
                 id="clientName"
                 required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#415058] bg-white text-gray-900"
                 placeholder="Enter client name"
               />
             </div>
@@ -459,7 +459,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                 type="text"
                 id="quickAddTaskName"
                 required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#415058] bg-white text-gray-900"
                 placeholder="Enter task name"
               />
             </div>
@@ -469,7 +469,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               </label>
               <select
                 id="quickAddTaskPriority"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#415058] bg-white text-gray-900"
               >
                 <option value="regular">Regular</option>
                 <option value="urgent">Urgent</option>
@@ -484,7 +484,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                   type="text"
                   id="quickAddTaskAssignees"
                   placeholder="Search for team members..."
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#415058] bg-white text-gray-900"
                 />
                 <div id="quickAddTaskAssigneesDropdown" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto hidden">
                   <!-- Search results will be populated here -->
@@ -550,7 +550,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                 type="text"
                 id="taskName"
                 required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#415058] bg-white text-gray-900"
                 placeholder="Enter task name"
               />
             </div>
@@ -561,7 +561,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               <textarea
                 id="taskDescription"
                 rows="3"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#415058] bg-white text-gray-900"
                 placeholder="Enter task description"
               ></textarea>
             </div>
@@ -571,7 +571,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               </label>
               <select
                 id="taskStatus"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#415058] bg-white text-gray-900"
               >
                 <option value="pending">Pending</option>
                 <option value="in-progress">In Progress</option>
@@ -585,7 +585,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
               </label>
               <select
                 id="taskPriority"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#415058] bg-white text-gray-900"
               >
                 <option value="regular">Regular</option>
                 <option value="urgent">Urgent</option>
@@ -1313,7 +1313,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                 ` : ''}
                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                   task.status === 'completed' ? 'bg-green-100 text-green-800' :
-                  task.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
+                  task.status === 'in-progress' ? 'bg-gray-100 text-gray-800' :
                   task.status === 'cancelled' ? 'bg-gray-100 text-gray-800' :
                   'bg-yellow-100 text-yellow-800'
                                  }">
@@ -1338,7 +1338,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                       type="text"
                       id="teamMemberSearch-${task.id}"
                       placeholder="Search for team members..."
-                      class="w-full px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white text-gray-900"
+                      class="w-full px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#415058] bg-white text-gray-900"
                       data-task-id="${task.id}"
                     />
                     <div id="teamMemberDropdown-${task.id}" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto hidden">
@@ -1347,7 +1347,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                   </div>
                   <button
                     type="button"
-                    class="assign-team-member-btn inline-flex items-center px-2 py-1 text-xs font-medium rounded border border-blue-200 text-blue-700 hover:bg-blue-50 transition-colors"
+                    class="assign-team-member-btn inline-flex items-center px-2 py-1 text-xs font-medium rounded border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
                     data-task-id="${task.id}"
                     title="Assign selected team members"
                   >
