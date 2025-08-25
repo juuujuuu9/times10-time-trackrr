@@ -12,13 +12,7 @@ export default defineConfig({
     webAnalytics: {
       enabled: false,
     },
-    security: {
-      headers: {
-        'X-Frame-Options': 'DENY',
-        'X-Content-Type-Options': 'nosniff',
-        'Referrer-Policy': 'strict-origin-when-cross-origin',
-      },
-    },
+    includeFiles: ['./src/pages/api/**/*', './src/middleware.ts'],
   }),
   integrations: [react()],
   vite: {
