@@ -6,6 +6,28 @@ A modern time tracking application built with Astro, React, and PostgreSQL. Focu
 
 The application now supports a comprehensive authentication system with three user roles and email invitations for team onboarding.
 
+## 🔗 Slack Integration
+
+The application includes full Slack integration for seamless time tracking directly from Slack channels.
+
+### Slack Features
+
+- **Slash Commands**: Use `/track`, `/tasks`, and `/status` commands in any Slack channel
+- **OAuth Integration**: Secure workspace installation and user linking
+- **Real-time Time Tracking**: Record time without leaving Slack
+- **Task Management**: View assigned tasks and track progress
+- **Daily Summaries**: Get overview of today's time tracking
+
+### Available Commands
+
+- `/track <task_id> <duration> [notes]` - Record time for a specific task
+- `/tasks` - View your assigned tasks with IDs
+- `/status` - View today's time tracking summary
+
+### Setup Instructions
+
+See [SLACK_SETUP.md](./SLACK_SETUP.md) for detailed setup instructions.
+
 ### Team Invitations
 
 Admins can invite new team members by:
@@ -107,6 +129,12 @@ Enter time as simply as typing `2h` or `3.5hr` - no need to worry about start an
    RESEND_API_KEY=your_resend_api_key_here
    BASE_URL=http://localhost:4321
    VERIFIED_EMAIL=your_verified_email@example.com
+   
+   # Slack Integration (optional)
+   SLACK_CLIENT_ID=your_slack_client_id
+   SLACK_CLIENT_SECRET=your_slack_client_secret
+   SLACK_SIGNING_SECRET=your_slack_signing_secret
+   SITE_URL=https://your-domain.com
    ```
    
    **Email Service Setup:**

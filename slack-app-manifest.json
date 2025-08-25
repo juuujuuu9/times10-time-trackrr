@@ -1,0 +1,56 @@
+{
+  "display_information": {
+    "name": "Times10 Trackr",
+    "description": "Track time and manage tasks directly from Slack",
+    "background_color": "#000000",
+    "long_description": "Times10 Trackr App allows you to record time entries, view assigned tasks, and check your daily time tracking summary directly from Slack. Use slash commands to stay on top of your time tracking without leaving your workspace."
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "Times10 Time Tracker",
+      "always_online": false
+    },
+    "slash_commands": [
+      {
+        "command": "/track",
+        "url": "http://localhost:4321/api/slack/commands",
+        "description": "Record time for a task",
+        "usage_hint": "task_id duration [notes]",
+        "should_escape": false
+      },
+      {
+        "command": "/tasks",
+        "url": "http://localhost:4321/api/slack/commands",
+        "description": "View your assigned tasks",
+        "usage_hint": "(no parameters needed)",
+        "should_escape": false
+      },
+      {
+        "command": "/time-status",
+        "url": "http://localhost:4321/api/slack/commands",
+        "description": "View today's time tracking summary",
+        "usage_hint": "(no parameters needed)",
+        "should_escape": false
+      }
+    ]
+  },
+  "oauth_config": {
+    "redirect_urls": [
+      "http://localhost:4321/api/slack/oauth"
+    ],
+    "scopes": {
+      "bot": [
+        "commands",
+        "chat:write",
+        "users:read",
+        "users:read.email"
+      ]
+    }
+  },
+  "settings": {
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": false
+  }
+}
+  

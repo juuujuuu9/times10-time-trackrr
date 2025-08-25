@@ -87,12 +87,51 @@ export const invitationTokens = pgTable('invitation_tokens', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// Slack Workspaces table
+export const slackWorkspaces = pgTable('slack_workspaces', {
+  id: serial('id').primaryKey(),
+  workspaceId: varchar('workspace_id', { length: 255 }).notNull().unique(),
+  workspaceName: varchar('workspace_name', { length: 255 }).notNull(),
+  accessToken: varchar('access_token', { length: 1000 }).notNull(),
+  botUserId: varchar('bot_user_id', { length: 255 }),
+  botAccessToken: varchar('bot_access_token', { length: 1000 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Slack Users table (links Slack users to your app users)
+export const slackUsers = pgTable('slack_users', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  slackUserId: varchar('slack_user_id', { length: 255 }).notNull(),
+  workspaceId: varchar('workspace_id', { length: 255 }).notNull(),
+  slackUsername: varchar('slack_username', { length: 255 }),
+  slackEmail: varchar('slack_email', { length: 255 }),
+  accessToken: varchar('access_token', { length: 1000 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Slack Commands table (for tracking command usage)
+export const slackCommands = pgTable('slack_commands', {
+  id: serial('id').primaryKey(),
+  command: varchar('command', { length: 100 }).notNull(),
+  slackUserId: varchar('slack_user_id', { length: 255 }).notNull(),
+  workspaceId: varchar('workspace_id', { length: 255 }).notNull(),
+  channelId: varchar('channel_id', { length: 255 }).notNull(),
+  text: text('text'),
+  response: text('response'),
+  success: boolean('success').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   clients: many(clients),
   taskAssignments: many(taskAssignments),
   timeEntries: many(timeEntries),
   sessions: many(sessions),
+  slackUsers: many(slackUsers),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -147,4 +186,15 @@ export const timeEntriesRelations = relations(timeEntries, ({ one }) => ({
     fields: [timeEntries.userId],
     references: [users.id],
   }),
+}));
+
+export const slackUsersRelations = relations(slackUsers, ({ one }) => ({
+  user: one(users, {
+    fields: [slackUsers.userId],
+    references: [users.id],
+  }),
+}));
+
+export const slackWorkspacesRelations = relations(slackWorkspaces, ({ many }) => ({
+  slackUsers: many(slackUsers),
 })); 

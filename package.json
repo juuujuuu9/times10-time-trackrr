@@ -18,6 +18,8 @@
     "@astrojs/react": "^4.3.0",
     "@astrojs/vercel": "^8.2.3",
     "@neondatabase/serverless": "^1.0.1",
+    "@slack/bolt": "^4.4.0",
+    "@slack/web-api": "^7.10.0",
     "@tailwindcss/vite": "^4.1.11",
     "@types/bcryptjs": "^2.4.6",
     "@types/react": "^19.1.8",

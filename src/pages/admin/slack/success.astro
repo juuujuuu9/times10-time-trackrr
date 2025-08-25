@@ -1,0 +1,111 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { requireRole } from '../../../utils/session';
+
+// Require admin role
+const user = await requireRole('admin', '/dashboard')(Astro);
+
+const workspace = Astro.url.searchParams.get('workspace');
+---
+
+<AdminLayout title="Slack Installation Success - Admin">
+  <div class="p-6">
+    <div class="max-w-2xl mx-auto">
+      <div class="text-center mb-8">
+        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+          <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </div>
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Slack App Installed Successfully!</h1>
+        <p class="text-gray-600">
+          {workspace ? `The Times10 Time Tracker app has been installed to the "${workspace}" workspace.` : 'The Times10 Time Tracker app has been installed to your Slack workspace.'}
+        </p>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Next Steps</h2>
+        
+        <div class="space-y-4">
+          <div class="flex items-start">
+            <div class="flex-shrink-0">
+              <div class="flex items-center justify-center h-6 w-6 rounded-full bg-blue-100">
+                <span class="text-sm font-medium text-blue-600">1</span>
+              </div>
+            </div>
+            <div class="ml-3">
+              <h3 class="text-sm font-medium text-gray-900">Team members need to link their accounts</h3>
+              <p class="text-sm text-gray-500 mt-1">
+                Each team member needs to link their Slack account to their Times10 account to use the time tracking commands.
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-start">
+            <div class="flex-shrink-0">
+              <div class="flex items-center justify-center h-6 w-6 rounded-full bg-blue-100">
+                <span class="text-sm font-medium text-blue-600">2</span>
+              </div>
+            </div>
+            <div class="ml-3">
+              <h3 class="text-sm font-medium text-gray-900">Available Slack commands</h3>
+              <p class="text-sm text-gray-500 mt-1">
+                Once linked, users can use these commands in any Slack channel:
+              </p>
+              <div class="mt-2 space-y-2">
+                <div class="bg-gray-50 rounded p-3">
+                  <code class="text-sm font-mono text-gray-800">/track &lt;task_id&gt; &lt;duration&gt; [notes]</code>
+                  <p class="text-xs text-gray-600 mt-1">Record time for a specific task</p>
+                </div>
+                <div class="bg-gray-50 rounded p-3">
+                  <code class="text-sm font-mono text-gray-800">/tasks</code>
+                  <p class="text-xs text-gray-600 mt-1">View your assigned tasks</p>
+                </div>
+                <div class="bg-gray-50 rounded p-3">
+                  <code class="text-sm font-mono text-gray-800">/status</code>
+                  <p class="text-xs text-gray-600 mt-1">View today's time tracking summary</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-start">
+            <div class="flex-shrink-0">
+              <div class="flex items-center justify-center h-6 w-6 rounded-full bg-blue-100">
+                <span class="text-sm font-medium text-blue-600">3</span>
+              </div>
+            </div>
+            <div class="ml-3">
+              <h3 class="text-sm font-medium text-gray-900">Monitor usage</h3>
+              <p class="text-sm text-gray-500 mt-1">
+                You can monitor Slack integration usage and manage connected users from the Slack Integration page.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-center space-x-4">
+        <a 
+          href="/admin/slack" 
+          class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+        >
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+          </svg>
+          Back to Slack Integration
+        </a>
+        <a 
+          href="/admin" 
+          class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+        >
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z"></path>
+          </svg>
+          Admin Dashboard
+        </a>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
