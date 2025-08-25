@@ -394,8 +394,8 @@ const user = await requireAuth('/')(Astro) as any;
         return;
       }
 
-      // Load user's recent time entries
-      const entriesResponse = await fetch('/api/time-entries?userId=' + encodeURIComponent(userId));
+      // Load user's recent time entries (limit to 10 most recent)
+      const entriesResponse = await fetch('/api/time-entries?userId=' + encodeURIComponent(userId) + '&limit=10');
       if (entriesResponse.ok) {
         const entriesData = await entriesResponse.json();
         updateRecentEntries(entriesData.data || []);
