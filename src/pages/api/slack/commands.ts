@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 
 export const OPTIONS: APIRoute = async () => {
+  console.log('OPTIONS request received');
   return new Response(null, {
     status: 200,
     headers: {
@@ -13,11 +14,21 @@ export const OPTIONS: APIRoute = async () => {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    console.log('Minimal commands endpoint hit at:', new Date().toISOString());
+    console.log('Commands endpoint hit at:', new Date().toISOString());
+    console.log('Request method:', request.method);
+    console.log('Request URL:', request.url);
+    
+    // Log all headers
+    const headers: Record<string, string> = {};
+    request.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
+    console.log('Request headers:', headers);
     
     // Get the raw body
     const rawBody = await request.text();
     console.log('Raw body length:', rawBody.length);
+    console.log('Raw body:', rawBody);
     
     // Parse form data
     const formData = new URLSearchParams(rawBody);
@@ -64,7 +75,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
   } catch (error) {
-    console.error('Minimal commands error:', error);
+    console.error('Commands endpoint error:', error);
     
     return new Response(JSON.stringify({
       response_type: 'ephemeral',
