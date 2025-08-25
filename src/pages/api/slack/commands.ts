@@ -11,18 +11,6 @@ import {
 } from '../../../utils/slack';
 
 export const POST: APIRoute = async ({ request }) => {
-  // Handle CORS preflight requests
-  if (request.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      }
-    });
-  }
-
   try {
     const formData = await request.formData();
     const command = formData.get('command') as string;
@@ -40,12 +28,7 @@ export const POST: APIRoute = async ({ request }) => {
       text: '❌ This workspace is not connected to Times10 Time Tracker. Please contact your administrator.'
     }), {
       status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      }
+      headers: { 'Content-Type': 'application/json' }
     });
     }
 
@@ -58,12 +41,7 @@ export const POST: APIRoute = async ({ request }) => {
       text: '❌ Your Slack account is not linked to Times10 Time Tracker. Please link your account first.'
     }), {
       status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      }
+      headers: { 'Content-Type': 'application/json' }
     });
     }
 
@@ -92,12 +70,7 @@ export const POST: APIRoute = async ({ request }) => {
       text: response
     }), {
       status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      }
+      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
@@ -107,12 +80,7 @@ export const POST: APIRoute = async ({ request }) => {
       text: '❌ An error occurred while processing your command. Please try again.'
     }), {
       status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      }
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 };
