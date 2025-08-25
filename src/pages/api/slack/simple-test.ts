@@ -4,29 +4,29 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     console.log('Simple test endpoint hit');
     
-    // Log all headers
-    const headers: Record<string, string> = {};
-    request.headers.forEach((value, key) => {
-      headers[key] = value;
-    });
+    // Get the raw body
+    const rawBody = await request.text();
+    console.log('Raw body length:', rawBody.length);
     
-    console.log('Request headers:', headers);
+    // Parse form data
+    const formData = new URLSearchParams(rawBody);
+    const command = formData.get('command') as string;
+    const text = formData.get('text') as string;
+    const userId = formData.get('user_id') as string;
+    const teamId = formData.get('team_id') as string;
+    const channelId = formData.get('channel_id') as string;
     
-    // Try to get the body
-    let body = '';
-    try {
-      body = await request.text();
-      console.log('Request body:', body);
-    } catch (error) {
-      console.log('Failed to read body:', error);
-    }
+    console.log('Parsed data:', { command, text, userId, teamId, channelId });
     
+    // Return a simple success response
     return new Response(JSON.stringify({
-      success: true,
-      message: 'Simple test successful',
-      headers: Object.keys(headers),
-      bodyLength: body.length,
-      timestamp: new Date().toISOString()
+      response_type: 'ephemeral',
+      text: `✅ Simple test successful!
+Command: ${command || 'none'}
+Text: ${text || 'none'}
+User: ${userId || 'none'}
+Team: ${teamId || 'none'}
+Channel: ${channelId || 'none'}`
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
@@ -36,9 +36,8 @@ export const POST: APIRoute = async ({ request }) => {
     console.error('Simple test error:', error);
     
     return new Response(JSON.stringify({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString()
+      response_type: 'ephemeral',
+      text: `❌ Simple test failed: ${error instanceof Error ? error.message : 'Unknown error'}`
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }

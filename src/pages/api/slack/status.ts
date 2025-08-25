@@ -6,33 +6,40 @@ export const GET: APIRoute = async () => {
   try {
     console.log('Slack status check requested');
     
-    // Get all workspaces
+    // Get workspace count
     const workspaces = await db.query.slackWorkspaces.findMany();
     console.log('Found workspaces:', workspaces.length);
     
-    // Get all linked users
-    const linkedUsers = await db.query.slackUsers.findMany({
-      with: {
-        user: true
-      }
-    });
+    // Get linked users count
+    const linkedUsers = await db.query.slackUsers.findMany();
     console.log('Found linked users:', linkedUsers.length);
+    
+    // Get workspace details
+    const workspaceDetails = workspaces.map(ws => ({
+      id: ws.workspaceId,
+      name: ws.workspaceName,
+      hasBotToken: !!ws.botAccessToken,
+      createdAt: ws.createdAt
+    }));
+    
+    // Get user details
+    const userDetails = linkedUsers.map(su => ({
+      userId: su.userId,
+      slackUserId: su.slackUserId,
+      workspaceId: su.workspaceId,
+      hasEmail: !!su.slackEmail,
+      createdAt: su.createdAt
+    }));
     
     return new Response(JSON.stringify({
       status: 'healthy',
-      workspaces: workspaces.map(w => ({
-        id: w.workspaceId,
-        name: w.workspaceName,
-        createdAt: w.createdAt
-      })),
-      linkedUsers: linkedUsers.map(u => ({
-        slackUserId: u.slackUserId,
-        workspaceId: u.workspaceId,
-        userName: u.user?.name || 'Unknown'
-      })),
-      summary: {
-        totalWorkspaces: workspaces.length,
-        totalLinkedUsers: linkedUsers.length
+      workspaces: {
+        count: workspaces.length,
+        details: workspaceDetails
+      },
+      linkedUsers: {
+        count: linkedUsers.length,
+        details: userDetails
       },
       timestamp: new Date().toISOString()
     }), {
@@ -44,7 +51,7 @@ export const GET: APIRoute = async () => {
     console.error('Slack status check failed:', error);
     
     return new Response(JSON.stringify({
-      status: 'error',
+      status: 'unhealthy',
       error: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString()
     }), {

@@ -27,25 +27,40 @@ function verifySlackSignature(request: Request, body: string): boolean {
     return true; // Temporarily allow requests without signature
   }
 
+  // Check if request is too old (replay attack protection)
+  const requestTime = parseInt(timestamp);
+  const currentTime = Math.floor(Date.now() / 1000);
+  if (Math.abs(currentTime - requestTime) > 300) { // 5 minutes
+    console.warn('Request timestamp too old');
+    return false;
+  }
+
   const baseString = `v0:${timestamp}:${body}`;
   const expectedSignature = 'v0=' + crypto
     .createHmac('sha256', signingSecret)
     .update(baseString)
     .digest('hex');
 
-  return crypto.timingSafeEqual(
+  const isValid = crypto.timingSafeEqual(
     Buffer.from(signature),
     Buffer.from(expectedSignature)
   );
+
+  if (!isValid) {
+    console.warn('Invalid Slack signature');
+  }
+
+  return isValid;
 }
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    console.log('Slack command received');
+    console.log('Slack command received at:', new Date().toISOString());
     
     // Get the raw body for signature verification
     const rawBody = await request.text();
     console.log('Raw request body length:', rawBody.length);
+    console.log('Raw request body preview:', rawBody.substring(0, 200));
     
     // Verify Slack signature
     if (!verifySlackSignature(request, rawBody)) {
@@ -137,10 +152,15 @@ export const POST: APIRoute = async ({ request }) => {
 
     await logSlackCommand(command, userId, teamId, channelId, text, response);
 
-    return new Response(JSON.stringify({
+    const responseBody = JSON.stringify({
       response_type: 'ephemeral',
       text: response
-    }), {
+    });
+    
+    console.log('Sending response:', responseBody);
+    console.log('Response length:', responseBody.length);
+
+    return new Response(responseBody, {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
@@ -148,17 +168,9 @@ export const POST: APIRoute = async ({ request }) => {
   } catch (error) {
     console.error('Slack command error:', error);
     
-    // Try to log the error
+    // Try to log the error (without re-reading the request body)
     try {
-      const rawBody = await request.text();
-      const formData = new URLSearchParams(rawBody);
-      const command = formData.get('command') as string;
-      const userId = formData.get('user_id') as string;
-      const teamId = formData.get('team_id') as string;
-      const channelId = formData.get('channel_id') as string;
-      const text = formData.get('text') as string;
-      
-      await logSlackCommand(command, userId, teamId, channelId, text, `Error: ${error instanceof Error ? error.message : 'Unknown error'}`, false);
+      await logSlackCommand('unknown', 'unknown', 'unknown', 'unknown', 'unknown', `Error: ${error instanceof Error ? error.message : 'Unknown error'}`, false);
     } catch (logError) {
       console.error('Failed to log error:', logError);
     }
@@ -265,20 +277,25 @@ async function handleTasksCommand(userId: number): Promise<string> {
       return '📋 You have no assigned tasks.';
     }
 
-    // Get task details for each assignment
+    // Get task details for each assignment with better error handling
     const taskDetails = await Promise.all(
       assignments.map(async (assignment) => {
-        const task = await db.query.tasks.findFirst({
-          where: eq(tasks.id, assignment.taskId),
-          with: {
-            project: {
-              with: {
-                client: true
+        try {
+          const task = await db.query.tasks.findFirst({
+            where: eq(tasks.id, assignment.taskId),
+            with: {
+              project: {
+                with: {
+                  client: true
+                }
               }
             }
-          }
-        });
-        return task;
+          });
+          return task;
+        } catch (taskError) {
+          console.error(`Error fetching task ${assignment.taskId}:`, taskError);
+          return null;
+        }
       })
     );
 
@@ -290,7 +307,12 @@ async function handleTasksCommand(userId: number): Promise<string> {
 
     const taskList = validTasks.map(task => {
       if (!task) return '';
-      return `• ID: ${task.id} | ${task.name} (${task.project.name} - ${task.project.client.name})`;
+      try {
+        return `• ID: ${task.id} | ${task.name} (${task.project.name} - ${task.project.client.name})`;
+      } catch (formatError) {
+        console.error('Error formatting task:', formatError);
+        return `• ID: ${task.id} | ${task.name} (Project details unavailable)`;
+      }
     }).filter(line => line !== '').join('\n');
 
     return `📋 Your assigned tasks:\n${taskList}`;
