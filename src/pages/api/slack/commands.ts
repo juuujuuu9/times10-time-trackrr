@@ -14,9 +14,9 @@ import {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    // For now, let's skip signature verification to test if the endpoint works
-    // We'll add it back once we confirm the basic functionality
+    console.log('Slack command received');
     
+    // Parse form data
     const formData = await request.formData();
     const command = formData.get('command') as string;
     const text = formData.get('text') as string;
@@ -24,35 +24,57 @@ export const POST: APIRoute = async ({ request }) => {
     const teamId = formData.get('team_id') as string;
     const channelId = formData.get('channel_id') as string;
 
+    console.log('Parsed form data:', { command, text, userId, teamId, channelId });
+
+    // Validate required fields
+    if (!command || !userId || !teamId || !channelId) {
+      console.error('Missing required fields:', { command, userId, teamId, channelId });
+      return new Response(JSON.stringify({
+        response_type: 'ephemeral',
+        text: '❌ Invalid request: Missing required fields'
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // Get workspace
+    console.log('Looking up workspace:', teamId);
     const workspace = await getWorkspaceById(teamId);
     if (!workspace) {
+      console.log('Workspace not found:', teamId);
       await logSlackCommand(command, userId, teamId, channelId, text, 'Workspace not found', false);
-          return new Response(JSON.stringify({
-      response_type: 'ephemeral',
-      text: '❌ This workspace is not connected to Times10 Time Tracker. Please contact your administrator.'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      return new Response(JSON.stringify({
+        response_type: 'ephemeral',
+        text: '❌ This workspace is not connected to Times10 Time Tracker. Please contact your administrator.'
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     // Get user
+    console.log('Looking up user:', userId, 'in workspace:', teamId);
     const user = await getUserBySlackId(userId, teamId);
     if (!user) {
+      console.log('User not linked:', userId);
       await logSlackCommand(command, userId, teamId, channelId, text, 'User not linked', false);
-          return new Response(JSON.stringify({
-      response_type: 'ephemeral',
-      text: '❌ Your Slack account is not linked to Times10 Time Tracker. Please link your account first.'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      return new Response(JSON.stringify({
+        response_type: 'ephemeral',
+        text: '❌ Your Slack account is not linked to Times10 Time Tracker. Please link your account first.'
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
+    console.log('User found:', user.id);
+
     // Parse command
-    const args = text.trim().split(/\s+/);
+    const args = text ? text.trim().split(/\s+/) : [];
     let response: string;
+
+    console.log('Processing command:', command, 'with args:', args);
 
     switch (command) {
       case '/track':
@@ -68,6 +90,8 @@ export const POST: APIRoute = async ({ request }) => {
         response = '❌ Unknown command. Available commands: `/track`, `/tasks`, `/time-status`';
     }
 
+    console.log('Command response:', response);
+
     await logSlackCommand(command, userId, teamId, channelId, text, response);
 
     return new Response(JSON.stringify({
@@ -80,6 +104,21 @@ export const POST: APIRoute = async ({ request }) => {
 
   } catch (error) {
     console.error('Slack command error:', error);
+    
+    // Try to log the error
+    try {
+      const formData = await request.formData();
+      const command = formData.get('command') as string;
+      const userId = formData.get('user_id') as string;
+      const teamId = formData.get('team_id') as string;
+      const channelId = formData.get('channel_id') as string;
+      const text = formData.get('text') as string;
+      
+      await logSlackCommand(command, userId, teamId, channelId, text, `Error: ${error instanceof Error ? error.message : 'Unknown error'}`, false);
+    } catch (logError) {
+      console.error('Failed to log error:', logError);
+    }
+    
     return new Response(JSON.stringify({
       response_type: 'ephemeral',
       text: '❌ An error occurred while processing your command. Please try again.'
@@ -167,81 +206,119 @@ Example: /track 456 90m Bug fixes`;
 
 // Handle /tasks command
 async function handleTasksCommand(userId: number): Promise<string> {
-  const userTasks = await db.query.taskAssignments.findMany({
-    where: eq(taskAssignments.userId, userId),
-    with: {
-      task: {
-        with: {
-          project: {
-            with: {
-              client: true
+  try {
+    console.log('Fetching tasks for user:', userId);
+    
+    // First, get task assignments
+    const assignments = await db.query.taskAssignments.findMany({
+      where: eq(taskAssignments.userId, userId),
+      orderBy: desc(taskAssignments.taskId)
+    });
+
+    console.log('Found assignments:', assignments.length);
+
+    if (assignments.length === 0) {
+      return '📋 You have no assigned tasks.';
+    }
+
+    // Get task details for each assignment
+    const taskDetails = await Promise.all(
+      assignments.map(async (assignment) => {
+        const task = await db.query.tasks.findFirst({
+          where: eq(tasks.id, assignment.taskId),
+          with: {
+            project: {
+              with: {
+                client: true
+              }
             }
           }
-        }
-      }
-    },
-    orderBy: desc(taskAssignments.taskId)
-  });
+        });
+        return task;
+      })
+    );
 
-  if (userTasks.length === 0) {
-    return '📋 You have no assigned tasks.';
+    const validTasks = taskDetails.filter(task => task !== null);
+    
+    if (validTasks.length === 0) {
+      return '📋 You have no assigned tasks.';
+    }
+
+    const taskList = validTasks.map(task => {
+      if (!task) return '';
+      return `• ID: ${task.id} | ${task.name} (${task.project.name} - ${task.project.client.name})`;
+    }).filter(line => line !== '').join('\n');
+
+    return `📋 Your assigned tasks:\n${taskList}`;
+  } catch (error) {
+    console.error('Error in handleTasksCommand:', error);
+    return '❌ Error fetching tasks. Please try again.';
   }
-
-  const taskList = userTasks.map(assignment => {
-    const task = assignment.task;
-    return `• ID: ${task.id} | ${task.name} (${task.project.name} - ${task.project.client.name})`;
-  }).join('\n');
-
-  return `📋 Your assigned tasks:\n${taskList}`;
 }
 
 // Handle /status command
 async function handleStatusCommand(userId: number): Promise<string> {
-  // Get today's time entries
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  try {
+    console.log('Fetching time entries for user:', userId);
+    
+    // Get today's time entries
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
-      const todayEntries = await db.query.timeEntries.findMany({
+    const todayEntries = await db.query.timeEntries.findMany({
       where: and(
         eq(timeEntries.userId, userId),
         gte(timeEntries.startTime, today),
         lt(timeEntries.startTime, tomorrow)
       ),
-    with: {
-      task: {
-        with: {
-          project: {
-            with: {
-              client: true
+      orderBy: desc(timeEntries.startTime)
+    });
+
+    console.log('Found time entries:', todayEntries.length);
+
+    if (todayEntries.length === 0) {
+      return '📊 Today\'s time tracking: No entries yet.';
+    }
+
+    // Get task details for each entry
+    const entryDetails = await Promise.all(
+      todayEntries.map(async (entry) => {
+        const task = await db.query.tasks.findFirst({
+          where: eq(tasks.id, entry.taskId),
+          with: {
+            project: {
+              with: {
+                client: true
+              }
             }
           }
-        }
-      }
-    },
-    orderBy: desc(timeEntries.startTime)
-  });
+        });
+        return { entry, task };
+      })
+    );
 
-  if (todayEntries.length === 0) {
-    return '📊 Today\'s time tracking: No entries yet.';
-  }
+    const totalSeconds = entryDetails.reduce((total, { entry }) => {
+      const duration = entry.durationManual || 
+        (entry.endTime ? Math.floor((entry.endTime.getTime() - entry.startTime.getTime()) / 1000) : 0);
+      return total + duration;
+    }, 0);
 
-  const totalSeconds = todayEntries.reduce((total, entry) => {
-    const duration = entry.durationManual || 
-      (entry.endTime ? Math.floor((entry.endTime.getTime() - entry.startTime.getTime()) / 1000) : 0);
-    return total + duration;
-  }, 0);
+    const formattedTotal = formatDurationForSlack(totalSeconds);
+    
+    const entryList = entryDetails.slice(0, 5).map(({ entry, task }) => {
+      const duration = entry.durationManual || 
+        (entry.endTime ? Math.floor((entry.endTime.getTime() - entry.startTime.getTime()) / 1000) : 0);
+      const formattedDuration = formatDurationForSlack(duration);
+      const taskName = task?.name || 'Unknown Task';
+      return `• ${taskName} (${formattedDuration})`;
+    }).join('\n');
 
-  const formattedTotal = formatDurationForSlack(totalSeconds);
-  
-  const entryList = todayEntries.slice(0, 5).map(entry => {
-    const duration = entry.durationManual || 
-      (entry.endTime ? Math.floor((entry.endTime.getTime() - entry.startTime.getTime()) / 1000) : 0);
-    const formattedDuration = formatDurationForSlack(duration);
-    return `• ${entry.task.name} (${formattedDuration})`;
-  }).join('\n');
-
-  return `📊 Today's time tracking (${formattedTotal} total):
+    return `📊 Today's time tracking (${formattedTotal} total):
 ${entryList}${todayEntries.length > 5 ? '\n... and more' : ''}`;
+  } catch (error) {
+    console.error('Error in handleStatusCommand:', error);
+    return '❌ Error fetching time entries. Please try again.';
+  }
 }
