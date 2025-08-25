@@ -8,7 +8,18 @@ import 'dotenv/config';
 // https://astro.build/config
 export default defineConfig({
   output: 'server',
-  adapter: vercel(),
+  adapter: vercel({
+    webAnalytics: {
+      enabled: false,
+    },
+    security: {
+      headers: {
+        'X-Frame-Options': 'DENY',
+        'X-Content-Type-Options': 'nosniff',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+      },
+    },
+  }),
   integrations: [react()],
   vite: {
     plugins: [tailwindcss()],
