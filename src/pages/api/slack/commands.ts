@@ -53,6 +53,17 @@ function verifySlackSignature(request: Request, body: string): boolean {
   return isValid;
 }
 
+export const OPTIONS: APIRoute = async () => {
+  return new Response(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Slack-Signature, X-Slack-Request-Timestamp',
+    },
+  });
+};
+
 export const POST: APIRoute = async ({ request }) => {
   try {
     console.log('Slack command received at:', new Date().toISOString());
@@ -70,7 +81,12 @@ export const POST: APIRoute = async ({ request }) => {
         text: '❌ Invalid request signature'
       }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Slack-Signature, X-Slack-Request-Timestamp',
+        }
       });
     }
     
@@ -92,7 +108,12 @@ export const POST: APIRoute = async ({ request }) => {
         text: '❌ Invalid request: Missing required fields'
       }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Slack-Signature, X-Slack-Request-Timestamp',
+        }
       });
     }
 
@@ -162,7 +183,12 @@ export const POST: APIRoute = async ({ request }) => {
 
     return new Response(responseBody, {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Slack-Signature, X-Slack-Request-Timestamp',
+      }
     });
 
   } catch (error) {
@@ -180,7 +206,12 @@ export const POST: APIRoute = async ({ request }) => {
       text: '❌ An error occurred while processing your command. Please try again.'
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Slack-Signature, X-Slack-Request-Timestamp',
+      }
     });
   }
 };
