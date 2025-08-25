@@ -11,6 +11,18 @@ import {
 } from '../../../utils/slack';
 
 export const POST: APIRoute = async ({ request }) => {
+  // Handle CORS preflight requests
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      }
+    });
+  }
+
   try {
     const formData = await request.formData();
     const command = formData.get('command') as string;
@@ -23,26 +35,36 @@ export const POST: APIRoute = async ({ request }) => {
     const workspace = await getWorkspaceById(teamId);
     if (!workspace) {
       await logSlackCommand(command, userId, teamId, channelId, text, 'Workspace not found', false);
-      return new Response(JSON.stringify({
-        response_type: 'ephemeral',
-        text: '❌ This workspace is not connected to Times10 Time Tracker. Please contact your administrator.'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+          return new Response(JSON.stringify({
+      response_type: 'ephemeral',
+      text: '❌ This workspace is not connected to Times10 Time Tracker. Please contact your administrator.'
+    }), {
+      status: 200,
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      }
+    });
     }
 
     // Get user
     const user = await getUserBySlackId(userId, teamId);
     if (!user) {
       await logSlackCommand(command, userId, teamId, channelId, text, 'User not linked', false);
-      return new Response(JSON.stringify({
-        response_type: 'ephemeral',
-        text: '❌ Your Slack account is not linked to Times10 Time Tracker. Please link your account first.'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+          return new Response(JSON.stringify({
+      response_type: 'ephemeral',
+      text: '❌ Your Slack account is not linked to Times10 Time Tracker. Please link your account first.'
+    }), {
+      status: 200,
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      }
+    });
     }
 
     // Parse command
@@ -70,7 +92,12 @@ export const POST: APIRoute = async ({ request }) => {
       text: response
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      }
     });
 
   } catch (error) {
@@ -80,7 +107,12 @@ export const POST: APIRoute = async ({ request }) => {
       text: '❌ An error occurred while processing your command. Please try again.'
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      }
     });
   }
 };
