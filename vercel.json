@@ -13,9 +13,14 @@
         },
         {
           "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization, X-Slack-Signature, X-Slack-Request-Timestamp"
+          "value": "Content-Type, Authorization, X-Slack-Signature, X-Slack-Request-Timestamp, X-Slack-Signature"
         }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "src/pages/api/slack/commands.ts": {
+      "maxDuration": 10
+    }
+  }
 }
