@@ -12,7 +12,6 @@ export default defineConfig({
     webAnalytics: {
       enabled: false,
     },
-    includeFiles: ['./src/pages/api/**/*', './src/middleware.ts'],
   }),
   integrations: [react()],
   vite: {
