@@ -1,5 +1,16 @@
 import type { APIRoute } from 'astro';
 
+export const OPTIONS: APIRoute = async () => {
+  return new Response(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Slack-Signature, X-Slack-Request-Timestamp',
+    },
+  });
+};
+
 export const POST: APIRoute = async ({ request }) => {
   try {
     console.log('Minimal commands endpoint hit at:', new Date().toISOString());
@@ -44,7 +55,12 @@ export const POST: APIRoute = async ({ request }) => {
     
     return new Response(responseBody, {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Slack-Signature, X-Slack-Request-Timestamp',
+      }
     });
 
   } catch (error) {
@@ -55,7 +71,12 @@ export const POST: APIRoute = async ({ request }) => {
       text: `❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Slack-Signature, X-Slack-Request-Timestamp',
+      }
     });
   }
 };
