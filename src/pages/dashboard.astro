@@ -458,6 +458,12 @@ const user = await requireAuth('/')(Astro) as any;
               Date
             </th>
             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Start
+            </th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Stop
+            </th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Duration
             </th>
             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -472,9 +478,11 @@ const user = await requireAuth('/')(Astro) as any;
           ${displayEntries.map((entry: any) => {
             const taskDate = new Date(entry.startTime);
             const durationHours = entry.duration ? (entry.duration / 3600).toFixed(1) : '0';
+            const startTime = new Date(entry.startTime);
+            const endTime = entry.endTime ? new Date(entry.endTime) : null;
             
                          return `
-               <tr class="hover:bg-gray-50">
+               <tr class="hover:bg-gray-50" data-entry-id="${entry.id}">
                  <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                    ${entry.clientName || 'Unknown Client'}
                  </td>
@@ -486,6 +494,26 @@ const user = await requireAuth('/')(Astro) as any;
                  </td>
                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                    ${taskDate.toLocaleDateString()}
+                 </td>
+                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                   <input
+                     type="text"
+                     class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                     value="${startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}"
+                     data-entry-id="${entry.id}"
+                     data-time-type="start"
+                     placeholder="12:00AM"
+                   />
+                 </td>
+                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                   <input
+                     type="text"
+                     class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                     value="${endTime ? endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : ''}"
+                     data-entry-id="${entry.id}"
+                     data-time-type="end"
+                     placeholder="12:00AM"
+                   />
                  </td>
                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                    ${durationHours} hours
@@ -1055,4 +1083,114 @@ const user = await requireAuth('/')(Astro) as any;
       }
     });
   }
+
+  // Time input handling for recent entries
+  document.addEventListener('DOMContentLoaded', function() {
+    // Function to handle time input changes
+    function handleTimeInputChange() {
+      const timeInputs = document.querySelectorAll('.time-input');
+      
+      timeInputs.forEach((input: Element) => {
+        const timeInput = input as HTMLInputElement;
+        
+        timeInput.addEventListener('blur', async function() {
+          const entryId = this.getAttribute('data-entry-id');
+          const timeType = this.getAttribute('data-time-type');
+          const timeValue = this.value.trim();
+          
+          if (!timeValue) return;
+          
+          try {
+            const updateData: { startTime?: string; endTime?: string } = {};
+            if (timeType === 'start') {
+              updateData.startTime = timeValue;
+            } else if (timeType === 'end') {
+              updateData.endTime = timeValue;
+            }
+            
+            const response = await fetch(`/api/time-entries/${entryId}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(updateData)
+            });
+            
+            if (response.ok) {
+              const result = await response.json();
+              // Update the duration cell
+              const row = this.closest('tr');
+              const durationCell = row?.querySelector('td:nth-child(7)'); // Duration column
+              if (durationCell && result.data) {
+                const duration = result.data.durationManual ? result.data.durationManual / 3600 : 0;
+                durationCell.textContent = `${duration ? Math.round(duration * 10) / 10 : 0} hours`;
+              }
+              
+              // Reload weekly stats to update "This Week" hours
+              const userId = await getCurrentUserId();
+              if (userId) {
+                const statsResponse = await fetch('/api/reports/weekly-stats?userId=' + encodeURIComponent(userId));
+                if (statsResponse.ok) {
+                  const statsData = await statsResponse.json();
+                  updateWeeklyStats(statsData);
+                }
+              }
+              
+              // Show success feedback
+              this.style.borderColor = '#10B981';
+              setTimeout(() => {
+                this.style.borderColor = '';
+              }, 2000);
+                         } else {
+               const error = await response.json();
+               
+               if (response.status === 401) {
+                 // Authentication error - redirect to login
+                 alert('Your session has expired. Please log in again.');
+                 window.location.href = '/login';
+                 return;
+               }
+               
+               alert(`Error: ${error.error}`);
+               // Reset to original value on error
+               this.focus();
+             }
+          } catch (error) {
+            console.error('Error updating time:', error);
+            alert('Error updating time. Please try again.');
+            this.focus();
+          }
+        });
+        
+        // Handle Enter key
+        timeInput.addEventListener('keypress', function(e: KeyboardEvent) {
+          if (e.key === 'Enter') {
+            this.blur();
+          }
+        });
+      });
+    }
+
+    // Initial setup
+    handleTimeInputChange();
+
+      // Re-setup after data reload using a MutationObserver
+  const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+      if (mutation.type === 'childList') {
+        // Check if time inputs were added
+        const timeInputs = document.querySelectorAll('.time-input');
+        if (timeInputs.length > 0) {
+          handleTimeInputChange();
+        }
+      }
+    });
+  });
+
+  // Start observing the recent entries container
+  const recentEntriesContainer = document.getElementById('recentEntries');
+  if (recentEntriesContainer) {
+    observer.observe(recentEntriesContainer, { childList: true, subtree: true });
+  }
+  });
 </script> 

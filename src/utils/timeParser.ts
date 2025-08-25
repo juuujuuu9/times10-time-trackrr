@@ -55,6 +55,133 @@ export function parseTimeInput(input: string): number {
 }
 
 /**
+ * Parse time input in various formats and return a Date object for a specific date
+ * Supports formats like: "12p", "12:30am", "1230 p", "12:00 PM", "12am", etc.
+ */
+export function parseTimeString(timeInput: string, baseDate: Date = new Date()): Date {
+  const trimmed = timeInput.trim().toLowerCase();
+  
+  // Create a new date object based on the base date
+  const resultDate = new Date(baseDate);
+  
+  // Handle various time formats
+  let hours = 0;
+  let minutes = 0;
+  let isPM = false;
+  
+  // Pattern 1: "12p", "12pm", "12:30p", "12:30pm"
+  const pmPattern1 = trimmed.match(/^(\d{1,2})(?::(\d{2}))?\s*(p|pm)$/);
+  if (pmPattern1) {
+    hours = parseInt(pmPattern1[1]);
+    minutes = pmPattern1[2] ? parseInt(pmPattern1[2]) : 0;
+    isPM = true;
+  }
+  
+  // Pattern 2: "12a", "12am", "12:30a", "12:30am"
+  const amPattern1 = trimmed.match(/^(\d{1,2})(?::(\d{2}))?\s*(a|am)$/);
+  if (amPattern1) {
+    hours = parseInt(amPattern1[1]);
+    minutes = amPattern1[2] ? parseInt(amPattern1[2]) : 0;
+    isPM = false;
+  }
+  
+  // Pattern 3: "12 p", "12 pm", "12:30 p", "12:30 pm"
+  const pmPattern2 = trimmed.match(/^(\d{1,2})(?::(\d{2}))?\s+(p|pm)$/);
+  if (pmPattern2) {
+    hours = parseInt(pmPattern2[1]);
+    minutes = pmPattern2[2] ? parseInt(pmPattern2[2]) : 0;
+    isPM = true;
+  }
+  
+  // Pattern 4: "12 a", "12 am", "12:30 a", "12:30 am"
+  const amPattern2 = trimmed.match(/^(\d{1,2})(?::(\d{2}))?\s+(a|am)$/);
+  if (amPattern2) {
+    hours = parseInt(amPattern2[1]);
+    minutes = amPattern2[2] ? parseInt(amPattern2[2]) : 0;
+    isPM = false;
+  }
+  
+  // Pattern 5: "12:00 PM", "12:00 AM"
+  const fullPattern = trimmed.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/);
+  if (fullPattern) {
+    hours = parseInt(fullPattern[1]);
+    minutes = parseInt(fullPattern[2]);
+    isPM = fullPattern[3] === 'pm';
+  }
+  
+  // Pattern 6: "1230p", "1230pm", "1230a", "1230am" (4-digit format)
+  const fourDigitPattern = trimmed.match(/^(\d{4})(a|am|p|pm)$/);
+  if (fourDigitPattern) {
+    const timeStr = fourDigitPattern[1];
+    hours = parseInt(timeStr.substring(0, 2));
+    minutes = parseInt(timeStr.substring(2, 4));
+    isPM = fourDigitPattern[2].startsWith('p');
+  }
+  
+  // Pattern 7: "1230 p", "1230 pm", "1230 a", "1230 am" (4-digit with space)
+  const fourDigitSpacePattern = trimmed.match(/^(\d{4})\s+(a|am|p|pm)$/);
+  if (fourDigitSpacePattern) {
+    const timeStr = fourDigitSpacePattern[1];
+    hours = parseInt(timeStr.substring(0, 2));
+    minutes = parseInt(timeStr.substring(2, 4));
+    isPM = fourDigitSpacePattern[2].startsWith('p');
+  }
+  
+  // Pattern 8: "12:00" (24-hour format)
+  const twentyFourHourPattern = trimmed.match(/^(\d{1,2}):(\d{2})$/);
+  if (twentyFourHourPattern) {
+    hours = parseInt(twentyFourHourPattern[1]);
+    minutes = parseInt(twentyFourHourPattern[2]);
+    // Assume 24-hour format if hours > 12
+    if (hours > 12) {
+      isPM = false; // Already in 24-hour format
+    } else {
+      // For 12 or less, we can't determine AM/PM, so we'll assume current time period
+      const currentHour = baseDate.getHours();
+      isPM = currentHour >= 12;
+    }
+  }
+  
+  // If no pattern matched, throw an error
+  if (hours === 0 && minutes === 0 && !pmPattern1 && !amPattern1 && !pmPattern2 && !amPattern2 && !fullPattern && !fourDigitPattern && !fourDigitSpacePattern && !twentyFourHourPattern) {
+    throw new Error(`Invalid time format: ${timeInput}. Supported formats: 12p, 12:30am, 1230 p, 12:00 PM, 12am, etc.`);
+  }
+  
+  // Validate hours and minutes
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+    throw new Error(`Invalid time: ${timeInput}. Hours must be 0-23, minutes must be 0-59.`);
+  }
+  
+  // Validate 12-hour format hours (1-12)
+  if ((pmPattern1 || amPattern1 || pmPattern2 || amPattern2 || fullPattern || fourDigitPattern || fourDigitSpacePattern) && (hours < 1 || hours > 12)) {
+    throw new Error(`Invalid time: ${timeInput}. Hours must be 1-12 for 12-hour format.`);
+  }
+  
+  // Convert 12-hour format to 24-hour format
+  if (isPM && hours !== 12) {
+    hours += 12;
+  } else if (!isPM && hours === 12) {
+    hours = 0;
+  }
+  
+  // Set the time on the result date
+  resultDate.setHours(hours, minutes, 0, 0);
+  
+  return resultDate;
+}
+
+/**
+ * Format a Date object to 12-hour time format (12:00AM)
+ */
+export function formatTime12Hour(date: Date): string {
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12;
+  return `${displayHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}${ampm}`;
+}
+
+/**
  * Format seconds into a human-readable string
  */
 export function formatDuration(seconds: number): string {

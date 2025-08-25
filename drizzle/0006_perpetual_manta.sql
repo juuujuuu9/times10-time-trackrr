@@ -1,0 +1,1 @@
+ALTER TABLE "time_entries" ALTER COLUMN "start_time" DROP NOT NULL;
