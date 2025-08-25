@@ -1,9 +1,9 @@
 {
   "display_information": {
-    "name": "Times10 Time Tracker",
+    "name": "Times10 Trackr",
     "description": "Track time and manage tasks directly from Slack",
-    "long_description": "Times10 Time Tracker allows you to record time entries, view assigned tasks, and check your daily time tracking summary directly from Slack. Use slash commands to stay on top of your time tracking without leaving your workspace.",
-    "background_color": "#2eb67d"
+    "background_color": "#000000",
+    "long_description": "Times10 Trackr App allows you to record time entries, view assigned tasks, and check your daily time tracking summary directly from Slack. Use slash commands to stay on top of your time tracking without leaving your workspace."
   },
   "features": {
     "bot_user": {
@@ -12,22 +12,22 @@
     },
     "slash_commands": [
       {
-        "command": "/track-time",
-        "url": "https://your-vercel-domain.vercel.app/api/slack/commands",
+        "command": "/track",
+        "url": "https://times10-time-trackrr.vercel.app/api/slack/commands",
         "description": "Record time for a task",
         "usage_hint": "task_id duration [notes]",
         "should_escape": false
       },
       {
-        "command": "/my-tasks",
-        "url": "https://your-vercel-domain.vercel.app/api/slack/commands",
+        "command": "/tasks",
+        "url": "https://times10-time-trackrr.vercel.app/api/slack/commands",
         "description": "View your assigned tasks",
         "usage_hint": "(no parameters needed)",
         "should_escape": false
       },
       {
         "command": "/time-status",
-        "url": "https://your-vercel-domain.vercel.app/api/slack/commands",
+        "url": "https://times10-time-trackrr.vercel.app/api/slack/commands",
         "description": "View today's time tracking summary",
         "usage_hint": "(no parameters needed)",
         "should_escape": false
@@ -35,6 +35,9 @@
     ]
   },
   "oauth_config": {
+    "redirect_urls": [
+      "https://times10-time-trackrr.vercel.app/api/slack/oauth"
+    ],
     "scopes": {
       "bot": [
         "commands",
@@ -42,21 +45,11 @@
         "users:read",
         "users:read.email"
       ]
-    },
-    "redirect_urls": [
-      "https://your-vercel-domain.vercel.app/api/slack/oauth"
-    ]
+    }
   },
   "settings": {
     "org_deploy_enabled": false,
     "socket_mode_enabled": false,
-    "token_rotation_enabled": false,
-    "interactivity": {
-      "is_enabled": false
-    },
-    "event_subscriptions": {
-      "request_url": "https://your-vercel-domain.vercel.app/api/slack/events",
-      "bot_events": []
-    }
+    "token_rotation_enabled": false
   }
 }
