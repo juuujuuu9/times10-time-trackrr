@@ -60,23 +60,23 @@ const userTasks = await db
   <div class="min-h-screen bg-gray-50">
     <!-- Header -->
     <header class="bg-white shadow-sm border-b border-gray-200 flex items-center" style="height: 58px;">
-      <div class="max-w-7xl mx-auto px-1 w-full">
+      <div class="max-w-7xl mx-auto px-8 w-full">
         <div class="flex justify-between items-center">
-                      <div class="flex items-center">
-              <img src="/favicon.png" alt="Times10 Logo" class="w-auto mr-3 py-2" style="height: calc(58px - 1rem);" />
-            </div>
-            <div class="flex items-center space-x-4">
-              <span class="text-sm text-gray-600">Welcome, {user?.name || 'User'}</span>
-              <span class="px-3 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
-                Team Member
-              </span>
-              <button
-                id="logoutButton"
-                class="text-sm text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                Sign Out
-              </button>
-            </div>
+          <div class="flex items-center">
+            <img src="/trackr-icon.png" alt="Times10 Logo" class="w-auto mr-3 py-0" style="height: calc(58px - 1rem);" />
+          </div>
+          <div class="flex items-center space-x-4">
+            <span class="text-sm text-gray-600">Welcome, {user?.name || 'User'}</span>
+            <span class="px-3 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
+              Team Member
+            </span>
+            <button
+              id="logoutButton"
+              class="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
       </div>
     </header>
@@ -241,8 +241,12 @@ const userTasks = await db
                 {userTimeEntries.map((entry) => {
                   const taskDate = entry.startTime ? new Date(entry.startTime) : new Date(entry.createdAt);
                   const duration = entry.durationManual ? entry.durationManual / 3600 : 0;
-                  const startTime = entry.startTime ? new Date(entry.startTime) : null;
-                  const endTime = entry.endTime ? new Date(entry.endTime) : null;
+                  
+                  // Check if this is a manual duration entry (no meaningful start/end times)
+                  // Manual duration entries have startTime set to task date but endTime is null
+                  const isManualDurationEntry = entry.durationManual && !entry.endTime;
+                  const startTime = (!isManualDurationEntry && entry.startTime) ? new Date(entry.startTime) : null;
+                  const endTime = (!isManualDurationEntry && entry.endTime) ? new Date(entry.endTime) : null;
                   
                   return (
                     <tr class="hover:bg-gray-50" data-entry-id={entry.id}>
@@ -261,23 +265,23 @@ const userTasks = await db
                       <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <input
                           type="text"
-                          class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer"
                           value={startTime ? startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:-- --'}
                           data-entry-id={entry.id}
                           data-time-type="start"
                           placeholder="12:00AM"
-                          disabled={!startTime}
+                          title="Click to edit start time"
                         />
                       </td>
                       <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <input
                           type="text"
-                          class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer"
                           value={endTime ? endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:-- --'}
                           data-entry-id={entry.id}
                           data-time-type="end"
                           placeholder="12:00AM"
-                          disabled={!endTime}
+                          title="Click to edit end time"
                         />
                       </td>
                       <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -447,12 +451,60 @@ const userTasks = await db
           const timeType = this.getAttribute('data-time-type');
           const timeValue = this.value.trim();
           
-          // Skip if input is disabled (manual duration entry) or empty
-          if (this.disabled || !timeValue) return;
+          // Skip if empty
+          if (!timeValue) return;
           
           try {
-            const updateData = {};
-            updateData[timeType === 'start' ? 'startTime' : 'endTime'] = timeValue;
+            // Get the current entry data to determine if this is a manual duration entry
+            const row = this.closest('tr');
+            const editBtn = row?.querySelector('.edit-time-entry-btn') as HTMLElement;
+            const entryData = editBtn?.getAttribute('data-entry');
+            let currentEntry = null;
+            
+            if (entryData) {
+              try {
+                currentEntry = JSON.parse(entryData);
+              } catch (e) {
+                console.error('Error parsing entry data:', e);
+              }
+            }
+            
+            // Get the task date from the current entry
+            const taskDate = currentEntry?.startTime ? new Date(currentEntry.startTime) : new Date(currentEntry?.createdAt);
+            
+            // Parse the time input and create a proper datetime
+            const [hours, minutes] = timeValue.split(':').map(Number);
+            const newDateTime = new Date(taskDate);
+            newDateTime.setHours(hours, minutes, 0, 0);
+            
+            const updateData: { startTime?: string; endTime?: string; durationManual?: number | null } = {};
+            if (timeType === 'start') {
+              updateData.startTime = newDateTime.toISOString();
+            } else if (timeType === 'end') {
+              updateData.endTime = newDateTime.toISOString();
+            }
+            
+            // If this was a manual duration entry and we're adding times, clear the manual duration
+            if (currentEntry?.durationManual && !currentEntry?.endTime) {
+              updateData.durationManual = null;
+            }
+            
+            // Validate that end time is after start time if both times are being set
+            if (timeType === 'end' && currentEntry?.startTime) {
+              const existingStartTime = new Date(currentEntry.startTime);
+              if (newDateTime <= existingStartTime) {
+                alert('End time must be after start time');
+                this.focus();
+                return;
+              }
+            } else if (timeType === 'start' && currentEntry?.endTime) {
+              const existingEndTime = new Date(currentEntry.endTime);
+              if (newDateTime >= existingEndTime) {
+                alert('Start time must be before end time');
+                this.focus();
+                return;
+              }
+            }
             
             const response = await fetch(`/api/time-entries/${entryId}`, {
               method: 'PUT',
@@ -464,12 +516,33 @@ const userTasks = await db
             
             if (response.ok) {
               const result = await response.json();
-              // Update the duration cell
               const row = this.closest('tr');
+              
+              // Update the duration cell
               const durationCell = row.querySelector('td:nth-child(7)'); // Duration column
               if (durationCell && result.data) {
                 const duration = result.data.durationManual ? result.data.durationManual / 3600 : 0;
                 durationCell.textContent = `${duration ? Math.round(duration * 10) / 10 : 0} hours`;
+              }
+              
+              // Update the time input values to reflect the new data
+              if (result.data) {
+                const startTimeInput = row?.querySelector('input[data-time-type="start"]') as HTMLInputElement;
+                const endTimeInput = row?.querySelector('input[data-time-type="end"]') as HTMLInputElement;
+                
+                if (startTimeInput && result.data.startTime) {
+                  const startDate = new Date(result.data.startTime);
+                  startTimeInput.value = startDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                } else if (startTimeInput && !result.data.startTime) {
+                  startTimeInput.value = '--:-- --';
+                }
+                
+                if (endTimeInput && result.data.endTime) {
+                  const endDate = new Date(result.data.endTime);
+                  endTimeInput.value = endDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                } else if (endTimeInput && !result.data.endTime) {
+                  endTimeInput.value = '--:-- --';
+                }
               }
               
               // Show success feedback
@@ -948,20 +1021,32 @@ const userTasks = await db
             return;
           }
           
-          // Create new datetime by combining original date with new time
-          if (currentEditingEntry?.startTime && startTimeInput.value) {
-            const originalStartDate = new Date(currentEditingEntry.startTime);
-            const [hours, minutes] = startTimeInput.value.split(':').map(Number);
-            originalStartDate.setHours(hours, minutes, 0, 0);
-            updateData.startTime = originalStartDate.toISOString();
+          // Get the task date from the original entry (use startTime if it exists, otherwise use createdAt)
+          const taskDate = currentEditingEntry?.startTime ? new Date(currentEditingEntry.startTime) : new Date(currentEditingEntry?.createdAt);
+          
+          // Create start time by combining task date with user input
+          const [startHours, startMinutes] = startTimeInput.value.split(':').map(Number);
+          const startDateTime = new Date(taskDate);
+          startDateTime.setHours(startHours, startMinutes, 0, 0);
+          updateData.startTime = startDateTime.toISOString();
+          
+          // Create end time by combining task date with user input
+          const [endHours, endMinutes] = endTimeInput.value.split(':').map(Number);
+          const endDateTime = new Date(taskDate);
+          endDateTime.setHours(endHours, endMinutes, 0, 0);
+          updateData.endTime = endDateTime.toISOString();
+          
+          // Validate that end time is after start time
+          if (endDateTime <= startDateTime) {
+            alert('End time must be after start time');
+            submitButton.disabled = false;
+            saveButtonText.textContent = originalText;
+            saveButtonSpinner.classList.add('hidden');
+            return;
           }
           
-          if (currentEditingEntry?.endTime && endTimeInput.value) {
-            const originalEndDate = new Date(currentEditingEntry.endTime);
-            const [hours, minutes] = endTimeInput.value.split(':').map(Number);
-            originalEndDate.setHours(hours, minutes, 0, 0);
-            updateData.endTime = originalEndDate.toISOString();
-          }
+          // Clear manual duration since we're now using start/end times
+          updateData.durationManual = null;
         } else {
           if (!durationInput?.value) {
             alert('Please enter a duration');
