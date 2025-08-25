@@ -9,15 +9,58 @@ import {
   parseSlackTimeInput, 
   formatDurationForSlack 
 } from '../../../utils/slack';
-// Note: Astro doesn't support bodyParser config like Next.js
-// We'll handle raw body access differently
+import crypto from 'crypto';
+
+// Verify Slack request signature
+function verifySlackSignature(request: Request, body: string): boolean {
+  const signingSecret = import.meta.env.SLACK_SIGNING_SECRET;
+  if (!signingSecret) {
+    console.warn('SLACK_SIGNING_SECRET not configured, skipping signature verification');
+    return true;
+  }
+
+  const timestamp = request.headers.get('x-slack-request-timestamp');
+  const signature = request.headers.get('x-slack-signature');
+  
+  if (!timestamp || !signature) {
+    console.warn('Missing Slack signature headers');
+    return false;
+  }
+
+  const baseString = `v0:${timestamp}:${body}`;
+  const expectedSignature = 'v0=' + crypto
+    .createHmac('sha256', signingSecret)
+    .update(baseString)
+    .digest('hex');
+
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expectedSignature)
+  );
+}
 
 export const POST: APIRoute = async ({ request }) => {
   try {
     console.log('Slack command received');
     
-    // Parse form data
-    const formData = await request.formData();
+    // Get the raw body for signature verification
+    const rawBody = await request.text();
+    console.log('Raw request body length:', rawBody.length);
+    
+    // Verify Slack signature
+    if (!verifySlackSignature(request, rawBody)) {
+      console.error('Invalid Slack signature');
+      return new Response(JSON.stringify({
+        response_type: 'ephemeral',
+        text: '❌ Invalid request signature'
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Parse form data from the raw body
+    const formData = new URLSearchParams(rawBody);
     const command = formData.get('command') as string;
     const text = formData.get('text') as string;
     const userId = formData.get('user_id') as string;
@@ -107,7 +150,8 @@ export const POST: APIRoute = async ({ request }) => {
     
     // Try to log the error
     try {
-      const formData = await request.formData();
+      const rawBody = await request.text();
+      const formData = new URLSearchParams(rawBody);
       const command = formData.get('command') as string;
       const userId = formData.get('user_id') as string;
       const teamId = formData.get('team_id') as string;
