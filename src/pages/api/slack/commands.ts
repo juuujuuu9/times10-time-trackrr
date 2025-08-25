@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db';
 import { tasks, timeEntries, users, projects, clients, taskAssignments } from '../../../db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, gte, lt } from 'drizzle-orm';
 import { 
   getUserBySlackId, 
   getWorkspaceById, 
@@ -198,12 +198,12 @@ async function handleStatusCommand(userId: number): Promise<string> {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  const todayEntries = await db.query.timeEntries.findMany({
-    where: and(
-      eq(timeEntries.userId, userId),
-      eq(timeEntries.startTime, '>=', today),
-      eq(timeEntries.startTime, '<', tomorrow)
-    ),
+      const todayEntries = await db.query.timeEntries.findMany({
+      where: and(
+        eq(timeEntries.userId, userId),
+        gte(timeEntries.startTime, today),
+        lt(timeEntries.startTime, tomorrow)
+      ),
     with: {
       task: {
         with: {
