@@ -9,10 +9,56 @@ import {
   parseSlackTimeInput, 
   formatDurationForSlack 
 } from '../../../utils/slack';
+import crypto from 'crypto';
+
+// Disable body parsing to get raw body for signature verification
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const formData = await request.formData();
+    // Get raw body for signature verification
+    const rawBody = await request.text();
+    
+    // Verify Slack signature
+    const signature = request.headers.get('x-slack-signature');
+    const timestamp = request.headers.get('x-slack-request-timestamp');
+    const signingSecret = import.meta.env.SLACK_SIGNING_SECRET;
+    
+    if (!signature || !timestamp || !signingSecret) {
+      console.error('Missing signature verification data');
+      return new Response(JSON.stringify({
+        response_type: 'ephemeral',
+        text: '❌ Invalid request'
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Verify signature
+    const baseString = `v0:${timestamp}:${rawBody}`;
+    const expectedSignature = 'v0=' + crypto
+      .createHmac('sha256', signingSecret)
+      .update(baseString)
+      .digest('hex');
+    
+    if (signature !== expectedSignature) {
+      console.error('Invalid Slack signature');
+      return new Response(JSON.stringify({
+        response_type: 'ephemeral',
+        text: '❌ Invalid request signature'
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Parse form data from raw body
+    const formData = new URLSearchParams(rawBody);
     const command = formData.get('command') as string;
     const text = formData.get('text') as string;
     const userId = formData.get('user_id') as string;
