@@ -26,7 +26,6 @@ export default function AdminTimer() {
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
-  const [showTaskSelect, setShowTaskSelect] = useState(false);
 
   // Get timer state key based on user ID
   const getTimerStateKey = (userId: number) => `adminTimerState_${userId}`;
@@ -156,7 +155,6 @@ export default function AdminTimer() {
 
   const startTimer = () => {
     if (!selectedTask) {
-      setShowTaskSelect(true);
       return;
     }
     if (!currentUserId) {
@@ -217,7 +215,6 @@ export default function AdminTimer() {
         setTime(0);
         setStartTime(null);
         setSelectedTask(null);
-        setShowTaskSelect(false);
         
         // Show success message
         alert('Time entry saved successfully!');
@@ -242,6 +239,17 @@ export default function AdminTimer() {
     return task ? `${task.name}` : '';
   };
 
+  // Get full task info for display
+  const getSelectedTaskInfo = () => {
+    if (!selectedTask) return { taskName: '', projectName: '', clientName: '' };
+    const task = tasks.find(t => t.id === selectedTask);
+    return task ? {
+      taskName: task.name,
+      projectName: task.projectName,
+      clientName: task.clientName
+    } : { taskName: '', projectName: '', clientName: '' };
+  };
+
   // Show loading state while data is being loaded
   if (dataLoading) {
     return (
@@ -255,9 +263,9 @@ export default function AdminTimer() {
   }
 
   return (
-    <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-900">⏱️ Time Tracker</h3>
+    <div className="bg-white py-2 border-t border-gray-200">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium text-gray-600">Time Tracker</h3>
         {isRunning && (
           <div className="flex items-center">
             <div className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></div>
@@ -267,34 +275,31 @@ export default function AdminTimer() {
       </div>
       
       {/* Task Selection */}
-      {showTaskSelect && (
-        <div className="mb-3">
-          <select
-            value={selectedTask || ''}
-            onChange={(e) => {
-              setSelectedTask(e.target.value ? parseInt(e.target.value) : null);
-              setShowTaskSelect(false);
-            }}
-            className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-400"
-          >
-            <option value="">Choose a task...</option>
-            {tasks.map((task) => (
-              <option key={task.id} value={task.id}>
-                {task.name}
-              </option>
-            ))}
-          </select>
-          {tasks.length === 0 && (
-            <p className="text-xs text-gray-500 mt-1">No tasks assigned</p>
-          )}
-        </div>
-      )}
+      <div className="mb-3">
+        <select
+          value={selectedTask || ''}
+          onChange={(e) => {
+            setSelectedTask(e.target.value ? parseInt(e.target.value) : null);
+          }}
+          className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-400"
+        >
+          <option value="">Choose a task...</option>
+          {tasks.map((task) => (
+            <option key={task.id} value={task.id}>
+              {task.name}
+            </option>
+          ))}
+        </select>
+        {tasks.length === 0 && (
+          <p className="text-xs text-gray-500 mt-1">No tasks assigned</p>
+        )}
+      </div>
 
       {/* Active Task Display */}
       {isRunning && selectedTask && (
-        <div className="mb-3 p-2 bg-gray-50 border border-gray-200 rounded text-xs">
-          <p className="font-medium text-gray-900">Tracking:</p>
-          <p className="text-gray-700">{getSelectedTaskName()}</p>
+        <div className="mb-3 px-1 py-0 bg-gray-200 border border-gray-200 rounded text-xs">
+          <p className="text-gray-700">{getSelectedTaskInfo().taskName}</p>
+          <p className="text-gray-600 text-xs">{getSelectedTaskInfo().projectName} • {getSelectedTaskInfo().clientName}</p>
         </div>
       )}
 
@@ -303,7 +308,7 @@ export default function AdminTimer() {
         <div 
           className="text-2xl font-mono font-bold text-gray-900"
           style={{ 
-            fontFamily: 'RadiolandTest, monospace',
+            fontFamily: '"Istok Web", system-ui, sans-serif',
             fontWeight: 'bold'
           }}
         >
@@ -317,7 +322,7 @@ export default function AdminTimer() {
           <button
             onClick={startTimer}
             disabled={loading || !currentUserId}
-            className={`flex-1 px-3 py-2 text-xs font-medium rounded transition-colors ${
+            className={`flex-1 px-3 py-2 text-xs font-medium rounded transition-colors border-0 ${
               loading || !currentUserId
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-green-500 text-white hover:bg-green-600'
@@ -329,7 +334,7 @@ export default function AdminTimer() {
           <button
             onClick={stopTimer}
             disabled={loading}
-            className={`flex-1 px-3 py-2 text-xs font-medium rounded transition-colors ${
+            className={`flex-1 px-3 py-2 text-xs font-medium rounded transition-colors border-0 ${
               loading
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-red-500 text-white hover:bg-red-600'
@@ -340,26 +345,12 @@ export default function AdminTimer() {
         )}
       </div>
 
-      {/* Quick Task Selection */}
-      {!isRunning && !showTaskSelect && selectedTask && (
-        <div className="mt-2 text-center">
-          <button
-            onClick={() => setShowTaskSelect(true)}
-            className="text-xs text-gray-500 hover:text-gray-700 underline"
-          >
-            Change task
-          </button>
-        </div>
-      )}
+
 
       {/* Status */}
-      {isRunning && (
-        <div className="mt-2 text-center">
-          <p className="text-xs text-gray-500">
-            Timer saved automatically
-          </p>
+        <div className="mt-2 text-right">
+          <a href="/time-entries" className="text-xs text-gray-500 hover:text-gray-700 underline">View Time Entries</a>
         </div>
-      )}
     </div>
   );
 }
