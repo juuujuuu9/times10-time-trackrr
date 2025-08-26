@@ -32,7 +32,7 @@ export async function sendInvitationEmail(data: InvitationEmailData) {
     console.log('📧 Attempting to send invitation email to:', data.email);
     
     const { data: emailData, error } = await resend.emails.send({
-      from: 'Times10 <onboarding@resend.dev>',
+      from: 'Times10 <noreply@trackr.times10.net>',
       to: [data.email],
       subject: `You've been invited to join Times10 Time Tracker`,
       html: `
@@ -143,7 +143,7 @@ export async function sendTaskAssignmentEmail(data: TaskAssignmentEmailData) {
     console.log('📧 Attempting to send task assignment email to:', data.email);
     
     const { data: emailData, error } = await resend.emails.send({
-      from: 'Times10 <onboarding@resend.dev>',
+      from: 'Times10 <noreply@trackr.times10.net>',
       to: [data.email],
       subject: `New Task Assigned: ${data.taskName}`,
       html: `
