@@ -349,7 +349,7 @@ export default function AdminTimer() {
 
       {/* Status */}
         <div className="mt-2 text-right">
-          <a href="/time-entries" className="text-xs text-gray-500 hover:text-gray-700 underline">View Time Entries</a>
+          <a href="/time-entries" className="text-xs text-gray-500 hover:text-gray-700 underline">View Your Timesheet</a>
         </div>
     </div>
   );

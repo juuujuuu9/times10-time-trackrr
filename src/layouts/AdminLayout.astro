@@ -43,10 +43,10 @@ const navItems = [
     <title>{title} - Times10 Admin</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
-  <body class="bg-gray-50 font-sans">
+  <body class="font-sans" style="background-color: #f0eef5;">
     {!user || !isAdmin ? (
       <!-- Access Denied -->
-      <div class="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div class="min-h-screen flex items-center justify-center" style="background-color: #f0eef5;">
         <div class="text-center">
           <div class="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
             <span class="text-gray-700 text-2xl">🚫</span>
@@ -62,7 +62,7 @@ const navItems = [
     ) : (
       <>
         <!-- Loading State (shown immediately) -->
-        <div id="loadingState" class="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div id="loadingState" class="min-h-screen flex items-center justify-center" style="background-color: #f0eef5;">
           <div class="text-center">
             <div class="w-12 h-12 border-4 border-gray-300 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p class="text-gray-600 text-lg">Loading admin panel...</p>
@@ -151,7 +151,7 @@ const navItems = [
         </header>
 
         <!-- Page content -->
-        <main class="flex-1 overflow-y-auto p-6 bg-gray-50">
+        <main class="flex-1 overflow-y-auto p-6" style="background-color: #f0eef5;">
           <slot />
         </main>
       </div>

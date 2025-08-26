@@ -224,16 +224,31 @@ const allUsers = await db
                   {new Date(user.createdAt).toLocaleDateString()}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button
-                    class="edit-user-btn inline-flex items-center px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-md transition-colors duration-200"
-                    data-user-id={user.id}
-                    title="Edit user details"
-                  >
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                    </svg>
-                    Edit
-                  </button>
+                  <div class="flex justify-end space-x-2">
+                    {user.status === 'invited' && (
+                      <button
+                        class="resend-invite-btn inline-flex items-center px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 text-sm font-medium rounded-md transition-colors duration-200"
+                        data-user-id={user.id}
+                        data-user-email={user.email}
+                        title="Resend invitation email"
+                      >
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                        Resend Invite
+                      </button>
+                    )}
+                    <button
+                      class="edit-user-btn inline-flex items-center px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-md transition-colors duration-200"
+                      data-user-id={user.id}
+                      title="Edit user details"
+                    >
+                      <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                      </svg>
+                      Edit
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -706,6 +721,15 @@ const allUsers = await db
         });
       });
 
+      // Resend invite buttons
+      document.querySelectorAll('.resend-invite-btn').forEach(button => {
+        button.addEventListener('click', function() {
+          const userId = parseInt(this.getAttribute('data-user-id') || '0');
+          const userEmail = this.getAttribute('data-user-email') || '';
+          resendInvite(userId, userEmail);
+        });
+      });
+
       // Save role button
       document.querySelectorAll('.save-role-btn').forEach(button => {
         button.addEventListener('click', function() {
@@ -885,6 +909,30 @@ const allUsers = await db
         console.error('Error:', error);
         alert('Error changing role');
       });
+    }
+
+    function resendInvite(userId, userEmail) {
+      if (confirm(`Are you sure you want to resend the invitation email to ${userEmail}?`)) {
+        fetch('/api/admin/users/resend-invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ userId }),
+        })
+        .then(async response => {
+          if (response.ok) {
+            const result = await response.json();
+            alert('Invitation resent successfully! The team member will receive a new email to set up their account.');
+          } else {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            alert(`Error resending invitation: ${errorData.error || 'Unknown error'}`);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error resending invitation: Network error');
+        });
+      }
     }
 
     function deleteUser(userId, userName) {

@@ -30,6 +30,10 @@
 }
 
 /* Base styles */
+:root {
+  --main-bg-color: #f0eef5;
+}
+
 html {
   font-family: 'Istok Web', system-ui, sans-serif !important;
 }
@@ -39,6 +43,12 @@ body {
   padding: 0;
   line-height: 1.6;
   font-family: 'Istok Web', system-ui, sans-serif !important;
+  background-color: #f0eef5 !important;
+}
+
+/* Force background color on html and body */
+html, body {
+  background-color: #f0eef5 !important;
 }
 
 * {

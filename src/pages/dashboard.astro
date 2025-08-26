@@ -8,9 +8,9 @@ const user = await requireAuth('/')(Astro) as any;
 ---
 
 <Layout title="Dashboard - Times10 Time Tracker">
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen" style="background-color: #f0eef5;">
     <!-- Loading State (shown immediately) -->
-    <div id="loadingState" class="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div id="loadingState" class="min-h-screen flex items-center justify-center" style="background-color: #f0eef5;">
       <div class="text-center">
         <div class="w-12 h-12 border-4 border-gray-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
         <p class="text-gray-600 text-lg">Loading dashboard...</p>
