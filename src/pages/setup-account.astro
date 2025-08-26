@@ -15,15 +15,15 @@ const token = url.searchParams.get('token');
     <div class="max-w-md w-full">
       <!-- Logo and Header -->
       <div class="text-center mb-8">
-        <div class="w-20 h-20 bg-gradient-to-r from-[#4F46E5] to-[#3730A3] rounded-full flex items-center justify-center mx-auto mb-6">
-          <span class="text-white text-3xl">🚀</span>
+        <div class="flex items-center justify-center mx-auto mb-6">
+          <img src="/logo-black.png" alt="Times10 Logo" class="w-auto h-10 object-contain" />
         </div>
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">Welcome to Times10!</h1>
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Welcome to the team!</h1>
         <p class="text-gray-600">Set up your account to get started</p>
       </div>
 
       <!-- Setup Form -->
-      <div class="bg-white rounded-xl shadow-xl border border-gray-200 p-8">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
         <form id="setupForm" class="space-y-6">
           <div>
             <label for="password" class="block text-sm font-semibold text-gray-700 mb-2">
@@ -35,7 +35,7 @@ const token = url.searchParams.get('token');
               name="password"
               required
               minlength="8"
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition-all duration-200 bg-white text-gray-900"
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all duration-200 bg-white text-gray-900"
               placeholder="Enter your password"
             />
             <p class="text-xs text-gray-500 mt-1">Password must be at least 8 characters long</p>
@@ -50,7 +50,7 @@ const token = url.searchParams.get('token');
               id="confirmPassword"
               name="confirmPassword"
               required
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent transition-all duration-200 bg-white text-gray-900"
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all duration-200 bg-white text-gray-900"
               placeholder="Confirm your password"
             />
           </div>
@@ -70,7 +70,10 @@ const token = url.searchParams.get('token');
           <button
             type="submit"
             id="submitBtn"
-            class="w-full bg-gradient-to-r from-[#4F46E5] to-[#3730A3] hover:from-[#3730A3] hover:to-[#312E81] text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg"
+            class="w-full text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg"
+            style="background-color: #d63a2e;"
+            onmouseover="this.style.backgroundColor='#b83228'"
+            onmouseout="this.style.backgroundColor='#d63a2e'"
           >
             <span id="submitText">Set Up Account</span>
             <span id="loadingText" class="hidden">Setting up...</span>
@@ -80,31 +83,8 @@ const token = url.searchParams.get('token');
         <div class="mt-6 text-center">
           <p class="text-sm text-gray-600">
             Already have an account? 
-            <a href="/" class="text-[#4F46E5] hover:text-[#3730A3] font-medium">Sign in here</a>
+            <a href="/" class="text-gray-600 hover:text-gray-900 font-medium">Sign in here</a>
           </p>
-        </div>
-      </div>
-
-      <!-- Features Preview -->
-      <div class="mt-8 text-center">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">What you can do with Times10:</h3>
-        <div class="grid grid-cols-1 gap-4 text-sm text-gray-600">
-          <div class="flex items-center justify-center space-x-2">
-            <span class="text-[#4F46E5]">⏱️</span>
-            <span>Track time on projects and tasks</span>
-          </div>
-          <div class="flex items-center justify-center space-x-2">
-            <span class="text-[#4F46E5]">📊</span>
-            <span>View detailed reports and analytics</span>
-          </div>
-          <div class="flex items-center justify-center space-x-2">
-            <span class="text-[#4F46E5]">👥</span>
-            <span>Collaborate with your team</span>
-          </div>
-          <div class="flex items-center justify-center space-x-2">
-            <span class="text-[#4F46E5]">📋</span>
-            <span>Manage projects and clients</span>
-          </div>
         </div>
       </div>
     </div>
@@ -119,6 +99,24 @@ const token = url.searchParams.get('token');
     const errorMessage = document.getElementById('errorMessage');
     const errorText = document.getElementById('errorText');
     const successMessage = document.getElementById('successMessage');
+
+    // Function to check if both password fields are filled and update button color
+    function updateButtonColor() {
+      const password = (document.getElementById('password') as HTMLInputElement)?.value;
+      const confirmPassword = (document.getElementById('confirmPassword') as HTMLInputElement)?.value;
+      
+      if (password && confirmPassword) {
+        submitBtn.style.backgroundColor = '#d63a2e';
+        submitBtn.style.opacity = '1';
+      } else {
+        submitBtn.style.backgroundColor = '#415058';
+        submitBtn.style.opacity = '1';
+      }
+    }
+
+    // Add event listeners to input fields
+    document.getElementById('password')?.addEventListener('input', updateButtonColor);
+    document.getElementById('confirmPassword')?.addEventListener('input', updateButtonColor);
 
     if (!token) {
       window.location.href = '/';

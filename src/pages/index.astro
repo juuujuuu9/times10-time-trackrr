@@ -96,6 +96,25 @@ if (user) {
 </Layout>
 
 <script>
+  // Function to check if both fields are filled and update button color
+  function updateButtonColor() {
+    const email = (document.getElementById('email') as HTMLInputElement)?.value;
+    const password = (document.getElementById('password') as HTMLInputElement)?.value;
+    const button = document.getElementById('loginButton') as HTMLButtonElement;
+    
+    if (email && password) {
+      button.style.backgroundColor = '#d63a2e';
+      button.classList.remove('bg-[#415058]');
+    } else {
+      button.style.backgroundColor = '';
+      button.classList.add('bg-[#415058]');
+    }
+  }
+
+  // Add event listeners to input fields
+  document.getElementById('email')?.addEventListener('input', updateButtonColor);
+  document.getElementById('password')?.addEventListener('input', updateButtonColor);
+
   document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     
