@@ -62,7 +62,7 @@ const user = await requireAuth('/')(Astro) as any;
                     id="viewAllEntriesBtn"
                     class="text-sm text-gray-600 hover:text-gray-800 font-medium transition-colors"
                   >
-                    Timesheet
+                    All Entries
                   </button>
                 </div>
               </div>
@@ -597,9 +597,9 @@ const user = await requireAuth('/')(Astro) as any;
   // Load data when page loads
   document.addEventListener('DOMContentLoaded', loadDashboardData);
 
-  // Timesheet button functionality
+  // All Entries button functionality
   document.getElementById('viewAllEntriesBtn')?.addEventListener('click', () => {
-    window.location.href = '/timesheet';
+    window.location.href = '/time-entries';
   });
 
   // View Reports button functionality
