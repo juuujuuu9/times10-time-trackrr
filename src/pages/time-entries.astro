@@ -90,7 +90,9 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
       <div class="max-w-7xl mx-auto px-8 w-full">
         <div class="flex justify-between items-center">
           <div class="flex items-center">
-            <img src="/trackr-icon.png" alt="Times10 Logo" class="w-auto mr-3 py-0" style="height: calc(58px - 1rem);" />
+            <a href="/" class="flex items-center hover:opacity-80 transition-opacity">
+              <img src="/trackr-icon.png" alt="Times10 Logo" class="w-auto mr-3 py-0" style="height: calc(58px - 1rem);" />
+            </a>
           </div>
           <div class="flex items-center space-x-4">
             <span class="text-sm text-gray-600">Welcome, {user?.name || 'User'}</span>
