@@ -6,7 +6,7 @@ import { count, sql } from 'drizzle-orm';
 import { requireRole } from '../../../utils/session';
 
 // Get current user
-const currentUser = await requireRole('admin', '/dashboard')(Astro) as any;
+const currentUser = await requireRole('admin', '/admin')(Astro) as any;
 
 // Get all users with their stats
 const allUsers = await db
