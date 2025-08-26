@@ -548,9 +548,9 @@ try {
     </div>
   </div>
 
-  <script is:inline>
+  <script define:vars={{ allTeamMembers }}>
     // Global team members data from server
-    window.teamMembersData = JSON.parse('{JSON.stringify(allTeamMembers)}');
+    window.teamMembersData = allTeamMembers;
     
     // Enhanced JavaScript with better UX
     window.handlePeriodChange = function(period) {
@@ -575,12 +575,12 @@ try {
       } else {
         customDateRange.classList.add('hidden');
         // Navigate to the selected period
-        const teamMemberSelect = document.getElementById('teamMemberSelect');
         const currentUrl = new URL(window.location);
         currentUrl.searchParams.set('period', period);
-        if (teamMemberSelect) {
-          currentUrl.searchParams.set('teamMember', teamMemberSelect.value);
-        }
+        
+        // Preserve current team member selection
+        const currentTeamMember = new URLSearchParams(window.location.search).get('teamMember') || 'all';
+        currentUrl.searchParams.set('teamMember', currentTeamMember);
         
         // Preserve project/client selection if it exists
         const currentProject = new URLSearchParams(window.location.search).get('project');
@@ -599,9 +599,8 @@ try {
     window.applyCustomRange = function() {
       const startDateEl = document.getElementById('startDate');
       const endDateEl = document.getElementById('endDate');
-      const teamMemberSelect = document.getElementById('teamMemberSelect');
       
-      if (!startDateEl || !endDateEl || !teamMemberSelect) return;
+      if (!startDateEl || !endDateEl) return;
       
       const startDate = startDateEl.value;
       const endDate = endDateEl.value;
@@ -616,7 +615,9 @@ try {
         return;
       }
       
-      let url = `/admin?period=custom&teamMember=${teamMemberSelect.value}&startDate=${startDate}&endDate=${endDate}`;
+      // Get current team member selection
+      const currentTeamMember = new URLSearchParams(window.location.search).get('teamMember') || 'all';
+      let url = `/admin?period=custom&teamMember=${currentTeamMember}&startDate=${startDate}&endDate=${endDate}`;
       
       // Preserve project/client selection if it exists
       const currentProject = new URLSearchParams(window.location.search).get('project');
