@@ -433,24 +433,38 @@ try {
             </button>
           </div>
 
-          <!-- Team Member Dropdown -->
+          <!-- Team Member Search -->
           <div class="relative">
-            <select 
-              id="teamMemberSelect" 
-              class="appearance-none bg-white border border-gray-300 text-gray-900 px-4 py-3 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent transition-all duration-200 hover:bg-gray-50"
-              onchange="handleTeamMemberChange(this.value)"
-            >
-              <option value="all" selected={selectedTeamMember === 'all'}>👥 All Team Members</option>
-              {allTeamMembers.map((member) => (
-                <option value={member.id} selected={selectedTeamMember === member.id.toString()}>
-                  👤 {member.name}
-                </option>
-              ))}
-            </select>
-            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-              <svg class="fill-current h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
-              </svg>
+            <div class="flex items-center space-x-2">
+              <div class="relative flex-1">
+                <input 
+                  type="text" 
+                  id="teamMemberSearch" 
+                  placeholder="🔍 Search team members..." 
+                  class="appearance-none bg-white border border-gray-300 text-gray-900 px-4 py-3 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent transition-all duration-200 hover:bg-gray-50 w-64"
+                  oninput="handleTeamMemberSearch(this.value)"
+                  onfocus="showTeamMemberDropdown()"
+                  onblur="hideTeamMemberDropdown()"
+                />
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                  <svg id="teamMemberDropdownArrow" class="fill-current h-5 w-5 transition-transform duration-200 cursor-pointer pointer-events-auto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" onclick="toggleTeamMemberDropdown()">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                  </svg>
+                </div>
+              </div>
+              <!-- Clear Team Member Button -->
+              <button 
+                id="clearTeamMemberBtn"
+                onclick="clearTeamMemberFilter()"
+                class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-3 rounded-lg text-sm font-medium transition-colors duration-200 hidden"
+                title="Clear team member filter"
+              >
+                ✕
+              </button>
+            </div>
+            <!-- Team Member Dropdown -->
+            <div id="teamMemberDropdown" class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto hidden">
+              <!-- Team member options will be populated here -->
             </div>
           </div>
         </div>
@@ -535,6 +549,9 @@ try {
   </div>
 
   <script is:inline>
+    // Global team members data from server
+    window.teamMembersData = JSON.parse('{JSON.stringify(allTeamMembers)}');
+    
     // Enhanced JavaScript with better UX
     window.handlePeriodChange = function(period) {
       const customDateRange = document.getElementById('customDateRange');
@@ -899,14 +916,200 @@ try {
       window.location.href = currentUrl.toString();
     };
 
-    window.handleTeamMemberChange = function(teamMember) {
+    // Team member search functionality
+    let teamMemberSearchTimeout;
+    let teamMemberDropdownOpen = false;
+    
+    window.handleTeamMemberSearch = function(searchTerm) {
+      clearTimeout(teamMemberSearchTimeout);
+      
+      if (searchTerm.length < 1) {
+        searchAllTeamMembers();
+        return;
+      }
+      
+      teamMemberSearchTimeout = setTimeout(() => {
+        searchTeamMembers(searchTerm);
+      }, 300);
+    };
+    
+    window.toggleTeamMemberDropdown = function() {
+      const searchInput = document.getElementById('teamMemberSearch');
+      if (!searchInput) return;
+      
+      if (teamMemberDropdownOpen) {
+        hideTeamMemberDropdown();
+      } else {
+        searchAllTeamMembers();
+        showTeamMemberDropdown();
+      }
+    };
+    
+    window.searchTeamMembers = function(searchTerm) {
+      // Get team members from server-side data
+      const teamMembers = [
+        { id: 'all', name: 'All Team Members', email: '' },
+        ...window.teamMembersData
+      ];
+      
+      const filteredMembers = teamMembers.filter(member => 
+        member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (member.email && member.email.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+      
+      const dropdown = document.getElementById('teamMemberDropdown');
+      if (!dropdown) return;
+      
+      dropdown.innerHTML = '';
+      
+      if (filteredMembers.length === 0) {
+        dropdown.innerHTML = '<div class="px-4 py-2 text-gray-500 text-sm">No team members found</div>';
+      } else {
+        filteredMembers.forEach(member => {
+          const option = document.createElement('div');
+          option.className = 'px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm';
+          if (member.id === 'all') {
+            option.innerHTML = `
+              <div class="font-semibold">👥 ${member.name}</div>
+            `;
+          } else {
+            option.innerHTML = `
+              <div class="font-medium">👤 ${member.name}</div>
+              <div class="text-xs text-gray-500">${member.email}</div>
+            `;
+          }
+          option.onclick = () => selectTeamMember(member);
+          dropdown.appendChild(option);
+        });
+      }
+      
+      showTeamMemberDropdown();
+    };
+    
+    window.searchAllTeamMembers = function() {
+      // Get team members from server-side data
+      const teamMembers = [
+        { id: 'all', name: 'All Team Members', email: '' },
+        ...window.teamMembersData
+      ];
+      
+      const dropdown = document.getElementById('teamMemberDropdown');
+      if (!dropdown) return;
+      
+      dropdown.innerHTML = '';
+      
+      teamMembers.forEach(member => {
+        const option = document.createElement('div');
+        option.className = 'px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm';
+        if (member.id === 'all') {
+          option.innerHTML = `
+            <div class="font-semibold">👥 ${member.name}</div>
+          `;
+        } else {
+          option.innerHTML = `
+            <div class="font-medium">👤 ${member.name}</div>
+            <div class="text-xs text-gray-500">${member.email}</div>
+          `;
+        }
+        option.onclick = () => selectTeamMember(member);
+        dropdown.appendChild(option);
+      });
+      
+      showTeamMemberDropdown();
+    };
+    
+    window.selectTeamMember = function(member) {
+      const searchInput = document.getElementById('teamMemberSearch');
+      const clearBtn = document.getElementById('clearTeamMemberBtn');
+      
+      if (searchInput) {
+        searchInput.value = member.name;
+      }
+      if (clearBtn) {
+        clearBtn.classList.remove('hidden');
+      }
+      
+      hideTeamMemberDropdown();
+      
+      // Navigate to the selected team member
       const periodSelect = document.getElementById('periodSelect');
       
       if (!periodSelect) return;
       
       const currentUrl = new URL(window.location);
       currentUrl.searchParams.set('period', periodSelect.value);
-      currentUrl.searchParams.set('teamMember', teamMember);
+      currentUrl.searchParams.set('teamMember', member.id.toString());
+      
+      // Preserve project/client selection if it exists
+      const currentProject = new URLSearchParams(window.location.search).get('project');
+      const currentClient = new URLSearchParams(window.location.search).get('client');
+      if (currentProject) {
+        currentUrl.searchParams.set('project', currentProject);
+      }
+      if (currentClient) {
+        currentUrl.searchParams.set('client', currentClient);
+      }
+      
+      // Preserve custom date range if it exists
+      const startDate = document.getElementById('startDate');
+      const endDate = document.getElementById('endDate');
+      if (startDate && endDate && startDate.value && endDate.value) {
+        currentUrl.searchParams.set('startDate', startDate.value);
+        currentUrl.searchParams.set('endDate', endDate.value);
+      }
+      
+      window.location.href = currentUrl.toString();
+    };
+    
+    window.showTeamMemberDropdown = function() {
+      const dropdown = document.getElementById('teamMemberDropdown');
+      const arrow = document.getElementById('teamMemberDropdownArrow');
+      if (dropdown) {
+        dropdown.classList.remove('hidden');
+        teamMemberDropdownOpen = true;
+      }
+      if (arrow) {
+        arrow.style.transform = 'rotate(180deg)';
+      }
+    };
+    
+    window.hideTeamMemberDropdown = function() {
+      // Small delay to allow clicking on dropdown items
+      setTimeout(() => {
+        const dropdown = document.getElementById('teamMemberDropdown');
+        const arrow = document.getElementById('teamMemberDropdownArrow');
+        if (dropdown) {
+          dropdown.classList.add('hidden');
+          teamMemberDropdownOpen = false;
+        }
+        if (arrow) {
+          arrow.style.transform = 'rotate(0deg)';
+        }
+      }, 150);
+    };
+    
+    window.clearTeamMemberFilter = function() {
+      const searchInput = document.getElementById('teamMemberSearch');
+      const clearBtn = document.getElementById('clearTeamMemberBtn');
+      
+      if (searchInput) {
+        searchInput.value = '';
+      }
+      if (clearBtn) {
+        clearBtn.classList.add('hidden');
+      }
+      
+      // Reset dropdown state
+      teamMemberDropdownOpen = false;
+      
+      // Navigate to show all team members
+      const periodSelect = document.getElementById('periodSelect');
+      
+      if (!periodSelect) return;
+      
+      const currentUrl = new URL(window.location);
+      currentUrl.searchParams.set('period', periodSelect.value);
+      currentUrl.searchParams.set('teamMember', 'all');
       
       // Preserve project/client selection if it exists
       const currentProject = new URLSearchParams(window.location.search).get('project');
@@ -974,6 +1177,28 @@ try {
             }
           })
           .catch(error => console.error('Error fetching project/client details:', error));
+      }
+      
+      // Initialize team member search with current selection
+      const currentTeamMember = new URLSearchParams(window.location.search).get('teamMember');
+      if (currentTeamMember && currentTeamMember !== 'all') {
+        // Find the team member in the server-side data
+        const teamMembers = [
+          { id: 'all', name: 'All Team Members', email: '' },
+          ...window.teamMembersData
+        ];
+        
+        const selectedMember = teamMembers.find(member => member.id.toString() === currentTeamMember);
+        if (selectedMember) {
+          const searchInput = document.getElementById('teamMemberSearch');
+          const clearBtn = document.getElementById('clearTeamMemberBtn');
+          if (searchInput) {
+            searchInput.value = selectedMember.name;
+          }
+          if (clearBtn) {
+            clearBtn.classList.remove('hidden');
+          }
+        }
       }
     });
   </script>
