@@ -269,7 +269,7 @@ export default function AdminTimer() {
         {isRunning && (
           <div className="flex items-center">
             <div className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></div>
-            <span className="text-xs text-green-600 font-medium">Live</span>
+            <span className="text-xs text-green-600 font-medium">Tracking...</span>
           </div>
         )}
       </div>
