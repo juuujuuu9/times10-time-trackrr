@@ -47,7 +47,7 @@ export async function sendInvitationEmail(data: InvitationEmailData) {
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { background: linear-gradient(135deg, #415058 0%, #1F292E 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
             .content { background: white; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #C8CDD0; }
-            .button { display: inline-block; background: #d63a2e; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; transition: background-color 0.2s; }
+            .button { display: inline-block; background: #d63a2e; color: #FFFFFF !important; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; transition: background-color 0.2s; }
             .button:hover { background: #b52a24; }
             .footer { text-align: center; margin-top: 30px; color: #415058; font-size: 14px; }
             .highlight { color: #d63a2e; }
@@ -64,7 +64,7 @@ export async function sendInvitationEmail(data: InvitationEmailData) {
             </div>
             <div class="content">
               <h2 class="text-dark">Hi ${data.name},</h2>
-              <p class="text-mid">You've been invited by <strong class="highlight">${data.invitedBy}</strong> to join Times10 Time Tracker as a <strong class="highlight">${data.role}</strong>.</p>
+              <p class="text-mid">You've been invited by <strong class="highlight">${data.invitedBy}</strong> to join Times10 Time Tracker as a <strong class="highlight">${data.role === 'admin' ? 'admin' : 'Team Member'}</strong>.</p>
               
               <p class="text-mid">Times10 is a powerful time tracking platform that helps teams manage their time, projects, and productivity.</p>
               
@@ -158,7 +158,7 @@ export async function sendTaskAssignmentEmail(data: TaskAssignmentEmailData) {
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { background: linear-gradient(135deg, #415058 0%, #1F292E 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
             .content { background: white; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #C8CDD0; }
-            .button { display: inline-block; background: #d63a2e; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; transition: background-color 0.2s; }
+            .button { display: inline-block; background: #d63a2e; color: #FFFFFF !important; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; transition: background-color 0.2s; }
             .button:hover { background: #b52a24; }
             .task-card { background: #F2F2F3; border: 1px solid #C8CDD0; border-radius: 8px; padding: 20px; margin: 20px 0; }
             .footer { text-align: center; margin-top: 30px; color: #415058; font-size: 14px; }

@@ -133,7 +133,7 @@ const allUsers = await db
           >
             <option value="">All Roles</option>
             <option value="admin">Admin</option>
-            <option value="user">User</option>
+            <option value="user">Team Member</option>
           </select>
         </div>
         <div class="sm:w-48">
@@ -203,7 +203,7 @@ const allUsers = await db
                       ? 'bg-red-100 text-red-800' 
                       : 'bg-gray-100 text-gray-800'
                   }`}>
-                    {user.role === 'admin' ? 'Admin' : 'User'}
+                    {user.role === 'admin' ? 'Admin' : 'Team Member'}
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
@@ -315,7 +315,7 @@ const allUsers = await db
                 required
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
               >
-                <option value="user">User</option>
+                <option value="user">Team Member</option>
                 <option value="admin">Admin</option>
               </select>
             </div>
@@ -409,7 +409,7 @@ const allUsers = await db
                 required
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
               >
-                <option value="user">User</option>
+                <option value="user">Team Member</option>
                 <option value="admin">Admin</option>
               </select>
             </div>
@@ -503,7 +503,7 @@ const allUsers = await db
                 id="newRole"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
               >
-                <option value="user">User</option>
+                <option value="user">Team Member</option>
                 <option value="admin">Admin</option>
               </select>
             </div>
@@ -529,299 +529,178 @@ const allUsers = await db
 
 
 
-  <script>
-    // Current user data
-    const currentUser = {
-      name: '${currentUser.name}',
-      email: '${currentUser.email}',
-      role: '${currentUser.role}'
-    };
+  <script define:vars={{ currentUser }}>
+    // Current user data is now available from server-side
 
     // Team Member management JavaScript
-    const inviteUserBtn = document.getElementById('inviteUserBtn');
-    const inviteForm = document.getElementById('inviteForm');
-    const editUserForm = document.getElementById('editUserForm');
-    const searchInput = document.getElementById('search');
-    const roleFilter = document.getElementById('roleFilter');
-    const statusFilter = document.getElementById('statusFilter');
-
-    // Function to apply all filters
-    function applyFilters() {
-      const searchTerm = (searchInput as HTMLInputElement)?.value.toLowerCase() || '';
-      const selectedRole = (roleFilter as HTMLSelectElement)?.value || '';
-      const selectedStatus = (statusFilter as HTMLSelectElement)?.value || '';
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOMContentLoaded fired');
       
-      const rows = document.querySelectorAll('tbody tr');
+      // Get DOM elements
+      const inviteUserBtn = document.getElementById('inviteUserBtn');
+      const inviteForm = document.getElementById('inviteForm');
+      const editUserForm = document.getElementById('editUserForm');
+      const searchInput = document.getElementById('search');
+      const roleFilter = document.getElementById('roleFilter');
+      const statusFilter = document.getElementById('statusFilter');
       
-      rows.forEach(row => {
-        const nameCell = row.querySelector('td:first-child');
-        const emailCell = row.querySelector('td:first-child div:last-child div:last-child');
-        const roleCell = row.querySelector('td:nth-child(2)');
-        const statusCell = row.querySelector('td:nth-child(3)');
-        
-        const name = nameCell?.textContent?.toLowerCase() || '';
-        const email = emailCell?.textContent?.toLowerCase() || '';
-        const roleText = roleCell?.textContent?.trim() || '';
-        const statusText = statusCell?.textContent?.trim() || '';
-        
-        // Check search filter
-        const matchesSearch = !searchTerm || name.includes(searchTerm) || email.includes(searchTerm);
-        
-        // Check role filter
-        const matchesRole = !selectedRole || 
-          (selectedRole === 'admin' && roleText.toLowerCase().includes('admin')) ||
-          (selectedRole === 'user' && roleText.toLowerCase().includes('user') && !roleText.toLowerCase().includes('admin'));
-        
-        // Check status filter
-        const matchesStatus = !selectedStatus || 
-          (selectedStatus === 'active' && statusText.includes('Active')) ||
-          (selectedStatus === 'inactive' && statusText.includes('Inactive'));
-        
-        // Show row only if it matches all active filters
-        (row as HTMLElement).style.display = (matchesSearch && matchesRole && matchesStatus) ? '' : 'none';
+      console.log('Elements found:', {
+        inviteUserBtn: !!inviteUserBtn,
+        inviteForm: !!inviteForm,
+        editUserForm: !!editUserForm,
+        searchInput: !!searchInput,
+        roleFilter: !!roleFilter,
+        statusFilter: !!statusFilter
       });
-    }
 
-    if (inviteUserBtn) {
-      inviteUserBtn.addEventListener('click', () => {
-        const inviteModal = document.getElementById('inviteModal');
-        if (inviteModal) inviteModal.classList.remove('hidden');
-      });
-    }
-
-    if (inviteForm) {
-      inviteForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const name = (document.getElementById('inviteName') as HTMLInputElement)?.value;
-        const email = (document.getElementById('inviteEmail') as HTMLInputElement)?.value;
-        const role = (document.getElementById('inviteRole') as HTMLSelectElement)?.value;
-        const payRate = (document.getElementById('invitePayRate') as HTMLInputElement)?.value;
+      // Function to apply all filters
+      function applyFilters() {
+        const searchTerm = searchInput?.value.toLowerCase() || '';
+        const selectedRole = roleFilter?.value || '';
+        const selectedStatus = statusFilter?.value || '';
         
-        try {
-          const response = await fetch('/api/admin/users', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              name, 
-              email, 
-              role, 
-              status: 'invited',
-              payRate: payRate ? parseFloat(payRate) : 0.00,
-              invitedBy: currentUser.name // Pass the current admin's name
-            }),
-          });
+        const rows = document.querySelectorAll('tbody tr');
+        
+        rows.forEach(row => {
+          const nameCell = row.querySelector('td:first-child');
+          const emailCell = row.querySelector('td:first-child div:last-child div:last-child');
+          const roleCell = row.querySelector('td:nth-child(2)');
+          const statusCell = row.querySelector('td:nth-child(3)');
           
-          if (response.ok) {
-            const result = await response.json();
-            if (result.invitationSent) {
-              alert('Invitation sent successfully! The team member will receive an email to set up their account.');
-            }
-            window.location.reload();
-          } else {
-            const errorData = await response.json();
-            alert('Error inviting team member: ' + (errorData.error || 'Unknown error'));
-          }
-        } catch (error) {
-          console.error('Error:', error);
-          alert('Error inviting team member');
-        }
-      });
-    }
-
-    if (editUserForm) {
-      editUserForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const userId = (document.getElementById('editUserId') as HTMLInputElement)?.value;
-        const name = (document.getElementById('editUserName') as HTMLInputElement)?.value;
-        const email = (document.getElementById('editUserEmail') as HTMLInputElement)?.value;
-        const role = (document.getElementById('editUserRole') as HTMLSelectElement)?.value;
-        const status = (document.getElementById('editUserStatus') as HTMLSelectElement)?.value;
-        const payRate = (document.getElementById('editUserPayRate') as HTMLInputElement)?.value;
-        
-        try {
-          const response = await fetch('/api/admin/users', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              id: userId, 
-              name, 
-              email, 
-              role, 
-              status,
-              payRate: payRate ? parseFloat(payRate) : 0.00
-            }),
-          });
+          const name = nameCell?.textContent?.toLowerCase() || '';
+          const email = emailCell?.textContent?.toLowerCase() || '';
+          const roleText = roleCell?.textContent?.trim() || '';
+          const statusText = statusCell?.textContent?.trim() || '';
           
-          if (response.ok) {
-            window.location.reload();
-          } else {
-            alert('Error updating team member');
-          }
-        } catch (error) {
-          console.error('Error:', error);
-          alert('Error updating team member');
-        }
-      });
-    }
-
-
-
-    function editUser(id: number) {
-      const editUserId = document.getElementById('editUserId') as HTMLInputElement;
-      const editUserModal = document.getElementById('editUserModal');
-      
-      // Find the team member row and get current values
-      const userRow = document.querySelector(`tr[data-user-id="${id}"]`);
-      
-      if (userRow) {
-        // Get name and email from the first cell
-        const nameElement = userRow.querySelector('td:first-child .ml-4 div:first-child');
-        const emailElement = userRow.querySelector('td:first-child .ml-4 div:last-child');
-        const roleElement = userRow.querySelector('td:nth-child(2) span');
-        const statusElement = userRow.querySelector('td:nth-child(3) span');
-        const payRateElement = userRow.querySelector('td:nth-child(5) span');
-        
-        const currentName = nameElement?.textContent?.trim() || '';
-        const currentEmail = emailElement?.textContent?.trim() || '';
-        const currentRole = roleElement?.textContent?.includes('Admin') ? 'admin' : 'user';
-        const currentStatus = statusElement?.textContent?.includes('Active') ? 'active' : 'inactive';
-        const currentPayRate = payRateElement?.textContent?.replace('/hr', '').replace('$', '').trim() || '0.00';
-        
-        console.log('Found team member data:', { currentName, currentEmail, currentRole, currentStatus, currentPayRate });
-        
-        // Populate the form fields
-        const editUserName = document.getElementById('editUserName') as HTMLInputElement;
-        const editUserEmail = document.getElementById('editUserEmail') as HTMLInputElement;
-        const editUserRole = document.getElementById('editUserRole') as HTMLSelectElement;
-        const editUserStatus = document.getElementById('editUserStatus') as HTMLSelectElement;
-        const editUserPayRate = document.getElementById('editUserPayRate') as HTMLInputElement;
-        
-        if (editUserName) editUserName.value = currentName;
-        if (editUserEmail) editUserEmail.value = currentEmail;
-        if (editUserRole) editUserRole.value = currentRole;
-        if (editUserStatus) editUserStatus.value = currentStatus;
-        if (editUserPayRate) editUserPayRate.value = currentPayRate;
-      }
-      
-      if (editUserId) editUserId.value = id.toString();
-      if (editUserModal) editUserModal.classList.remove('hidden');
-    }
-
-    function changeRole(id: number) {
-      const roleUserId = document.getElementById('roleUserId') as HTMLInputElement;
-      const roleModal = document.getElementById('roleModal');
-      
-      if (roleUserId) roleUserId.value = id.toString();
-      if (roleModal) roleModal.classList.remove('hidden');
-    }
-
-    function saveRoleChange() {
-      const userId = (document.getElementById('roleUserId') as HTMLInputElement)?.value;
-      const newRole = (document.getElementById('newRole') as HTMLSelectElement)?.value;
-      
-      fetch('/api/admin/users/role', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: parseInt(userId), role: newRole }),
-      })
-      .then(response => {
-        if (response.ok) {
-          window.location.reload();
-        } else {
-          alert('Error changing role');
-        }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        alert('Error changing role');
-      });
-    }
-
-    function deleteUser(userId: number, userName: string) {
-      if (confirm(`Are you sure you want to delete the team member "${userName}"? This action cannot be undone and will also delete all their time entries and task assignments.`)) {
-        fetch(`/api/admin/users/${userId}`, {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-        })
-        .then(response => {
-          if (response.ok) {
-            window.location.reload();
-          } else {
-            alert('Error deleting team member');
-          }
-        })
-        .catch(error => {
-          console.error('Error:', error);
-          alert('Error deleting team member');
+          // Check search filter
+          const matchesSearch = !searchTerm || name.includes(searchTerm) || email.includes(searchTerm);
+          
+          // Check role filter
+          const matchesRole = !selectedRole || 
+            (selectedRole === 'admin' && roleText.toLowerCase().includes('admin')) ||
+            (selectedRole === 'user' && roleText.toLowerCase().includes('team member') && !roleText.toLowerCase().includes('admin'));
+          
+          // Check status filter
+          const matchesStatus = !selectedStatus || 
+            (selectedStatus === 'active' && statusText.includes('Active')) ||
+            (selectedStatus === 'inactive' && statusText.includes('Inactive'));
+          
+          // Show row only if it matches all active filters
+          row.style.display = (matchesSearch && matchesRole && matchesStatus) ? '' : 'none';
         });
       }
-    }
 
-
-
-
-
-    // Search functionality
-    if (searchInput) {
-      searchInput.addEventListener('input', applyFilters);
-    }
-
-    // Role filter functionality
-    if (roleFilter) {
-      roleFilter.addEventListener('change', applyFilters);
-    }
-
-    // Status filter functionality
-    if (statusFilter) {
-      statusFilter.addEventListener('change', applyFilters);
-    }
-
-    // Modal close functions
-    function closeInviteModal() {
-      console.log('closeInviteModal called');
-      const inviteModal = document.getElementById('inviteModal');
-      if (inviteModal) {
-        inviteModal.classList.add('hidden');
-        console.log('Invite modal hidden');
+      // Invite button functionality
+      if (inviteUserBtn) {
+        console.log('Adding click listener to inviteUserBtn');
+        inviteUserBtn.addEventListener('click', () => {
+          console.log('Invite button clicked!');
+          const inviteModal = document.getElementById('inviteModal');
+          console.log('inviteModal found:', !!inviteModal);
+          if (inviteModal) {
+            inviteModal.classList.remove('hidden');
+            console.log('Modal should be visible now');
+          }
+        });
+      } else {
+        console.log('inviteUserBtn not found!');
       }
-      
-      // Clear the form
-      const inviteForm = document.getElementById('inviteForm') as HTMLFormElement;
-      if (inviteForm) inviteForm.reset();
-    }
 
-    function closeEditUserModal() {
-      console.log('closeEditUserModal called');
-      const editUserModal = document.getElementById('editUserModal');
-      if (editUserModal) {
-        editUserModal.classList.add('hidden');
-        console.log('Edit user modal hidden');
+      // Invite form functionality
+      if (inviteForm) {
+        inviteForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const name = document.getElementById('inviteName')?.value;
+          const email = document.getElementById('inviteEmail')?.value;
+          const role = document.getElementById('inviteRole')?.value;
+          const payRate = document.getElementById('invitePayRate')?.value;
+          
+          try {
+            const response = await fetch('/api/admin/users', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                name, 
+                email, 
+                role, 
+                status: 'invited',
+                payRate: payRate ? parseFloat(payRate) : 0.00,
+                invitedBy: currentUser?.name || 'Team Administrator'
+              }),
+            });
+            
+            if (response.ok) {
+              const result = await response.json();
+              if (result.invitationSent) {
+                alert('Invitation sent successfully! The team member will receive an email to set up their account.');
+              }
+              window.location.reload();
+            } else {
+              const errorData = await response.json();
+              alert('Error inviting team member: ' + (errorData.error || 'Unknown error'));
+            }
+          } catch (error) {
+            console.error('Error:', error);
+            alert('Error inviting team member');
+          }
+        });
       }
-    }
 
-    function closeRoleModal() {
-      console.log('closeRoleModal called');
-      const roleModal = document.getElementById('roleModal');
-      if (roleModal) {
-        roleModal.classList.add('hidden');
-        console.log('Role modal hidden');
+      // Edit user form functionality
+      if (editUserForm) {
+        editUserForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const userId = document.getElementById('editUserId')?.value;
+          const name = document.getElementById('editUserName')?.value;
+          const email = document.getElementById('editUserEmail')?.value;
+          const role = document.getElementById('editUserRole')?.value;
+          const status = document.getElementById('editUserStatus')?.value;
+          const payRate = document.getElementById('editUserPayRate')?.value;
+          
+          try {
+            const response = await fetch('/api/admin/users', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                id: userId, 
+                name, 
+                email, 
+                role, 
+                status,
+                payRate: payRate ? parseFloat(payRate) : 0.00
+              }),
+            });
+            
+            if (response.ok) {
+              window.location.reload();
+            } else {
+              alert('Error updating team member');
+            }
+          } catch (error) {
+            console.error('Error:', error);
+            alert('Error updating team member');
+          }
+        });
       }
-    }
 
-    // Keyboard support for closing modals (Escape key)
-    document.addEventListener('keydown', function(event) {
-      if (event.key === 'Escape') {
-        closeInviteModal();
-        closeEditUserModal();
-        closeRoleModal();
+      // Search functionality
+      if (searchInput) {
+        searchInput.addEventListener('input', applyFilters);
       }
-    });
 
-    // Add event listeners for user action buttons
-    document.addEventListener('DOMContentLoaded', function() {
+      // Role filter functionality
+      if (roleFilter) {
+        roleFilter.addEventListener('change', applyFilters);
+      }
+
+      // Status filter functionality
+      if (statusFilter) {
+        statusFilter.addEventListener('change', applyFilters);
+      }
+
       // Edit user buttons
       document.querySelectorAll('.edit-user-btn').forEach(button => {
-        button.addEventListener('click', function(this: HTMLElement) {
+        button.addEventListener('click', function() {
           const userId = parseInt(this.getAttribute('data-user-id') || '0');
           editUser(userId);
         });
@@ -838,8 +717,8 @@ const allUsers = await db
       const deleteUserBtn = document.getElementById('deleteUserBtn');
       if (deleteUserBtn) {
         deleteUserBtn.addEventListener('click', function() {
-          const userId = parseInt((document.getElementById('editUserId') as HTMLInputElement)?.value || '0');
-          const userName = (document.getElementById('editUserName') as HTMLInputElement)?.value || 'Unknown User';
+          const userId = parseInt(document.getElementById('editUserId')?.value || '0');
+          const userName = document.getElementById('editUserName')?.value || 'Unknown User';
           deleteUser(userId, userName);
         });
       }
@@ -894,5 +773,140 @@ const allUsers = await db
         });
       }
     });
+
+    // Modal close functions
+    function closeInviteModal() {
+      console.log('closeInviteModal called');
+      const inviteModal = document.getElementById('inviteModal');
+      if (inviteModal) {
+        inviteModal.classList.add('hidden');
+        console.log('Invite modal hidden');
+      }
+      
+      // Clear the form
+      const inviteForm = document.getElementById('inviteForm');
+      if (inviteForm) inviteForm.reset();
+    }
+
+    function closeEditUserModal() {
+      console.log('closeEditUserModal called');
+      const editUserModal = document.getElementById('editUserModal');
+      if (editUserModal) {
+        editUserModal.classList.add('hidden');
+        console.log('Edit user modal hidden');
+      }
+    }
+
+    function closeRoleModal() {
+      console.log('closeRoleModal called');
+      const roleModal = document.getElementById('roleModal');
+      if (roleModal) {
+        roleModal.classList.add('hidden');
+        console.log('Role modal hidden');
+      }
+    }
+
+    // Keyboard support for closing modals (Escape key)
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        closeInviteModal();
+        closeEditUserModal();
+        closeRoleModal();
+      }
+    });
+
+    // Define functions outside DOMContentLoaded so they're accessible
+    function editUser(id) {
+      const editUserId = document.getElementById('editUserId');
+      const editUserModal = document.getElementById('editUserModal');
+      
+      // Find the team member row and get current values
+      const userRow = document.querySelector(`tr[data-user-id="${id}"]`);
+      
+      if (userRow) {
+        // Get name and email from the first cell
+        const nameElement = userRow.querySelector('td:first-child .ml-4 div:first-child');
+        const emailElement = userRow.querySelector('td:first-child .ml-4 div:last-child');
+        const roleElement = userRow.querySelector('td:nth-child(2) span');
+        const statusElement = userRow.querySelector('td:nth-child(3) span');
+        const payRateElement = userRow.querySelector('td:nth-child(5) span');
+        
+        const currentName = nameElement?.textContent?.trim() || '';
+        const currentEmail = emailElement?.textContent?.trim() || '';
+        const currentRole = roleElement?.textContent?.includes('Admin') ? 'admin' : 'user';
+        const currentStatus = statusElement?.textContent?.includes('Active') ? 'active' : 'inactive';
+        const currentPayRate = payRateElement?.textContent?.replace('/hr', '').replace('$', '').trim() || '0.00';
+        
+        console.log('Found team member data:', { currentName, currentEmail, currentRole, currentStatus, currentPayRate });
+        
+        // Populate the form fields
+        const editUserName = document.getElementById('editUserName');
+        const editUserEmail = document.getElementById('editUserEmail');
+        const editUserRole = document.getElementById('editUserRole');
+        const editUserStatus = document.getElementById('editUserStatus');
+        const editUserPayRate = document.getElementById('editUserPayRate');
+        
+        if (editUserName) editUserName.value = currentName;
+        if (editUserEmail) editUserEmail.value = currentEmail;
+        if (editUserRole) editUserRole.value = currentRole;
+        if (editUserStatus) editUserStatus.value = currentStatus;
+        if (editUserPayRate) editUserPayRate.value = currentPayRate;
+      }
+      
+      if (editUserId) editUserId.value = id.toString();
+      if (editUserModal) editUserModal.classList.remove('hidden');
+    }
+
+    function changeRole(id) {
+      const roleUserId = document.getElementById('roleUserId');
+      const roleModal = document.getElementById('roleModal');
+      
+      if (roleUserId) roleUserId.value = id.toString();
+      if (roleModal) roleModal.classList.remove('hidden');
+    }
+
+    function saveRoleChange() {
+      const userId = document.getElementById('roleUserId')?.value;
+      const newRole = document.getElementById('newRole')?.value;
+      
+      fetch('/api/admin/users/role', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: parseInt(userId), role: newRole }),
+      })
+      .then(response => {
+        if (response.ok) {
+          window.location.reload();
+        } else {
+          alert('Error changing role');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Error changing role');
+      });
+    }
+
+    function deleteUser(userId, userName) {
+      if (confirm(`Are you sure you want to delete the team member "${userName}"? This action cannot be undone and will also delete all their time entries, task assignments, and any clients they created.`)) {
+        fetch(`/api/admin/users/${userId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+        })
+        .then(async response => {
+          if (response.ok) {
+            window.location.reload();
+          } else {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            alert(`Error deleting team member: ${errorData.error || 'Unknown error'}`);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error deleting team member: Network error');
+        });
+      }
+    }
   </script>
 </AdminLayout> 

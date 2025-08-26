@@ -131,7 +131,7 @@ const user = await requireRole('admin', '/dashboard')(Astro) as any;
               </label>
               <div class="px-4 py-3 bg-gray-100 border border-gray-200 rounded-lg">
                 <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-purple-100 text-purple-800">
-                  {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Unknown'}
+                  {user?.role ? (user.role === 'admin' ? 'Admin' : 'Team Member') : 'Unknown'}
                 </span>
               </div>
             </div>
