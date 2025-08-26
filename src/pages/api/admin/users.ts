@@ -37,7 +37,45 @@ export const POST: APIRoute = async ({ request }) => {
     // Check if user already exists
     const existingUser = await db.select().from(users).where(eq(users.email, email));
     if (existingUser.length > 0) {
-      return new Response(JSON.stringify({ error: 'User with this email already exists' }), {
+      const user = existingUser[0];
+      
+      // If user exists but is invited, we can resend the invitation
+      if (user.status === 'invited') {
+        try {
+          // Create a new invitation token
+          const token = await createInvitationToken(email);
+          
+          // Send invitation email
+          const baseUrl = process.env.PUBLIC_SITE_URL || process.env.BASE_URL || 'https://trackr.times10.net';
+          const invitationUrl = `${baseUrl}/setup-account?token=${token}`;
+          
+          await sendInvitationEmail({
+            email,
+            name: user.name,
+            role: user.role,
+            invitationUrl,
+            invitedBy: invitedBy || 'Team Administrator',
+          });
+
+          return new Response(JSON.stringify({ 
+            ...user, 
+            message: 'Invitation resent successfully',
+            invitationSent: true 
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        } catch (emailError) {
+          console.error('Error resending invitation email:', emailError);
+          return new Response(JSON.stringify({ error: 'Failed to resend invitation email' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+      }
+      
+      // If user exists and is active, return error
+      return new Response(JSON.stringify({ error: 'User with this email already exists and is active' }), {
         status: 409,
         headers: { 'Content-Type': 'application/json' },
       });
@@ -97,11 +135,31 @@ export const POST: APIRoute = async ({ request }) => {
         status: 201,
         headers: { 'Content-Type': 'application/json' },
       });
-    } catch (emailError) {
-      console.error('Error sending invitation email:', emailError);
-      // If email fails, delete the user and return error
-      await db.delete(users).where(eq(users.email, email));
-      return new Response(JSON.stringify({ error: 'Failed to send invitation email' }), {
+    } catch (dbError: any) {
+      console.error('Error creating user or sending invitation:', dbError);
+      
+      // Check if it's a duplicate email error
+      if (dbError.code === '23505' && dbError.constraint === 'users_email_unique') {
+        return new Response(JSON.stringify({ error: 'User with this email already exists' }), {
+          status: 409,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      
+      // If it's an email error, try to clean up the user if it was created
+      if (dbError.message && dbError.message.includes('Failed to send invitation email')) {
+        try {
+          await db.delete(users).where(eq(users.email, email));
+        } catch (cleanupError) {
+          console.error('Error cleaning up user after email failure:', cleanupError);
+        }
+        return new Response(JSON.stringify({ error: 'Failed to send invitation email' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      
+      return new Response(JSON.stringify({ error: 'Failed to create user' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
       });
