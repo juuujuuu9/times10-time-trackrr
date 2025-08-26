@@ -3,10 +3,21 @@ import Layout from '../layouts/Layout.astro';
 import { requireAuth } from '../utils/session';
 import { db } from '../db/index';
 import { timeEntries, users, tasks, projects, clients } from '../db/schema';
-import { sql, eq } from 'drizzle-orm';
+import { sql, eq, and, gte, lte } from 'drizzle-orm';
 
 // Require authentication
 const user = await requireAuth('/')(Astro) as any;
+
+// Calculate current week (Sunday to Saturday)
+const now = new Date();
+const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek;
+const weekStart = new Date(now);
+weekStart.setDate(now.getDate() - daysToSubtract);
+weekStart.setHours(0, 0, 0, 0);
+const weekEnd = new Date(weekStart);
+weekEnd.setDate(weekStart.getDate() + 6);
+weekEnd.setHours(23, 59, 59, 999);
 
 // Get current user's time entries with related data
 const userTimeEntries = await db
@@ -23,10 +34,10 @@ const userTimeEntries = await db
     clientName: clients.name,
   })
   .from(timeEntries)
-  .innerJoin(users, sql`${timeEntries.userId} = ${users.id}`)
-  .innerJoin(tasks, sql`${timeEntries.taskId} = ${tasks.id}`)
-  .innerJoin(projects, sql`${tasks.projectId} = ${projects.id}`)
-  .innerJoin(clients, sql`${projects.clientId} = ${clients.id}`)
+  .innerJoin(users, eq(timeEntries.userId, users.id))
+  .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+  .innerJoin(projects, eq(tasks.projectId, projects.id))
+  .innerJoin(clients, eq(projects.clientId, clients.id))
   .where(eq(timeEntries.userId, user.id))
   .orderBy(sql`${timeEntries.createdAt} DESC`);
 
@@ -54,6 +65,22 @@ const userTasks = await db
   .innerJoin(clients, sql`${projects.clientId} = ${clients.id}`)
   .where(eq(timeEntries.userId, user.id))
   .orderBy(clients.name, projects.name, tasks.name);
+
+// Format date range for display
+const formatDateRange = (start: Date, end: Date) => {
+  const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
+  const startDay = start.getDate();
+  const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+  const endDay = end.getDate();
+  
+  if (startMonth === endMonth) {
+    return `${startMonth} ${startDay} - ${endDay}`;
+  } else {
+    return `${startMonth} ${startDay} - ${endMonth} ${endDay}`;
+  }
+};
+
+const currentWeekRange = formatDateRange(weekStart, weekEnd);
 ---
 
 <Layout title="My Time Entries - Times10 Time Tracker">
@@ -114,7 +141,7 @@ const userTasks = await db
 
         <!-- Filters -->
         <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
               <input
@@ -149,38 +176,29 @@ const userTasks = await db
               </select>
             </div>
             <div>
-              <label for="dateRange" class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
-              <select
-                id="dateRange"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#415058] focus:border-[#415058]"
-              >
-                <option value="">All Time</option>
-                <option value="today">Today</option>
-                <option value="week">This Week</option>
-                <option value="month">This Month</option>
-                <option value="quarter">This Quarter</option>
-                <option value="custom">Custom Range</option>
-              </select>
-            </div>
-          </div>
-          <div id="customDateRange" class="hidden mt-4">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Custom Date Range</label>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="flex flex-col">
-                <label for="startDate" class="block text-xs text-gray-500 mb-1">Start Date</label>
-                <input
-                  type="date"
-                  id="startDate"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#415058] focus:border-[#415058] text-sm"
-                />
-              </div>
-              <div>
-                <label for="endDate" class="block text-xs text-gray-500 mb-1">End Date</label>
-                <input
-                  type="date"
-                  id="endDate"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#415058] focus:border-[#415058] text-sm"
-                />
+              <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+              <div class="flex items-center space-x-2 border border-gray-300 rounded-md px-3 py-2 bg-white">
+                <button
+                  id="prevWeekBtn"
+                  class="text-gray-600 hover:text-gray-900 transition-colors p-1"
+                  title="Previous Week"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                  </svg>
+                </button>
+                
+                <span id="weekRangeDisplay" class="text-gray-700 font-medium text-sm flex-1 text-center">{currentWeekRange}</span>
+                
+                <button
+                  id="nextWeekBtn"
+                  class="text-gray-600 hover:text-gray-900 transition-colors p-1"
+                  title="Next Week"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
@@ -443,8 +461,107 @@ const userTasks = await db
   </div>
 
   <script>
-    // Time input handling
+    // Week navigation and filtering
     document.addEventListener('DOMContentLoaded', function() {
+      // Week navigation state
+      let currentWeekStart = new Date();
+      const dayOfWeek = currentWeekStart.getDay();
+      const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek;
+      currentWeekStart.setDate(currentWeekStart.getDate() - daysToSubtract);
+      currentWeekStart.setHours(0, 0, 0, 0);
+
+      // Format date range for display
+      function formatDateRange(start, end) {
+        const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
+        const startDay = start.getDate();
+        const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+        const endDay = end.getDate();
+        
+        if (startMonth === endMonth) {
+          return `${startMonth} ${startDay} - ${endDay}`;
+        } else {
+          return `${startMonth} ${startDay} - ${endMonth} ${endDay}`;
+        }
+      }
+
+      // Update week display and filter entries
+      function updateWeekDisplay() {
+        const weekEnd = new Date(currentWeekStart);
+        weekEnd.setDate(currentWeekStart.getDate() + 6);
+        weekEnd.setHours(23, 59, 59, 999);
+        
+        const weekRangeDisplay = document.getElementById('weekRangeDisplay');
+        if (weekRangeDisplay) {
+          weekRangeDisplay.textContent = formatDateRange(currentWeekStart, weekEnd);
+        }
+        
+        filterEntriesByWeek();
+      }
+
+      // Filter entries by current week
+      function filterEntriesByWeek() {
+        const weekEnd = new Date(currentWeekStart);
+        weekEnd.setDate(currentWeekStart.getDate() + 6);
+        weekEnd.setHours(23, 59, 59, 999);
+        
+        const rows = document.querySelectorAll('tbody tr');
+        
+        rows.forEach(row => {
+          const dateCell = row.querySelector('td:nth-child(4)');
+          const dateText = dateCell?.textContent?.trim() || '';
+          const entryDate = new Date(dateText);
+          
+          // Check if entry is within the current week
+          const isInWeek = entryDate >= currentWeekStart && entryDate <= weekEnd;
+          
+          // Only hide if not already hidden by other filters
+          if (!isInWeek && row.style.display !== 'none') {
+            row.style.display = 'none';
+          } else if (isInWeek && row.style.display === 'none') {
+            // Check if it should be visible based on other filters
+            const shouldShow = checkOtherFilters(row);
+            row.style.display = shouldShow ? '' : 'none';
+          }
+        });
+        
+        updateResultsCounter();
+      }
+
+      // Check if row should be visible based on other filters
+      function checkOtherFilters(row) {
+        const searchTerm = document.getElementById('search')?.value?.toLowerCase() || '';
+        const selectedClient = document.getElementById('clientFilter')?.value || '';
+        const selectedTask = document.getElementById('taskFilter')?.value || '';
+        
+        const rowText = row.textContent?.toLowerCase() || '';
+        const clientCell = row.querySelector('td:nth-child(1)');
+        const clientName = clientCell?.textContent?.trim() || '';
+        const taskCell = row.querySelector('td:nth-child(3)');
+        const taskName = taskCell?.textContent?.trim() || '';
+        
+        const matchesSearch = !searchTerm || rowText.includes(searchTerm);
+        const matchesClient = !selectedClient || clientName === selectedClient;
+        const matchesTask = !selectedTask || taskName === selectedTask;
+        
+        return matchesSearch && matchesClient && matchesTask;
+      }
+
+      // Previous week button
+      document.getElementById('prevWeekBtn')?.addEventListener('click', () => {
+        currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+        updateWeekDisplay();
+      });
+
+      // Next week button
+      document.getElementById('nextWeekBtn')?.addEventListener('click', () => {
+        currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+        updateWeekDisplay();
+      });
+
+      // Initialize week display
+      updateWeekDisplay();
+
+      // Time input handling
       const timeInputs = document.querySelectorAll('.time-input');
       
       timeInputs.forEach(input => {
@@ -671,7 +788,6 @@ const userTasks = await db
     const searchInput = document.getElementById('search');
     const clientFilter = document.getElementById('clientFilter');
     const taskFilter = document.getElementById('taskFilter');
-    const dateRange = document.getElementById('dateRange');
 
     if (searchInput) {
       searchInput.addEventListener('input', (e) => {
@@ -681,7 +797,12 @@ const userTasks = await db
         
         rows.forEach(row => {
           const text = row.textContent?.toLowerCase() || '';
-          row.style.display = text.includes(searchTerm) ? '' : 'none';
+          const matchesSearch = text.includes(searchTerm);
+          const matchesWeek = checkWeekFilter(row);
+          const matchesClient = checkClientFilter(row);
+          const matchesTask = checkTaskFilter(row);
+          
+          row.style.display = (matchesSearch && matchesWeek && matchesClient && matchesTask) ? '' : 'none';
         });
         
         updateResultsCounter();
@@ -696,13 +817,12 @@ const userTasks = await db
         const rows = document.querySelectorAll('tbody tr');
         
         rows.forEach(row => {
-          const clientCell = row.querySelector('td:nth-child(1)');
-          const clientName = clientCell?.textContent?.trim() || '';
-          if (!selectedClient || clientName === selectedClient) {
-            row.style.display = '';
-          } else {
-            row.style.display = 'none';
-          }
+          const matchesSearch = checkSearchFilter(row);
+          const matchesWeek = checkWeekFilter(row);
+          const matchesClient = !selectedClient || row.querySelector('td:nth-child(1)')?.textContent?.trim() === selectedClient;
+          const matchesTask = checkTaskFilter(row);
+          
+          row.style.display = (matchesSearch && matchesWeek && matchesClient && matchesTask) ? '' : 'none';
         });
         
         updateResultsCounter();
@@ -717,43 +837,55 @@ const userTasks = await db
         const rows = document.querySelectorAll('tbody tr');
         
         rows.forEach(row => {
-          const taskCell = row.querySelector('td:nth-child(3)');
-          const task = taskCell?.textContent?.trim() || '';
-          if (!selectedTask || task === selectedTask) {
-            row.style.display = '';
-          } else {
-            row.style.display = 'none';
-          }
+          const matchesSearch = checkSearchFilter(row);
+          const matchesWeek = checkWeekFilter(row);
+          const matchesClient = checkClientFilter(row);
+          const matchesTask = !selectedTask || row.querySelector('td:nth-child(3)')?.textContent?.trim() === selectedTask;
+          
+          row.style.display = (matchesSearch && matchesWeek && matchesClient && matchesTask) ? '' : 'none';
         });
         
         updateResultsCounter();
       });
     }
 
-    // Date range filter functionality
-    if (dateRange) {
-      dateRange.addEventListener('change', (e) => {
-        const target = e.target;
-        const selectedRange = target.value;
-        const customDateRange = document.getElementById('customDateRange');
-        
-        if (selectedRange === 'custom') {
-          customDateRange.classList.remove('hidden');
-        } else {
-          customDateRange.classList.add('hidden');
-        }
-        
-        applyDateRangeFilter();
-      });
+    // Helper functions for filters
+    function checkSearchFilter(row: HTMLElement): boolean {
+      const searchInput = document.getElementById('search') as HTMLInputElement;
+      const searchTerm = searchInput?.value?.toLowerCase() || '';
+      const text = row.textContent?.toLowerCase() || '';
+      return !searchTerm || text.includes(searchTerm);
     }
 
-    // Custom date range inputs
-    const startDate = document.getElementById('startDate');
-    const endDate = document.getElementById('endDate');
+    function checkWeekFilter(row: HTMLElement): boolean {
+      const dateCell = row.querySelector('td:nth-child(4)');
+      const dateText = dateCell?.textContent?.trim() || '';
+      const entryDate = new Date(dateText);
+      
+      const weekEnd = new Date(currentWeekStart);
+      weekEnd.setDate(currentWeekStart.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
+      
+      return entryDate >= currentWeekStart && entryDate <= weekEnd;
+    }
+
+    function checkClientFilter(row: HTMLElement): boolean {
+      const clientFilter = document.getElementById('clientFilter') as HTMLSelectElement;
+      const selectedClient = clientFilter?.value || '';
+      const clientName = row.querySelector('td:nth-child(1)')?.textContent?.trim() || '';
+      return !selectedClient || clientName === selectedClient;
+    }
+
+    function checkTaskFilter(row: HTMLElement): boolean {
+      const taskFilter = document.getElementById('taskFilter') as HTMLSelectElement;
+      const selectedTask = taskFilter?.value || '';
+      const taskName = row.querySelector('td:nth-child(3)')?.textContent?.trim() || '';
+      return !selectedTask || taskName === selectedTask;
+    }
+
+    // Date sorting functionality
     const dateSortBtn = document.getElementById('dateSortBtn');
     const dateSortIcon = document.getElementById('dateSortIcon');
-    
-    // Date sorting functionality
     let dateSortDirection = 'desc';
     
     if (dateSortBtn) {
@@ -773,12 +905,16 @@ const userTasks = await db
     }
     
     function sortTableByDate() {
-      const tbody = document.querySelector('tbody');
+      const tbody = document.querySelector('tbody') as HTMLElement;
+      if (!tbody) return;
+      
       const rows = Array.from(tbody.querySelectorAll('tr'));
       
       rows.sort((a, b) => {
-        const dateTextA = a.querySelector('td:nth-child(4)').textContent.trim();
-        const dateTextB = b.querySelector('td:nth-child(4)').textContent.trim();
+        const dateCellA = a.querySelector('td:nth-child(4)') as HTMLElement;
+        const dateCellB = b.querySelector('td:nth-child(4)') as HTMLElement;
+        const dateTextA = dateCellA?.textContent?.trim() || '';
+        const dateTextB = dateCellB?.textContent?.trim() || '';
         
         const dateA = new Date(dateTextA);
         const dateB = new Date(dateTextB);
@@ -788,22 +924,14 @@ const userTasks = await db
         }
         
         if (dateSortDirection === 'desc') {
-          return dateB - dateA;
+          return dateB.getTime() - dateA.getTime();
         } else {
-          return dateA - dateB;
+          return dateA.getTime() - dateB.getTime();
         }
       });
       
       rows.forEach(row => tbody.appendChild(row));
       updateResultsCounter();
-    }
-
-    if (startDate) {
-      startDate.addEventListener('change', applyDateRangeFilter);
-    }
-
-    if (endDate) {
-      endDate.addEventListener('change', applyDateRangeFilter);
     }
 
     function updateResultsCounter() {
@@ -813,63 +941,6 @@ const userTasks = await db
       if (resultsCounter) {
         resultsCounter.textContent = `Showing ${visibleRows.length} time entries`;
       }
-    }
-
-    function applyDateRangeFilter() {
-      const selectedRange = dateRange?.value;
-      const rows = document.querySelectorAll('tbody tr');
-      const now = new Date();
-      
-      rows.forEach(row => {
-        const dateCell = row.querySelector('td:nth-child(4)');
-        const dateText = dateCell?.textContent?.trim() || '';
-        const entryDate = new Date(dateText);
-        
-        let show = true;
-        
-        if (selectedRange === 'today') {
-          show = entryDate.toDateString() === now.toDateString();
-        } else if (selectedRange === 'week') {
-          const dayOfWeek = now.getDay();
-          const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek;
-          const weekStart = new Date(now);
-          weekStart.setDate(now.getDate() - daysToSubtract);
-          weekStart.setHours(0, 0, 0, 0);
-          const weekEnd = new Date(weekStart);
-          weekEnd.setDate(weekStart.getDate() + 6);
-          weekEnd.setHours(23, 59, 59, 999);
-          show = entryDate >= weekStart && entryDate <= weekEnd;
-        } else if (selectedRange === 'month') {
-          const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1);
-          show = entryDate >= monthAgo;
-        } else if (selectedRange === 'quarter') {
-          const quarterAgo = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
-          show = entryDate >= quarterAgo;
-        } else if (selectedRange === 'custom') {
-          const customStartDate = document.getElementById('startDate')?.value;
-          const customEndDate = document.getElementById('endDate')?.value;
-          
-          if (customStartDate && customEndDate) {
-            const start = new Date(customStartDate);
-            const end = new Date(customEndDate);
-            end.setHours(23, 59, 59, 999);
-            show = entryDate >= start && entryDate <= end;
-          } else if (customStartDate) {
-            const start = new Date(customStartDate);
-            show = entryDate >= start;
-          } else if (customEndDate) {
-            const end = new Date(customEndDate);
-            end.setHours(23, 59, 59, 999);
-            show = entryDate <= end;
-          } else {
-            show = true;
-          }
-        }
-        
-        row.style.display = show ? '' : 'none';
-      });
-      
-      updateResultsCounter();
     }
 
     // Edit Time Entry Modal Functionality
