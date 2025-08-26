@@ -11,21 +11,22 @@ export interface InvitationEmailData {
 }
 
 export async function sendInvitationEmail(data: InvitationEmailData) {
+  // Check if we have a Resend API key configured
+  if (!process.env.RESEND_API_KEY) {
+    console.log('📧 NO API KEY: Invitation would be sent to:', data.email);
+    console.log('📧 Invitation URL:', data.invitationUrl);
+    console.log('📧 Invitation Details:', {
+      name: data.name,
+      role: data.role,
+      invitedBy: data.invitedBy,
+      email: data.email
+    });
+    
+    // Return success for testing
+    return { id: 'test-invitation-' + Date.now() };
+  }
+
   try {
-    // Check if we have a Resend API key configured
-    if (!process.env.RESEND_API_KEY) {
-      console.log('📧 NO API KEY: Invitation would be sent to:', data.email);
-      console.log('📧 Invitation URL:', data.invitationUrl);
-      console.log('📧 Invitation Details:', {
-        name: data.name,
-        role: data.role,
-        invitedBy: data.invitedBy,
-        email: data.email
-      });
-      
-      // Return success for testing
-      return { id: 'test-invitation-' + Date.now() };
-    }
 
     // Log the attempt for debugging
     console.log('📧 Attempting to send invitation email to:', data.email);
@@ -120,22 +121,23 @@ export interface TaskAssignmentEmailData {
 }
 
 export async function sendTaskAssignmentEmail(data: TaskAssignmentEmailData) {
+  // Check if we have a Resend API key configured
+  if (!process.env.RESEND_API_KEY) {
+    console.log('📧 NO API KEY: Task assignment notification would be sent to:', data.email);
+    console.log('📧 Task Details:', {
+      userName: data.userName,
+      taskName: data.taskName,
+      projectName: data.projectName,
+      assignedBy: data.assignedBy,
+      taskDescription: data.taskDescription,
+      dashboardUrl: data.dashboardUrl
+    });
+    
+    // Return success for testing
+    return { id: 'test-task-assignment-' + Date.now() };
+  }
+
   try {
-    // Check if we have a Resend API key configured
-    if (!process.env.RESEND_API_KEY) {
-      console.log('📧 NO API KEY: Task assignment notification would be sent to:', data.email);
-      console.log('📧 Task Details:', {
-        userName: data.userName,
-        taskName: data.taskName,
-        projectName: data.projectName,
-        assignedBy: data.assignedBy,
-        taskDescription: data.taskDescription,
-        dashboardUrl: data.dashboardUrl
-      });
-      
-      // Return success for testing
-      return { id: 'test-task-assignment-' + Date.now() };
-    }
 
     // Log the attempt for debugging
     console.log('📧 Attempting to send task assignment email to:', data.email);

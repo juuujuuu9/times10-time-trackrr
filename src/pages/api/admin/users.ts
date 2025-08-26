@@ -78,7 +78,7 @@ export const POST: APIRoute = async ({ request }) => {
       }).returning();
 
       // Send invitation email
-      const baseUrl = process.env.BASE_URL || 'http://localhost:4321';
+      const baseUrl = process.env.PUBLIC_SITE_URL || process.env.BASE_URL || 'https://trackr.times10.net';
       const invitationUrl = `${baseUrl}/setup-account?token=${token}`;
       
       await sendInvitationEmail({
