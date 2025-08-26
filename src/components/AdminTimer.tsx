@@ -265,7 +265,7 @@ export default function AdminTimer() {
   return (
     <div className="bg-white py-2 border-t border-gray-200">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-600">Time Tracker</h3>
+        <h3 className="text-xs font-normal text-gray-500 uppercase">Time Tracker</h3>
         {isRunning && (
           <div className="flex items-center">
             <div className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></div>
