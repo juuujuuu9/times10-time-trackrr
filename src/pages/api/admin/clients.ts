@@ -13,7 +13,7 @@ export const GET: APIRoute = async () => {
     });
   } catch (error) {
     console.error('Error fetching clients:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch clients' }), {
+    return new Response(JSON.stringify({ error: 'Failed to fetch clients', details: error instanceof Error ? error.message : 'Unknown error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -25,7 +25,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Get the authenticated user
     const user = await getSessionUser({ cookies } as any);
     if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      console.error('Authentication failed: No user found');
+      return new Response(JSON.stringify({ error: 'Unauthorized - Please log in again' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' },
       });
@@ -34,17 +35,22 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const body = await request.json();
     const { name } = body;
 
-    if (!name) {
-      return new Response(JSON.stringify({ error: 'Client name is required' }), {
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      return new Response(JSON.stringify({ error: 'Client name is required and must be a non-empty string' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
+    // Trim the name to remove leading/trailing whitespace
+    const trimmedName = name.trim();
+
     const newClient = await db.insert(clients).values({
-      name,
+      name: trimmedName,
       createdBy: user.id,
     }).returning();
+
+    console.log('Client created successfully:', newClient[0]);
 
     return new Response(JSON.stringify(newClient[0]), {
       status: 201,
@@ -52,28 +58,64 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     });
   } catch (error) {
     console.error('Error creating client:', error);
-    return new Response(JSON.stringify({ error: 'Failed to create client' }), {
-      status: 500,
+    
+    // Provide more specific error messages
+    let errorMessage = 'Failed to create client';
+    let statusCode = 500;
+    
+    if (error instanceof Error) {
+      if (error.message.includes('duplicate key')) {
+        errorMessage = 'A client with this name already exists';
+        statusCode = 409;
+      } else if (error.message.includes('foreign key')) {
+        errorMessage = 'Invalid user reference';
+        statusCode = 400;
+      } else if (error.message.includes('not null')) {
+        errorMessage = 'Required field is missing';
+        statusCode = 400;
+      } else {
+        errorMessage = error.message;
+      }
+    }
+    
+    return new Response(JSON.stringify({ 
+      error: errorMessage, 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    }), {
+      status: statusCode,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 };
 
-export const PUT: APIRoute = async ({ request }) => {
+export const PUT: APIRoute = async ({ request, cookies }) => {
   try {
+    // Get the authenticated user for consistency
+    const user = await getSessionUser({ cookies } as any);
+    if (!user) {
+      console.error('Authentication failed: No user found');
+      return new Response(JSON.stringify({ error: 'Unauthorized - Please log in again' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const body = await request.json();
     const { id, name } = body;
 
-    if (!id || !name) {
-      return new Response(JSON.stringify({ error: 'Client ID and name are required' }), {
+    if (!id || !name || typeof name !== 'string' || name.trim().length === 0) {
+      return new Response(JSON.stringify({ error: 'Client ID and name are required. Name must be a non-empty string' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
+    // Trim the name to remove leading/trailing whitespace
+    const trimmedName = name.trim();
+
     const updatedClient = await db
       .update(clients)
-      .set({ name, updatedAt: new Date() })
+      .set({ name: trimmedName, updatedAt: new Date() })
       .where(eq(clients.id, id))
       .returning();
 
@@ -84,21 +126,53 @@ export const PUT: APIRoute = async ({ request }) => {
       });
     }
 
+    console.log('Client updated successfully:', updatedClient[0]);
+
     return new Response(JSON.stringify(updatedClient[0]), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('Error updating client:', error);
-    return new Response(JSON.stringify({ error: 'Failed to update client' }), {
-      status: 500,
+    
+    // Provide more specific error messages
+    let errorMessage = 'Failed to update client';
+    let statusCode = 500;
+    
+    if (error instanceof Error) {
+      if (error.message.includes('duplicate key')) {
+        errorMessage = 'A client with this name already exists';
+        statusCode = 409;
+      } else if (error.message.includes('not null')) {
+        errorMessage = 'Required field is missing';
+        statusCode = 400;
+      } else {
+        errorMessage = error.message;
+      }
+    }
+    
+    return new Response(JSON.stringify({ 
+      error: errorMessage, 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    }), {
+      status: statusCode,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 };
 
-export const PATCH: APIRoute = async ({ request }) => {
+export const PATCH: APIRoute = async ({ request, cookies }) => {
   try {
+    // Get the authenticated user for consistency
+    const user = await getSessionUser({ cookies } as any);
+    if (!user) {
+      console.error('Authentication failed: No user found');
+      return new Response(JSON.stringify({ error: 'Unauthorized - Please log in again' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const body = await request.json();
     const { id, archived } = body;
 
@@ -122,13 +196,18 @@ export const PATCH: APIRoute = async ({ request }) => {
       });
     }
 
+    console.log('Client archive status updated successfully:', updatedClient[0]);
+
     return new Response(JSON.stringify(updatedClient[0]), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('Error archiving/unarchiving client:', error);
-    return new Response(JSON.stringify({ error: 'Failed to update client archive status' }), {
+    return new Response(JSON.stringify({ 
+      error: 'Failed to update client archive status', 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

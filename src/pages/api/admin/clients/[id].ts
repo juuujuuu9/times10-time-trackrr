@@ -2,11 +2,22 @@ import type { APIRoute } from 'astro';
 import { db } from '../../../../db/index';
 import { clients } from '../../../../db/schema';
 import { eq } from 'drizzle-orm';
+import { getSessionUser } from '../../../../utils/session';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, cookies }) => {
   try {
+    // Get the authenticated user
+    const user = await getSessionUser({ cookies } as any);
+    if (!user) {
+      console.error('Authentication failed: No user found');
+      return new Response(JSON.stringify({ error: 'Unauthorized - Please log in again' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const { id } = params;
 
     if (!id) {
@@ -35,15 +46,28 @@ export const GET: APIRoute = async ({ params }) => {
     });
   } catch (error) {
     console.error('Error fetching client:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch client' }), {
+    return new Response(JSON.stringify({ 
+      error: 'Failed to fetch client', 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 };
 
-export const DELETE: APIRoute = async ({ params }) => {
+export const DELETE: APIRoute = async ({ params, cookies }) => {
   try {
+    // Get the authenticated user
+    const user = await getSessionUser({ cookies } as any);
+    if (!user) {
+      console.error('Authentication failed: No user found');
+      return new Response(JSON.stringify({ error: 'Unauthorized - Please log in again' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const { id } = params;
 
     if (!id) {
@@ -53,9 +77,17 @@ export const DELETE: APIRoute = async ({ params }) => {
       });
     }
 
+    const clientId = parseInt(id);
+    if (isNaN(clientId)) {
+      return new Response(JSON.stringify({ error: 'Invalid client ID format' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const deletedClient = await db
       .delete(clients)
-      .where(eq(clients.id, parseInt(id)))
+      .where(eq(clients.id, clientId))
       .returning();
 
     if (deletedClient.length === 0) {
@@ -65,14 +97,33 @@ export const DELETE: APIRoute = async ({ params }) => {
       });
     }
 
+    console.log('Client deleted successfully:', deletedClient[0]);
+
     return new Response(JSON.stringify({ message: 'Client deleted successfully' }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('Error deleting client:', error);
-    return new Response(JSON.stringify({ error: 'Failed to delete client' }), {
-      status: 500,
+    
+    // Provide more specific error messages
+    let errorMessage = 'Failed to delete client';
+    let statusCode = 500;
+    
+    if (error instanceof Error) {
+      if (error.message.includes('foreign key')) {
+        errorMessage = 'Cannot delete client: It has associated projects or other data';
+        statusCode = 409;
+      } else {
+        errorMessage = error.message;
+      }
+    }
+    
+    return new Response(JSON.stringify({ 
+      error: errorMessage, 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    }), {
+      status: statusCode,
       headers: { 'Content-Type': 'application/json' },
     });
   }

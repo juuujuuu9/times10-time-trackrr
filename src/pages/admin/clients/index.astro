@@ -48,15 +48,27 @@ const allClients = await db
         <h1 class="text-2xl font-bold text-gray-900">Clients</h1>
         <p class="text-gray-600">Manage your client relationships and projects</p>
       </div>
-      <button
-        id="createClientBtn"
-        class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-gray-500"
-      >
-        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-        </svg>
-        Add Client
-      </button>
+      <div class="flex space-x-3">
+        <button
+          id="debugBtn"
+          class="inline-flex items-center px-3 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-yellow-500"
+          title="Debug client creation"
+        >
+          <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+          </svg>
+          Debug
+        </button>
+        <button
+          id="createClientBtn"
+          class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-gray-500"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+          </svg>
+          Add Client
+        </button>
+      </div>
     </div>
 
     <!-- Summary Stats -->
@@ -457,8 +469,29 @@ const allClients = await db
   <script>
     // Client management JavaScript
     const createClientBtn = document.getElementById('createClientBtn');
+    const debugBtn = document.getElementById('debugBtn');
     const clientForm = document.getElementById('clientForm');
     const searchInput = document.getElementById('search');
+
+    if (debugBtn) {
+      debugBtn.addEventListener('click', async () => {
+        console.log('Debug button clicked');
+        try {
+          const response = await fetch('/api/test-client-creation');
+          const result = await response.json();
+          console.log('Debug test result:', result);
+          
+          if (response.ok) {
+            alert(`Debug test passed!\n\nUser: ${result.user.name} (${result.user.role})\nTests: ${result.tests.join(', ')}`);
+          } else {
+            alert(`Debug test failed: ${result.error}\n\nTest: ${result.test}\nDetails: ${result.details}`);
+          }
+        } catch (error) {
+          console.error('Debug test error:', error);
+          alert('Debug test failed: Network error');
+        }
+      });
+    }
 
     if (createClientBtn) {
       createClientBtn.addEventListener('click', () => {
@@ -480,21 +513,34 @@ const allClients = await db
         const clientId = (document.getElementById('clientId') as HTMLInputElement)?.value;
         const clientName = (document.getElementById('clientName') as HTMLInputElement)?.value;
         
+        console.log('Form submission:', { clientId, clientName });
+        
         try {
+          const requestBody = { id: clientId, name: clientName };
+          console.log('Request body:', requestBody);
+          
           const response = await fetch('/api/admin/clients', {
             method: clientId ? 'PUT' : 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: clientId, name: clientName }),
+            body: JSON.stringify(requestBody),
           });
           
+          console.log('Response status:', response.status);
+          console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+          
           if (response.ok) {
+            const result = await response.json();
+            console.log('Success response:', result);
             window.location.reload();
           } else {
-            alert('Error saving client');
+            const errorData = await response.json();
+            const errorMessage = errorData.error || 'Error saving client';
+            console.error('Server error:', errorData);
+            alert(`Error saving client: ${errorMessage}`);
           }
         } catch (error) {
-          console.error('Error:', error);
-          alert('Error saving client');
+          console.error('Network error:', error);
+          alert('Network error: Unable to connect to server. Please check your connection and try again.');
         }
       });
     }
@@ -541,11 +587,14 @@ const allClients = await db
           if (response.ok) {
             window.location.reload();
           } else {
-            alert('Error archiving client');
+            const errorData = await response.json();
+            const errorMessage = errorData.error || 'Error archiving client';
+            console.error('Server error:', errorData);
+            alert(`Error archiving client: ${errorMessage}`);
           }
         } catch (error) {
-          console.error('Error:', error);
-          alert('Error archiving client');
+          console.error('Network error:', error);
+          alert('Network error: Unable to connect to server. Please check your connection and try again.');
         }
       }
     };
@@ -562,29 +611,35 @@ const allClients = await db
           if (response.ok) {
             window.location.reload();
           } else {
-            alert('Error unarchiving client');
+            const errorData = await response.json();
+            const errorMessage = errorData.error || 'Error unarchiving client';
+            console.error('Server error:', errorData);
+            alert(`Error unarchiving client: ${errorMessage}`);
           }
         } catch (error) {
-          console.error('Error:', error);
-          alert('Error unarchiving client');
+          console.error('Network error:', error);
+          alert('Network error: Unable to connect to server. Please check your connection and try again.');
         }
       }
     };
 
-    (window as any).deleteClient = function(id: number) {
+    (window as any).deleteClient = async function(id: number) {
       if (confirm('Are you sure you want to delete this client? This action cannot be undone.')) {
-        fetch(`/api/admin/clients/${id}`, { method: 'DELETE' })
-          .then(response => {
-            if (response.ok) {
-              window.location.reload();
-            } else {
-              alert('Error deleting client');
-            }
-          })
-          .catch(error => {
-            console.error('Error:', error);
-            alert('Error deleting client');
-          });
+        try {
+          const response = await fetch(`/api/admin/clients/${id}`, { method: 'DELETE' });
+          
+          if (response.ok) {
+            window.location.reload();
+          } else {
+            const errorData = await response.json();
+            const errorMessage = errorData.error || 'Error deleting client';
+            console.error('Server error:', errorData);
+            alert(`Error deleting client: ${errorMessage}`);
+          }
+        } catch (error) {
+          console.error('Network error:', error);
+          alert('Network error: Unable to connect to server. Please check your connection and try again.');
+        }
       }
     };
 
