@@ -59,6 +59,26 @@ const user = await requireAuth('/')(Astro) as any;
                 <h2 class="text-xl font-semibold text-gray-900">Recent Time Entries</h2>
                 <div class="flex space-x-4">
                   <button
+                    id="refreshEntriesBtn"
+                    class="text-sm text-gray-600 hover:text-gray-800 font-medium transition-colors cursor-pointer flex items-center space-x-1"
+                    title="Refresh data"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <span>Refresh</span>
+                  </button>
+                  <button
+                    id="debugBtn"
+                    class="text-sm text-gray-600 hover:text-gray-800 font-medium transition-colors cursor-pointer flex items-center space-x-1"
+                    title="Debug calculations"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>Debug</span>
+                  </button>
+                  <button
                     id="viewAllEntriesBtn"
                     class="text-sm text-gray-600 hover:text-gray-800 font-medium transition-colors cursor-pointer"
                   >
@@ -435,6 +455,25 @@ const user = await requireAuth('/')(Astro) as any;
     const container = document.getElementById('recentEntries');
     if (!container) return;
 
+    // Debug: Calculate manual total from entries
+    let manualTotalHours = 0;
+    entries.forEach(entry => {
+      if (entry.duration) {
+        manualTotalHours += entry.duration / 3600;
+      }
+    });
+    ongoingTimers.forEach(timer => {
+      if (timer.elapsedSeconds) {
+        manualTotalHours += timer.elapsedSeconds / 3600;
+      }
+    });
+    console.log('Manual calculation from displayed entries:', {
+      entriesCount: entries.length,
+      ongoingTimersCount: ongoingTimers.length,
+      manualTotalHours: manualTotalHours.toFixed(2),
+      entries: entries.map(e => ({ id: e.id, duration: e.duration, durationHours: e.duration ? (e.duration / 3600).toFixed(2) : '0' }))
+    });
+
     if (entries.length === 0 && ongoingTimers.length === 0) {
       container.innerHTML = `
         <div class="text-center py-8">
@@ -544,12 +583,13 @@ const user = await requireAuth('/')(Astro) as any;
             `;
           }).join('')}
           ${filteredEntries.map((entry: any) => {
-            const taskDate = new Date(entry.startTime);
+            // For manual duration entries, use createdAt for task date since startTime is null
+            const taskDate = entry.startTime ? new Date(entry.startTime) : new Date(entry.createdAt);
             const durationHours = entry.duration ? (entry.duration / 3600).toFixed(1) : '0';
             
             // Check if this is a manual duration entry (no meaningful start/end times)
-            // Manual duration entries have startTime set to task date but endTime is null
-            const isManualDurationEntry = entry.durationManual && !entry.endTime;
+            // Manual duration entries have durationManual but no startTime or endTime
+            const isManualDurationEntry = entry.durationManual && !entry.startTime && !entry.endTime;
             const startTime = (!isManualDurationEntry && entry.startTime) ? new Date(entry.startTime) : null;
             const endTime = (!isManualDurationEntry && entry.endTime) ? new Date(entry.endTime) : null;
             
@@ -577,23 +617,25 @@ const user = await requireAuth('/')(Astro) as any;
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                   <input
                     type="text"
-                    class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer"
+                    class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer ${isManualDurationEntry ? 'bg-gray-100 cursor-not-allowed' : ''}"
                     value="${startTimeDisplay}"
                     data-entry-id="${entry.id}"
                     data-time-type="start"
                     placeholder="9:30 AM"
-                    title="Click to edit start time"
+                    title="${isManualDurationEntry ? 'Manual duration entry - use edit button to modify' : 'Click to edit start time'}"
+                    ${isManualDurationEntry ? 'readonly' : ''}
                   />
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                   <input
                     type="text"
-                    class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer"
+                    class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer ${isManualDurationEntry ? 'bg-gray-100 cursor-not-allowed' : ''}"
                     value="${endTimeDisplay}"
                     data-entry-id="${entry.id}"
                     data-time-type="end"
                     placeholder="9:30 AM"
-                    title="Click to edit end time"
+                    title="${isManualDurationEntry ? 'Manual duration entry - use edit button to modify' : 'Click to edit end time'}"
+                    ${isManualDurationEntry ? 'readonly' : ''}
                   />
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
@@ -630,6 +672,14 @@ const user = await requireAuth('/')(Astro) as any;
       // Convert seconds to hours for display
       const hoursFromSeconds = (stats.totalHours || 0) / 3600;
       weeklyHours.textContent = formatHours(hoursFromSeconds);
+      
+      // Debug information - log the raw data
+      console.log('Weekly Stats Debug:', {
+        totalSeconds: stats.totalHours,
+        totalHours: hoursFromSeconds,
+        formattedDisplay: formatHours(hoursFromSeconds),
+        rawStats: stats
+      });
     }
   }
 
@@ -748,6 +798,44 @@ const user = await requireAuth('/')(Astro) as any;
   window.addEventListener('timerStarted', () => {
     // Reload dashboard data when a timer is started
     loadDashboardData();
+  });
+
+  // Refresh button functionality
+  document.getElementById('refreshEntriesBtn')?.addEventListener('click', () => {
+    loadDashboardData();
+  });
+
+  // Debug button functionality
+  document.getElementById('debugBtn')?.addEventListener('click', async () => {
+    try {
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        alert('No user ID available');
+        return;
+      }
+
+      const response = await fetch('/api/debug-calculations?userId=' + encodeURIComponent(userId));
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Debug Calculations:', data);
+        
+        // Show a summary in an alert
+        const summary = `
+Debug Summary:
+- All Entries: ${data.totals.allEntries.totalHours} hours (${data.totals.allEntries.count} entries)
+- Weekly Entries: ${data.totals.weeklyEntries.totalHours} hours (${data.totals.weeklyEntries.count} entries)
+- Ongoing Timers: ${data.totals.ongoingTimers.totalHours} hours (${data.totals.ongoingTimers.count} timers)
+- Non-Archived Weekly: ${data.totals.nonArchivedWeeklyEntries.totalHours} hours
+- Non-Archived Ongoing: ${data.totals.nonArchivedOngoingTimers.totalHours} hours
+        `;
+        alert(summary);
+      } else {
+        alert('Failed to get debug data');
+      }
+    } catch (error) {
+      console.error('Debug error:', error);
+      alert('Error getting debug data');
+    }
   });
 
   // All Entries button functionality
@@ -1366,6 +1454,11 @@ const user = await requireAuth('/')(Astro) as any;
           // Skip if the value hasn't changed
           const originalValue = this.getAttribute('data-original-value');
           if (timeValue === originalValue) return;
+          
+          // Check if this is a manual duration entry (readonly input)
+          if (this.hasAttribute('readonly')) {
+            return; // Don't allow editing manual duration entries
+          }
           
           // Validate time format (12-hour with AM/PM)
           const timeRegex = /^(1[0-2]|0?[1-9]):[0-5][0-9]\s*(am|pm|AM|PM)$/;

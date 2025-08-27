@@ -6,7 +6,7 @@ import { parseTimeInput } from '../../../utils/timeParser';
 
 export const GET: APIRoute = async () => {
   try {
-    // Get all time entries with related data
+    // Get all time entries with related data (only non-archived activities)
     const allTimeEntries = await db
       .select({
         id: timeEntries.id,
@@ -25,6 +25,11 @@ export const GET: APIRoute = async () => {
       .innerJoin(tasks, sql`${timeEntries.taskId} = ${tasks.id}`)
       .innerJoin(projects, sql`${tasks.projectId} = ${projects.id}`)
       .innerJoin(clients, sql`${projects.clientId} = ${clients.id}`)
+      .where(and(
+        eq(clients.archived, false),
+        eq(projects.archived, false),
+        eq(tasks.archived, false)
+      ))
       .orderBy(sql`${timeEntries.createdAt} DESC`);
 
     return new Response(JSON.stringify(allTimeEntries), {
@@ -67,13 +72,13 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Use provided task date or default to today
-    const startTime = taskDate ? new Date(taskDate) : new Date();
+    // For manual duration entries, we don't set startTime to avoid them being treated as ongoing timers
+    // The task date is stored in the createdAt timestamp for reference
 
     const newTimeEntry = await db.insert(timeEntries).values({
       userId: parseInt(userId),
       taskId: parseInt(taskId),
-      startTime: startTime, // Use the task date instead of current time
+      startTime: null, // No start time for manual entries
       endTime: null, // No end time for manual entries
       durationManual: durationSeconds,
       notes: notes || null,
@@ -135,10 +140,8 @@ export const PUT: APIRoute = async ({ request }) => {
       updatedAt: new Date()
     };
 
-    // Update startTime if taskDate is provided
-    if (taskDate) {
-      updateData.startTime = new Date(taskDate);
-    }
+    // For manual duration entries, we don't set startTime even if taskDate is provided
+    // to avoid them being treated as ongoing timers
 
     const updatedTimeEntry = await db
       .update(timeEntries)

@@ -46,7 +46,12 @@ export const GET: APIRoute = async ({ url }) => {
       .innerJoin(clients, eq(projects.clientId, clients.id))
       .where(and(
         eq(timeEntries.userId, parseInt(userId)),
-        isNotNull(timeEntries.endTime) // Only include completed time entries, not ongoing ones
+        // Include completed time entries (with endTime) OR manual duration entries (with durationManual)
+        sql`(${timeEntries.endTime} IS NOT NULL OR ${timeEntries.durationManual} IS NOT NULL)`,
+        // Filter out archived activities
+        eq(clients.archived, false),
+        eq(projects.archived, false),
+        eq(tasks.archived, false)
       ))
       .orderBy(desc(timeEntries.createdAt))
       .limit(limit);
