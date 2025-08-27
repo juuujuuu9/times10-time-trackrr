@@ -43,17 +43,106 @@ export async function sendInvitationEmail(data: InvitationEmailData) {
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Times10 Invitation</title>
           <style>
-            body { font-family: 'Istok Web', system-ui, sans-serif; line-height: 1.6; color: #1F292E; background-color: #F2F2F3; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #415058 0%, #1F292E 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: white; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #C8CDD0; }
-            .button { display: inline-block; background: #d63a2e; color: #FFFFFF !important; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; transition: background-color 0.2s; }
-            .button:hover { background: #b52a24; }
-            .footer { text-align: center; margin-top: 30px; color: #415058; font-size: 14px; }
+            /* Reset and base styles */
+            body { 
+              font-family: 'Istok Web', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+              line-height: 1.6; 
+              color: #1F292E; 
+              background-color: #F2F2F3; 
+              margin: 0; 
+              padding: 0; 
+            }
+            
+            /* Container and layout */
+            .container { 
+              max-width: 600px; 
+              margin: 0 auto; 
+              padding: 20px; 
+            }
+            
+            /* Header with brand color */
+            .header { 
+              background: #d63a2e; 
+              color: white; 
+              padding: 30px; 
+              text-align: center; 
+              border-radius: 10px 10px 0 0; 
+              box-shadow: 0 2px 4px rgba(214, 58, 46, 0.2);
+            }
+            
+            .header h1 {
+              margin: 0 0 10px 0;
+              font-size: 24px;
+              font-weight: bold;
+            }
+            
+            .header p {
+              margin: 0;
+              font-size: 16px;
+              opacity: 0.9;
+            }
+            
+            /* Content area */
+            .content { 
+              background: white; 
+              padding: 30px; 
+              border-radius: 0 0 10px 10px; 
+              border: 1px solid #C8CDD0; 
+              border-top: none;
+            }
+            
+            /* Button styling */
+            .button { 
+              display: inline-block; 
+              background: #d63a2e; 
+              color: #FFFFFF !important; 
+              padding: 15px 30px; 
+              text-decoration: none; 
+              border-radius: 8px; 
+              font-weight: bold; 
+              margin: 20px 0; 
+              transition: background-color 0.2s; 
+              box-shadow: 0 2px 4px rgba(214, 58, 46, 0.2);
+            }
+            
+            .button:hover { 
+              background: #b52a24; 
+            }
+            
+            /* Footer */
+            .footer { 
+              text-align: center; 
+              margin-top: 30px; 
+              color: #415058; 
+              font-size: 14px; 
+            }
+            
+            /* Text color classes */
             .highlight { color: #d63a2e; }
             .text-dark { color: #1F292E; }
             .text-mid { color: #415058; }
             .text-light { color: #C8CDD0; }
+            
+            /* Dark mode support */
+            @media (prefers-color-scheme: dark) {
+              .content {
+                background: #1a1a1a;
+                color: #ffffff;
+                border-color: #333;
+              }
+              .text-dark { color: #ffffff; }
+              .text-mid { color: #cccccc; }
+              .text-light { color: #999999; }
+              .footer { color: #cccccc; }
+            }
+            
+            /* Mobile responsiveness */
+            @media (max-width: 600px) {
+              .container { padding: 10px; }
+              .header, .content { padding: 20px; }
+              .header h1 { font-size: 20px; }
+              .header p { font-size: 14px; }
+            }
           </style>
         </head>
         <body>
@@ -154,18 +243,127 @@ export async function sendTaskAssignmentEmail(data: TaskAssignmentEmailData) {
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>New Task Assignment</title>
           <style>
-            body { font-family: 'Istok Web', system-ui, sans-serif; line-height: 1.6; color: #1F292E; background-color: #F2F2F3; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #415058 0%, #1F292E 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: white; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #C8CDD0; }
-            .button { display: inline-block; background: #d63a2e; color: #FFFFFF !important; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; transition: background-color 0.2s; }
-            .button:hover { background: #b52a24; }
-            .task-card { background: #F2F2F3; border: 1px solid #C8CDD0; border-radius: 8px; padding: 20px; margin: 20px 0; }
-            .footer { text-align: center; margin-top: 30px; color: #415058; font-size: 14px; }
+            /* Reset and base styles */
+            body { 
+              font-family: 'Istok Web', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+              line-height: 1.6; 
+              color: #1F292E; 
+              background-color: #F2F2F3; 
+              margin: 0; 
+              padding: 0; 
+            }
+            
+            /* Container and layout */
+            .container { 
+              max-width: 600px; 
+              margin: 0 auto; 
+              padding: 20px; 
+            }
+            
+            /* Header with brand color */
+            .header { 
+              background: #d63a2e; 
+              color: white; 
+              padding: 30px; 
+              text-align: center; 
+              border-radius: 10px 10px 0 0; 
+              box-shadow: 0 2px 4px rgba(214, 58, 46, 0.2);
+            }
+            
+            .header h1 {
+              margin: 0 0 10px 0;
+              font-size: 24px;
+              font-weight: bold;
+            }
+            
+            .header p {
+              margin: 0;
+              font-size: 16px;
+              opacity: 0.9;
+            }
+            
+            /* Content area */
+            .content { 
+              background: white; 
+              padding: 30px; 
+              border-radius: 0 0 10px 10px; 
+              border: 1px solid #C8CDD0; 
+              border-top: none;
+            }
+            
+            /* Button styling */
+            .button { 
+              display: inline-block; 
+              background: #d63a2e; 
+              color: #FFFFFF !important; 
+              padding: 15px 30px; 
+              text-decoration: none; 
+              border-radius: 8px; 
+              font-weight: bold; 
+              margin: 20px 0; 
+              transition: background-color 0.2s; 
+              box-shadow: 0 2px 4px rgba(214, 58, 46, 0.2);
+            }
+            
+            .button:hover { 
+              background: #b52a24; 
+            }
+            
+            /* Task card styling */
+            .task-card { 
+              background: #F2F2F3; 
+              border: 1px solid #C8CDD0; 
+              border-radius: 8px; 
+              padding: 20px; 
+              margin: 20px 0; 
+            }
+            
+            .task-card h3 {
+              margin-top: 0;
+              color: #d63a2e;
+              font-size: 18px;
+              font-weight: bold;
+            }
+            
+            /* Footer */
+            .footer { 
+              text-align: center; 
+              margin-top: 30px; 
+              color: #415058; 
+              font-size: 14px; 
+            }
+            
+            /* Text color classes */
             .highlight { color: #d63a2e; }
             .text-dark { color: #1F292E; }
             .text-mid { color: #415058; }
             .text-light { color: #C8CDD0; }
+            
+            /* Dark mode support */
+            @media (prefers-color-scheme: dark) {
+              .content {
+                background: #1a1a1a;
+                color: #ffffff;
+                border-color: #333;
+              }
+              .task-card {
+                background: #2a2a2a;
+                border-color: #444;
+              }
+              .text-dark { color: #ffffff; }
+              .text-mid { color: #cccccc; }
+              .text-light { color: #999999; }
+              .footer { color: #cccccc; }
+            }
+            
+            /* Mobile responsiveness */
+            @media (max-width: 600px) {
+              .container { padding: 10px; }
+              .header, .content { padding: 20px; }
+              .header h1 { font-size: 20px; }
+              .header p { font-size: 14px; }
+              .task-card { padding: 15px; }
+            }
           </style>
         </head>
         <body>
@@ -179,7 +377,7 @@ export async function sendTaskAssignmentEmail(data: TaskAssignmentEmailData) {
               <p class="text-mid">You have been assigned a new task by <strong class="highlight">${data.assignedBy}</strong>.</p>
               
               <div class="task-card">
-                <h3 style="margin-top: 0; color: #d63a2e;">${data.taskName}</h3>
+                <h3>${data.taskName}</h3>
                 <p class="text-mid"><strong>Project:</strong> ${data.projectName}</p>
                 ${data.taskDescription ? `<p class="text-mid"><strong>Description:</strong> ${data.taskDescription}</p>` : ''}
               </div>
