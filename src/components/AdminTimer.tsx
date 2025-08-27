@@ -227,6 +227,15 @@ export default function AdminTimer() {
           }
         });
         window.dispatchEvent(timeEntryCreatedEvent);
+
+        // Emit custom event to notify that task status may have changed
+        const taskStatusUpdatedEvent = new CustomEvent('taskStatusUpdated', {
+          detail: {
+            taskId: selectedTask,
+            newStatus: 'in-progress'
+          }
+        });
+        window.dispatchEvent(taskStatusUpdatedEvent);
         
         // Show success message
         alert('Time entry saved successfully!');

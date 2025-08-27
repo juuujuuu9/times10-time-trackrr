@@ -1,7 +1,8 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db/index';
 import { timeEntries, users, tasks, projects, clients } from '../../../db/schema';
-import { sql } from 'drizzle-orm';
+import { sql, eq, and } from 'drizzle-orm';
+import { parseTimeInput } from '../../../utils/timeParser';
 
 export const GET: APIRoute = async () => {
   try {
@@ -77,6 +78,17 @@ export const POST: APIRoute = async ({ request }) => {
       durationManual: durationSeconds,
       notes: notes || null,
     }).returning();
+
+    // Update task status to "in-progress" if it's currently "pending"
+    await db
+      .update(tasks)
+      .set({ status: 'in-progress' })
+      .where(
+        and(
+          eq(tasks.id, parseInt(taskId)),
+          eq(tasks.status, 'pending')
+        )
+      );
 
     return new Response(JSON.stringify(newTimeEntry[0]), {
       status: 201,

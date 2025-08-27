@@ -94,6 +94,17 @@ export const POST: APIRoute = async ({ request }) => {
       })
       .returning();
 
+    // Update task status to "in-progress" if it's currently "pending"
+    await db
+      .update(tasks)
+      .set({ status: 'in-progress' })
+      .where(
+        and(
+          eq(tasks.id, parseInt(taskId)),
+          eq(tasks.status, 'pending')
+        )
+      );
+
     return new Response(JSON.stringify({
       data: newEntry,
       message: 'Time entry created successfully'

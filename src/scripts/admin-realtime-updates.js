@@ -33,6 +33,9 @@ class AdminRealTimeUpdates {
     // Listen for time entry deletions
     window.addEventListener('timeEntryDeleted', this.handleTimeEntryDeleted.bind(this));
     
+    // Listen for task status updates
+    window.addEventListener('taskStatusUpdated', this.handleTaskStatusUpdated.bind(this));
+    
     // Set up periodic updates for dashboard and reports pages
     if (this.currentPage === 'dashboard' || this.currentPage === 'reports') {
       this.startPeriodicUpdates();
@@ -99,6 +102,28 @@ class AdminRealTimeUpdates {
         break;
       default:
         this.showNotification('Time entry deleted', 'warning');
+        break;
+    }
+  }
+
+  handleTaskStatusUpdated(event) {
+    console.log('Task status updated event received:', event.detail);
+    
+    switch (this.currentPage) {
+      case 'tasks':
+        this.refreshTasksData();
+        break;
+      case 'projects':
+        this.refreshProjectsData();
+        break;
+      case 'dashboard':
+        this.refreshDashboardData();
+        break;
+      case 'reports':
+        this.refreshReportsData();
+        break;
+      default:
+        this.showNotification('Task status updated', 'info');
         break;
     }
   }
@@ -228,6 +253,34 @@ class AdminRealTimeUpdates {
     }
   }
 
+  async refreshTasksData() {
+    if (this.isUpdating) return;
+    this.isUpdating = true;
+
+    try {
+      // Reload the tasks page to get updated data
+      window.location.reload();
+    } catch (error) {
+      console.error('Error refreshing tasks:', error);
+    } finally {
+      this.isUpdating = false;
+    }
+  }
+
+  async refreshProjectsData() {
+    if (this.isUpdating) return;
+    this.isUpdating = true;
+
+    try {
+      // Reload the projects page to get updated data
+      window.location.reload();
+    } catch (error) {
+      console.error('Error refreshing projects:', error);
+    } finally {
+      this.isUpdating = false;
+    }
+  }
+
   setupTimeEntriesUpdates() {
     // Set up event listeners for edit/delete buttons on dynamically added rows
     document.addEventListener('click', (e) => {
@@ -317,6 +370,7 @@ class AdminRealTimeUpdates {
     window.removeEventListener('timeEntryCreated', this.handleTimeEntryCreated.bind(this));
     window.removeEventListener('timeEntryUpdated', this.handleTimeEntryUpdated.bind(this));
     window.removeEventListener('timeEntryDeleted', this.handleTimeEntryDeleted.bind(this));
+    window.removeEventListener('taskStatusUpdated', this.handleTaskStatusUpdated.bind(this));
   }
 }
 
