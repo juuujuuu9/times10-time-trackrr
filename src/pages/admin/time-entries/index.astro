@@ -538,6 +538,19 @@ const allTasks = await db
           });
           
           if (response.ok) {
+            // Emit event for real-time updates
+            const timeEntryUpdatedEvent = new CustomEvent('timeEntryUpdated', {
+              detail: { 
+                id: timeEntryId,
+                userId: parseInt(userId),
+                taskId: parseInt(taskId),
+                duration: duration,
+                taskDate: taskDate,
+                notes: notes || null
+              }
+            });
+            window.dispatchEvent(timeEntryUpdatedEvent);
+            
             // Show success message briefly before reloading
             submitButton.textContent = 'Saved!';
             submitButton.classList.add('bg-green-600');
@@ -718,6 +731,12 @@ const allTasks = await db
         fetch(`/api/admin/time-entries/${id}`, { method: 'DELETE' })
           .then(response => {
             if (response.ok) {
+              // Emit event for real-time updates
+              const timeEntryDeletedEvent = new CustomEvent('timeEntryDeleted', {
+                detail: { id: id }
+              });
+              window.dispatchEvent(timeEntryDeletedEvent);
+              
               window.location.reload();
             } else {
               alert('Error deleting time entry');

@@ -1,31 +1,44 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db/index';
-import { timeEntries } from '../../../db/schema';
-import { eq } from 'drizzle-orm';
-import { parseTimeInput } from '../../../utils/timeParser';
+import { timeEntries, users, tasks, projects, clients } from '../../../db/schema';
+import { sql } from 'drizzle-orm';
 
 export const GET: APIRoute = async () => {
   try {
-    const allTimeEntries = await db.select().from(timeEntries);
-    
-    // Transform the data to include proper date formatting
-    const transformedEntries = allTimeEntries.map(entry => ({
-      ...entry,
-      startTime: entry.startTime,
-      endTime: entry.endTime,
-      createdAt: entry.createdAt,
-      updatedAt: entry.updatedAt
-    }));
-    
-    return new Response(JSON.stringify(transformedEntries), {
+    // Get all time entries with related data
+    const allTimeEntries = await db
+      .select({
+        id: timeEntries.id,
+        startTime: timeEntries.startTime,
+        endTime: timeEntries.endTime,
+        durationManual: timeEntries.durationManual,
+        notes: timeEntries.notes,
+        createdAt: timeEntries.createdAt,
+        userName: users.name,
+        taskName: tasks.name,
+        projectName: projects.name,
+        clientName: clients.name,
+      })
+      .from(timeEntries)
+      .innerJoin(users, sql`${timeEntries.userId} = ${users.id}`)
+      .innerJoin(tasks, sql`${timeEntries.taskId} = ${tasks.id}`)
+      .innerJoin(projects, sql`${tasks.projectId} = ${projects.id}`)
+      .innerJoin(clients, sql`${projects.clientId} = ${clients.id}`)
+      .orderBy(sql`${timeEntries.createdAt} DESC`);
+
+    return new Response(JSON.stringify(allTimeEntries), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
   } catch (error) {
     console.error('Error fetching time entries:', error);
     return new Response(JSON.stringify({ error: 'Failed to fetch time entries' }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
   }
 };

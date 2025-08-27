@@ -216,6 +216,18 @@ export default function AdminTimer() {
         setStartTime(null);
         setSelectedTask(null);
         
+        // Emit custom event to notify other components that a new time entry was created
+        const timeEntryCreatedEvent = new CustomEvent('timeEntryCreated', {
+          detail: {
+            userId: currentUserId,
+            taskId: selectedTask,
+            startTime: startTime?.toISOString(),
+            endTime: new Date().toISOString(),
+            duration: duration
+          }
+        });
+        window.dispatchEvent(timeEntryCreatedEvent);
+        
         // Show success message
         alert('Time entry saved successfully!');
       } else {
