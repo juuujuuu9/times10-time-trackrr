@@ -297,24 +297,37 @@ export default function AdminTimer() {
             >
               {timerLoading ? 'Stopping...' : (
                 <>
-                  <svg 
-                    className="w-3 h-3 mr-1" 
-                    fill="currentColor" 
-                    viewBox="0 0 20 20"
-                  >
-                    <rect x="4" y="4" width="12" height="12" rx="1" />
-                  </svg>
                   Stop
+                  <svg viewBox="0 0 24 24" className="w-3 h-3 ml-1 mb-[-2px]" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                    <g id="SVGRepo_iconCarrier">
+                      <path fill-rule="evenodd" clip-rule="evenodd" d="M4 18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12z" fill="#ffffff"></path>
+                      </g>
+                  </svg>
                 </>
               )}
             </button>
             <button
               onClick={handleForceStopTimer}
               disabled={timerLoading}
-              className="px-3 py-2 text-xs font-medium rounded transition-colors border-0 bg-orange-500 text-white hover:bg-orange-600"
+              className="flex items-center justify-center px-1 py-1 text-xs font-medium rounded transition-colors border-0 bg-gray-900 text-white hover:bg-gray-600"
               title="Force stop timer without saving"
             >
-              Force Stop
+              <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                <g id="SVGRepo_iconCarrier">
+                  <g clip-path="url(#clip0_429_11083)">
+                    <path d="M7 7.00006L17 17.0001M7 17.0001L17 7.00006" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                  </g>
+                  <defs> 
+                    <clipPath id="clip0_429_11083">
+                      <rect width="24" height="24" fill="white"></rect>
+                    </clipPath>
+                  </defs>
+                </g>
+              </svg>
             </button>
           </>
         )}
