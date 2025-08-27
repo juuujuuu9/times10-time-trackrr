@@ -89,9 +89,35 @@ export default function Timer() {
     });
   };
 
+  // Clean up corrupted timer states
+  const cleanupCorruptedTimerStates = () => {
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.startsWith('timerState_')) {
+        try {
+          const savedState = localStorage.getItem(key);
+          if (savedState) {
+            const state: TimerState = JSON.parse(savedState);
+            // Remove timer states that are missing required fields
+            if (!state.selectedTask || !state.startTime || !state.userId) {
+              console.warn('Removing corrupted timer state:', key);
+              localStorage.removeItem(key);
+            }
+          }
+        } catch (error) {
+          console.warn('Removing invalid timer state:', key);
+          localStorage.removeItem(key);
+        }
+      }
+    });
+  };
+
   // Load timer state from localStorage on component mount
   useEffect(() => {
     const loadTimerState = async () => {
+      // Clean up any corrupted timer states first
+      cleanupCorruptedTimerStates();
+      
       try {
         // Get current user first
         const userResponse = await fetch('/api/auth/me');
@@ -110,24 +136,45 @@ export default function Timer() {
                 const state: TimerState = JSON.parse(savedState);
                 
                 // Verify this timer state belongs to the current user
-                if (state.userId === userId && state.isRunning && state.startTime && !state.stopped) {
+                if (state.userId === userId && state.isRunning && state.startTime && !state.stopped && state.selectedTask) {
                   const startTimeDate = new Date(state.startTime);
                   const now = new Date();
                   const elapsedSeconds = Math.floor((now.getTime() - startTimeDate.getTime()) / 1000);
                   
                   // If the timer was started more than 24 hours ago, don't restore it
                   if (elapsedSeconds < 24 * 60 * 60) {
-                    setTime(elapsedSeconds);
-                    setIsRunning(true);
-                    setSelectedTask(state.selectedTask);
-                    setStartTime(startTimeDate);
-                    
-                    // Validate that the task still exists after restoring timer state
-                    // Run immediately and also after a delay to catch any issues
-                    validateSelectedTask();
-                    setTimeout(() => {
-                      validateSelectedTask();
-                    }, 1000);
+                    // First, validate that the task exists before restoring the timer
+                    try {
+                      const tasksResponse = await fetch(`/api/tasks?assignedTo=${userId}`);
+                      if (tasksResponse.ok) {
+                        const tasksData = await tasksResponse.json();
+                        const currentTasks = tasksData.data || [];
+                        const taskExists = currentTasks.some((task: Task) => task.id === state.selectedTask);
+                        
+                        if (taskExists) {
+                          setTime(elapsedSeconds);
+                          setIsRunning(true);
+                          setSelectedTask(state.selectedTask);
+                          setStartTime(startTimeDate);
+                          
+                          // Validate that the task still exists after restoring timer state
+                          // Run immediately and also after a delay to catch any issues
+                          validateSelectedTask();
+                          setTimeout(() => {
+                            validateSelectedTask();
+                          }, 1000);
+                        } else {
+                          console.warn(`Task ${state.selectedTask} no longer exists. Clearing timer state.`);
+                          localStorage.removeItem(timerStateKey);
+                        }
+                      } else {
+                        console.warn('Failed to validate tasks. Clearing timer state.');
+                        localStorage.removeItem(timerStateKey);
+                      }
+                    } catch (error) {
+                      console.error('Error validating tasks during timer restoration:', error);
+                      localStorage.removeItem(timerStateKey);
+                    }
                   } else {
                     // Clear expired timer state
                     localStorage.removeItem(timerStateKey);
@@ -166,10 +213,11 @@ export default function Timer() {
     
     const timerStateKey = getTimerStateKey(currentUserId);
     
-    if (isRunning && startTime) {
+    // Only save timer state if we have a valid task and the timer is running
+    if (isRunning && startTime && selectedTask) {
       localStorage.setItem(timerStateKey, JSON.stringify(timerState));
     } else {
-      // Only remove if we're not in the middle of stopping the timer
+      // Clear timer state if not running or no valid task
       if (!loading) {
         localStorage.removeItem(timerStateKey);
       }
@@ -553,6 +601,28 @@ export default function Timer() {
     alert('Timer has been force stopped. No time entry was saved.');
   };
 
+  const clearAllTimerData = () => {
+    if (confirm('This will clear all timer data and reset the timer completely. Are you sure?')) {
+      console.warn('Clearing all timer data due to user request');
+      
+      // Stop the timer immediately
+      setIsRunning(false);
+      setTime(0);
+      setStartTime(null);
+      setSelectedTask(null);
+      
+      // Clear all timer states from localStorage
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.startsWith('timerState_')) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      alert('All timer data has been cleared. The timer has been reset.');
+    }
+  };
+
   const stopTimer = async () => {
     if (!isRunning || !selectedTask || !startTime) return;
 
@@ -819,6 +889,17 @@ export default function Timer() {
           </p>
         </div>
       )}
+
+      {/* Clear Timer Data Button */}
+      <div className="mt-4 text-center">
+        <button
+          onClick={clearAllTimerData}
+          className="text-xs text-red-500 hover:text-red-700 underline"
+          title="Clear all timer data and reset"
+        >
+          Clear Timer Data
+        </button>
+      </div>
     </div>
   );
 } 
