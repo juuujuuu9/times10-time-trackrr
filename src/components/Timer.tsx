@@ -234,18 +234,7 @@ export default function Timer() {
     }
   };
 
-  const clearAllTimerData = () => {
-    if (confirm('This will clear all timer data and reset the timer completely. Are you sure?')) {
-      console.warn('Clearing all timer data due to user request');
-      
-      // Force stop any active timer
-      if (timerData) {
-        forceStopTimer(timerData.id);
-      }
-      
-      alert('All timer data has been cleared. The timer has been reset.');
-    }
-  };
+
 
   // Get task name for display
   const getSelectedTaskName = () => {
@@ -412,16 +401,7 @@ export default function Timer() {
         </div>
       )}
 
-      {/* Clear Timer Data Button */}
-      <div className="mt-4 text-center">
-        <button
-          onClick={clearAllTimerData}
-          className="text-xs text-red-500 hover:text-red-700 underline"
-          title="Clear all timer data and reset"
-        >
-          Clear Timer Data
-        </button>
-      </div>
+
     </div>
   );
 } 

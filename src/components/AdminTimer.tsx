@@ -182,18 +182,7 @@ export default function AdminTimer() {
     }
   };
 
-  const clearAllTimerData = () => {
-    if (confirm('This will clear all timer data and reset the timer completely. Are you sure?')) {
-      console.warn('Clearing all timer data due to user request');
-      
-      // Force stop any active timer
-      if (timerData) {
-        forceStopTimer(timerData.id);
-      }
-      
-      alert('All timer data has been cleared. The timer has been reset.');
-    }
-  };
+
 
 
 
@@ -325,13 +314,6 @@ export default function AdminTimer() {
       {/* Status */}
         <div className="mt-2 text-right">
           <a href="/time-entries" className="text-xs text-gray-500 hover:text-gray-700 underline">View Your Timesheet</a>
-          <button
-            onClick={clearAllTimerData}
-            className="ml-2 text-xs text-red-500 hover:text-red-700 underline"
-            title="Clear all timer data and reset"
-          >
-            Clear Timer Data
-          </button>
         </div>
     </div>
   );
