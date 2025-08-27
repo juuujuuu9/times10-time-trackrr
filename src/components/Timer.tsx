@@ -325,7 +325,7 @@ export default function Timer() {
       </div>
 
       {/* Timer Controls */}
-      <div className="flex space-x-4 justify-center">
+      <div className="flex space-x-2 justify-center">
         {!isRunning ? (
           <button
             onClick={handleStartTimer}
@@ -346,26 +346,21 @@ export default function Timer() {
             <button
               onClick={handleStopTimer}
               disabled={timerLoading}
-              className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
+              className={`flex-1 flex row items-center justify-center px-3 py-2 text-lg font-medium rounded transition-colors border-0 ${
                 timerLoading
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'text-white hover:bg-red-700'
+                  : 'bg-red-500 text-white hover:bg-red-600'
               }`}
-              style={{
-                backgroundColor: timerLoading ? '#D1D5DB' : '#E24236'
-              }}
             >
               {timerLoading ? 'Stopping...' : (
                 <>
                   Stop
-                  <svg 
-                    className="w-4 h-4 ml-2" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path d="M12 21C10.22 21 8.47991 20.4722 6.99987 19.4832C5.51983 18.4943 4.36628 17.0887 3.68509 15.4442C3.0039 13.7996 2.82567 11.99 3.17294 10.2442C3.5202 8.49836 4.37737 6.89472 5.63604 5.63604C6.89472 4.37737 8.49836 3.5202 10.2442 3.17294C11.99 2.82567 13.7996 3.0039 15.4442 3.68509C17.0887 4.36628 18.4943 5.51983 19.4832 6.99987C20.4722 8.47991 21 10.22 21 12C21 14.387 20.0518 16.6761 18.364 18.364C16.6761 20.0518 14.387 21 12 21ZM12 4.5C10.5166 4.5 9.0666 4.93987 7.83323 5.76398C6.59986 6.58809 5.63856 7.75943 5.07091 9.12988C4.50325 10.5003 4.35473 12.0083 4.64411 13.4632C4.9335 14.918 5.64781 16.2544 6.6967 17.3033C7.7456 18.3522 9.08197 19.0665 10.5368 19.3559C11.9917 19.6453 13.4997 19.4968 14.8701 18.9291C16.2406 18.3614 17.4119 17.4001 18.236 16.1668C19.0601 14.9334 19.5 13.4834 19.5 12C19.5 10.0109 18.7098 8.10323 17.3033 6.6967C15.8968 5.29018 13.9891 4.5 12 4.5Z" fill="currentColor"/>
-                    <path d="M14.5 8H9.5C8.67157 8 8 8.67157 8 9.5V14.5C8 15.3284 8.67157 16 9.5 16H14.5C15.3284 16 16 15.3284 16 14.5V9.5C16 8.67157 15.3284 8 14.5 8Z" fill="currentColor"/>
+                  <svg viewBox="0 0 24 24" className="w-6 h-6 ml-1" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                    <g id="SVGRepo_iconCarrier">
+                      <path fill-rule="evenodd" clip-rule="evenodd" d="M4 18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12z" fill="#ffffff"></path>
+                      </g>
                   </svg>
                 </>
               )}
@@ -373,13 +368,23 @@ export default function Timer() {
             <button
               onClick={handleForceStopTimer}
               disabled={timerLoading}
-              className="px-6 py-2 rounded-lg font-semibold transition-colors text-white hover:bg-orange-600"
-              style={{
-                backgroundColor: '#F97316'
-              }}
+              className="flex items-center justify-center px-1 py-1 text-xs font-medium rounded transition-colors border-0 bg-gray-900 text-white hover:bg-gray-600"
               title="Force stop timer without saving"
             >
-              Force Stop
+              <svg className="h-10 w-10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                <g id="SVGRepo_iconCarrier">
+                  <g clip-path="url(#clip0_429_11083)">
+                    <path d="M7 7.00006L17 17.0001M7 17.0001L17 7.00006" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                  </g>
+                  <defs> 
+                    <clipPath id="clip0_429_11083">
+                      <rect width="24" height="24" fill="white"></rect>
+                    </clipPath>
+                  </defs>
+                </g>
+              </svg>
             </button>
           </>
         )}
@@ -389,18 +394,18 @@ export default function Timer() {
       {isRunning && (
         <div className="mt-4 text-center">
           <div 
-            className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-gray-800"
+            className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium uppercase text-[#00c64e]"
             style={{
-              backgroundColor: 'rgba(237, 194, 94, 0.5)' // #EDC25E at 50% opacity
+              backgroundColor: 'rgb(240 238 245)'
             }}
           >
             <div 
-              className="w-2 h-2 rounded-full mr-2 animate-pulse"
+              className="w-4 h-4 rounded-full mr-2 animate-pulse"
               style={{
-                backgroundColor: '#49D449'
+                backgroundColor: '#00c64e'
               }}
             ></div>
-            Tracking time...
+            Tracking...
           </div>
         </div>
       )}

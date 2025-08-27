@@ -289,7 +289,7 @@ export default function AdminTimer() {
             <button
               onClick={handleStopTimer}
               disabled={timerLoading}
-              className={`flex-1 px-3 py-2 text-xs font-medium rounded transition-colors border-0 ${
+              className={`flex-1 flex row items-center justify-center px-3 py-2 text-xs font-medium rounded transition-colors border-0 ${
                 timerLoading
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'bg-red-500 text-white hover:bg-red-600'
@@ -298,7 +298,7 @@ export default function AdminTimer() {
               {timerLoading ? 'Stopping...' : (
                 <>
                   Stop
-                  <svg viewBox="0 0 24 24" className="w-3 h-3 ml-1 mb-[-2px]" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <svg viewBox="0 0 24 24" className="w-3 h-3 ml-1" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
                     <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
                     <g id="SVGRepo_iconCarrier">
