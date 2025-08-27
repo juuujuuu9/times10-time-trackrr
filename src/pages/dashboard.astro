@@ -396,8 +396,8 @@ const user = await requireAuth('/')(Astro) as any;
         const entriesData = await entriesResponse.json();
         const recentEntries = entriesData.data || [];
         
-        // Load ongoing timers
-        const ongoingResponse = await fetch('/api/timers/all-ongoing');
+        // Load ongoing timers - use user-specific endpoint for team members
+        const ongoingResponse = await fetch('/api/timers/user-ongoing');
         if (ongoingResponse.ok) {
           const ongoingData = await ongoingResponse.json();
           const ongoingTimers = ongoingData.data || [];

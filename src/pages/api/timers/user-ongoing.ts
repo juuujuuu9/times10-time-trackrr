@@ -2,23 +2,23 @@ import type { APIRoute } from 'astro';
 import { db } from '../../../db/index';
 import { timeEntries, tasks, users, projects, clients } from '../../../db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
-import { requireRole } from '../../../utils/session';
+import { requireAuth } from '../../../utils/session';
 
-// GET: Get all ongoing timers for all users (admin only)
+// GET: Get current user's ongoing timers only
 export const GET: APIRoute = async (context) => {
   try {
-    const currentUser = await requireRole('admin', '/admin')(context);
+    const currentUser = await requireAuth()(context);
     if (!currentUser || typeof currentUser === 'string') {
       return new Response(JSON.stringify({ 
         success: false, 
-        error: 'Admin access required' 
+        error: 'Authentication required' 
       }), {
-        status: 403,
+        status: 401,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    // Get all ongoing timers with related data
+    // Get current user's ongoing timers with related data
     const ongoingTimers = await db.select({
       id: timeEntries.id,
       taskId: timeEntries.taskId,
@@ -35,7 +35,10 @@ export const GET: APIRoute = async (context) => {
     .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
     .innerJoin(projects, eq(tasks.projectId, projects.id))
     .innerJoin(clients, eq(projects.clientId, clients.id))
-    .where(isNull(timeEntries.endTime))
+    .where(and(
+      eq(timeEntries.userId, currentUser.id),
+      isNull(timeEntries.endTime)
+    ))
     .orderBy(timeEntries.startTime);
 
     // Calculate elapsed time for each timer
@@ -58,7 +61,7 @@ export const GET: APIRoute = async (context) => {
     });
 
   } catch (error) {
-    console.error('Error fetching ongoing timers:', error);
+    console.error('Error fetching user ongoing timers:', error);
     return new Response(JSON.stringify({ 
       success: false, 
       error: 'Internal server error' 
