@@ -142,17 +142,12 @@ export default function Timer() {
       if (deletedTaskId && deletedTaskId === selectedTask && isRunning) {
         console.warn(`Task ${deletedTaskId} was deleted. Stopping timer.`);
         
-        // Stop the timer immediately
-        setIsRunning(false);
-        setTime(0);
-        setStartTime(null);
-        setSelectedTask(null);
-        
-        // Clear timer state from localStorage
-        if (currentUserId) {
-          const timerStateKey = getTimerStateKey(currentUserId);
-          localStorage.removeItem(timerStateKey);
+        // Stop the timer using the real-time system
+        if (timerData) {
+          forceStopTimer(timerData.id);
         }
+        
+        setSelectedTask(null);
         
         // Show notification to user
         alert('The task you were tracking has been deleted. The timer has been stopped.');
@@ -165,17 +160,7 @@ export default function Timer() {
     return () => {
       window.removeEventListener('taskDeleted', handleTaskDeleted as EventListener);
     };
-  }, [selectedTask, isRunning, currentUserId]);
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isRunning) {
-      interval = setInterval(() => {
-        setTime(prevTime => prevTime + 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isRunning]);
+  }, [selectedTask, isRunning, currentUserId, timerData, forceStopTimer]);
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -197,6 +182,8 @@ export default function Timer() {
     const success = await startTimer(selectedTask);
     if (success) {
       alert('Timer started successfully!');
+      // Trigger a custom event to notify the dashboard to refresh
+      window.dispatchEvent(new CustomEvent('timerStarted'));
     } else {
       alert(timerError || 'Failed to start timer');
     }

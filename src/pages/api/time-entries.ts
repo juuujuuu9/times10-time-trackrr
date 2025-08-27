@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../db';
 import { timeEntries, users, tasks, projects, clients } from '../../db/schema';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc, sql, isNotNull } from 'drizzle-orm';
 
 export const GET: APIRoute = async ({ url }) => {
   try {
@@ -44,7 +44,10 @@ export const GET: APIRoute = async ({ url }) => {
       .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
       .innerJoin(projects, eq(tasks.projectId, projects.id))
       .innerJoin(clients, eq(projects.clientId, clients.id))
-      .where(eq(timeEntries.userId, parseInt(userId)))
+      .where(and(
+        eq(timeEntries.userId, parseInt(userId)),
+        isNotNull(timeEntries.endTime) // Only include completed time entries, not ongoing ones
+      ))
       .orderBy(desc(timeEntries.createdAt))
       .limit(limit);
 

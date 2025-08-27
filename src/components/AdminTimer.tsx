@@ -145,6 +145,8 @@ export default function AdminTimer() {
     const success = await startTimer(selectedTask);
     if (success) {
       alert('Timer started successfully!');
+      // Trigger a custom event to notify the dashboard to refresh
+      window.dispatchEvent(new CustomEvent('timerStarted'));
     } else {
       alert(timerError || 'Failed to start timer');
     }
@@ -336,7 +338,7 @@ export default function AdminTimer() {
 
 
       {/* Status */}
-        <div className="mt-2 text-right">
+        <div className="mt-2 text-center">
           <a href="/time-entries" className="text-xs text-gray-500 hover:text-gray-700 underline">View Your Timesheet</a>
         </div>
     </div>
