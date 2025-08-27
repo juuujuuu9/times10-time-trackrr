@@ -355,7 +355,18 @@ export default function Timer() {
                 backgroundColor: timerLoading ? '#D1D5DB' : '#E24236'
               }}
             >
-              {timerLoading ? 'Stopping...' : 'Stop'}
+              {timerLoading ? 'Stopping...' : (
+                <>
+                  <svg 
+                    className="w-4 h-4 mr-2" 
+                    fill="currentColor" 
+                    viewBox="0 0 20 20"
+                  >
+                    <rect x="4" y="4" width="12" height="12" rx="1" />
+                  </svg>
+                  Stop
+                </>
+              )}
             </button>
             <button
               onClick={handleForceStopTimer}

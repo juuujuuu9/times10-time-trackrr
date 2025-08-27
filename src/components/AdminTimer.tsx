@@ -295,7 +295,18 @@ export default function AdminTimer() {
                   : 'bg-red-500 text-white hover:bg-red-600'
               }`}
             >
-              {timerLoading ? 'Stopping...' : 'Stop'}
+              {timerLoading ? 'Stopping...' : (
+                <>
+                  <svg 
+                    className="w-3 h-3 mr-1" 
+                    fill="currentColor" 
+                    viewBox="0 0 20 20"
+                  >
+                    <rect x="4" y="4" width="12" height="12" rx="1" />
+                  </svg>
+                  Stop
+                </>
+              )}
             </button>
             <button
               onClick={handleForceStopTimer}
