@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useRealtimeTimer } from '../utils/useRealtimeTimer';
 
 interface Task {
   id: number;
@@ -8,33 +9,34 @@ interface Task {
   status: string;
 }
 
-interface TimerState {
-  isRunning: boolean;
-  selectedTask: number | null;
-  startTime: string | null;
-  elapsedTime: number;
-  userId: number; // Add userId to timer state
-  stopped: boolean; // Flag to indicate if timer was explicitly stopped
-}
-
 export default function Timer() {
-  // Multi-user timer component that supports:
-  // - Multiple users tracking time simultaneously
-  // - User-specific timer state persistence
-  // - Cross-tab/window timer synchronization
-  // - Automatic session validation and cleanup
+  // Real-time synchronized timer component that supports:
+  // - Cross-device timer synchronization
+  // - Server-side timer state management
+  // - Real-time updates across all devices
+  // - Automatic conflict resolution
   
-  const [time, setTime] = useState(0);
-  const [isRunning, setIsRunning] = useState(false);
   const [selectedTask, setSelectedTask] = useState<number | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [startTime, setStartTime] = useState<Date | null>(null);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
+  const [localTime, setLocalTime] = useState(0);
+  
+  // Use real-time timer hook for server synchronization
+  const {
+    timerData,
+    isLoading: timerLoading,
+    error: timerError,
+    startTimer,
+    stopTimer,
+    forceStopTimer,
+    refreshTimer
+  } = useRealtimeTimer(2000); // Poll every 2 seconds
 
-  // Get timer state key based on user ID
-  const getTimerStateKey = (userId: number) => `timerState_${userId}`;
+  // Calculate current time based on server data
+  const time = timerData ? timerData.elapsedSeconds + localTime : 0;
+  const isRunning = !!timerData;
+  const startTime = timerData ? new Date(timerData.startTime) : null;
 
   // Check if the currently selected task still exists
   const validateSelectedTask = async () => {
@@ -54,15 +56,12 @@ export default function Timer() {
           // Task was deleted while timer was running - stop the timer
           console.warn(`Task ${selectedTask} was deleted while timer was running. Stopping timer.`);
           
-          // Stop the timer immediately
-          setIsRunning(false);
-          setTime(0);
-          setStartTime(null);
-          setSelectedTask(null);
+          // Stop the timer using the real-time system
+          if (timerData) {
+            await forceStopTimer(timerData.id);
+          }
           
-          // Clear timer state from localStorage
-          const timerStateKey = getTimerStateKey(currentUserId);
-          localStorage.removeItem(timerStateKey);
+          setSelectedTask(null);
           
           // Show notification to user
           alert('The task you were tracking has been deleted. The timer has been stopped.');
@@ -73,323 +72,7 @@ export default function Timer() {
     }
   };
 
-  // Clear timer state for a specific user (used when that user logs out)
-  const clearUserTimerState = (userId: number) => {
-    const timerStateKey = getTimerStateKey(userId);
-    localStorage.removeItem(timerStateKey);
-  };
-
-  // Clear timer state for all users (used when logging out)
-  const clearAllTimerStates = () => {
-    const keys = Object.keys(localStorage);
-    keys.forEach(key => {
-      if (key.startsWith('timerState_')) {
-        localStorage.removeItem(key);
-      }
-    });
-  };
-
-  // Clean up corrupted timer states
-  const cleanupCorruptedTimerStates = () => {
-    const keys = Object.keys(localStorage);
-    keys.forEach(key => {
-      if (key.startsWith('timerState_')) {
-        try {
-          const savedState = localStorage.getItem(key);
-          if (savedState) {
-            const state: TimerState = JSON.parse(savedState);
-            // Remove timer states that are missing required fields
-            if (!state.selectedTask || !state.startTime || !state.userId) {
-              console.warn('Removing corrupted timer state:', key);
-              localStorage.removeItem(key);
-            }
-          }
-        } catch (error) {
-          console.warn('Removing invalid timer state:', key);
-          localStorage.removeItem(key);
-        }
-      }
-    });
-  };
-
-  // Load timer state from localStorage on component mount
-  useEffect(() => {
-    const loadTimerState = async () => {
-      // Clean up any corrupted timer states first
-      cleanupCorruptedTimerStates();
-      
-      try {
-        // Get current user first
-        const userResponse = await fetch('/api/auth/me');
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          if (userData.success && userData.user) {
-            const userId = userData.user.id;
-            setCurrentUserId(userId);
-            
-            // Load user-specific timer state
-            const timerStateKey = getTimerStateKey(userId);
-            const savedState = localStorage.getItem(timerStateKey);
-            
-            if (savedState) {
-              try {
-                const state: TimerState = JSON.parse(savedState);
-                
-                // Verify this timer state belongs to the current user
-                if (state.userId === userId && state.isRunning && state.startTime && !state.stopped && state.selectedTask) {
-                  const startTimeDate = new Date(state.startTime);
-                  const now = new Date();
-                  const elapsedSeconds = Math.floor((now.getTime() - startTimeDate.getTime()) / 1000);
-                  
-                  // If the timer was started more than 24 hours ago, don't restore it
-                  if (elapsedSeconds < 24 * 60 * 60) {
-                    // First, validate that the task exists before restoring the timer
-                    try {
-                      const tasksResponse = await fetch(`/api/tasks?assignedTo=${userId}`);
-                      if (tasksResponse.ok) {
-                        const tasksData = await tasksResponse.json();
-                        const currentTasks = tasksData.data || [];
-                        const taskExists = currentTasks.some((task: Task) => task.id === state.selectedTask);
-                        
-                        if (taskExists) {
-                          setTime(elapsedSeconds);
-                          setIsRunning(true);
-                          setSelectedTask(state.selectedTask);
-                          setStartTime(startTimeDate);
-                          
-                          // Validate that the task still exists after restoring timer state
-                          // Run immediately and also after a delay to catch any issues
-                          validateSelectedTask();
-                          setTimeout(() => {
-                            validateSelectedTask();
-                          }, 1000);
-                        } else {
-                          console.warn(`Task ${state.selectedTask} no longer exists. Clearing timer state.`);
-                          localStorage.removeItem(timerStateKey);
-                        }
-                      } else {
-                        console.warn('Failed to validate tasks. Clearing timer state.');
-                        localStorage.removeItem(timerStateKey);
-                      }
-                    } catch (error) {
-                      console.error('Error validating tasks during timer restoration:', error);
-                      localStorage.removeItem(timerStateKey);
-                    }
-                  } else {
-                    // Clear expired timer state
-                    localStorage.removeItem(timerStateKey);
-                  }
-                } else if (state.userId !== userId || state.stopped) {
-                  // Clear timer state from different user or stopped timer
-                  localStorage.removeItem(timerStateKey);
-                }
-              } catch (error) {
-                console.error('Error parsing saved timer state:', error);
-                localStorage.removeItem(timerStateKey);
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error loading timer state:', error);
-      }
-    };
-
-    loadTimerState();
-  }, []);
-
-  // Save timer state to localStorage whenever it changes
-  useEffect(() => {
-    if (!currentUserId) return;
-
-    const timerState: TimerState = {
-      isRunning,
-      selectedTask,
-      startTime: startTime?.toISOString() || null,
-      elapsedTime: time,
-      userId: currentUserId,
-      stopped: false
-    };
-    
-    const timerStateKey = getTimerStateKey(currentUserId);
-    
-    // Only save timer state if we have a valid task and the timer is running
-    if (isRunning && startTime && selectedTask) {
-      localStorage.setItem(timerStateKey, JSON.stringify(timerState));
-    } else {
-      // Clear timer state if not running or no valid task
-      if (!loading) {
-        localStorage.removeItem(timerStateKey);
-      }
-    }
-  }, [isRunning, selectedTask, startTime, time, currentUserId, loading]);
-
-  // Handle page unload to ensure timer state is saved
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (isRunning && currentUserId) {
-        const timerState: TimerState = {
-          isRunning,
-          selectedTask,
-          startTime: startTime?.toISOString() || null,
-          elapsedTime: time,
-          userId: currentUserId,
-          stopped: false
-        };
-        const timerStateKey = getTimerStateKey(currentUserId);
-        localStorage.setItem(timerStateKey, JSON.stringify(timerState));
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.hidden && isRunning && currentUserId) {
-        // Page is hidden, save timer state
-        const timerState: TimerState = {
-          isRunning,
-          selectedTask,
-          startTime: startTime?.toISOString() || null,
-          elapsedTime: time,
-          userId: currentUserId,
-          stopped: false
-        };
-        const timerStateKey = getTimerStateKey(currentUserId);
-        localStorage.setItem(timerStateKey, JSON.stringify(timerState));
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [isRunning, selectedTask, startTime, time, currentUserId]);
-
-  // Listen for storage changes to detect user switches
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      // If timer state changes and it's for the current user, update the timer
-      if (e.key && e.key.startsWith('timerState_') && currentUserId) {
-        const keyUserId = parseInt(e.key.replace('timerState_', ''));
-        if (keyUserId === currentUserId) {
-          // This is our timer state, reload it
-          const savedState = localStorage.getItem(e.key);
-          if (savedState) {
-            try {
-              const state: TimerState = JSON.parse(savedState);
-              if (state.userId === currentUserId && !state.stopped) {
-                setTime(state.elapsedTime || 0);
-                setIsRunning(state.isRunning || false);
-                setSelectedTask(state.selectedTask);
-                setStartTime(state.startTime ? new Date(state.startTime) : null);
-              } else if (state.userId === currentUserId && state.stopped) {
-                // Clear stopped timer state
-                localStorage.removeItem(e.key);
-                setTime(0);
-                setIsRunning(false);
-                setSelectedTask(null);
-                setStartTime(null);
-              }
-            } catch (error) {
-              console.error('Error parsing timer state from storage event:', error);
-            }
-          }
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [currentUserId]);
-
-  // Check for session validity periodically
-  useEffect(() => {
-    if (!currentUserId) return;
-
-    const checkSession = async () => {
-      try {
-        const response = await fetch('/api/auth/me');
-        if (!response.ok) {
-          // Session is invalid, clear only this user's timer state
-          clearUserTimerState(currentUserId);
-          setTime(0);
-          setIsRunning(false);
-          setSelectedTask(null);
-          setStartTime(null);
-          setCurrentUserId(null);
-        }
-      } catch (error) {
-        console.error('Error checking session:', error);
-      }
-    };
-
-    // Check session every 5 minutes
-    const interval = setInterval(checkSession, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [currentUserId]);
-
-  // Global timer state manager for multi-user support
-  useEffect(() => {
-    if (!currentUserId) return;
-
-    // Broadcast timer state changes to other tabs/windows
-    const broadcastTimerState = () => {
-      if (isRunning && currentUserId) {
-        const timerState: TimerState = {
-          isRunning,
-          selectedTask,
-          startTime: startTime?.toISOString() || null,
-          elapsedTime: time,
-          userId: currentUserId,
-          stopped: false
-        };
-        
-        // Broadcast to other tabs/windows
-        window.postMessage({
-          type: 'TIMER_STATE_UPDATE',
-          userId: currentUserId,
-          state: timerState
-        }, '*');
-      }
-    };
-
-    // Listen for timer state updates from other tabs/windows
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data.type === 'TIMER_STATE_UPDATE' && event.data.userId === currentUserId) {
-        const state = event.data.state;
-        if (!state.stopped) {
-          setTime(state.elapsedTime || 0);
-          setIsRunning(state.isRunning || false);
-          setSelectedTask(state.selectedTask);
-          setStartTime(state.startTime ? new Date(state.startTime) : null);
-        } else {
-          // Clear stopped timer state
-          setTime(0);
-          setIsRunning(false);
-          setSelectedTask(null);
-          setStartTime(null);
-        }
-      }
-    };
-
-    // Broadcast timer state every second when running
-    let broadcastInterval: NodeJS.Timeout;
-    if (isRunning) {
-      broadcastInterval = setInterval(broadcastTimerState, 1000);
-    }
-
-    window.addEventListener('message', handleMessage);
-    
-    return () => {
-      window.removeEventListener('message', handleMessage);
-      if (broadcastInterval) {
-        clearInterval(broadcastInterval);
-      }
-    };
-  }, [currentUserId, isRunning, selectedTask, startTime, time]);
-
-  // Get current user ID and load tasks
+  // Initialize component and load user data
   useEffect(() => {
     const initializeData = async () => {
       try {
@@ -398,88 +81,18 @@ export default function Timer() {
         if (userResponse.ok) {
           const userData = await userResponse.json();
           if (userData.success && userData.user) {
-            const newUserId = userData.user.id;
-            
-            // If user ID changed, load the new user's timer state
-            if (currentUserId && currentUserId !== newUserId) {
-              // Save current timer state before switching
-              if (isRunning) {
-                const timerState: TimerState = {
-                  isRunning,
-                  selectedTask,
-                  startTime: startTime?.toISOString() || null,
-                  elapsedTime: time,
-                  userId: currentUserId,
-                  stopped: false
-                };
-                const currentTimerStateKey = getTimerStateKey(currentUserId);
-                localStorage.setItem(currentTimerStateKey, JSON.stringify(timerState));
-              }
-              
-              // Load new user's timer state
-              const newTimerStateKey = getTimerStateKey(newUserId);
-              const savedState = localStorage.getItem(newTimerStateKey);
-              
-              if (savedState) {
-                try {
-                  const state: TimerState = JSON.parse(savedState);
-                  if (state.userId === newUserId && state.isRunning && state.startTime && !state.stopped) {
-                    const startTimeDate = new Date(state.startTime);
-                    const now = new Date();
-                    const elapsedSeconds = Math.floor((now.getTime() - startTimeDate.getTime()) / 1000);
-                    
-                    if (elapsedSeconds < 24 * 60 * 60) {
-                      setTime(elapsedSeconds);
-                      setIsRunning(true);
-                      setSelectedTask(state.selectedTask);
-                      setStartTime(startTimeDate);
-                    } else {
-                      localStorage.removeItem(newTimerStateKey);
-                      setTime(0);
-                      setIsRunning(false);
-                      setSelectedTask(null);
-                      setStartTime(null);
-                    }
-                  } else {
-                    // Clear stopped or invalid timer state
-                    if (state.stopped) {
-                      localStorage.removeItem(newTimerStateKey);
-                    }
-                    setTime(0);
-                    setIsRunning(false);
-                    setSelectedTask(null);
-                    setStartTime(null);
-                  }
-                } catch (error) {
-                  console.error('Error loading new user timer state:', error);
-                  setTime(0);
-                  setIsRunning(false);
-                  setSelectedTask(null);
-                  setStartTime(null);
-                }
-              } else {
-                setTime(0);
-                setIsRunning(false);
-                setSelectedTask(null);
-                setStartTime(null);
-              }
-            }
-            
-            setCurrentUserId(newUserId);
+            const userId = userData.user.id;
+            setCurrentUserId(userId);
             
             // Load user's tasks
-            const tasksResponse = await fetch(`/api/tasks?assignedTo=${newUserId}`);
+            const tasksResponse = await fetch(`/api/tasks?assignedTo=${userId}`);
             if (tasksResponse.ok) {
               const tasksData = await tasksResponse.json();
               setTasks(tasksData.data || []);
             } else {
               console.error('Failed to load tasks:', tasksResponse.status);
             }
-          } else {
-            console.error('Invalid user data:', userData);
           }
-        } else {
-          console.error('Failed to get user data:', userResponse.status);
         }
       } catch (error) {
         console.error('Error initializing timer data:', error);
@@ -489,35 +102,38 @@ export default function Timer() {
     };
 
     initializeData();
-  }, [currentUserId, isRunning, selectedTask, startTime, time]);
+  }, []);
 
-  // Periodic task validation when timer is running
+  // Update selected task when timer data changes
   useEffect(() => {
-    let validationInterval: NodeJS.Timeout;
-    
-    if (isRunning && selectedTask) {
-      // Check more frequently initially (every 10 seconds for first minute, then every 30 seconds)
-      let checkCount = 0;
-      validationInterval = setInterval(() => {
-        validateSelectedTask();
-        checkCount++;
-        
-        // After 6 checks (1 minute), switch to 30-second intervals
-        if (checkCount >= 6) {
-          clearInterval(validationInterval);
-          validationInterval = setInterval(() => {
-            validateSelectedTask();
-          }, 30000);
-        }
-      }, 10000);
+    if (timerData && timerData.task) {
+      setSelectedTask(timerData.taskId);
     }
-    
-    return () => {
-      if (validationInterval) {
-        clearInterval(validationInterval);
-      }
-    };
-  }, [isRunning, selectedTask, currentUserId]);
+  }, [timerData]);
+
+  // Local time counter for smooth display
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isRunning) {
+      interval = setInterval(() => {
+        setLocalTime(prev => prev + 1);
+      }, 1000);
+    } else {
+      setLocalTime(0);
+    }
+    return () => clearInterval(interval);
+  }, [isRunning]);
+
+  // Reset local time when server data updates
+  useEffect(() => {
+    if (timerData) {
+      setLocalTime(0);
+    }
+  }, [timerData?.elapsedSeconds]);
+
+
+
+
 
   // Listen for task deletion events
   useEffect(() => {
@@ -568,7 +184,7 @@ export default function Timer() {
     return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const startTimer = () => {
+  const handleStartTimer = async () => {
     if (!selectedTask) {
       alert('Please select a task first');
       return;
@@ -577,151 +193,57 @@ export default function Timer() {
       alert('Please wait for user data to load, then try again');
       return;
     }
-    const now = new Date();
-    setStartTime(now);
-    setIsRunning(true);
-    setTime(0); // Reset time when starting fresh
+
+    const success = await startTimer(selectedTask);
+    if (success) {
+      alert('Timer started successfully!');
+    } else {
+      alert(timerError || 'Failed to start timer');
+    }
   };
 
-  const forceStopTimer = () => {
-    console.warn('Force stopping timer due to user request');
-    
-    // Stop the timer immediately without saving
-    setIsRunning(false);
-    setTime(0);
-    setStartTime(null);
-    setSelectedTask(null);
-    
-    // Clear timer state from localStorage
-    if (currentUserId) {
-      const timerStateKey = getTimerStateKey(currentUserId);
-      localStorage.removeItem(timerStateKey);
+  const handleStopTimer = async () => {
+    if (!timerData) {
+      alert('No active timer to stop');
+      return;
     }
-    
-    alert('Timer has been force stopped. No time entry was saved.');
+
+    const success = await stopTimer(timerData.id);
+    if (success) {
+      alert('Time entry saved successfully!');
+      // Trigger a page refresh to update the recent entries
+      window.location.reload();
+    } else {
+      alert(timerError || 'Failed to stop timer');
+    }
+  };
+
+  const handleForceStopTimer = async () => {
+    if (!timerData) {
+      alert('No active timer to stop');
+      return;
+    }
+
+    if (confirm('This will force stop the timer without saving. Are you sure?')) {
+      const success = await forceStopTimer(timerData.id);
+      if (success) {
+        alert('Timer has been force stopped. No time entry was saved.');
+      } else {
+        alert(timerError || 'Failed to force stop timer');
+      }
+    }
   };
 
   const clearAllTimerData = () => {
     if (confirm('This will clear all timer data and reset the timer completely. Are you sure?')) {
       console.warn('Clearing all timer data due to user request');
       
-      // Stop the timer immediately
-      setIsRunning(false);
-      setTime(0);
-      setStartTime(null);
-      setSelectedTask(null);
-      
-      // Clear all timer states from localStorage
-      const keys = Object.keys(localStorage);
-      keys.forEach(key => {
-        if (key.startsWith('timerState_')) {
-          localStorage.removeItem(key);
-        }
-      });
+      // Force stop any active timer
+      if (timerData) {
+        forceStopTimer(timerData.id);
+      }
       
       alert('All timer data has been cleared. The timer has been reset.');
-    }
-  };
-
-  const stopTimer = async () => {
-    if (!isRunning || !selectedTask || !startTime) return;
-
-    if (!currentUserId) {
-      alert('Unable to save time entry: User data not loaded. Please refresh the page and try again.');
-      return;
-    }
-
-    setIsRunning(false);
-    setLoading(true);
-
-    try {
-      const endTime = new Date();
-      const duration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
-
-      const response = await fetch('/api/time-entries', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          taskId: selectedTask,
-          userId: currentUserId,
-          startTime: startTime.toISOString(),
-          endTime: endTime.toISOString(),
-          duration: duration
-        }),
-      });
-
-      if (response.ok) {
-        // Mark the timer as stopped in localStorage before clearing
-        if (currentUserId) {
-          const timerStateKey = getTimerStateKey(currentUserId);
-          const stoppedState: TimerState = {
-            isRunning: false,
-            selectedTask: null,
-            startTime: null,
-            elapsedTime: 0,
-            userId: currentUserId,
-            stopped: true
-          };
-          localStorage.setItem(timerStateKey, JSON.stringify(stoppedState));
-        }
-        
-        // Reset timer state
-        setTime(0);
-        setStartTime(null);
-        setSelectedTask(null);
-        
-        // Trigger a page refresh to update the recent entries
-        window.location.reload();
-      } else {
-        const errorData = await response.json();
-        const errorMessage = errorData.error || 'Unknown error';
-        
-        // Check if the error is due to task not existing
-        if (errorMessage.includes('Task not found') || errorMessage.includes('task not found') || response.status === 404) {
-          alert('The task you were tracking no longer exists. The timer has been stopped.');
-          
-          // Clear timer state completely since task doesn't exist
-          if (currentUserId) {
-            const timerStateKey = getTimerStateKey(currentUserId);
-            localStorage.removeItem(timerStateKey);
-          }
-          
-          // Reset timer state
-          setTime(0);
-          setStartTime(null);
-          setSelectedTask(null);
-        } else {
-          alert(`Error saving time entry: ${errorMessage}`);
-          // Only restart timer if it's not a task-related error
-          setIsRunning(true);
-        }
-      }
-    } catch (error) {
-      console.error('Error saving time entry:', error);
-      
-      // Check if it's a network error or task-related error
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
-        alert('Network error. The timer has been stopped. Please check your connection and try again.');
-        
-        // Clear timer state on network errors
-        if (currentUserId) {
-          const timerStateKey = getTimerStateKey(currentUserId);
-          localStorage.removeItem(timerStateKey);
-        }
-        
-        // Reset timer state
-        setTime(0);
-        setStartTime(null);
-        setSelectedTask(null);
-      } else {
-        alert('Error saving time entry. Please try again.');
-        setIsRunning(true);
-      }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -817,38 +339,38 @@ export default function Timer() {
       <div className="flex space-x-4 justify-center">
         {!isRunning ? (
           <button
-            onClick={startTimer}
-            disabled={!selectedTask || loading || !currentUserId}
+            onClick={handleStartTimer}
+            disabled={!selectedTask || timerLoading || !currentUserId}
             className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
-              !selectedTask || loading || !currentUserId
+              !selectedTask || timerLoading || !currentUserId
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'text-white hover:bg-green-600'
             }`}
             style={{
-              backgroundColor: !selectedTask || loading || !currentUserId ? '#D1D5DB' : '#49D449'
+              backgroundColor: !selectedTask || timerLoading || !currentUserId ? '#D1D5DB' : '#49D449'
             }}
           >
-            {loading ? 'Saving...' : 'Start'}
+            {timerLoading ? 'Starting...' : 'Start'}
           </button>
         ) : (
           <>
             <button
-              onClick={stopTimer}
-              disabled={loading}
+              onClick={handleStopTimer}
+              disabled={timerLoading}
               className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
-                loading
+                timerLoading
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'text-white hover:bg-red-700'
               }`}
               style={{
-                backgroundColor: loading ? '#D1D5DB' : '#E24236'
+                backgroundColor: timerLoading ? '#D1D5DB' : '#E24236'
               }}
             >
-              {loading ? 'Saving...' : 'Stop'}
+              {timerLoading ? 'Stopping...' : 'Stop'}
             </button>
             <button
-              onClick={forceStopTimer}
-              disabled={loading}
+              onClick={handleForceStopTimer}
+              disabled={timerLoading}
               className="px-6 py-2 rounded-lg font-semibold transition-colors text-white hover:bg-orange-600"
               style={{
                 backgroundColor: '#F97316'
