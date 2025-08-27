@@ -99,6 +99,8 @@ export default function AdminTimer() {
                     setStartTime(startTimeDate);
                     
                     // Validate that the task still exists after restoring timer state
+                    // Run immediately and also after a delay to catch any issues
+                    validateSelectedTask();
                     setTimeout(() => {
                       validateSelectedTask();
                     }, 1000);
@@ -183,10 +185,20 @@ export default function AdminTimer() {
     let validationInterval: NodeJS.Timeout;
     
     if (isRunning && selectedTask) {
-      // Check every 30 seconds if the task still exists
+      // Check more frequently initially (every 10 seconds for first minute, then every 30 seconds)
+      let checkCount = 0;
       validationInterval = setInterval(() => {
         validateSelectedTask();
-      }, 30000);
+        checkCount++;
+        
+        // After 6 checks (1 minute), switch to 30-second intervals
+        if (checkCount >= 6) {
+          clearInterval(validationInterval);
+          validationInterval = setInterval(() => {
+            validateSelectedTask();
+          }, 30000);
+        }
+      }, 10000);
     }
     
     return () => {
@@ -257,6 +269,24 @@ export default function AdminTimer() {
     setStartTime(now);
     setIsRunning(true);
     setTime(0);
+  };
+
+  const forceStopTimer = () => {
+    console.warn('Force stopping timer due to user request');
+    
+    // Stop the timer immediately without saving
+    setIsRunning(false);
+    setTime(0);
+    setStartTime(null);
+    setSelectedTask(null);
+    
+    // Clear timer state from localStorage
+    if (currentUserId) {
+      const timerStateKey = getTimerStateKey(currentUserId);
+      localStorage.removeItem(timerStateKey);
+    }
+    
+    alert('Timer has been force stopped. No time entry was saved.');
   };
 
   const stopTimer = async () => {
@@ -333,13 +363,50 @@ export default function AdminTimer() {
         alert('Time entry saved successfully!');
       } else {
         const errorData = await response.json();
-        alert(`Error saving time entry: ${errorData.error || 'Unknown error'}`);
-        setIsRunning(true);
+        const errorMessage = errorData.error || 'Unknown error';
+        
+        // Check if the error is due to task not existing
+        if (errorMessage.includes('Task not found') || errorMessage.includes('task not found') || response.status === 404) {
+          alert('The task you were tracking no longer exists. The timer has been stopped.');
+          
+          // Clear timer state completely since task doesn't exist
+          if (currentUserId) {
+            const timerStateKey = getTimerStateKey(currentUserId);
+            localStorage.removeItem(timerStateKey);
+          }
+          
+          // Reset timer state
+          setTime(0);
+          setStartTime(null);
+          setSelectedTask(null);
+        } else {
+          alert(`Error saving time entry: ${errorMessage}`);
+          // Only restart timer if it's not a task-related error
+          setIsRunning(true);
+        }
       }
     } catch (error) {
       console.error('Error saving time entry:', error);
-      alert('Error saving time entry. Please try again.');
-      setIsRunning(true);
+      
+      // Check if it's a network error or task-related error
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
+        alert('Network error. The timer has been stopped. Please check your connection and try again.');
+        
+        // Clear timer state on network errors
+        if (currentUserId) {
+          const timerStateKey = getTimerStateKey(currentUserId);
+          localStorage.removeItem(timerStateKey);
+        }
+        
+        // Reset timer state
+        setTime(0);
+        setStartTime(null);
+        setSelectedTask(null);
+      } else {
+        alert('Error saving time entry. Please try again.');
+        setIsRunning(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -444,17 +511,27 @@ export default function AdminTimer() {
             {loading ? 'Saving...' : 'Start'}
           </button>
         ) : (
-          <button
-            onClick={stopTimer}
-            disabled={loading}
-            className={`flex-1 px-3 py-2 text-xs font-medium rounded transition-colors border-0 ${
-              loading
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-red-500 text-white hover:bg-red-600'
-            }`}
-          >
-            {loading ? 'Saving...' : 'Stop'}
-          </button>
+          <>
+            <button
+              onClick={stopTimer}
+              disabled={loading}
+              className={`flex-1 px-3 py-2 text-xs font-medium rounded transition-colors border-0 ${
+                loading
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-red-500 text-white hover:bg-red-600'
+              }`}
+            >
+              {loading ? 'Saving...' : 'Stop'}
+            </button>
+            <button
+              onClick={forceStopTimer}
+              disabled={loading}
+              className="px-3 py-2 text-xs font-medium rounded transition-colors border-0 bg-orange-500 text-white hover:bg-orange-600"
+              title="Force stop timer without saving"
+            >
+              Force Stop
+            </button>
+          </>
         )}
       </div>
 
