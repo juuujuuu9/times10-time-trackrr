@@ -530,6 +530,17 @@ const allUsers = await db.select().from(users).orderBy(users.name);
           });
           
           if (response.ok) {
+            const responseData = await response.json();
+            
+            // Emit custom event to notify timers that a task was deleted
+            const taskDeletedEvent = new CustomEvent('taskDeleted', {
+              detail: {
+                taskId: id,
+                taskName: responseData.deletedTaskName || 'Unknown Task'
+              }
+            });
+            window.dispatchEvent(taskDeletedEvent);
+            
             // Show success message
             const successMessage = document.createElement('div');
             successMessage.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';

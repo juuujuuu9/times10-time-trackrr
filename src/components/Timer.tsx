@@ -36,6 +36,43 @@ export default function Timer() {
   // Get timer state key based on user ID
   const getTimerStateKey = (userId: number) => `timerState_${userId}`;
 
+  // Check if the currently selected task still exists
+  const validateSelectedTask = async () => {
+    if (!selectedTask || !currentUserId) return;
+
+    try {
+      const response = await fetch(`/api/tasks?assignedTo=${currentUserId}`);
+      if (response.ok) {
+        const tasksData = await response.json();
+        const currentTasks = tasksData.data || [];
+        setTasks(currentTasks);
+        
+        // Check if the selected task still exists
+        const taskExists = currentTasks.some((task: Task) => task.id === selectedTask);
+        
+        if (!taskExists && isRunning) {
+          // Task was deleted while timer was running - stop the timer
+          console.warn(`Task ${selectedTask} was deleted while timer was running. Stopping timer.`);
+          
+          // Stop the timer immediately
+          setIsRunning(false);
+          setTime(0);
+          setStartTime(null);
+          setSelectedTask(null);
+          
+          // Clear timer state from localStorage
+          const timerStateKey = getTimerStateKey(currentUserId);
+          localStorage.removeItem(timerStateKey);
+          
+          // Show notification to user
+          alert('The task you were tracking has been deleted. The timer has been stopped.');
+        }
+      }
+    } catch (error) {
+      console.error('Error validating selected task:', error);
+    }
+  };
+
   // Clear timer state for a specific user (used when that user logs out)
   const clearUserTimerState = (userId: number) => {
     const timerStateKey = getTimerStateKey(userId);
@@ -84,6 +121,11 @@ export default function Timer() {
                     setIsRunning(true);
                     setSelectedTask(state.selectedTask);
                     setStartTime(startTimeDate);
+                    
+                    // Validate that the task still exists after restoring timer state
+                    setTimeout(() => {
+                      validateSelectedTask();
+                    }, 1000);
                   } else {
                     // Clear expired timer state
                     localStorage.removeItem(timerStateKey);
@@ -398,6 +440,56 @@ export default function Timer() {
 
     initializeData();
   }, [currentUserId, isRunning, selectedTask, startTime, time]);
+
+  // Periodic task validation when timer is running
+  useEffect(() => {
+    let validationInterval: NodeJS.Timeout;
+    
+    if (isRunning && selectedTask) {
+      // Check every 30 seconds if the task still exists
+      validationInterval = setInterval(() => {
+        validateSelectedTask();
+      }, 30000);
+    }
+    
+    return () => {
+      if (validationInterval) {
+        clearInterval(validationInterval);
+      }
+    };
+  }, [isRunning, selectedTask, currentUserId]);
+
+  // Listen for task deletion events
+  useEffect(() => {
+    const handleTaskDeleted = (event: CustomEvent) => {
+      const deletedTaskId = event.detail?.taskId;
+      if (deletedTaskId && deletedTaskId === selectedTask && isRunning) {
+        console.warn(`Task ${deletedTaskId} was deleted. Stopping timer.`);
+        
+        // Stop the timer immediately
+        setIsRunning(false);
+        setTime(0);
+        setStartTime(null);
+        setSelectedTask(null);
+        
+        // Clear timer state from localStorage
+        if (currentUserId) {
+          const timerStateKey = getTimerStateKey(currentUserId);
+          localStorage.removeItem(timerStateKey);
+        }
+        
+        // Show notification to user
+        alert('The task you were tracking has been deleted. The timer has been stopped.');
+      }
+    };
+
+    // Listen for custom task deletion events
+    window.addEventListener('taskDeleted', handleTaskDeleted as EventListener);
+    
+    return () => {
+      window.removeEventListener('taskDeleted', handleTaskDeleted as EventListener);
+    };
+  }, [selectedTask, isRunning, currentUserId]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;

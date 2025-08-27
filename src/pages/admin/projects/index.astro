@@ -2169,7 +2169,17 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         });
         
         if (response.ok) {
+          const responseData = await response.json();
           console.log('Task deleted successfully');
+          
+          // Emit custom event to notify timers that a task was deleted
+          const taskDeletedEvent = new CustomEvent('taskDeleted', {
+            detail: {
+              taskId: taskId,
+              taskName: responseData.deletedTaskName || taskName
+            }
+          });
+          window.dispatchEvent(taskDeletedEvent);
           
           // Show success message
           const successMessage = document.createElement('div');

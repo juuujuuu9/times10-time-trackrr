@@ -42,8 +42,11 @@ export const DELETE: APIRoute = async ({ params }) => {
       });
     }
 
+    // Return response with task deletion event data
     return new Response(JSON.stringify({ 
-      message: 'Task deleted successfully. All user assignments and time entries have been removed.' 
+      message: 'Task deleted successfully. All user assignments and time entries have been removed.',
+      deletedTaskId: taskId,
+      deletedTaskName: deletedTask[0].name
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
