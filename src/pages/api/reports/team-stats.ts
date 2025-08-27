@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db';
-import { timeEntries, users, projects, tasks } from '../../../db/schema';
-import { sql, count, gte, lte, and } from 'drizzle-orm';
+import { timeEntries, users, projects, tasks, clients } from '../../../db/schema';
+import { sql, count, gte, lte, and, eq } from 'drizzle-orm';
 
 export const GET: APIRoute = async ({ url }) => {
   try {
@@ -19,8 +19,14 @@ export const GET: APIRoute = async ({ url }) => {
     endDate.setDate(startDate.getDate() + 6);
     endDate.setHours(23, 59, 59, 999);
 
-    // Build filter conditions
-    let filterConditions = [gte(timeEntries.startTime, startDate), lte(timeEntries.startTime, endDate)];
+    // Build filter conditions for non-archived activities
+    let filterConditions = [
+      gte(timeEntries.startTime, startDate), 
+      lte(timeEntries.startTime, endDate),
+      eq(clients.archived, false),
+      eq(projects.archived, false),
+      eq(tasks.archived, false)
+    ];
     
     if (userId) {
       filterConditions.push(sql`${timeEntries.userId} = ${parseInt(userId)}`);
@@ -28,7 +34,7 @@ export const GET: APIRoute = async ({ url }) => {
 
     const dateFilter = and(...filterConditions);
 
-    // Get total hours for the week
+    // Get total hours for the week (only non-archived activities)
     const totalHoursResult = await db
       .select({
         totalSeconds: sql<number>`COALESCE(SUM(
@@ -40,9 +46,12 @@ export const GET: APIRoute = async ({ url }) => {
         ), 0)`.as('total_seconds')
       })
       .from(timeEntries)
+      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(clients, eq(projects.clientId, clients.id))
       .where(dateFilter);
 
-    // Get total cost for the week
+    // Get total cost for the week (only non-archived activities)
     const totalCostResult = await db
       .select({
         totalCost: sql<number>`COALESCE(SUM(
@@ -54,18 +63,28 @@ export const GET: APIRoute = async ({ url }) => {
         ), 0)`.as('total_cost')
       })
       .from(timeEntries)
-      .innerJoin(users, sql`${timeEntries.userId} = ${users.id}`)
+      .innerJoin(users, eq(timeEntries.userId, users.id))
+      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(clients, eq(projects.clientId, clients.id))
       .where(dateFilter);
 
-    // Get active projects count
+    // Get active projects count (only non-archived activities)
     const activeProjectsResult = await db
       .select({
         count: count(sql`DISTINCT ${projects.id}`)
       })
       .from(timeEntries)
-      .innerJoin(tasks, sql`${timeEntries.taskId} = ${tasks.id}`)
-      .innerJoin(projects, sql`${tasks.projectId} = ${projects.id}`)
-      .where(and(dateFilter, sql`${projects.archived} = false`));
+      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(clients, eq(projects.clientId, clients.id))
+      .where(and(
+        gte(timeEntries.startTime, startDate), 
+        lte(timeEntries.startTime, endDate),
+        eq(clients.archived, false),
+        eq(projects.archived, false),
+        eq(tasks.archived, false)
+      ));
 
     // Get team members count
     const teamMembersResult = await db

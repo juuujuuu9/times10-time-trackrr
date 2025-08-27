@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db';
-import { timeEntries, users, projects, tasks } from '../../../db/schema';
-import { sql, count, gte, lte, and } from 'drizzle-orm';
+import { timeEntries, users, projects, tasks, clients } from '../../../db/schema';
+import { sql, count, gte, lte, and, eq } from 'drizzle-orm';
 
 export const GET: APIRoute = async ({ url }) => {
   try {
@@ -19,8 +19,14 @@ export const GET: APIRoute = async ({ url }) => {
     endDate.setDate(startDate.getDate() + 6);
     endDate.setHours(23, 59, 59, 999);
 
-    // Build filter conditions
-    let filterConditions = [gte(timeEntries.startTime, startDate), lte(timeEntries.startTime, endDate)];
+    // Build filter conditions for non-archived activities
+    let filterConditions = [
+      gte(timeEntries.startTime, startDate), 
+      lte(timeEntries.startTime, endDate),
+      eq(clients.archived, false),
+      eq(projects.archived, false),
+      eq(tasks.archived, false)
+    ];
     
     if (userId) {
       filterConditions.push(sql`${timeEntries.userId} = ${parseInt(userId)}`);
@@ -28,7 +34,7 @@ export const GET: APIRoute = async ({ url }) => {
 
     const dateFilter = and(...filterConditions);
 
-    // Get total hours for the week
+    // Get total hours for the week (only non-archived activities)
     const totalHoursResult = await db
       .select({
         totalSeconds: sql<number>`COALESCE(SUM(
@@ -40,26 +46,91 @@ export const GET: APIRoute = async ({ url }) => {
         ), 0)`.as('total_seconds')
       })
       .from(timeEntries)
+      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(clients, eq(projects.clientId, clients.id))
       .where(dateFilter);
 
-    // Get completed tasks count
+    // Debug: Get individual time entries for this week
+    const debugEntries = await db
+      .select({
+        id: timeEntries.id,
+        startTime: timeEntries.startTime,
+        endTime: timeEntries.endTime,
+        durationManual: timeEntries.durationManual,
+        calculatedDuration: sql<number>`CASE 
+          WHEN ${timeEntries.endTime} IS NOT NULL 
+          THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))
+          ELSE COALESCE(${timeEntries.durationManual}, 0)
+        END`.as('calculated_duration'),
+        taskName: tasks.name,
+        projectName: projects.name,
+        clientName: clients.name
+      })
+      .from(timeEntries)
+      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(clients, eq(projects.clientId, clients.id))
+      .where(dateFilter)
+      .orderBy(timeEntries.startTime);
+
+    console.log('Weekly Stats Debug - Date Range:', {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      userId: userId
+    });
+
+    console.log('Weekly Stats Debug - Individual Entries:', debugEntries.map(entry => ({
+      id: entry.id,
+      startTime: entry.startTime,
+      endTime: entry.endTime,
+      durationManual: entry.durationManual,
+      calculatedDuration: entry.calculatedDuration,
+      durationHours: (entry.calculatedDuration / 3600).toFixed(2),
+      taskName: entry.taskName,
+      projectName: entry.projectName,
+      clientName: entry.clientName
+    })));
+
+    console.log('Weekly Stats Debug - Total:', {
+      totalSeconds: totalHoursResult[0]?.totalSeconds,
+      totalHours: (totalHoursResult[0]?.totalSeconds || 0) / 3600
+    });
+
+    // Get completed tasks count (only non-archived activities)
     const completedTasksResult = await db
       .select({
         count: count(sql`DISTINCT ${tasks.id}`)
       })
       .from(timeEntries)
-      .innerJoin(tasks, sql`${timeEntries.taskId} = ${tasks.id}`)
-      .where(and(dateFilter, sql`${tasks.status} = 'completed'`));
+      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(clients, eq(projects.clientId, clients.id))
+      .where(and(
+        gte(timeEntries.startTime, startDate), 
+        lte(timeEntries.startTime, endDate),
+        eq(clients.archived, false),
+        eq(projects.archived, false),
+        eq(tasks.archived, false),
+        sql`${tasks.status} = 'completed'`
+      ));
 
-    // Get active projects count
+    // Get active projects count (only non-archived activities)
     const activeProjectsResult = await db
       .select({
         count: count(sql`DISTINCT ${projects.id}`)
       })
       .from(timeEntries)
-      .innerJoin(tasks, sql`${timeEntries.taskId} = ${tasks.id}`)
-      .innerJoin(projects, sql`${tasks.projectId} = ${projects.id}`)
-      .where(and(dateFilter, sql`${projects.archived} = false`));
+      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(clients, eq(projects.clientId, clients.id))
+      .where(and(
+        gte(timeEntries.startTime, startDate), 
+        lte(timeEntries.startTime, endDate),
+        eq(clients.archived, false),
+        eq(projects.archived, false),
+        eq(tasks.archived, false)
+      ));
 
     const totalHours = totalHoursResult[0]?.totalSeconds || 0;
     const completedTasks = completedTasksResult[0]?.count || 0;

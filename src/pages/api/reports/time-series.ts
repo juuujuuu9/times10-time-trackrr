@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db';
-import { timeEntries, users } from '../../../db/schema';
-import { sql, gte, lte, and } from 'drizzle-orm';
+import { timeEntries, users, projects, tasks, clients } from '../../../db/schema';
+import { sql, gte, lte, and, eq } from 'drizzle-orm';
 
 export const GET: APIRoute = async ({ url }) => {
   try {
@@ -52,11 +52,9 @@ export const GET: APIRoute = async ({ url }) => {
         break;
       case 'month':
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-        break;
-      case 'year':
-        startDate = new Date(now.getFullYear(), 0, 1);
-        endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        endDate.setHours(23, 59, 59, 999);
         break;
       case 'custom':
         if (customStartDate && customEndDate) {
@@ -80,8 +78,14 @@ export const GET: APIRoute = async ({ url }) => {
         endDate.setHours(23, 59, 59, 999);
     }
 
-    // Build filter conditions
-    let filterConditions = [gte(timeEntries.startTime, startDate), lte(timeEntries.startTime, endDate)];
+    // Build filter conditions for non-archived activities
+    let filterConditions = [
+      gte(timeEntries.startTime, startDate), 
+      lte(timeEntries.startTime, endDate),
+      eq(clients.archived, false),
+      eq(projects.archived, false),
+      eq(tasks.archived, false)
+    ];
 
     if (teamMemberId && teamMemberId !== 'all') {
       filterConditions.push(sql`${timeEntries.userId} = ${parseInt(teamMemberId)}`);
@@ -89,7 +93,7 @@ export const GET: APIRoute = async ({ url }) => {
 
     if (projectId) {
       filterConditions.push(sql`${timeEntries.taskId} IN (
-        SELECT id FROM tasks WHERE project_id = ${parseInt(projectId)}
+        SELECT id FROM tasks WHERE project_id = ${parseInt(projectId)} AND archived = false
       )`);
     }
 
@@ -97,13 +101,13 @@ export const GET: APIRoute = async ({ url }) => {
       filterConditions.push(sql`${timeEntries.taskId} IN (
         SELECT t.id FROM tasks t 
         INNER JOIN projects p ON t.project_id = p.id 
-        WHERE p.client_id = ${parseInt(clientId)}
+        WHERE p.client_id = ${parseInt(clientId)} AND p.archived = false AND t.archived = false
       )`);
     }
 
     const dateFilter = and(...filterConditions);
 
-    // Get daily time series data
+    // Get daily time series data (only non-archived activities)
     const timeSeriesResult = await db
       .select({
         date: sql<string>`DATE(${timeEntries.startTime})`,
@@ -123,7 +127,10 @@ export const GET: APIRoute = async ({ url }) => {
         ), 0)`.as('total_cost')
       })
       .from(timeEntries)
-      .innerJoin(users, sql`${timeEntries.userId} = ${users.id}`)
+      .innerJoin(users, eq(timeEntries.userId, users.id))
+      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(clients, eq(projects.clientId, clients.id))
       .where(dateFilter)
       .groupBy(sql`DATE(${timeEntries.startTime})`)
       .orderBy(sql`DATE(${timeEntries.startTime})`);
