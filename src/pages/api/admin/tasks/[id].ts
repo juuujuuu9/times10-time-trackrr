@@ -23,8 +23,11 @@ export const DELETE: APIRoute = async ({ params }) => {
       .delete(taskAssignments)
       .where(eq(taskAssignments.taskId, taskId));
 
-    // Note: We intentionally keep time entries for record keeping
-    // Time entries will remain in the database but will have a reference to a deleted task
+    // Delete all time entries for this task since we can't have orphaned time entries
+    // due to foreign key constraints
+    await db
+      .delete(timeEntries)
+      .where(eq(timeEntries.taskId, taskId));
 
     // Finally, delete the task
     const deletedTask = await db
@@ -40,7 +43,7 @@ export const DELETE: APIRoute = async ({ params }) => {
     }
 
     return new Response(JSON.stringify({ 
-      message: 'Task deleted successfully. All user assignments have been removed. Time entries have been preserved for record keeping.' 
+      message: 'Task deleted successfully. All user assignments and time entries have been removed.' 
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
