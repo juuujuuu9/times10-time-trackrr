@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../../db/index';
-import { clients } from '../../../../db/schema';
-import { eq } from 'drizzle-orm';
+import { clients, projects, tasks, timeEntries, taskAssignments } from '../../../../db/schema';
+import { eq, inArray } from 'drizzle-orm';
 import { getSessionUser } from '../../../../utils/session';
 
 export const prerender = false;
@@ -85,6 +85,48 @@ export const DELETE: APIRoute = async ({ params, cookies }) => {
       });
     }
 
+    // Delete in order to avoid foreign key constraint violations
+    // 1. First, get all projects for this client
+    const clientProjects = await db
+      .select({ id: projects.id })
+      .from(projects)
+      .where(eq(projects.clientId, clientId));
+
+    const projectIds = clientProjects.map(p => p.id);
+
+    if (projectIds.length > 0) {
+      // 2. Get all tasks for these projects
+      const projectTasks = await db
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(inArray(tasks.projectId, projectIds));
+
+      const taskIds = projectTasks.map(t => t.id);
+
+      if (taskIds.length > 0) {
+        // 3. Delete time entries for these tasks
+        await db
+          .delete(timeEntries)
+          .where(inArray(timeEntries.taskId, taskIds));
+
+        // 4. Delete task assignments for these tasks
+        await db
+          .delete(taskAssignments)
+          .where(inArray(taskAssignments.taskId, taskIds));
+
+        // 5. Delete the tasks
+        await db
+          .delete(tasks)
+          .where(inArray(tasks.projectId, projectIds));
+      }
+
+      // 6. Delete the projects
+      await db
+        .delete(projects)
+        .where(eq(projects.clientId, clientId));
+    }
+
+    // 7. Finally, delete the client
     const deletedClient = await db
       .delete(clients)
       .where(eq(clients.id, clientId))
@@ -99,7 +141,11 @@ export const DELETE: APIRoute = async ({ params, cookies }) => {
 
     console.log('Client deleted successfully:', deletedClient[0]);
 
-    return new Response(JSON.stringify({ message: 'Client deleted successfully' }), {
+    return new Response(JSON.stringify({ 
+      message: 'Client deleted successfully. All associated projects, tasks, and time entries have been removed.',
+      deletedClientId: clientId,
+      deletedClientName: deletedClient[0].name
+    }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
