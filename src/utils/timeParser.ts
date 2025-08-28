@@ -3,52 +3,104 @@
  * Supports formats like: "2h", "2hr", "3.5hr", "4:15", "90m", "5400s", etc.
  */
 export function parseTimeInput(input: string): number {
-  const trimmed = input.trim().toLowerCase();
+  // Basic input validation
+  if (!input || typeof input !== 'string') {
+    throw new Error('Input must be a non-empty string');
+  }
+  
+  const trimmed = input.trim();
+  if (trimmed.length === 0) {
+    throw new Error('Input cannot be empty');
+  }
+  
+  const trimmedLower = trimmed.toLowerCase();
   
   // Handle hours with various formats: "2h", "2hr", "2hours", "3.5h", etc.
-  const hourMatch = trimmed.match(/^(\d+(?:\.\d+)?)\s*(h|hr|hour|hours)$/);
+  const hourMatch = trimmedLower.match(/^(\d+(?:\.\d+)?)\s*(h|hr|hour|hours)$/);
   if (hourMatch) {
     const hours = parseFloat(hourMatch[1]);
-    return Math.round(hours * 3600);
+    const result = Math.round(hours * 3600);
+    
+    // Validate result bounds
+    if (result < 0 || result > 24 * 3600) {
+      throw new Error('Duration must be between 0 and 24 hours');
+    }
+    
+    return result;
   }
   
   // Handle minutes: "30m", "30min", "30minutes", etc.
-  const minuteMatch = trimmed.match(/^(\d+(?:\.\d+)?)\s*(m|min|minute|minutes)$/);
+  const minuteMatch = trimmedLower.match(/^(\d+(?:\.\d+)?)\s*(m|min|minute|minutes)$/);
   if (minuteMatch) {
     const minutes = parseFloat(minuteMatch[1]);
-    return Math.round(minutes * 60);
+    const result = Math.round(minutes * 60);
+    
+    // Validate result bounds (max 24 hours in minutes)
+    if (result < 0 || result > 24 * 60) {
+      throw new Error('Duration must be between 0 and 24 hours');
+    }
+    
+    return result;
   }
   
   // Handle seconds: "3600s", "3600sec", "3600seconds", etc.
-  const secondMatch = trimmed.match(/^(\d+(?:\.\d+)?)\s*(s|sec|second|seconds)$/);
+  const secondMatch = trimmedLower.match(/^(\d+(?:\.\d+)?)\s*(s|sec|second|seconds)$/);
   if (secondMatch) {
     const seconds = parseFloat(secondMatch[1]);
-    return Math.round(seconds);
+    const result = Math.round(seconds);
+    
+    // Validate result bounds (max 24 hours in seconds)
+    if (result < 0 || result > 24 * 3600) {
+      throw new Error('Duration must be between 0 and 24 hours');
+    }
+    
+    return result;
   }
   
   // Handle time format: "4:15", "1:30:45", etc.
-  const timeMatch = trimmed.match(/^(\d+):(\d+)(?::(\d+))?$/);
+  const timeMatch = trimmedLower.match(/^(\d+):(\d+)(?::(\d+))?$/);
   if (timeMatch) {
     const hours = parseInt(timeMatch[1]);
     const minutes = parseInt(timeMatch[2]);
     const seconds = timeMatch[3] ? parseInt(timeMatch[3]) : 0;
-    return hours * 3600 + minutes * 60 + seconds;
+    const result = hours * 3600 + minutes * 60 + seconds;
+    
+    // Validate result bounds
+    if (result < 0 || result > 24 * 3600) {
+      throw new Error('Duration must be between 0 and 24 hours');
+    }
+    
+    return result;
   }
   
   // Handle combined hours and minutes: "0h 30m", "2h 15m", etc.
-  const combinedMatch = trimmed.match(/^(\d+(?:\.\d+)?)\s*(h|hr|hour|hours)\s+(\d+(?:\.\d+)?)\s*(m|min|minute|minutes)(?:\s+(\d+(?:\.\d+)?)\s*(s|sec|second|seconds))?$/);
+  const combinedMatch = trimmedLower.match(/^(\d+(?:\.\d+)?)\s*(h|hr|hour|hours)\s+(\d+(?:\.\d+)?)\s*(m|min|minute|minutes)(?:\s+(\d+(?:\.\d+)?)\s*(s|sec|second|seconds))?$/);
   if (combinedMatch) {
     const hours = parseFloat(combinedMatch[1]);
     const minutes = parseFloat(combinedMatch[3]);
     const seconds = combinedMatch[5] ? parseFloat(combinedMatch[5]) : 0;
-    return Math.round(hours * 3600 + minutes * 60 + seconds);
+    const result = Math.round(hours * 3600 + minutes * 60 + seconds);
+    
+    // Validate result bounds
+    if (result < 0 || result > 24 * 3600) {
+      throw new Error('Duration must be between 0 and 24 hours');
+    }
+    
+    return result;
   }
   
   // Handle decimal hours: "2.5" (assumes hours)
-  const decimalMatch = trimmed.match(/^(\d+(?:\.\d+)?)$/);
+  const decimalMatch = trimmedLower.match(/^(\d+(?:\.\d+)?)$/);
   if (decimalMatch) {
     const hours = parseFloat(decimalMatch[1]);
-    return Math.round(hours * 3600);
+    const result = Math.round(hours * 3600);
+    
+    // Validate result bounds
+    if (result < 0 || result > 24 * 3600) {
+      throw new Error('Duration must be between 0 and 24 hours');
+    }
+    
+    return result;
   }
   
   throw new Error(`Invalid time format: ${input}. Supported formats: 2h, 2hr, 3.5hr, 4:15, 90m, 5400s, 0h 30m, etc.`);
