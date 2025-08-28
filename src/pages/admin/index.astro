@@ -266,7 +266,7 @@ const formatDuration = (seconds: number) => {
 };
 
 const formatDurationToHours = (seconds: number) => {
-  return Math.round((seconds / 3600) * 100) / 100;
+  return Math.round((seconds / 3600) * 100000) / 100000; // Use 5 decimal places for better precision
 };
 
 const totalHoursFormatted = formatDuration(totalHours);

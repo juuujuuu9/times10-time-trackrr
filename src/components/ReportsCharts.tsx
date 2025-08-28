@@ -318,7 +318,6 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string }> =
       {
         data: data.map(item => {
           const cost = item.totalCost;
-          console.log('Cost value:', cost, 'Type:', typeof cost);
           return cost || 0;
         }),
         backgroundColor: colors.slice(0, data.length),
