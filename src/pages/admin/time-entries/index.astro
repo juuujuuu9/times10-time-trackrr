@@ -197,7 +197,7 @@ const allTasks = await db
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             {allTimeEntries.map((entry) => {
-              const taskDate = new Date(entry.startTime);
+              const taskDate = entry.startTime ? new Date(entry.startTime) : new Date(entry.createdAt);
               const duration = entry.durationManual ? entry.durationManual / 3600 : 0;
               
               return (
@@ -659,8 +659,9 @@ const allTasks = await db
         if (notesTextarea) notesTextarea.value = timeEntry.notes || '';
         
         // Set the task date
-        if (dateInput && timeEntry.startTime) {
-          const taskDate = new Date(timeEntry.startTime).toISOString().split('T')[0];
+        if (dateInput) {
+          const dateToUse = timeEntry.startTime || timeEntry.createdAt;
+          const taskDate = new Date(dateToUse).toISOString().split('T')[0];
           dateInput.value = taskDate;
         }
         

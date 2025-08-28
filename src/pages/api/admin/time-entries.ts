@@ -72,13 +72,14 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // For manual duration entries, we don't set startTime to avoid them being treated as ongoing timers
-    // The task date is stored in the createdAt timestamp for reference
+    // For manual duration entries, set startTime to the task date to indicate when the work was done
+    // The endTime remains null since we only have duration, not start/end times
+    const taskStartTime = taskDate ? new Date(taskDate) : new Date();
 
     const newTimeEntry = await db.insert(timeEntries).values({
       userId: parseInt(userId),
       taskId: parseInt(taskId),
-      startTime: null, // No start time for manual entries
+      startTime: taskStartTime, // Set to the task date for manual entries
       endTime: null, // No end time for manual entries
       durationManual: durationSeconds,
       notes: notes || null,
@@ -140,8 +141,10 @@ export const PUT: APIRoute = async ({ request }) => {
       updatedAt: new Date()
     };
 
-    // For manual duration entries, we don't set startTime even if taskDate is provided
-    // to avoid them being treated as ongoing timers
+    // For manual duration entries, update startTime to the task date if provided
+    if (taskDate) {
+      updateData.startTime = new Date(taskDate);
+    }
 
     const updatedTimeEntry = await db
       .update(timeEntries)
