@@ -42,10 +42,14 @@ export async function getWeeklyTimeEntries() {
     .innerJoin(users, eq(timeEntries.userId, users.id))
     .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
     .innerJoin(projects, eq(tasks.projectId, projects.id))
+    .innerJoin(clients, eq(projects.clientId, clients.id))
     .where(
       and(
         gte(timeEntries.startTime, weekStart),
-        lte(timeEntries.startTime, weekEnd)
+        lte(timeEntries.startTime, weekEnd),
+        eq(clients.archived, false),
+        eq(projects.archived, false),
+        eq(tasks.archived, false)
       )
     )
     .orderBy(timeEntries.startTime);
@@ -68,10 +72,16 @@ export async function getWeeklyTotals() {
       ), 0)`.as('total_seconds')
     })
     .from(timeEntries)
+    .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+    .innerJoin(projects, eq(tasks.projectId, projects.id))
+    .innerJoin(clients, eq(projects.clientId, clients.id))
     .where(
       and(
         gte(timeEntries.startTime, weekStart),
-        lte(timeEntries.startTime, weekEnd)
+        lte(timeEntries.startTime, weekEnd),
+        eq(clients.archived, false),
+        eq(projects.archived, false),
+        eq(tasks.archived, false)
       )
     );
 
@@ -88,10 +98,16 @@ export async function getWeeklyTotals() {
     })
     .from(timeEntries)
     .innerJoin(users, eq(timeEntries.userId, users.id))
+    .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+    .innerJoin(projects, eq(tasks.projectId, projects.id))
+    .innerJoin(clients, eq(projects.clientId, clients.id))
     .where(
       and(
         gte(timeEntries.startTime, weekStart),
-        lte(timeEntries.startTime, weekEnd)
+        lte(timeEntries.startTime, weekEnd),
+        eq(clients.archived, false),
+        eq(projects.archived, false),
+        eq(tasks.archived, false)
       )
     );
 
@@ -101,10 +117,16 @@ export async function getWeeklyTotals() {
       count: count(sql`DISTINCT ${timeEntries.userId}`)
     })
     .from(timeEntries)
+    .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+    .innerJoin(projects, eq(tasks.projectId, projects.id))
+    .innerJoin(clients, eq(projects.clientId, clients.id))
     .where(
       and(
         gte(timeEntries.startTime, weekStart),
-        lte(timeEntries.startTime, weekEnd)
+        lte(timeEntries.startTime, weekEnd),
+        eq(clients.archived, false),
+        eq(projects.archived, false),
+        eq(tasks.archived, false)
       )
     );
 
@@ -148,11 +170,17 @@ export async function getProjectCosts(startDate: Date, endDate: Date, teamMember
         ? and(
             gte(timeEntries.startTime, startDate),
             lte(timeEntries.startTime, endDate),
-            eq(timeEntries.userId, teamMemberId)
+            eq(timeEntries.userId, teamMemberId),
+            eq(clients.archived, false),
+            eq(projects.archived, false),
+            eq(tasks.archived, false)
           )
         : and(
             gte(timeEntries.startTime, startDate),
-            lte(timeEntries.startTime, endDate)
+            lte(timeEntries.startTime, endDate),
+            eq(clients.archived, false),
+            eq(projects.archived, false),
+            eq(tasks.archived, false)
           )
     )
     .groupBy(projects.id, projects.name, clients.id, clients.name)
@@ -198,11 +226,17 @@ export async function getClientCosts(startDate: Date, endDate: Date, teamMemberI
         ? and(
             gte(timeEntries.startTime, startDate),
             lte(timeEntries.startTime, endDate),
-            eq(timeEntries.userId, teamMemberId)
+            eq(timeEntries.userId, teamMemberId),
+            eq(clients.archived, false),
+            eq(projects.archived, false),
+            eq(tasks.archived, false)
           )
         : and(
             gte(timeEntries.startTime, startDate),
-            lte(timeEntries.startTime, endDate)
+            lte(timeEntries.startTime, endDate),
+            eq(clients.archived, false),
+            eq(projects.archived, false),
+            eq(tasks.archived, false)
           )
     )
     .groupBy(clients.id, clients.name)

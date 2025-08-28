@@ -8,15 +8,12 @@ export const GET: APIRoute = async ({ url }) => {
     const searchParams = url.searchParams;
     const userId = searchParams.get('userId');
     
-    // Calculate date range for this week
+    // Calculate date range for last 7 days (to match admin dashboard default)
     const now = new Date();
-    const dayOfWeek = now.getDay();
-    const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek;
     const startDate = new Date(now);
-    startDate.setDate(now.getDate() - daysToSubtract);
+    startDate.setDate(now.getDate() - 7);
     startDate.setHours(0, 0, 0, 0);
-    const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 6);
+    const endDate = new Date(now);
     endDate.setHours(23, 59, 59, 999);
 
     // Build filter conditions for non-archived activities
@@ -104,7 +101,7 @@ export const GET: APIRoute = async ({ url }) => {
       totalCost,
       activeProjects,
       teamMembers,
-      period: 'This Week',
+      period: 'Last 7 Days',
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString()
     }), {

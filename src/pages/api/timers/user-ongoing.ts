@@ -18,7 +18,7 @@ export const GET: APIRoute = async (context) => {
       });
     }
 
-    // Get current user's ongoing timers with related data
+    // Get current user's ongoing timers with related data (only non-archived activities)
     const ongoingTimers = await db.select({
       id: timeEntries.id,
       taskId: timeEntries.taskId,
@@ -37,7 +37,10 @@ export const GET: APIRoute = async (context) => {
     .innerJoin(clients, eq(projects.clientId, clients.id))
     .where(and(
       eq(timeEntries.userId, currentUser.id),
-      isNull(timeEntries.endTime)
+      isNull(timeEntries.endTime),
+      eq(clients.archived, false),
+      eq(projects.archived, false),
+      eq(tasks.archived, false)
     ))
     .orderBy(timeEntries.startTime);
 

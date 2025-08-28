@@ -18,7 +18,7 @@ export const GET: APIRoute = async (context) => {
       });
     }
 
-    // Get all ongoing timers with related data
+    // Get all ongoing timers with related data (only non-archived activities)
     // Exclude manual duration entries (entries with durationManual but no endTime)
     const ongoingTimers = await db.select({
       id: timeEntries.id,
@@ -40,7 +40,10 @@ export const GET: APIRoute = async (context) => {
       and(
         isNull(timeEntries.endTime),
         isNull(timeEntries.durationManual), // Exclude manual duration entries
-        sql`${timeEntries.startTime} IS NOT NULL` // Only include entries with actual start times
+        sql`${timeEntries.startTime} IS NOT NULL`, // Only include entries with actual start times
+        eq(clients.archived, false),
+        eq(projects.archived, false),
+        eq(tasks.archived, false)
       )
     )
     .orderBy(timeEntries.startTime);

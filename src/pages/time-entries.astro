@@ -8,18 +8,15 @@ import { sql, eq, and, gte, lte, isNotNull } from 'drizzle-orm';
 // Require authentication
 const user = await requireAuth('/')(Astro) as any;
 
-// Calculate current week (Sunday to Saturday)
+// Calculate last 7 days (to match dashboard)
 const now = new Date();
-const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
-const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek;
 const weekStart = new Date(now);
-weekStart.setDate(now.getDate() - daysToSubtract);
+weekStart.setDate(now.getDate() - 7);
 weekStart.setHours(0, 0, 0, 0);
-const weekEnd = new Date(weekStart);
-weekEnd.setDate(weekStart.getDate() + 6);
+const weekEnd = new Date(now);
 weekEnd.setHours(23, 59, 59, 999);
 
-// Get current user's time entries with related data
+// Get current user's time entries with related data (only non-archived activities)
 const userTimeEntries = await db
   .select({
     id: timeEntries.id,
@@ -40,21 +37,29 @@ const userTimeEntries = await db
   .innerJoin(clients, eq(projects.clientId, clients.id))
   .where(and(
     eq(timeEntries.userId, user.id),
-    isNotNull(timeEntries.endTime) // Only include completed time entries, not ongoing ones
+    isNotNull(timeEntries.endTime), // Only include completed time entries, not ongoing ones
+    eq(clients.archived, false),
+    eq(projects.archived, false),
+    eq(tasks.archived, false)
   ))
   .orderBy(sql`${timeEntries.createdAt} DESC`);
 
-// Get all clients for filtering (only those the user has worked on)
+// Get all clients for filtering (only those the user has worked on - non-archived activities)
 const userClients = await db
   .selectDistinct({ name: clients.name })
   .from(timeEntries)
   .innerJoin(tasks, sql`${timeEntries.taskId} = ${tasks.id}`)
   .innerJoin(projects, sql`${tasks.projectId} = ${projects.id}`)
   .innerJoin(clients, sql`${projects.clientId} = ${clients.id}`)
-  .where(eq(timeEntries.userId, user.id))
+  .where(and(
+    eq(timeEntries.userId, user.id),
+    eq(clients.archived, false),
+    eq(projects.archived, false),
+    eq(tasks.archived, false)
+  ))
   .orderBy(clients.name);
 
-// Get all tasks for filtering (only those the user has worked on)
+// Get all tasks for filtering (only those the user has worked on - non-archived activities)
 const userTasks = await db
   .selectDistinct({
     id: tasks.id,
@@ -66,7 +71,12 @@ const userTasks = await db
   .innerJoin(tasks, sql`${timeEntries.taskId} = ${tasks.id}`)
   .innerJoin(projects, sql`${tasks.projectId} = ${projects.id}`)
   .innerJoin(clients, sql`${projects.clientId} = ${clients.id}`)
-  .where(eq(timeEntries.userId, user.id))
+  .where(and(
+    eq(timeEntries.userId, user.id),
+    eq(clients.archived, false),
+    eq(projects.archived, false),
+    eq(tasks.archived, false)
+  ))
   .orderBy(clients.name, projects.name, tasks.name);
 
 // Format date range for display
@@ -471,11 +481,9 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
   <script>
     // Week navigation and filtering
     document.addEventListener('DOMContentLoaded', function() {
-      // Week navigation state
+      // Week navigation state - use last 7 days to match dashboard
       let currentWeekStart = new Date();
-      const dayOfWeek = currentWeekStart.getDay();
-      const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek;
-      currentWeekStart.setDate(currentWeekStart.getDate() - daysToSubtract);
+      currentWeekStart.setDate(currentWeekStart.getDate() - 7);
       currentWeekStart.setHours(0, 0, 0, 0);
 
       // Format date range for display
@@ -494,8 +502,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
 
       // Update week display and filter entries
       function updateWeekDisplay() {
-        const weekEnd = new Date(currentWeekStart);
-        weekEnd.setDate(currentWeekStart.getDate() + 6);
+        const weekEnd = new Date(); // Today
         weekEnd.setHours(23, 59, 59, 999);
         
         const weekRangeDisplay = document.getElementById('weekRangeDisplay');
@@ -506,10 +513,9 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
         filterEntriesByWeek();
       }
 
-      // Filter entries by current week
+      // Filter entries by last 7 days
       function filterEntriesByWeek() {
-        const weekEnd = new Date(currentWeekStart);
-        weekEnd.setDate(currentWeekStart.getDate() + 6);
+        const weekEnd = new Date(); // Today
         weekEnd.setHours(23, 59, 59, 999);
         
         const rows = document.querySelectorAll('tbody tr');
@@ -519,7 +525,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
           const dateText = dateCell?.textContent?.trim() || '';
           const entryDate = new Date(dateText);
           
-          // Check if entry is within the current week
+          // Check if entry is within the last 7 days
           const isInWeek = entryDate >= currentWeekStart && entryDate <= weekEnd;
           
           // Only hide if not already hidden by other filters
