@@ -143,7 +143,7 @@ const allUsers = await db
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
           >
             <option value="">All Statuses</option>
-            <option value="active">Active</option>
+            <option value="active" selected>Active</option>
             <option value="inactive">Inactive</option>
           </select>
         </div>
@@ -711,6 +711,8 @@ const allUsers = await db
       // Status filter functionality
       if (statusFilter) {
         statusFilter.addEventListener('change', applyFilters);
+        // Apply the default "Active" filter on page load
+        applyFilters();
       }
 
       // Edit user buttons
