@@ -54,8 +54,12 @@ export function useRealtimeTimer(pollInterval: number = 2000): UseRealtimeTimerR
             lastUpdateRef.current = currentTime;
           }
         } else {
-          // No ongoing timer
+          // No ongoing timer - stop polling to reduce server load
           setTimerData(null);
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
         }
         setError(null);
       } else {
@@ -67,20 +71,41 @@ export function useRealtimeTimer(pollInterval: number = 2000): UseRealtimeTimerR
     }
   }, [timerData]);
 
+  // Start polling when timer is active
+  const startPolling = useCallback(() => {
+    if (!pollIntervalRef.current) {
+      pollIntervalRef.current = setInterval(fetchTimerState, pollInterval);
+    }
+  }, [fetchTimerState, pollInterval]);
+
+  // Stop polling
+  const stopPolling = useCallback(() => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  }, []);
+
   // Start polling for timer updates
   useEffect(() => {
     // Initial fetch
     fetchTimerState();
 
-    // Set up polling
-    pollIntervalRef.current = setInterval(fetchTimerState, pollInterval);
-
+    // Only set up polling if there's an active timer
+    // Polling will be started when a timer is started and stopped when timer is null
     return () => {
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
       }
     };
-  }, [fetchTimerState, pollInterval]);
+  }, [fetchTimerState]);
+
+  // Start polling if there's already an active timer
+  useEffect(() => {
+    if (timerData && !pollIntervalRef.current) {
+      startPolling();
+    }
+  }, [timerData, startPolling]);
 
   // Start a new timer
   const startTimer = useCallback(async (taskId: number, notes?: string): Promise<boolean> => {
@@ -105,6 +130,8 @@ export function useRealtimeTimer(pollInterval: number = 2000): UseRealtimeTimerR
       
       if (result.success) {
         setTimerData(result.data);
+        // Start polling when timer is active
+        startPolling();
         return true;
       } else {
         setError(result.error || 'Failed to start timer');
@@ -117,7 +144,7 @@ export function useRealtimeTimer(pollInterval: number = 2000): UseRealtimeTimerR
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [startPolling]);
 
   // Stop the current timer
   const stopTimer = useCallback(async (timerId: number, notes?: string): Promise<boolean> => {
@@ -142,6 +169,7 @@ export function useRealtimeTimer(pollInterval: number = 2000): UseRealtimeTimerR
       
       if (result.success) {
         setTimerData(null); // Clear timer data after stopping
+        stopPolling(); // Stop polling when timer is stopped
         return true;
       } else {
         setError(result.error || 'Failed to stop timer');
@@ -154,7 +182,7 @@ export function useRealtimeTimer(pollInterval: number = 2000): UseRealtimeTimerR
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [stopPolling]);
 
   // Force stop timer without saving
   const forceStopTimer = useCallback(async (timerId: number): Promise<boolean> => {
@@ -175,6 +203,7 @@ export function useRealtimeTimer(pollInterval: number = 2000): UseRealtimeTimerR
       
       if (result.success) {
         setTimerData(null); // Clear timer data after force stopping
+        stopPolling(); // Stop polling when timer is force stopped
         return true;
       } else {
         setError(result.error || 'Failed to force stop timer');
@@ -187,7 +216,7 @@ export function useRealtimeTimer(pollInterval: number = 2000): UseRealtimeTimerR
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [stopPolling]);
 
   // Manual refresh of timer state
   const refreshTimer = useCallback(async (): Promise<void> => {
