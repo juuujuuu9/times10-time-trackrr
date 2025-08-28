@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db/index';
 import { timeEntries, tasks, users, projects, clients } from '../../../db/schema';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, sql } from 'drizzle-orm';
 import { requireAuth } from '../../../utils/session';
 
 // GET: Get current user's ongoing timers only
@@ -19,6 +19,7 @@ export const GET: APIRoute = async (context) => {
     }
 
     // Get current user's ongoing timers with related data (only non-archived activities)
+    // Exclude manual duration entries (entries with durationManual but no endTime)
     const ongoingTimers = await db.select({
       id: timeEntries.id,
       taskId: timeEntries.taskId,
@@ -35,13 +36,17 @@ export const GET: APIRoute = async (context) => {
     .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
     .innerJoin(projects, eq(tasks.projectId, projects.id))
     .innerJoin(clients, eq(projects.clientId, clients.id))
-    .where(and(
-      eq(timeEntries.userId, currentUser.id),
-      isNull(timeEntries.endTime),
-      eq(clients.archived, false),
-      eq(projects.archived, false),
-      eq(tasks.archived, false)
-    ))
+    .where(
+      and(
+        eq(timeEntries.userId, currentUser.id),
+        isNull(timeEntries.endTime),
+        isNull(timeEntries.durationManual), // Exclude manual duration entries
+        sql`${timeEntries.startTime} IS NOT NULL`, // Only include entries with actual start times
+        eq(clients.archived, false),
+        eq(projects.archived, false),
+        eq(tasks.archived, false)
+      )
+    )
     .orderBy(timeEntries.startTime);
 
     // Calculate elapsed time for each timer

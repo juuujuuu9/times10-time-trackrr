@@ -602,8 +602,8 @@ const user = await requireAuth('/')(Astro) as any;
             const durationHours = entry.duration ? (entry.duration / 3600).toFixed(1) : '0';
             
             // Check if this is a manual duration entry (no meaningful start/end times)
-            // Manual duration entries have durationManual but no startTime or endTime
-            const isManualDurationEntry = entry.durationManual && !entry.startTime && !entry.endTime;
+            // Manual duration entries have durationManual but no endTime
+            const isManualDurationEntry = entry.durationManual && !entry.endTime;
             const startTime = (!isManualDurationEntry && entry.startTime) ? new Date(entry.startTime) : null;
             const endTime = (!isManualDurationEntry && entry.endTime) ? new Date(entry.endTime) : null;
             

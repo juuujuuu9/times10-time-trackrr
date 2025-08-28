@@ -1,7 +1,8 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../db/index';
 import { users, clients, projects, tasks, timeEntries } from '../../db/schema';
-import { eq, and } from 'drizzle-orm';
+
+import { eq, and, isNull, sql } from 'drizzle-orm';
 import { requireRole } from '../../utils/session';
 
 export const POST: APIRoute = async (context) => {
@@ -90,12 +91,15 @@ export const POST: APIRoute = async (context) => {
 
     for (const { userId, taskId, userName } of userTasks) {
       // Check if user already has an ongoing timer
+      // Exclude manual duration entries (entries with durationManual but no endTime)
       const existingOngoingTimer = await db.select()
         .from(timeEntries)
         .where(and(
           eq(timeEntries.userId, userId),
           eq(timeEntries.taskId, taskId),
-          isNull(timeEntries.endTime)
+          isNull(timeEntries.endTime),
+          isNull(timeEntries.durationManual), // Exclude manual duration entries
+          sql`${timeEntries.startTime} IS NOT NULL` // Only include entries with actual start times
         ));
 
       if (existingOngoingTimer.length === 0) {

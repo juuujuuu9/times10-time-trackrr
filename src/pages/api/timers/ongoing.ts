@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db/index';
 import { timeEntries, tasks, users } from '../../../db/schema';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, sql } from 'drizzle-orm';
 import { requireAuth } from '../../../utils/session';
 
 // GET: Get user's ongoing timer
@@ -19,6 +19,7 @@ export const GET: APIRoute = async (context) => {
     }
 
     // Get user's ongoing timer
+    // Exclude manual duration entries (entries with durationManual but no endTime)
     const ongoingTimer = await db.select({
       id: timeEntries.id,
       taskId: timeEntries.taskId,
@@ -35,7 +36,9 @@ export const GET: APIRoute = async (context) => {
     .leftJoin(tasks, eq(timeEntries.taskId, tasks.id))
     .where(and(
       eq(timeEntries.userId, currentUser.id),
-      isNull(timeEntries.endTime)
+      isNull(timeEntries.endTime),
+      isNull(timeEntries.durationManual), // Exclude manual duration entries
+      sql`${timeEntries.startTime} IS NOT NULL` // Only include entries with actual start times
     ))
     .limit(1);
 
@@ -108,12 +111,15 @@ export const POST: APIRoute = async (context) => {
     }
 
     // Check if user already has an ongoing timer
-          const existingTimer = await db.select()
-        .from(timeEntries)
-        .where(and(
-          eq(timeEntries.userId, currentUser.id),
-          isNull(timeEntries.endTime)
-        ));
+    // Exclude manual duration entries (entries with durationManual but no endTime)
+    const existingTimer = await db.select()
+      .from(timeEntries)
+      .where(and(
+        eq(timeEntries.userId, currentUser.id),
+        isNull(timeEntries.endTime),
+        isNull(timeEntries.durationManual), // Exclude manual duration entries
+        sql`${timeEntries.startTime} IS NOT NULL` // Only include entries with actual start times
+      ));
 
     if (existingTimer.length > 0) {
       return new Response(JSON.stringify({ 
@@ -205,13 +211,16 @@ export const PUT: APIRoute = async (context) => {
     }
 
     // Get the ongoing timer
-          const ongoingTimer = await db.select()
-        .from(timeEntries)
-        .where(and(
-          eq(timeEntries.id, timerId),
-          eq(timeEntries.userId, currentUser.id),
-          isNull(timeEntries.endTime)
-        ))
+    // Exclude manual duration entries (entries with durationManual but no endTime)
+    const ongoingTimer = await db.select()
+      .from(timeEntries)
+      .where(and(
+        eq(timeEntries.id, timerId),
+        eq(timeEntries.userId, currentUser.id),
+        isNull(timeEntries.endTime),
+        isNull(timeEntries.durationManual), // Exclude manual duration entries
+        sql`${timeEntries.startTime} IS NOT NULL` // Only include entries with actual start times
+      ))
       .limit(1);
 
     if (ongoingTimer.length === 0) {
@@ -293,11 +302,14 @@ export const DELETE: APIRoute = async (context) => {
     }
 
     // Delete the ongoing timer
+    // Exclude manual duration entries (entries with durationManual but no endTime)
     const deletedTimer = await db.delete(timeEntries)
       .where(and(
         eq(timeEntries.id, parseInt(timerId)),
         eq(timeEntries.userId, currentUser.id),
-        isNull(timeEntries.endTime)
+        isNull(timeEntries.endTime),
+        isNull(timeEntries.durationManual), // Exclude manual duration entries
+        sql`${timeEntries.startTime} IS NOT NULL` // Only include entries with actual start times
       ))
       .returning();
 

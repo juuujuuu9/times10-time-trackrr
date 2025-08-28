@@ -1,7 +1,7 @@
 import { db } from '../db';
 import { users, clients, projects, tasks, timeEntries } from '../db/schema';
 import { hashPassword } from '../utils/auth';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, isNull, sql } from 'drizzle-orm';
 
 async function addOngoingTimers() {
   try {
@@ -80,12 +80,15 @@ async function addOngoingTimers() {
 
     for (const { userId, taskId } of userTasks) {
       // Check if user already has an ongoing timer
+      // Exclude manual duration entries (entries with durationManual but no endTime)
       const existingOngoingTimer = await db.select()
         .from(timeEntries)
         .where(and(
           eq(timeEntries.userId, userId),
           eq(timeEntries.taskId, taskId),
-          isNull(timeEntries.endTime)
+          isNull(timeEntries.endTime),
+          isNull(timeEntries.durationManual), // Exclude manual duration entries
+          sql`${timeEntries.startTime} IS NOT NULL` // Only include entries with actual start times
         ));
 
       if (existingOngoingTimer.length === 0) {
@@ -105,9 +108,16 @@ async function addOngoingTimers() {
     console.log('Ongoing timers added successfully!');
     
     // Display summary
+    // Exclude manual duration entries (entries with durationManual but no endTime)
     const finalTimeEntries = await db.select()
       .from(timeEntries)
-      .where(isNull(timeEntries.endTime));
+      .where(
+        and(
+          isNull(timeEntries.endTime),
+          isNull(timeEntries.durationManual), // Exclude manual duration entries
+          sql`${timeEntries.startTime} IS NOT NULL` // Only include entries with actual start times
+        )
+      );
     
     console.log(`\nSummary:`);
     console.log(`- Total ongoing timers: ${finalTimeEntries.length}`);
