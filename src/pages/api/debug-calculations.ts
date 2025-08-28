@@ -32,6 +32,7 @@ export const GET: APIRoute = async ({ url }) => {
         startTime: timeEntries.startTime,
         endTime: timeEntries.endTime,
         durationManual: timeEntries.durationManual,
+        createdAt: timeEntries.createdAt,
         calculatedDuration: sql<number>`CASE 
           WHEN ${timeEntries.endTime} IS NOT NULL 
           THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))
@@ -78,7 +79,7 @@ export const GET: APIRoute = async ({ url }) => {
     // Calculate elapsed time for ongoing timers
     const nowDate = new Date();
     const ongoingTimersWithElapsed = ongoingTimers.map(timer => {
-      const elapsedSeconds = Math.floor((nowDate.getTime() - new Date(timer.startTime).getTime()) / 1000);
+      const elapsedSeconds = timer.startTime ? Math.floor((nowDate.getTime() - new Date(timer.startTime).getTime()) / 1000) : 0;
       return {
         ...timer,
         elapsedSeconds,
@@ -88,8 +89,15 @@ export const GET: APIRoute = async ({ url }) => {
 
     // Filter entries for this week
     const weeklyEntries = allEntries.filter(entry => {
-      const entryDate = new Date(entry.startTime);
-      return entryDate >= startDate && entryDate <= endDate;
+      if (entry.startTime) {
+        const entryDate = new Date(entry.startTime);
+        return entryDate >= startDate && entryDate <= endDate;
+      } else if (entry.durationManual) {
+        // For manual entries, use createdAt date
+        const entryDate = new Date(entry.createdAt);
+        return entryDate >= startDate && entryDate <= endDate;
+      }
+      return false;
     });
 
     // Calculate totals
@@ -160,7 +168,9 @@ export const GET: APIRoute = async ({ url }) => {
         projectName: entry.projectName,
         clientName: entry.clientName,
         isArchived: entry.clientArchived || entry.projectArchived || entry.taskArchived,
-        isInWeek: new Date(entry.startTime) >= startDate && new Date(entry.startTime) <= endDate
+        isInWeek: entry.startTime ? 
+          (new Date(entry.startTime) >= startDate && new Date(entry.startTime) <= endDate) :
+          (entry.durationManual ? (new Date(entry.createdAt) >= startDate && new Date(entry.createdAt) <= endDate) : false)
       })),
       ongoingTimers: ongoingTimersWithElapsed.map(timer => ({
         id: timer.id,

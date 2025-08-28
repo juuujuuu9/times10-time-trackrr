@@ -36,7 +36,7 @@ export const timeEntries = pgTable("time_entries", {
 	id: serial().primaryKey().notNull(),
 	taskId: integer("task_id").notNull(),
 	userId: integer("user_id").notNull(),
-	startTime: timestamp("start_time", { mode: 'string' }).notNull(),
+	startTime: timestamp("start_time", { mode: 'string' }),
 	endTime: timestamp("end_time", { mode: 'string' }),
 	durationManual: integer("duration_manual"),
 	notes: text(),

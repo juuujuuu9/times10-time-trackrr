@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db';
 import { tasks, timeEntries, users, projects, clients, taskAssignments } from '../../../db/schema';
-import { eq, and, desc, gte, lt } from 'drizzle-orm';
+import { eq, and, desc, isNull, sql, gte, lt } from 'drizzle-orm';
 import { 
   getUserBySlackId, 
   getWorkspaceById, 
@@ -367,8 +367,11 @@ async function handleStatusCommand(userId: number): Promise<string> {
     const todayEntries = await db.query.timeEntries.findMany({
       where: and(
         eq(timeEntries.userId, userId),
-        gte(timeEntries.startTime, today),
-        lt(timeEntries.startTime, tomorrow)
+        sql`(
+          (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${today} AND ${timeEntries.startTime} < ${tomorrow})
+          OR 
+          (${timeEntries.startTime} IS NULL AND ${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${today} AND ${timeEntries.createdAt} < ${tomorrow})
+        )`
       ),
       orderBy: desc(timeEntries.startTime)
     });
@@ -398,7 +401,7 @@ async function handleStatusCommand(userId: number): Promise<string> {
 
     const totalSeconds = entryDetails.reduce((total, { entry }) => {
       const duration = entry.durationManual || 
-        (entry.endTime ? Math.floor((entry.endTime.getTime() - entry.startTime.getTime()) / 1000) : 0);
+        (entry.endTime && entry.startTime ? Math.floor((entry.endTime.getTime() - entry.startTime.getTime()) / 1000) : 0);
       return total + duration;
     }, 0);
 
@@ -406,7 +409,7 @@ async function handleStatusCommand(userId: number): Promise<string> {
     
     const entryList = entryDetails.slice(0, 5).map(({ entry, task }) => {
       const duration = entry.durationManual || 
-        (entry.endTime ? Math.floor((entry.endTime.getTime() - entry.startTime.getTime()) / 1000) : 0);
+        (entry.endTime && entry.startTime ? Math.floor((entry.endTime.getTime() - entry.startTime.getTime()) / 1000) : 0);
       const formattedDuration = formatDurationForSlack(duration);
       const taskName = task?.name || 'Unknown Task';
       return `• ${taskName} (${formattedDuration})`;

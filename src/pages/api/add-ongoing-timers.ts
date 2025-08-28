@@ -95,7 +95,7 @@ export const POST: APIRoute = async (context) => {
         .where(and(
           eq(timeEntries.userId, userId),
           eq(timeEntries.taskId, taskId),
-          eq(timeEntries.endTime, null)
+          isNull(timeEntries.endTime)
         ));
 
       if (existingOngoingTimer.length === 0) {
@@ -123,7 +123,7 @@ export const POST: APIRoute = async (context) => {
     // Get final summary
     const finalTimeEntries = await db.select()
       .from(timeEntries)
-      .where(eq(timeEntries.endTime, null));
+      .where(isNull(timeEntries.endTime));
     
     console.log('Ongoing timers added successfully!');
     

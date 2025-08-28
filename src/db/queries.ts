@@ -45,8 +45,11 @@ export async function getWeeklyTimeEntries() {
     .innerJoin(clients, eq(projects.clientId, clients.id))
     .where(
       and(
-        gte(timeEntries.startTime, weekStart),
-        lte(timeEntries.startTime, weekEnd),
+        sql`(
+          (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${weekStart} AND ${timeEntries.startTime} <= ${weekEnd})
+          OR 
+          (${timeEntries.startTime} IS NULL AND ${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${weekStart} AND ${timeEntries.createdAt} <= ${weekEnd})
+        )`,
         eq(clients.archived, false),
         eq(projects.archived, false),
         eq(tasks.archived, false)
@@ -77,8 +80,11 @@ export async function getWeeklyTotals() {
     .innerJoin(clients, eq(projects.clientId, clients.id))
     .where(
       and(
-        gte(timeEntries.startTime, weekStart),
-        lte(timeEntries.startTime, weekEnd),
+        sql`(
+          (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${weekStart} AND ${timeEntries.startTime} <= ${weekEnd})
+          OR 
+          (${timeEntries.startTime} IS NULL AND ${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${weekStart} AND ${timeEntries.createdAt} <= ${weekEnd})
+        )`,
         eq(clients.archived, false),
         eq(projects.archived, false),
         eq(tasks.archived, false)
@@ -103,8 +109,11 @@ export async function getWeeklyTotals() {
     .innerJoin(clients, eq(projects.clientId, clients.id))
     .where(
       and(
-        gte(timeEntries.startTime, weekStart),
-        lte(timeEntries.startTime, weekEnd),
+        sql`(
+          (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${weekStart} AND ${timeEntries.startTime} <= ${weekEnd})
+          OR 
+          (${timeEntries.startTime} IS NULL AND ${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${weekStart} AND ${timeEntries.createdAt} <= ${weekEnd})
+        )`,
         eq(clients.archived, false),
         eq(projects.archived, false),
         eq(tasks.archived, false)
@@ -122,8 +131,11 @@ export async function getWeeklyTotals() {
     .innerJoin(clients, eq(projects.clientId, clients.id))
     .where(
       and(
-        gte(timeEntries.startTime, weekStart),
-        lte(timeEntries.startTime, weekEnd),
+        sql`(
+          (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${weekStart} AND ${timeEntries.startTime} <= ${weekEnd})
+          OR 
+          (${timeEntries.startTime} IS NULL AND ${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${weekStart} AND ${timeEntries.createdAt} <= ${weekEnd})
+        )`,
         eq(clients.archived, false),
         eq(projects.archived, false),
         eq(tasks.archived, false)
@@ -168,16 +180,22 @@ export async function getProjectCosts(startDate: Date, endDate: Date, teamMember
     .where(
       teamMemberId 
         ? and(
-            gte(timeEntries.startTime, startDate),
-            lte(timeEntries.startTime, endDate),
+            sql`(
+              (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate})
+              OR 
+              (${timeEntries.startTime} IS NULL AND ${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${startDate} AND ${timeEntries.createdAt} <= ${endDate})
+            )`,
             eq(timeEntries.userId, teamMemberId),
             eq(clients.archived, false),
             eq(projects.archived, false),
             eq(tasks.archived, false)
           )
         : and(
-            gte(timeEntries.startTime, startDate),
-            lte(timeEntries.startTime, endDate),
+            sql`(
+              (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate})
+              OR 
+              (${timeEntries.startTime} IS NULL AND ${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${startDate} AND ${timeEntries.createdAt} <= ${endDate})
+            )`,
             eq(clients.archived, false),
             eq(projects.archived, false),
             eq(tasks.archived, false)
@@ -224,16 +242,22 @@ export async function getClientCosts(startDate: Date, endDate: Date, teamMemberI
     .where(
       teamMemberId 
         ? and(
-            gte(timeEntries.startTime, startDate),
-            lte(timeEntries.startTime, endDate),
+            sql`(
+              (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate})
+              OR 
+              (${timeEntries.startTime} IS NULL AND ${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${startDate} AND ${timeEntries.createdAt} <= ${endDate})
+            )`,
             eq(timeEntries.userId, teamMemberId),
             eq(clients.archived, false),
             eq(projects.archived, false),
             eq(tasks.archived, false)
           )
         : and(
-            gte(timeEntries.startTime, startDate),
-            lte(timeEntries.startTime, endDate),
+            sql`(
+              (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate})
+              OR 
+              (${timeEntries.startTime} IS NULL AND ${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${startDate} AND ${timeEntries.createdAt} <= ${endDate})
+            )`,
             eq(clients.archived, false),
             eq(projects.archived, false),
             eq(tasks.archived, false)

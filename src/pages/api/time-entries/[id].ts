@@ -96,7 +96,7 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
           }
         } else {
           // Use the original start time as base date for time parser
-          const baseDate = new Date(entry.startTime);
+          const baseDate = entry.startTime ? new Date(entry.startTime) : new Date();
           newStartTime = parseTimeString(startTime, baseDate);
         }
       } catch (error) {
@@ -119,7 +119,7 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
           }
         } else {
           // Use the original end time as base date, or start time if no end time exists
-          const baseDate = entry.endTime ? new Date(entry.endTime) : new Date(entry.startTime);
+          const baseDate = entry.endTime ? new Date(entry.endTime) : (entry.startTime ? new Date(entry.startTime) : new Date());
           newEndTime = parseTimeString(endTime, baseDate);
         }
       } catch (error) {
@@ -141,7 +141,7 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
     }
     
     // If only start time is being updated, check against existing end time
-    if (startTime && !endTime && entry.endTime && newStartTime >= entry.endTime) {
+    if (startTime && !endTime && entry.endTime && newStartTime && newStartTime >= entry.endTime) {
       return new Response(JSON.stringify({ error: 'Start time must be before existing end time' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -149,7 +149,7 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
     }
     
     // If only end time is being updated, check against existing start time
-    if (!startTime && endTime && entry.startTime && newEndTime <= entry.startTime) {
+    if (!startTime && endTime && entry.startTime && newEndTime && newEndTime <= entry.startTime) {
       return new Response(JSON.stringify({ error: 'End time must be after existing start time' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }

@@ -51,11 +51,11 @@ export const GET: APIRoute = async (context) => {
     // Calculate elapsed time for each timer
     const now = new Date();
     const timersWithElapsed = ongoingTimers.map(timer => {
-      const elapsedSeconds = Math.floor((now.getTime() - new Date(timer.startTime).getTime()) / 1000);
+      const elapsedSeconds = timer.startTime ? Math.floor((now.getTime() - new Date(timer.startTime).getTime()) / 1000) : 0;
       return {
         ...timer,
         elapsedSeconds,
-        startTime: timer.startTime.toISOString()
+        startTime: timer.startTime?.toISOString() || null
       };
     });
 

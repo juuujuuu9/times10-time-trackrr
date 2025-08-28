@@ -85,7 +85,7 @@ async function addOngoingTimers() {
         .where(and(
           eq(timeEntries.userId, userId),
           eq(timeEntries.taskId, taskId),
-          eq(timeEntries.endTime, null)
+          isNull(timeEntries.endTime)
         ));
 
       if (existingOngoingTimer.length === 0) {
@@ -107,7 +107,7 @@ async function addOngoingTimers() {
     // Display summary
     const finalTimeEntries = await db.select()
       .from(timeEntries)
-      .where(eq(timeEntries.endTime, null));
+      .where(isNull(timeEntries.endTime));
     
     console.log(`\nSummary:`);
     console.log(`- Total ongoing timers: ${finalTimeEntries.length}`);

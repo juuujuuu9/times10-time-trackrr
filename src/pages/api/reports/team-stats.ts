@@ -16,10 +16,13 @@ export const GET: APIRoute = async ({ url }) => {
     const endDate = new Date(now);
     endDate.setHours(23, 59, 59, 999);
 
-    // Build filter conditions for non-archived activities
+    // Build filter conditions for non-archived activities - include both startTime-based entries and manual entries
     let filterConditions = [
-      gte(timeEntries.startTime, startDate), 
-      lte(timeEntries.startTime, endDate),
+      sql`(
+        (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate})
+        OR 
+        (${timeEntries.startTime} IS NULL AND ${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${startDate} AND ${timeEntries.createdAt} <= ${endDate})
+      )`,
       eq(clients.archived, false),
       eq(projects.archived, false),
       eq(tasks.archived, false)
