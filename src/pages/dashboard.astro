@@ -415,10 +415,21 @@ const user = await requireAuth('/')(Astro) as any;
       if (entriesResponse.ok) {
         const entriesData = await entriesResponse.json();
         const recentEntries = entriesData.data || [];
-        updateRecentEntries(recentEntries);
+        
+        // Load ongoing timers - use user-specific endpoint for team members
+        const ongoingResponse = await fetch('/api/timers/user-ongoing');
+        if (ongoingResponse.ok) {
+          const ongoingData = await ongoingResponse.json();
+          const ongoingTimers = ongoingData.data || [];
+          
+          // Combine recent entries with ongoing timers
+          updateRecentEntries(recentEntries, ongoingTimers);
+        } else {
+          updateRecentEntries(recentEntries, []);
+        }
       } else {
         console.error('Failed to load time entries:', entriesResponse.status);
-        updateRecentEntries([]);
+        updateRecentEntries([], []);
       }
 
       // Load weekly stats
@@ -440,7 +451,7 @@ const user = await requireAuth('/')(Astro) as any;
     }
   }
 
-  function updateRecentEntries(entries: any[]) {
+  function updateRecentEntries(entries: any[], ongoingTimers: any[] = []) {
     const container = document.getElementById('recentEntries');
     if (!container) return;
 
@@ -451,13 +462,33 @@ const user = await requireAuth('/')(Astro) as any;
         manualTotalHours += entry.duration / 3600;
       }
     });
+    ongoingTimers.forEach(timer => {
+      if (timer.elapsedSeconds) {
+        manualTotalHours += timer.elapsedSeconds / 3600;
+      }
+    });
     console.log('Manual calculation from displayed entries:', {
       entriesCount: entries.length,
+      ongoingTimersCount: ongoingTimers.length,
       manualTotalHours: manualTotalHours.toFixed(2),
       entries: entries.map(e => ({ id: e.id, duration: e.duration, durationHours: e.duration ? (e.duration / 3600).toFixed(2) : '0' }))
     });
 
-    if (entries.length === 0) {
+    // Disable manual entry if there's an ongoing timer
+    const addTimeEntryBtn = document.getElementById('addTimeEntryBtn') as HTMLButtonElement;
+    if (addTimeEntryBtn) {
+      if (ongoingTimers.length > 0) {
+        addTimeEntryBtn.disabled = true;
+        addTimeEntryBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        addTimeEntryBtn.title = 'Please stop the current timer before adding manual entries';
+      } else {
+        addTimeEntryBtn.disabled = false;
+        addTimeEntryBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        addTimeEntryBtn.title = 'Add manual time entry';
+      }
+    }
+
+    if (entries.length === 0 && ongoingTimers.length === 0) {
       container.innerHTML = `
         <div class="text-center py-8">
           <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -470,8 +501,12 @@ const user = await requireAuth('/')(Astro) as any;
       return;
     }
 
-    // Show more entries in table format
+    // Show more entries in table format, but prioritize ongoing timers
     const displayEntries = entries.slice(0, 10);
+    
+    // Filter out any entries that are also in ongoing timers to avoid duplicates
+    const ongoingTimerIds = new Set(ongoingTimers.map(timer => timer.id));
+    const filteredEntries = displayEntries.filter(entry => !ongoingTimerIds.has(entry.id));
     
     container.innerHTML = `
       <table class="min-w-full divide-y divide-gray-200">
@@ -510,7 +545,58 @@ const user = await requireAuth('/')(Astro) as any;
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
-          ${displayEntries.map((entry: any) => {
+          ${ongoingTimers.map((timer: any) => {
+            const taskDate = new Date(timer.startTime);
+            const elapsedHours = (timer.elapsedSeconds / 3600).toFixed(1);
+            const startTime = new Date(timer.startTime);
+            const startTimeDisplay = startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            
+            return `
+              <tr class="hover:bg-gray-50 bg-green-50 border-l-4 border-green-400" data-timer-id="${timer.id}">
+                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                  ${timer.clientName || 'Unknown Client'}
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                  ${timer.projectName || 'Unknown Project'}
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                  ${timer.taskName || 'Unknown Task'}
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                  ${timer.userName || '-'}
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                  ${taskDate.toLocaleDateString()}
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                  ${startTimeDisplay}
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                  <button
+                    class="stop-timer-btn px-2 py-1 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded transition-colors"
+                    data-timer-id="${timer.id}"
+                    data-user-id="${timer.userId}"
+                    title="Stop timer"
+                  >
+                    Stop
+                  </button>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                  <span class="timer-duration" data-timer-id="${timer.id}">${elapsedHours} hours</span>
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-500 max-w-xs truncate" title="${timer.notes || ''}">
+                  ${timer.notes || '-'}
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                  <div class="flex items-center justify-end">
+                    <div class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                    <span class="text-xs text-green-600 font-medium">Running</span>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }).join('')}
+          ${filteredEntries.map((entry: any) => {
             // For manual duration entries, use createdAt for task date since startTime is null
             const taskDate = entry.startTime ? new Date(entry.startTime) : new Date(entry.createdAt);
             const durationHours = entry.duration ? (entry.duration / 3600).toFixed(1) : '0';
@@ -589,7 +675,40 @@ const user = await requireAuth('/')(Astro) as any;
       </table>
     `;
 
+    // Start updating ongoing timer durations
+    startTimerDurationUpdates(ongoingTimers);
+  }
 
+  // Timer duration update intervals
+  let timerUpdateIntervals: { [key: string]: NodeJS.Timeout } = {};
+
+  function startTimerDurationUpdates(ongoingTimers: any[]) {
+    // Clear existing intervals
+    Object.values(timerUpdateIntervals).forEach(interval => clearInterval(interval));
+    timerUpdateIntervals = {};
+
+    // Start new intervals for each timer
+    ongoingTimers.forEach(timer => {
+      const startTime = new Date(timer.startTime);
+      
+      const interval = setInterval(() => {
+        const now = new Date();
+        const elapsedSeconds = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+        const elapsedHours = (elapsedSeconds / 3600).toFixed(1);
+        
+        const durationElement = document.querySelector(`[data-timer-id="${timer.id}"] .timer-duration`);
+        if (durationElement) {
+          durationElement.textContent = `${elapsedHours} hours`;
+        }
+      }, 1000);
+      
+      timerUpdateIntervals[timer.id] = interval;
+    });
+  }
+
+  function stopTimerDurationUpdates() {
+    Object.values(timerUpdateIntervals).forEach(interval => clearInterval(interval));
+    timerUpdateIntervals = {};
   }
 
   function updateWeeklyStats(stats: any) {
@@ -652,6 +771,45 @@ const user = await requireAuth('/')(Astro) as any;
   // Load data when page loads
   document.addEventListener('DOMContentLoaded', loadDashboardData);
 
+  // Add event listeners for stop timer buttons
+  document.addEventListener('click', async (e) => {
+    const target = e.target as HTMLElement;
+    const stopBtn = target.closest('.stop-timer-btn') as HTMLElement;
+    
+    if (stopBtn) {
+      const timerId = stopBtn.getAttribute('data-timer-id');
+      const userId = stopBtn.getAttribute('data-user-id');
+      
+      if (timerId && userId) {
+        if (confirm('Are you sure you want to stop this timer?')) {
+          try {
+            const response = await fetch('/api/timers/ongoing', {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ timerId: parseInt(timerId) }),
+            });
+
+            if (response.ok) {
+              // Reload dashboard data to update the display
+              loadDashboardData();
+            } else {
+              const errorData = await response.json();
+              alert(`Error stopping timer: ${errorData.error || 'Unknown error'}`);
+            }
+          } catch (error) {
+            console.error('Error stopping timer:', error);
+            alert('Error stopping timer');
+          }
+        }
+      }
+    }
+  });
+
+  // Cleanup intervals when page unloads
+  window.addEventListener('beforeunload', stopTimerDurationUpdates);
+
 
 
 
@@ -686,7 +844,9 @@ const user = await requireAuth('/')(Astro) as any;
 Debug Summary:
 - All Entries: ${data.totals.allEntries.totalHours} hours (${data.totals.allEntries.count} entries)
 - Weekly Entries: ${data.totals.weeklyEntries.totalHours} hours (${data.totals.weeklyEntries.count} entries)
+- Ongoing Timers: ${data.totals.ongoingTimers.totalHours} hours (${data.totals.ongoingTimers.count} timers)
 - Non-Archived Weekly: ${data.totals.nonArchivedWeeklyEntries.totalHours} hours
+- Non-Archived Ongoing: ${data.totals.nonArchivedOngoingTimers.totalHours} hours
         `;
         alert(summary);
       } else {
