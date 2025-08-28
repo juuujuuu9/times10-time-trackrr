@@ -951,10 +951,11 @@ Debug Summary:
           const data = await response.json();
           const tasks = data.data || [];
           
-          // Filter tasks based on search term
+          // Filter tasks based on search term (including client name)
           const filteredTasks = tasks.filter((task: any) => 
             task.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            task.projectName.toLowerCase().includes(searchTerm.toLowerCase())
+            task.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            task.clientName.toLowerCase().includes(searchTerm.toLowerCase())
           );
 
           displayTaskDropdown(filteredTasks);
@@ -980,9 +981,10 @@ Debug Summary:
         data-task-id="${task.id}"
         data-task-name="${task.name}"
         data-project-name="${task.projectName}"
+        data-client-name="${task.clientName}"
       >
         <div class="font-medium text-gray-900">${task.name}</div>
-        <div class="text-sm text-gray-600">${task.projectName}</div>
+        <div class="text-sm text-gray-600">${task.clientName} • ${task.projectName}</div>
       </div>
     `).join('');
 
@@ -994,9 +996,10 @@ Debug Summary:
         const taskId = item.getAttribute('data-task-id');
         const taskName = item.getAttribute('data-task-name');
         const projectName = item.getAttribute('data-project-name');
+        const clientName = item.getAttribute('data-client-name');
 
         if (timeEntryTask && timeEntryTask instanceof HTMLInputElement) {
-          timeEntryTask.value = `${taskName} (${projectName})`;
+          timeEntryTask.value = `${taskName} (${clientName} • ${projectName})`;
         }
         if (timeEntryTaskId && timeEntryTaskId instanceof HTMLInputElement) {
           timeEntryTaskId.value = taskId || '';
