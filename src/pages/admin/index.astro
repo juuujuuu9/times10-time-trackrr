@@ -7,8 +7,8 @@ import { getProjectCosts, getClientCosts } from '../../db/queries';
 import { ReportsCharts } from '../../components/ReportsCharts';
 import { DashboardWidgets } from '../../components/DashboardWidgets';
 
-// Get the selected time period from query params, default to 'last7' (more likely to have data)
-const period = Astro.url.searchParams.get('period') || 'last7';
+// Get the selected time period from query params, default to 'week' (This Week)
+const period = Astro.url.searchParams.get('period') || 'week';
 // Get the selected view type from query params, default to 'project'
 const viewTypeParam = Astro.url.searchParams.get('view') || 'project';
 const viewType = (viewTypeParam === 'client' || viewTypeParam === 'project') ? viewTypeParam : 'project';
@@ -28,26 +28,14 @@ let startDate: Date | null = null;
 let endDate: Date | null = null;
 
 switch (period) {
-  case 'last7':
-    // Last 7 days
-    startDate = new Date(now);
-    startDate.setDate(now.getDate() - 7);
-    startDate.setHours(0, 0, 0, 0);
-    endDate = new Date(now);
-    endDate.setHours(23, 59, 59, 999);
+  case 'all':
+    // All time - no date filter
+    startDate = null;
+    endDate = null;
     break;
-  case 'last14':
-    // Last 14 days
+  case 'today':
+    // Today
     startDate = new Date(now);
-    startDate.setDate(now.getDate() - 14);
-    startDate.setHours(0, 0, 0, 0);
-    endDate = new Date(now);
-    endDate.setHours(23, 59, 59, 999);
-    break;
-  case 'last30':
-    // Last 30 days
-    startDate = new Date(now);
-    startDate.setDate(now.getDate() - 30);
     startDate.setHours(0, 0, 0, 0);
     endDate = new Date(now);
     endDate.setHours(23, 59, 59, 999);
@@ -68,10 +56,12 @@ switch (period) {
     startDate = new Date(now.getFullYear(), now.getMonth(), 1);
     endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
     break;
-  case 'year':
-    // Year to date
-    startDate = new Date(now.getFullYear(), 0, 1);
-    endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+  case 'quarter':
+    // This quarter
+    const currentQuarter = Math.floor(now.getMonth() / 3);
+    const quarterStartMonth = currentQuarter * 3;
+    startDate = new Date(now.getFullYear(), quarterStartMonth, 1);
+    endDate = new Date(now.getFullYear(), quarterStartMonth + 3, 0, 23, 59, 59, 999);
     break;
   case 'custom':
     // Custom period - use provided dates or default to last 30 days
@@ -90,25 +80,34 @@ switch (period) {
     }
     break;
   default:
-    // Default to last 7 days if invalid period
+    // Default to this week if invalid period
+    const defaultDayOfWeek = now.getDay();
+    const defaultDaysToSubtract = defaultDayOfWeek === 0 ? 0 : defaultDayOfWeek;
     startDate = new Date(now);
-    startDate.setDate(now.getDate() - 7);
+    startDate.setDate(now.getDate() - defaultDaysToSubtract);
     startDate.setHours(0, 0, 0, 0);
-    endDate = new Date(now);
+    endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 6);
     endDate.setHours(23, 59, 59, 999);
 }
 
-// Build filter conditions - include both startTime-based entries and manual entries based on createdAt
+// Build filter conditions - use startTime for date filtering (when work was done)
 let filterConditions = [
-  sql`(
-    (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate})
-    OR 
-    (${timeEntries.startTime} IS NULL AND ${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${startDate} AND ${timeEntries.createdAt} <= ${endDate})
-  )`,
   eq(clients.archived, false),
   eq(projects.archived, false),
   eq(tasks.archived, false)
 ];
+
+// Add date filter only if not "all time"
+if (startDate && endDate) {
+  // For entries with startTime, use startTime for filtering
+  // For entries without startTime (manual entries), use createdAt
+  filterConditions.push(sql`(
+    (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate})
+    OR 
+    (${timeEntries.startTime} IS NULL AND ${timeEntries.createdAt} >= ${startDate} AND ${timeEntries.createdAt} <= ${endDate})
+  )`);
+}
 
 // Add team member filter if a specific member is selected
 if (selectedTeamMember !== 'all') {
@@ -142,7 +141,7 @@ const totalUsers = await db.select({ count: count() }).from(users);
 const totalProjects = await db.select({ count: count() }).from(projects);
 const totalTasks = await db.select({ count: count() }).from(tasks);
 
-// Get total hours from time entries (with date filter) - always include joins for archived filtering
+// Get total hours from time entries (with all filters applied)
 const totalHoursResult = await db
   .select({
     totalSeconds: sql<number>`COALESCE(SUM(
@@ -157,9 +156,13 @@ const totalHoursResult = await db
   .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
   .innerJoin(projects, eq(tasks.projectId, projects.id))
   .innerJoin(clients, eq(projects.clientId, clients.id))
-  .where(dateFilter);
+  .where(and(
+    dateFilter,
+    // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
+    sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
+  ));
 
-// Get total cost from time entries (with date filter) - always include joins for archived filtering
+// Get total cost from time entries (with all filters applied)
 const totalCostResult = await db
   .select({
     totalCost: sql<number>`COALESCE(SUM(
@@ -175,9 +178,13 @@ const totalCostResult = await db
   .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
   .innerJoin(projects, eq(tasks.projectId, projects.id))
   .innerJoin(clients, eq(projects.clientId, clients.id))
-  .where(dateFilter);
+  .where(and(
+    dateFilter,
+    // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
+    sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
+  ));
 
-// Get active team members (users with time entries, with date filter) - always include joins for archived filtering
+// Get active team members (users with time entries, with all filters applied)
 const activeTeamMembersResult = await db
   .select({
     count: count(sql`DISTINCT ${timeEntries.userId}`)
@@ -186,7 +193,11 @@ const activeTeamMembersResult = await db
   .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
   .innerJoin(projects, eq(tasks.projectId, projects.id))
   .innerJoin(clients, eq(projects.clientId, clients.id))
-  .where(dateFilter);
+  .where(and(
+    dateFilter,
+    // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
+    sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
+  ));
 
 // Get data based on project/client selection
 const teamMemberId = selectedTeamMember !== 'all' ? parseInt(selectedTeamMember) : undefined;
@@ -209,13 +220,13 @@ let clientCosts: Array<{
 try {
   if (selectedProject) {
     // If a specific project is selected, only show project data
-    projectCosts = await getProjectCosts(startDate, endDate, teamMemberId);
+    projectCosts = await getProjectCosts(startDate || new Date(0), endDate || new Date(), teamMemberId);
     // Filter to only show the selected project
     projectCosts = projectCosts.filter(project => project.projectId === parseInt(selectedProject));
     clientCosts = []; // No client costs when specific project is selected
   } else if (selectedClient) {
     // If a specific client is selected, show all projects for that client
-    projectCosts = await getProjectCosts(startDate, endDate, teamMemberId);
+    projectCosts = await getProjectCosts(startDate || new Date(0), endDate || new Date(), teamMemberId);
     // Filter to only show projects for the selected client
     projectCosts = projectCosts.filter(project => project.clientId === parseInt(selectedClient));
     clientCosts = []; // No client costs when specific client is selected
@@ -224,15 +235,15 @@ try {
     if (viewType === 'client') {
       // Show only client costs
       projectCosts = [];
-      clientCosts = await getClientCosts(startDate, endDate, teamMemberId);
+      clientCosts = await getClientCosts(startDate || new Date(0), endDate || new Date(), teamMemberId);
     } else if (viewType === 'project') {
       // Show only project costs
-      projectCosts = await getProjectCosts(startDate, endDate, teamMemberId);
+      projectCosts = await getProjectCosts(startDate || new Date(0), endDate || new Date(), teamMemberId);
       clientCosts = [];
     } else {
       // Default: show both project and client data
-      projectCosts = await getProjectCosts(startDate, endDate, teamMemberId);
-      clientCosts = await getClientCosts(startDate, endDate, teamMemberId);
+      projectCosts = await getProjectCosts(startDate || new Date(0), endDate || new Date(), teamMemberId);
+      clientCosts = await getClientCosts(startDate || new Date(0), endDate || new Date(), teamMemberId);
     }
   }
 } catch (error) {
@@ -268,18 +279,17 @@ const totalCostFormatted = new Intl.NumberFormat('en-US', {
 // Get period display name
 const getPeriodDisplayName = (period: string) => {
   switch (period) {
-    case 'last7': return 'Last 7 Days';
-    case 'last14': return 'Last 14 Days';
-    case 'last30': return 'Last 30 Days';
+    case 'all': return 'All Time';
+    case 'today': return 'Today';
     case 'week': return 'This Week';
     case 'month': return 'This Month';
-    case 'year': return 'Year to Date';
+    case 'quarter': return 'This Quarter';
     case 'custom': 
       if (customStartDate && customEndDate) {
         return `Custom Range (${new Date(customStartDate).toLocaleDateString()} - ${new Date(customEndDate).toLocaleDateString()})`;
       }
-      return 'Last 30 Days';
-    default: return 'Last 7 Days';
+      return 'Custom Range';
+    default: return 'This Week';
   }
 };
 
@@ -359,12 +369,11 @@ try {
               class="appearance-none bg-white border border-gray-300 text-gray-900 px-4 py-3 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent transition-all duration-200 hover:bg-gray-50"
               onchange="handlePeriodChange(this.value)"
             >
-              <option value="last7" selected={period === 'last7'}>📅 Last 7 Days</option>
-              <option value="last14" selected={period === 'last14'}>📅 Last 14 Days</option>
-              <option value="last30" selected={period === 'last30'}>📅 Last 30 Days</option>
+              <option value="all" selected={period === 'all'}>📅 All Time</option>
+              <option value="today" selected={period === 'today'}>📅 Today</option>
               <option value="week" selected={period === 'week'}>📅 This Week</option>
               <option value="month" selected={period === 'month'}>📅 This Month</option>
-              <option value="year" selected={period === 'year'}>📅 Year to Date</option>
+              <option value="quarter" selected={period === 'quarter'}>📅 This Quarter</option>
               <option value="custom" selected={period === 'custom'}>📅 Custom Range</option>
             </select>
             <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
@@ -450,7 +459,7 @@ try {
             <span class="font-semibold">Showing data for:</span> {periodDisplayName}
           </p>
           <p class="text-xs text-gray-500">
-            {startDate.toLocaleDateString()} - {endDate.toLocaleDateString()}
+            {startDate && endDate ? `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}` : 'All Time'}
           </p>
         </div>
       </div>
@@ -479,10 +488,16 @@ try {
               <div class="text-xs text-gray-600">Total Cost</div>
             </div>
 
+            <!-- Active Team Members -->
+            <div class="text-left p-3 bg-gray-50 rounded border border-gray-200">
+              <div class="text-lg font-semibold text-gray-900">{activeTeamMembers}</div>
+              <div class="text-xs text-gray-600">Active Team Members</div>
+            </div>
+
             <!-- Average Hours per Member -->
             <div class="text-left p-3 bg-gray-50 rounded border border-gray-200">
               <div class="text-lg font-semibold text-gray-900">
-                {activeTeamMembers > 0 ? Math.round((totalHours / activeTeamMembers) / 3600 * 10) / 10 : 0}h
+                {activeTeamMembers > 0 ? Math.round((totalHoursDecimal / activeTeamMembers) * 10) / 10 : 0}h
               </div>
               <div class="text-xs text-gray-600">Avg Hours/Member</div>
             </div>
@@ -490,7 +505,7 @@ try {
             <!-- Average Rate -->
             <div class="text-left p-3 bg-gray-50 rounded border border-gray-200">
               <div class="text-lg font-semibold text-gray-900">
-                {totalHours > 0 ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalCost / (totalHours / 3600)) : '$0.00'}
+                {totalHoursDecimal > 0 ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalCost / totalHoursDecimal) : '$0.00'}
               </div>
               <div class="text-xs text-gray-600">Avg Rate/Hour</div>
             </div>
@@ -783,13 +798,15 @@ try {
       
       // Navigate to the selected project or client
       const periodSelect = document.getElementById('periodSelect');
-      const teamMemberSelect = document.getElementById('teamMemberSelect');
       
-      if (!periodSelect || !teamMemberSelect) return;
+      if (!periodSelect) return;
       
       const currentUrl = new URL(window.location);
       currentUrl.searchParams.set('period', periodSelect.value);
-      currentUrl.searchParams.set('teamMember', teamMemberSelect.value);
+      
+      // Get current team member from URL params (default to 'all')
+      const currentTeamMember = new URLSearchParams(window.location.search).get('teamMember') || 'all';
+      currentUrl.searchParams.set('teamMember', currentTeamMember);
       
       // Clear existing project/client params
       currentUrl.searchParams.delete('project');
@@ -862,13 +879,15 @@ try {
       
       // Navigate to remove project/client filter
       const periodSelect = document.getElementById('periodSelect');
-      const teamMemberSelect = document.getElementById('teamMemberSelect');
       
-      if (!periodSelect || !teamMemberSelect) return;
+      if (!periodSelect) return;
       
       const currentUrl = new URL(window.location);
       currentUrl.searchParams.set('period', periodSelect.value);
-      currentUrl.searchParams.set('teamMember', teamMemberSelect.value);
+      
+      // Get current team member from URL params (default to 'all')
+      const currentTeamMember = new URLSearchParams(window.location.search).get('teamMember') || 'all';
+      currentUrl.searchParams.set('teamMember', currentTeamMember);
       currentUrl.searchParams.delete('project');
       currentUrl.searchParams.delete('client');
       

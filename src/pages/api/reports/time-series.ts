@@ -19,28 +19,20 @@ export const GET: APIRoute = async ({ url }) => {
     let endDate: Date;
 
     switch (period) {
-      case 'last7':
-        startDate = new Date(now);
-        startDate.setDate(now.getDate() - 7);
-        startDate.setHours(0, 0, 0, 0);
-        endDate = new Date(now);
-        endDate.setHours(23, 59, 59, 999);
+      case 'all':
+        // All time - no date filter
+        startDate = new Date(0); // Beginning of time
+        endDate = new Date(); // Now
         break;
-      case 'last14':
+      case 'today':
+        // Today
         startDate = new Date(now);
-        startDate.setDate(now.getDate() - 14);
-        startDate.setHours(0, 0, 0, 0);
-        endDate = new Date(now);
-        endDate.setHours(23, 59, 59, 999);
-        break;
-      case 'last30':
-        startDate = new Date(now);
-        startDate.setDate(now.getDate() - 30);
         startDate.setHours(0, 0, 0, 0);
         endDate = new Date(now);
         endDate.setHours(23, 59, 59, 999);
         break;
       case 'week':
+        // This week (Sunday to Saturday)
         const dayOfWeek = now.getDay();
         const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek;
         startDate = new Date(now);
@@ -51,12 +43,23 @@ export const GET: APIRoute = async ({ url }) => {
         endDate.setHours(23, 59, 59, 999);
         break;
       case 'month':
+        // This month
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
         startDate.setHours(0, 0, 0, 0);
         endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         endDate.setHours(23, 59, 59, 999);
         break;
+      case 'quarter':
+        // This quarter
+        const currentQuarter = Math.floor(now.getMonth() / 3);
+        const quarterStartMonth = currentQuarter * 3;
+        startDate = new Date(now.getFullYear(), quarterStartMonth, 1);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(now.getFullYear(), quarterStartMonth + 3, 0);
+        endDate.setHours(23, 59, 59, 999);
+        break;
       case 'custom':
+        // Custom period
         if (customStartDate && customEndDate) {
           startDate = new Date(customStartDate);
           startDate.setHours(0, 0, 0, 0);
@@ -71,23 +74,31 @@ export const GET: APIRoute = async ({ url }) => {
         }
         break;
       default:
+        // Default to this week
+        const defaultDayOfWeek = now.getDay();
+        const defaultDaysToSubtract = defaultDayOfWeek === 0 ? 0 : defaultDayOfWeek;
         startDate = new Date(now);
-        startDate.setDate(now.getDate() - 7);
+        startDate.setDate(now.getDate() - defaultDaysToSubtract);
         startDate.setHours(0, 0, 0, 0);
-        endDate = new Date(now);
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6);
         endDate.setHours(23, 59, 59, 999);
     }
 
-    // Build filter conditions for non-archived activities - include both startTime-based entries and manual entries
+    // Build filter conditions - use startTime for date filtering (when work was done)
     let filterConditions = [
+      // For entries with startTime, use startTime for filtering
+      // For entries without startTime (manual entries), use createdAt
       sql`(
         (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate})
         OR 
-        (${timeEntries.startTime} IS NULL AND ${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${startDate} AND ${timeEntries.createdAt} <= ${endDate})
+        (${timeEntries.startTime} IS NULL AND ${timeEntries.createdAt} >= ${startDate} AND ${timeEntries.createdAt} <= ${endDate})
       )`,
       eq(clients.archived, false),
       eq(projects.archived, false),
-      eq(tasks.archived, false)
+      eq(tasks.archived, false),
+      // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
+      sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
     ];
 
     if (teamMemberId && teamMemberId !== 'all') {

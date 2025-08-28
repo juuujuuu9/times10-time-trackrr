@@ -52,7 +52,9 @@ export async function getWeeklyTimeEntries() {
         )`,
         eq(clients.archived, false),
         eq(projects.archived, false),
-        eq(tasks.archived, false)
+        eq(tasks.archived, false),
+        // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
+        sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
       )
     )
     .orderBy(timeEntries.startTime);
@@ -87,7 +89,9 @@ export async function getWeeklyTotals() {
         )`,
         eq(clients.archived, false),
         eq(projects.archived, false),
-        eq(tasks.archived, false)
+        eq(tasks.archived, false),
+        // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
+        sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
       )
     );
 
@@ -116,7 +120,9 @@ export async function getWeeklyTotals() {
         )`,
         eq(clients.archived, false),
         eq(projects.archived, false),
-        eq(tasks.archived, false)
+        eq(tasks.archived, false),
+        // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
+        sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
       )
     );
 
@@ -138,7 +144,9 @@ export async function getWeeklyTotals() {
         )`,
         eq(clients.archived, false),
         eq(projects.archived, false),
-        eq(tasks.archived, false)
+        eq(tasks.archived, false),
+        // Exclude ongoing timers (entries with startTime but no endTime)
+        sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL)`
       )
     );
 
@@ -188,7 +196,9 @@ export async function getProjectCosts(startDate: Date, endDate: Date, teamMember
             eq(timeEntries.userId, teamMemberId),
             eq(clients.archived, false),
             eq(projects.archived, false),
-            eq(tasks.archived, false)
+            eq(tasks.archived, false),
+            // Exclude ongoing timers (entries with startTime but no endTime)
+            sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL)`
           )
         : and(
             sql`(
@@ -198,7 +208,9 @@ export async function getProjectCosts(startDate: Date, endDate: Date, teamMember
             )`,
             eq(clients.archived, false),
             eq(projects.archived, false),
-            eq(tasks.archived, false)
+            eq(tasks.archived, false),
+            // Exclude ongoing timers (entries with startTime but no endTime)
+            sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL)`
           )
     )
     .groupBy(projects.id, projects.name, clients.id, clients.name)
@@ -250,7 +262,9 @@ export async function getClientCosts(startDate: Date, endDate: Date, teamMemberI
             eq(timeEntries.userId, teamMemberId),
             eq(clients.archived, false),
             eq(projects.archived, false),
-            eq(tasks.archived, false)
+            eq(tasks.archived, false),
+            // Exclude ongoing timers (entries with startTime but no endTime)
+            sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL)`
           )
         : and(
             sql`(
@@ -260,7 +274,9 @@ export async function getClientCosts(startDate: Date, endDate: Date, teamMemberI
             )`,
             eq(clients.archived, false),
             eq(projects.archived, false),
-            eq(tasks.archived, false)
+            eq(tasks.archived, false),
+            // Exclude ongoing timers (entries with startTime but no endTime)
+            sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL)`
           )
     )
     .groupBy(clients.id, clients.name)
