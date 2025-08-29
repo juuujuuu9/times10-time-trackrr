@@ -19,6 +19,13 @@ export const GET: APIRoute = async () => {
         taskName: tasks.name,
         projectName: projects.name,
         clientName: clients.name,
+        duration: sql<number>`CASE 
+          WHEN ${timeEntries.durationManual} IS NOT NULL 
+          THEN ${timeEntries.durationManual}
+          WHEN ${timeEntries.endTime} IS NOT NULL 
+          THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))
+          ELSE 0
+        END`.as('duration')
       })
       .from(timeEntries)
       .innerJoin(users, sql`${timeEntries.userId} = ${users.id}`)

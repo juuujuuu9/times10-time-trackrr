@@ -273,7 +273,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
               <tbody class="bg-white divide-y divide-gray-200">
                 {userTimeEntries.map((entry) => {
                   const taskDate = entry.startTime ? new Date(entry.startTime) : new Date(entry.createdAt);
-                  const duration = entry.durationManual ? entry.durationManual / 3600 : 0;
+                  const duration = entry.duration ? entry.duration / 3600 : 0;
                   
                   // Check if this is a manual duration entry (no meaningful start/end times)
                   // Manual duration entries have startTime set to task date but endTime is null
@@ -692,7 +692,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
               // Update the duration cell
               const durationCell = row.querySelector('td:nth-child(7)'); // Duration column
               if (durationCell && result.data) {
-                const duration = result.data.durationManual ? result.data.durationManual / 3600 : 0;
+                const duration = result.data.duration ? result.data.duration / 3600 : 0;
                 durationCell.textContent = `${duration ? Math.round(duration * 10) / 10 : 0} hours`;
               }
               

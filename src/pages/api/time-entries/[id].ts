@@ -206,9 +206,31 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
       .where(eq(timeEntries.id, parseInt(entryId)))
       .returning();
 
+    // Get the updated entry with calculated duration
+    const entryWithDuration = await db
+      .select({
+        id: timeEntries.id,
+        startTime: timeEntries.startTime,
+        endTime: timeEntries.endTime,
+        durationManual: timeEntries.durationManual,
+        notes: timeEntries.notes,
+        createdAt: timeEntries.createdAt,
+        updatedAt: timeEntries.updatedAt,
+        duration: sql<number>`CASE 
+          WHEN ${timeEntries.durationManual} IS NOT NULL 
+          THEN ${timeEntries.durationManual}
+          WHEN ${timeEntries.endTime} IS NOT NULL 
+          THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))
+          ELSE 0
+        END`.as('duration')
+      })
+      .from(timeEntries)
+      .where(eq(timeEntries.id, parseInt(entryId)))
+      .limit(1);
+
     return new Response(JSON.stringify({
       success: true,
-      data: updatedEntry[0]
+      data: entryWithDuration[0]
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }

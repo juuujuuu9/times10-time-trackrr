@@ -171,7 +171,7 @@ class AdminRealTimeUpdates {
     row.className = 'hover:bg-gray-50';
     
     const taskDate = new Date(entry.startTime);
-    const duration = entry.durationManual ? entry.durationManual / 3600 : 0;
+    const duration = entry.duration ? entry.duration / 3600 : 0;
     
     row.innerHTML = `
       <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">

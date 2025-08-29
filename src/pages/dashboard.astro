@@ -1650,7 +1650,7 @@ const user = await requireAuth('/')(Astro) as any;
               // Update the duration cell
               const durationCell = row?.querySelector('td:nth-child(7)'); // Duration column
               if (durationCell && result.data) {
-                const duration = result.data.durationManual ? result.data.durationManual / 3600 : 0;
+                const duration = result.data.duration ? result.data.duration / 3600 : 0;
                 durationCell.textContent = `${duration ? Math.round(duration * 10) / 10 : 0} hours`;
               }
               
