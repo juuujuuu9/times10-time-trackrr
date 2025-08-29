@@ -186,7 +186,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
               >
                 <option value="">All Tasks</option>
                 {userTasks.map((task) => (
-                  <option value={task.name}>{task.clientName} - {task.projectName} - {task.name}</option>
+                  <option value={task.name}>{task.projectName} - {task.name}</option>
                 ))}
               </select>
             </div>
