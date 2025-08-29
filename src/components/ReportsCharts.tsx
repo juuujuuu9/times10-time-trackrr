@@ -55,6 +55,10 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
   // Sort data by cost in descending order for better visualization
   const sortedData = [...data].sort((a, b) => b.totalCost - a.totalCost);
 
+  // Calculate better scaling for small value differences
+  const maxCost = Math.max(...sortedData.map(item => item.totalCost));
+  const suggestedMax = maxCost < 100 ? Math.ceil(maxCost * 1.2) : undefined;
+
   const chartData = {
     labels: sortedData.map(item => {
       if (item.projectName && item.clientName) {
@@ -147,6 +151,9 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
             size: 12,
           },
         },
+        // Add better scaling for small value differences
+        beginAtZero: true,
+        suggestedMax: suggestedMax
       },
       y: {
         type: 'category' as const,
