@@ -284,6 +284,15 @@ export default function Timer() {
     return task.displayName || `${task.projectName} - ${task.name}`;
   };
 
+  // Get client name for display
+  const getSelectedTaskClientName = () => {
+    if (!selectedTask) return '';
+    const task = tasks.find(t => t.id === selectedTask);
+    if (!task) return '';
+    
+    return task.clientName;
+  };
+
   // Organize tasks by client for dropdown display
   const organizeTasksByClient = () => {
     const clientGroups: { [clientName: string]: Task[] } = {};
@@ -473,6 +482,7 @@ export default function Timer() {
       {isRunning && selectedTask && (
         <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
           <p className="text-sm font-medium text-gray-900">Currently tracking:</p>
+          <p className="text-lg font-medium text-gray-800">{getSelectedTaskClientName()}</p>
           <p className="text-sm text-gray-700">{getSelectedTaskName()}</p>
           <p className="text-xs text-gray-600 mt-1">
             Started at: {startTime?.toLocaleTimeString()}
