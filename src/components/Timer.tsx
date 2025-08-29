@@ -213,6 +213,13 @@ export default function Timer() {
     };
   }, [selectedTask, isRunning, currentUserId, timerData, forceStopTimer]);
 
+  // Close dropdown when timer starts
+  useEffect(() => {
+    if (isRunning) {
+      setTaskDropdownOpen(false);
+    }
+  }, [isRunning]);
+
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
@@ -232,6 +239,8 @@ export default function Timer() {
 
     const success = await startTimer(selectedTask);
     if (success) {
+      // Close the dropdown when timer starts
+      setTaskDropdownOpen(false);
       alert('Timer started successfully!');
       // Trigger a custom event to notify the dashboard to refresh
       window.dispatchEvent(new CustomEvent('timerStarted'));
@@ -447,7 +456,7 @@ export default function Timer() {
             placeholder="🔍 Search tasks..."
             value={taskSearchTerm}
             onChange={(e) => setTaskSearchTerm(e.target.value)}
-            onFocus={() => setTaskDropdownOpen(true)}
+            onFocus={() => !isRunning && setTaskDropdownOpen(true)}
             disabled={isRunning}
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 disabled:bg-gray-100"
           />
@@ -459,7 +468,7 @@ export default function Timer() {
         </div>
         
         {/* Task Dropdown */}
-        {taskDropdownOpen && (
+        {taskDropdownOpen && !isRunning && (
           <div 
             className="absolute z-50 w-full bg-white border border-gray-300 rounded-lg shadow-lg overflow-hidden" 
             style={{ 

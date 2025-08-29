@@ -411,15 +411,18 @@ export default function AdminTimer() {
       <div className="mb-3 relative task-dropdown-container">
         <input
           type="text"
-          placeholder="🔍 Search tasks..."
+          placeholder={isRunning ? "Timer is running..." : "🔍 Search tasks..."}
           value={taskSearchTerm}
           onChange={(e) => setTaskSearchTerm(e.target.value)}
-          onFocus={() => setTaskDropdownOpen(true)}
-          className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-400"
+          onFocus={() => !isRunning && setTaskDropdownOpen(true)}
+          disabled={isRunning}
+          className={`w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-400 ${
+            isRunning ? 'bg-gray-100 cursor-not-allowed' : ''
+          }`}
         />
         
         {/* Task Dropdown */}
-        {taskDropdownOpen && (
+        {taskDropdownOpen && !isRunning && (
           <div 
             className="absolute z-50 w-full bg-white border border-gray-300 rounded shadow-lg overflow-hidden" 
             style={{ 
@@ -436,6 +439,7 @@ export default function AdminTimer() {
         {tasks.length === 0 && (
           <p className="text-xs text-gray-500 mt-1">No tasks assigned</p>
         )}
+
       </div>
 
       {/* Active Task Display */}

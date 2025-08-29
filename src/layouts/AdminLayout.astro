@@ -47,7 +47,7 @@ const navItems = [
   <body class="font-sans" style="background-color: #f0eef5;">
     {!user || !isAdmin ? (
       <!-- Access Denied -->
-      <div class="min-h-screen flex items-center justify-center" style="background-color: #f0eef5;">
+      <div class="min-h-[100dvh] flex items-center justify-center" style="background-color: #f0eef5;">
         <div class="text-center">
           <div class="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
             <span class="text-gray-700 text-2xl">🚫</span>
@@ -63,7 +63,7 @@ const navItems = [
     ) : (
       <>
         <!-- Loading State (shown immediately) -->
-        <div id="loadingState" class="min-h-screen flex items-center justify-center" style="background-color: #f0eef5;">
+        <div id="loadingState" class="min-h-[100dvh] flex items-center justify-center" style="background-color: #f0eef5;">
           <div class="text-center">
             <div class="w-12 h-12 border-4 border-gray-300 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p class="text-gray-600 text-lg">Loading admin panel...</p>

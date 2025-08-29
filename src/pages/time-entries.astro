@@ -237,6 +237,9 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
               <thead class="bg-gray-50">
                 <tr>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Client
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Project
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -280,6 +283,9 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                   
                   return (
                     <tr class="hover:bg-gray-50" data-entry-id={entry.id}>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {entry.clientName}
+                      </td>
                       <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {entry.projectName}
                       </td>
@@ -684,7 +690,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
               const row = this.closest('tr');
               
               // Update the duration cell
-              const durationCell = row.querySelector('td:nth-child(7)'); // Duration column
+              const durationCell = row.querySelector('td:nth-child(8)'); // Duration column
               if (durationCell && result.data) {
                 const duration = result.data.durationManual ? result.data.durationManual / 3600 : 0;
                 durationCell.textContent = `${duration ? Math.round(duration * 10) / 10 : 0} hours`;
