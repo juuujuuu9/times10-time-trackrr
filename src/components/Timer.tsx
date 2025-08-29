@@ -7,6 +7,7 @@ interface Task {
   projectName: string;
   clientName: string;
   status: string;
+  displayName?: string; // For system-generated tasks
 }
 
 export default function Timer() {
@@ -21,6 +22,23 @@ export default function Timer() {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [localTime, setLocalTime] = useState(0);
+  const [taskSearchTerm, setTaskSearchTerm] = useState('');
+  const [taskDropdownOpen, setTaskDropdownOpen] = useState(false);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.task-dropdown-container')) {
+        setTaskDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
   
   // Use real-time timer hook for server synchronization
   const {
@@ -43,29 +61,42 @@ export default function Timer() {
     if (!selectedTask || !currentUserId) return;
 
     try {
+      // Load regular tasks
       const response = await fetch(`/api/tasks?assignedTo=${currentUserId}`);
+      let regularTasks = [];
       if (response.ok) {
         const tasksData = await response.json();
-        const currentTasks = tasksData.data || [];
-        setTasks(currentTasks);
+        regularTasks = tasksData.data || [];
+      }
+
+      // Load system tasks
+      const systemResponse = await fetch(`/api/system-tasks?assignedTo=${currentUserId}`);
+      let systemTasks = [];
+      if (systemResponse.ok) {
+        const systemTasksData = await systemResponse.json();
+        systemTasks = systemTasksData.data || [];
+      }
+
+      // Combine all tasks
+      const currentTasks = [...regularTasks, ...systemTasks];
+      setTasks(currentTasks);
+      
+      // Check if the selected task still exists
+      const taskExists = currentTasks.some((task: Task) => task.id === selectedTask);
+      
+      if (!taskExists && isRunning) {
+        // Task was deleted while timer was running - stop the timer
+        console.warn(`Task ${selectedTask} was deleted while timer was running. Stopping timer.`);
         
-        // Check if the selected task still exists
-        const taskExists = currentTasks.some((task: Task) => task.id === selectedTask);
-        
-        if (!taskExists && isRunning) {
-          // Task was deleted while timer was running - stop the timer
-          console.warn(`Task ${selectedTask} was deleted while timer was running. Stopping timer.`);
-          
-          // Stop the timer using the real-time system
-          if (timerData) {
-            await forceStopTimer(timerData.id);
-          }
-          
-          setSelectedTask(null);
-          
-          // Show notification to user
-          alert('The task you were tracking has been deleted. The timer has been stopped.');
+        // Stop the timer using the real-time system
+        if (timerData) {
+          await forceStopTimer(timerData.id);
         }
+        
+        setSelectedTask(null);
+        
+        // Show notification to user
+        alert('The task you were tracking has been deleted. The timer has been stopped.');
       }
     } catch (error) {
       console.error('Error validating selected task:', error);
@@ -84,14 +115,29 @@ export default function Timer() {
             const userId = userData.user.id;
             setCurrentUserId(userId);
             
-            // Load user's tasks
+            // Load user's regular tasks
             const tasksResponse = await fetch(`/api/tasks?assignedTo=${userId}`);
+            let regularTasks = [];
             if (tasksResponse.ok) {
               const tasksData = await tasksResponse.json();
-              setTasks(tasksData.data || []);
+              regularTasks = tasksData.data || [];
             } else {
-              console.error('Failed to load tasks:', tasksResponse.status);
+              console.error('Failed to load regular tasks:', tasksResponse.status);
             }
+
+            // Load user's system-generated tasks (General tasks)
+            const systemTasksResponse = await fetch(`/api/system-tasks?assignedTo=${userId}`);
+            let systemTasks = [];
+            if (systemTasksResponse.ok) {
+              const systemTasksData = await systemTasksResponse.json();
+              systemTasks = systemTasksData.data || [];
+            } else {
+              console.error('Failed to load system tasks:', systemTasksResponse.status);
+            }
+
+            // Combine regular tasks and system tasks
+            const allTasks = [...regularTasks, ...systemTasks];
+            setTasks(allTasks);
           }
         }
       } catch (error) {
@@ -108,8 +154,13 @@ export default function Timer() {
   useEffect(() => {
     if (timerData && timerData.task) {
       setSelectedTask(timerData.taskId);
+      // Update search term to show the selected task
+      const task = tasks.find(t => t.id === timerData.taskId);
+      if (task) {
+        setTaskSearchTerm(task.displayName || `${task.clientName} - ${task.projectName} - ${task.name}`);
+      }
     }
-  }, [timerData]);
+  }, [timerData, tasks]);
 
   // Local time counter for smooth display
   useEffect(() => {
@@ -227,7 +278,124 @@ export default function Timer() {
   const getSelectedTaskName = () => {
     if (!selectedTask) return '';
     const task = tasks.find(t => t.id === selectedTask);
-    return task ? `${task.clientName} - ${task.projectName} - ${task.name}` : '';
+    if (!task) return '';
+    
+    // Use displayName for system-generated tasks, otherwise use the standard format
+    return task.displayName || `${task.clientName} - ${task.projectName} - ${task.name}`;
+  };
+
+  // Organize tasks by client for dropdown display
+  const organizeTasksByClient = () => {
+    const clientGroups: { [clientName: string]: Task[] } = {};
+    
+    tasks.forEach(task => {
+      const clientName = task.clientName;
+      if (!clientGroups[clientName]) {
+        clientGroups[clientName] = [];
+      }
+      clientGroups[clientName].push(task);
+    });
+    
+    // Sort clients alphabetically
+    const sortedClients = Object.keys(clientGroups).sort();
+    
+    // For each client, sort tasks: General task first, then other tasks alphabetically
+    sortedClients.forEach(clientName => {
+      clientGroups[clientName].sort((a, b) => {
+        // Put General tasks first
+        if (a.name === 'General' && b.name !== 'General') return -1;
+        if (a.name !== 'General' && b.name === 'General') return 1;
+        
+        // Then sort alphabetically
+        return a.name.localeCompare(b.name);
+      });
+    });
+    
+    return { clientGroups, sortedClients };
+  };
+
+  // Filter tasks based on search term
+  const getFilteredTasks = () => {
+    if (!taskSearchTerm.trim()) {
+      return organizeTasksByClient();
+    }
+    
+    const searchTerm = taskSearchTerm.toLowerCase();
+    const filteredTasks = tasks.filter(task => 
+      task.clientName.toLowerCase().includes(searchTerm) ||
+      task.projectName.toLowerCase().includes(searchTerm) ||
+      task.name.toLowerCase().includes(searchTerm) ||
+      (task.displayName && task.displayName.toLowerCase().includes(searchTerm))
+    );
+    
+    const clientGroups: { [clientName: string]: Task[] } = {};
+    filteredTasks.forEach(task => {
+      const clientName = task.clientName;
+      if (!clientGroups[clientName]) {
+        clientGroups[clientName] = [];
+      }
+      clientGroups[clientName].push(task);
+    });
+    
+    const sortedClients = Object.keys(clientGroups).sort();
+    
+    sortedClients.forEach(clientName => {
+      clientGroups[clientName].sort((a, b) => {
+        if (a.name === 'General' && b.name !== 'General') return -1;
+        if (a.name !== 'General' && b.name === 'General') return 1;
+        return a.name.localeCompare(b.name);
+      });
+    });
+    
+    return { clientGroups, sortedClients };
+  };
+
+  // Render the task dropdown
+  const renderTaskDropdown = () => {
+    const { clientGroups, sortedClients } = getFilteredTasks();
+    
+    if (sortedClients.length === 0) {
+      return (
+        <div className="px-4 py-2 text-gray-500 text-sm">
+          {taskSearchTerm.trim() ? 'No tasks found' : 'No tasks assigned'}
+        </div>
+      );
+    }
+    
+    return (
+      <div>
+        {sortedClients.map((clientName, clientIndex) => (
+          <div key={clientName}>
+            {/* Client Header */}
+            <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+              {clientName}
+            </div>
+            
+            {/* Tasks for this client */}
+            {clientGroups[clientName].map((task, taskIndex) => (
+              <div
+                key={task.id}
+                className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
+                onClick={() => {
+                  setSelectedTask(task.id);
+                  setTaskSearchTerm(task.displayName || `${task.clientName} - ${task.projectName} - ${task.name}`);
+                  setTaskDropdownOpen(false);
+                }}
+              >
+                <div className="font-medium text-gray-900">
+                  {task.displayName || `${task.clientName} - ${task.projectName} - ${task.name}`}
+                </div>
+                {!task.displayName && (
+                  <div className="text-xs text-gray-500">
+                    {task.projectName} • {task.name}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    );
   };
 
   // Show loading state while data is being loaded
@@ -264,24 +432,43 @@ export default function Timer() {
       <h2 className="text-2xl font-bold text-gray-800 mb-4">Time Tracker</h2>
       
       {/* Task Selection */}
-      <div className="mb-6">
+      <div className="mb-6 relative task-dropdown-container">
         <label htmlFor="taskSelect" className="block text-sm font-medium text-gray-700 mb-2">
           Select Task
         </label>
-        <select
-          id="taskSelect"
-          value={selectedTask || ''}
-          onChange={(e) => setSelectedTask(e.target.value ? parseInt(e.target.value) : null)}
-          disabled={isRunning}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 disabled:bg-gray-100"
-        >
-          <option value="">Choose a task...</option>
-          {tasks.map((task) => (
-            <option key={task.id} value={task.id}>
-              {task.clientName} - {task.projectName} - {task.name}
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <input
+            type="text"
+            id="taskSelect"
+            placeholder="🔍 Search tasks..."
+            value={taskSearchTerm}
+            onChange={(e) => setTaskSearchTerm(e.target.value)}
+            onFocus={() => setTaskDropdownOpen(true)}
+            disabled={isRunning}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 disabled:bg-gray-100"
+          />
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+            <svg className="fill-current h-5 w-5 transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+            </svg>
+          </div>
+        </div>
+        
+        {/* Task Dropdown */}
+        {taskDropdownOpen && (
+          <div 
+            className="absolute z-50 w-full bg-white border border-gray-300 rounded-lg shadow-lg overflow-hidden" 
+            style={{ 
+              top: '100%', 
+              left: 0, 
+              maxHeight: '240px',
+              overflowY: 'auto'
+            }}
+          >
+            {renderTaskDropdown()}
+          </div>
+        )}
+        
         {tasks.length === 0 && (
           <p className="text-sm text-gray-500 mt-1">No tasks assigned. Contact your manager.</p>
         )}

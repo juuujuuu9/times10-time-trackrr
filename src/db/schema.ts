@@ -39,6 +39,7 @@ export const projects = pgTable('projects', {
   clientId: integer('client_id').references(() => clients.id).notNull(),
   name: varchar('name', { length: 255 }).notNull(),
   archived: boolean('archived').notNull().default(false),
+  isSystem: boolean('is_system').notNull().default(false), // Mark system-generated projects
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -52,6 +53,7 @@ export const tasks = pgTable('tasks', {
   status: varchar('status', { length: 50 }).notNull().default('pending'),
   priority: varchar('priority', { length: 20 }).notNull().default('regular'),
   archived: boolean('archived').notNull().default(false),
+  isSystem: boolean('is_system').notNull().default(false), // Mark system-generated tasks
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

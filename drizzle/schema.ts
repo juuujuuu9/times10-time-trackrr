@@ -65,6 +65,7 @@ export const tasks = pgTable("tasks", {
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
 	archived: boolean().default(false).notNull(),
 	priority: varchar({ length: 20 }).default('regular').notNull(),
+	isSystem: boolean().default(false).notNull(),
 }, (table) => [
 	foreignKey({
 			columns: [table.projectId],
@@ -80,6 +81,7 @@ export const projects = pgTable("projects", {
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
 	archived: boolean().default(false).notNull(),
+	isSystem: boolean().default(false).notNull(),
 }, (table) => [
 	foreignKey({
 			columns: [table.clientId],

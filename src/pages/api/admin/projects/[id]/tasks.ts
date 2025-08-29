@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../../../db/index';
 import { tasks, taskAssignments, users, timeEntries } from '../../../../../db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { eq, sql, and } from 'drizzle-orm';
 
 export const prerender = false;
 
@@ -27,11 +27,15 @@ export const GET: APIRoute = async ({ params }) => {
         description: tasks.description,
         status: tasks.status,
         priority: tasks.priority,
+        isSystem: tasks.isSystem,
         createdAt: tasks.createdAt,
         updatedAt: tasks.updatedAt,
       })
       .from(tasks)
-      .where(eq(tasks.projectId, parseInt(projectId)))
+      .where(and(
+        eq(tasks.projectId, parseInt(projectId)),
+        eq(tasks.isSystem, false) // Exclude system-generated tasks
+      ))
       .orderBy(tasks.createdAt);
 
     console.log('Found tasks:', projectTasks.length);

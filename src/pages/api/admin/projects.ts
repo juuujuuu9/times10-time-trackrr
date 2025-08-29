@@ -15,6 +15,7 @@ export const GET: APIRoute = async ({ url }) => {
         name: projects.name,
         clientId: projects.clientId,
         archived: projects.archived,
+        isSystem: projects.isSystem,
         createdAt: projects.createdAt,
         updatedAt: projects.updatedAt,
         clientArchived: clients.archived,
@@ -23,17 +24,18 @@ export const GET: APIRoute = async ({ url }) => {
       .leftJoin(clients, eq(projects.clientId, clients.id));
     
     // Only show projects from active clients, but include archived projects if requested
+    // Exclude system-generated projects from regular listings
     if (includeArchived) {
       // Show all projects from active clients (both archived and non-archived projects)
-      query = query.where(eq(clients.archived, false));
+      query = query.where(and(eq(clients.archived, false), eq(projects.isSystem, false)));
     } else {
       // Show only non-archived projects from active clients
-      query = query.where(and(eq(clients.archived, false), eq(projects.archived, false)));
+      query = query.where(and(eq(clients.archived, false), eq(projects.archived, false), eq(projects.isSystem, false)));
     }
     
     const allProjects = await query;
     
-    // Remove the clientArchived field from the response
+    // Remove the clientArchived and isSystem fields from the response
     const cleanProjects = allProjects.map(project => ({
       id: project.id,
       name: project.name,

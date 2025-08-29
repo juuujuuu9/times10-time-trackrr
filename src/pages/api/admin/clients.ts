@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db/index';
-import { clients } from '../../../db/schema';
+import { clients, projects, tasks, users, taskAssignments } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
 import { getSessionUser } from '../../../utils/session';
 
@@ -45,12 +45,46 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Trim the name to remove leading/trailing whitespace
     const trimmedName = name.trim();
 
+    // Create the client
     const newClient = await db.insert(clients).values({
       name: trimmedName,
       createdBy: user.id,
     }).returning();
 
     console.log('Client created successfully:', newClient[0]);
+
+    // Create the "Time Tracking" project for this client
+    const timeTrackingProject = await db.insert(projects).values({
+      name: 'Time Tracking',
+      clientId: newClient[0].id,
+      isSystem: true, // Mark as system-generated
+    }).returning();
+
+    console.log('Time Tracking project created:', timeTrackingProject[0]);
+
+    // Get all active users to assign the General task to everyone
+    const allUsers = await db.select().from(users).where(eq(users.status, 'active'));
+
+    // Create the "General" task for the Time Tracking project
+    const generalTask = await db.insert(tasks).values({
+      name: 'General',
+      projectId: timeTrackingProject[0].id,
+      description: `General time tracking for ${trimmedName}`,
+      isSystem: true, // Mark as system-generated
+    }).returning();
+
+    console.log('General task created:', generalTask[0]);
+
+    // Assign the General task to all active users
+    if (allUsers.length > 0) {
+      const taskAssignments = allUsers.map(user => ({
+        taskId: generalTask[0].id,
+        userId: user.id,
+      }));
+
+      await db.insert(taskAssignments).values(taskAssignments);
+      console.log(`Assigned General task to ${allUsers.length} users`);
+    }
 
     return new Response(JSON.stringify(newClient[0]), {
       status: 201,
