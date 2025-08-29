@@ -17,6 +17,13 @@ const allTimeEntries = await db
     taskName: tasks.name,
     projectName: projects.name,
     clientName: clients.name,
+    duration: sql<number>`CASE 
+      WHEN ${timeEntries.durationManual} IS NOT NULL 
+      THEN ${timeEntries.durationManual}
+      WHEN ${timeEntries.endTime} IS NOT NULL 
+      THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))
+      ELSE 0
+    END`.as('duration')
   })
   .from(timeEntries)
   .innerJoin(users, sql`${timeEntries.userId} = ${users.id}`)
@@ -198,7 +205,16 @@ const allTasks = await db
           <tbody class="bg-white divide-y divide-gray-200">
             {allTimeEntries.map((entry) => {
               const taskDate = entry.startTime ? new Date(entry.startTime) : new Date(entry.createdAt);
-              const duration = entry.durationManual ? entry.durationManual / 3600 : 0;
+              
+              // Calculate duration properly - use durationManual if available, otherwise calculate from start/end times
+              let duration = 0;
+              if (entry.durationManual) {
+                duration = entry.durationManual / 3600;
+              } else if (entry.startTime && entry.endTime) {
+                const startTime = new Date(entry.startTime);
+                const endTime = new Date(entry.endTime);
+                duration = (endTime.getTime() - startTime.getTime()) / (1000 * 3600); // Convert to hours
+              }
               
               return (
                 <tr class="hover:bg-gray-50">

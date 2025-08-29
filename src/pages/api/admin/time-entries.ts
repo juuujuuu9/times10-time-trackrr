@@ -19,6 +19,7 @@ export const GET: APIRoute = async () => {
         taskName: tasks.name,
         projectName: projects.name,
         clientName: clients.name,
+
       })
       .from(timeEntries)
       .innerJoin(users, sql`${timeEntries.userId} = ${users.id}`)
