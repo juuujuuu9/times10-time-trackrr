@@ -90,126 +90,97 @@ if (user) {
 </Layout>
 
 <script>
-  try {
-    console.log('Login script starting...');
+  // Function to check if both fields are filled and update button color
+  function updateButtonColor() {
+    const email = (document.getElementById('email') as HTMLInputElement)?.value;
+    const password = (document.getElementById('password') as HTMLInputElement)?.value;
+    const button = document.getElementById('loginButton') as HTMLButtonElement;
     
-    // Function to check if both fields are filled and update button color
-    function updateButtonColor() {
+    if (email && password) {
+      button.style.backgroundColor = '#d63a2e';
+      button.classList.remove('bg-[#415058]');
+    } else {
+      button.style.backgroundColor = '';
+      button.classList.add('bg-[#415058]');
+    }
+  }
+
+  // Add event listeners to input fields
+  const emailInput = document.getElementById('email');
+  const passwordInput = document.getElementById('password');
+  
+  if (emailInput) {
+    emailInput.addEventListener('input', updateButtonColor);
+  }
+  
+  if (passwordInput) {
+    passwordInput.addEventListener('input', updateButtonColor);
+  }
+
+  const loginForm = document.getElementById('loginForm');
+
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const form = e.target as HTMLFormElement;
+      const email = (form.elements.namedItem('email') as HTMLInputElement).value;
+      const password = (form.elements.namedItem('password') as HTMLInputElement).value;
+      
+      const button = document.getElementById('loginButton') as HTMLButtonElement;
+      const buttonText = document.getElementById('buttonText') as HTMLSpanElement;
+      const loadingSpinner = document.getElementById('loadingSpinner') as HTMLSpanElement;
+      const errorMessage = document.getElementById('errorMessage') as HTMLDivElement;
+      const errorText = document.getElementById('errorText') as HTMLParagraphElement;
+      
+      // Show loading state
+      button.disabled = true;
+      buttonText.classList.add('hidden');
+      loadingSpinner.classList.remove('hidden');
+      errorMessage.classList.add('hidden');
+      
       try {
-        const email = (document.getElementById('email') as HTMLInputElement)?.value;
-        const password = (document.getElementById('password') as HTMLInputElement)?.value;
-        const button = document.getElementById('loginButton') as HTMLButtonElement;
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, password }),
+        });
         
-        if (email && password) {
-          button.style.backgroundColor = '#d63a2e';
-          button.classList.remove('bg-[#415058]');
+        const data = await response.json();
+        
+        if (data.success) {
+          // Redirect based on user role
+          if (data.user.role === 'admin') {
+            window.location.href = '/admin';
+          } else if (data.user.role === 'manager') {
+            window.location.href = '/manager';
+          } else {
+            window.location.href = '/dashboard';
+          }
         } else {
-          button.style.backgroundColor = '';
-          button.classList.add('bg-[#415058]');
+          // Show error message
+          errorText.textContent = data.error || 'Login failed';
+          errorMessage.classList.remove('hidden');
         }
       } catch (error) {
-        console.error('Error in updateButtonColor:', error);
-      }
-    }
-
-    // Add event listeners to input fields
-    const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
-    
-    if (emailInput) {
-      emailInput.addEventListener('input', updateButtonColor);
-      console.log('Email input listener added');
-    }
-    
-    if (passwordInput) {
-      passwordInput.addEventListener('input', updateButtonColor);
-      console.log('Password input listener added');
-    }
-
-    const loginForm = document.getElementById('loginForm');
-    console.log('Login form found:', !!loginForm);
-
-    if (loginForm) {
-      console.log('Adding form submit listener...');
-      
-      loginForm.addEventListener('submit', async (e) => {
-        console.log('Form submitted - preventing default');
-        e.preventDefault();
-        e.stopPropagation();
+        console.error('Login error:', error);
+        const errorText = document.getElementById('errorText') as HTMLParagraphElement;
+        const errorMessage = document.getElementById('errorMessage') as HTMLDivElement;
+        errorText.textContent = 'Network error. Please try again.';
+        errorMessage.classList.remove('hidden');
+      } finally {
+        // Reset button state
+        const button = document.getElementById('loginButton') as HTMLButtonElement;
+        const buttonText = document.getElementById('buttonText') as HTMLSpanElement;
+        const loadingSpinner = document.getElementById('loadingSpinner') as HTMLSpanElement;
         
-        try {
-          const form = e.target as HTMLFormElement;
-          const email = (form.elements.namedItem('email') as HTMLInputElement).value;
-          const password = (form.elements.namedItem('password') as HTMLInputElement).value;
-          
-          console.log('Form data:', { email, password: '***' });
-          
-          const button = document.getElementById('loginButton') as HTMLButtonElement;
-          const buttonText = document.getElementById('buttonText') as HTMLSpanElement;
-          const loadingSpinner = document.getElementById('loadingSpinner') as HTMLSpanElement;
-          const errorMessage = document.getElementById('errorMessage') as HTMLDivElement;
-          const errorText = document.getElementById('errorText') as HTMLParagraphElement;
-          
-          // Show loading state
-          button.disabled = true;
-          buttonText.classList.add('hidden');
-          loadingSpinner.classList.remove('hidden');
-          errorMessage.classList.add('hidden');
-          
-          console.log('Making API call to /api/auth/login');
-          const response = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ email, password }),
-          });
-          
-          console.log('Response status:', response.status);
-          const data = await response.json();
-          console.log('Response data:', data);
-          
-          if (data.success) {
-            console.log('Login successful, redirecting...');
-            // Redirect based on user role
-            if (data.user.role === 'admin') {
-              window.location.href = '/admin';
-            } else if (data.user.role === 'manager') {
-              window.location.href = '/manager';
-            } else {
-              window.location.href = '/dashboard';
-            }
-          } else {
-            console.log('Login failed:', data.error);
-            // Show error message
-            errorText.textContent = data.error || 'Login failed';
-            errorMessage.classList.remove('hidden');
-          }
-        } catch (error) {
-          console.error('Login error:', error);
-          const errorText = document.getElementById('errorText') as HTMLParagraphElement;
-          const errorMessage = document.getElementById('errorMessage') as HTMLDivElement;
-          errorText.textContent = 'Network error. Please try again.';
-          errorMessage.classList.remove('hidden');
-        } finally {
-          // Reset button state
-          const button = document.getElementById('loginButton') as HTMLButtonElement;
-          const buttonText = document.getElementById('buttonText') as HTMLSpanElement;
-          const loadingSpinner = document.getElementById('loadingSpinner') as HTMLSpanElement;
-          
-          button.disabled = false;
-          buttonText.classList.remove('hidden');
-          loadingSpinner.classList.add('hidden');
-        }
-      });
-      
-      console.log('Form submit listener added successfully');
-    } else {
-      console.error('Login form not found!');
-    }
-    
-    console.log('Login script completed successfully');
-  } catch (error) {
-    console.error('Critical error in login script:', error);
+        button.disabled = false;
+        buttonText.classList.remove('hidden');
+        loadingSpinner.classList.add('hidden');
+      }
+    });
   }
 </script> 
