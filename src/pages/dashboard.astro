@@ -154,10 +154,18 @@ const user = await requireAuth('/')(Astro) as any;
                 <input
                   type="text"
                   id="timeEntryTask"
-                  placeholder="Search for a task..."
+                  placeholder="🔍 Search tasks..."
                   required
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                  class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                  oninput="handleTaskSearch(this.value)"
+                  onfocus="showTaskDropdown()"
+                  onblur="hideTaskDropdown()"
                 />
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                  <svg id="taskDropdownArrow" class="fill-current h-5 w-5 transition-transform duration-200 cursor-pointer pointer-events-auto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" onclick="toggleTaskDropdown()">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                  </svg>
+                </div>
                 <input type="hidden" id="timeEntryTaskId" />
                 <div id="taskDropdown" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto hidden">
                   <!-- Task results will be populated here -->
@@ -891,47 +899,119 @@ const user = await requireAuth('/')(Astro) as any;
     }
   }
 
-  // Task search functionality
-  if (timeEntryTask) {
-    timeEntryTask.addEventListener('input', debounce(async (e: Event) => {
-      const target = e.target as HTMLInputElement;
-      const searchTerm = target.value.trim();
-      
-      if (searchTerm.length < 2) {
-        if (taskDropdown) {
-          taskDropdown.classList.add('hidden');
-        }
+  // Enhanced task search functionality
+  let taskSearchTimeout: NodeJS.Timeout;
+  let taskDropdownOpen = false;
+  
+  // Task search functions
+  function handleTaskSearch(searchTerm: string) {
+    clearTimeout(taskSearchTimeout);
+    
+    if (searchTerm.length < 1) {
+      searchAllTasks();
+      return;
+    }
+    
+    taskSearchTimeout = setTimeout(() => {
+      searchTasks(searchTerm);
+    }, 300);
+  }
+  
+  function toggleTaskDropdown() {
+    const searchInput = document.getElementById('timeEntryTask');
+    if (!searchInput) return;
+    
+    if (taskDropdownOpen) {
+      hideTaskDropdown();
+    } else {
+      searchAllTasks();
+      showTaskDropdown();
+    }
+  }
+  
+  async function searchTasks(searchTerm: string) {
+    try {
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        console.error('No user ID available for task search');
         return;
       }
 
-      try {
-        const userId = await getCurrentUserId();
-        if (!userId) {
-          console.error('No user ID available for task search');
-          return;
-        }
+      const response = await fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=20`);
+      if (response.ok) {
+        const data = await response.json();
+        const tasks = data.data || [];
+        
+        // Filter tasks based on search term (including client and project names)
+        const filteredTasks = tasks.filter((task: any) => 
+          task.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          task.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          task.clientName.toLowerCase().includes(searchTerm.toLowerCase())
+        );
 
-        const response = await fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=10`);
-        if (response.ok) {
-          const data = await response.json();
-          const tasks = data.data || [];
-          
-          // Filter tasks based on search term (including client name)
-          const filteredTasks = tasks.filter((task: any) => 
-            task.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            task.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            task.clientName.toLowerCase().includes(searchTerm.toLowerCase())
-          );
-
-          displayTaskDropdown(filteredTasks);
-        }
-      } catch (error) {
-        console.error('Error searching tasks:', error);
+        displayTaskDropdown(filteredTasks);
       }
-    }, 300));
+    } catch (error) {
+      console.error('Error searching tasks:', error);
+    }
   }
+  
+  async function searchAllTasks() {
+    try {
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        console.error('No user ID available for task search');
+        return;
+      }
 
+      const response = await fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=20`);
+      if (response.ok) {
+        const data = await response.json();
+        const tasks = data.data || [];
+        displayTaskDropdown(tasks);
+      }
+    } catch (error) {
+      console.error('Error loading all tasks:', error);
+    }
+  }
+  
+  function showTaskDropdown() {
+    const dropdown = document.getElementById('taskDropdown');
+    const arrow = document.getElementById('taskDropdownArrow');
+    if (dropdown) {
+      dropdown.classList.remove('hidden');
+      taskDropdownOpen = true;
+    }
+    if (arrow) {
+      arrow.style.transform = 'rotate(180deg)';
+    }
+  }
+  
+  function hideTaskDropdown() {
+    // Small delay to allow clicking on dropdown items
+    setTimeout(() => {
+      const dropdown = document.getElementById('taskDropdown');
+      const arrow = document.getElementById('taskDropdownArrow');
+      if (dropdown) {
+        dropdown.classList.add('hidden');
+        taskDropdownOpen = false;
+      }
+      if (arrow) {
+        arrow.style.transform = 'rotate(0deg)';
+      }
+    }, 150);
+  }
+  
+  // Make functions available globally for HTML event handlers
+  (window as any).handleTaskSearch = handleTaskSearch;
+  (window as any).toggleTaskDropdown = toggleTaskDropdown;
+  (window as any).searchTasks = searchTasks;
+  (window as any).searchAllTasks = searchAllTasks;
+  (window as any).showTaskDropdown = showTaskDropdown;
+  (window as any).hideTaskDropdown = hideTaskDropdown;
+  
   function displayTaskDropdown(tasks: any[]) {
+    const taskDropdown = document.getElementById('taskDropdown');
     if (!taskDropdown) return;
 
     if (tasks.length === 0) {
@@ -940,19 +1020,46 @@ const user = await requireAuth('/')(Astro) as any;
       return;
     }
 
-    taskDropdown.innerHTML = tasks.map((task: any) => `
-      <div 
-        class="px-3 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
-        data-task-id="${task.id}"
-        data-task-name="${task.name}"
-        data-project-name="${task.projectName}"
-        data-client-name="${task.clientName}"
-      >
-        <div class="font-medium text-gray-900">${task.name}</div>
-        <div class="text-sm text-gray-600">${task.clientName} • ${task.projectName}</div>
-      </div>
-    `).join('');
+    // Group tasks by client for better organization
+    const tasksByClient: { [key: string]: any[] } = {};
+    tasks.forEach(task => {
+      const clientName = task.clientName || 'Unknown Client';
+      if (!tasksByClient[clientName]) {
+        tasksByClient[clientName] = [];
+      }
+      tasksByClient[clientName].push(task);
+    });
 
+    let dropdownHTML = '';
+    
+    Object.keys(tasksByClient).forEach(clientName => {
+      const clientTasks = tasksByClient[clientName];
+      
+      // Add client header
+      dropdownHTML += `
+        <div class="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-600 uppercase tracking-wide border-b border-gray-200">
+          ${clientName}
+        </div>
+      `;
+      
+      // Add tasks for this client
+      clientTasks.forEach(task => {
+        dropdownHTML += `
+          <div 
+            class="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm pl-6 border-b border-gray-100 last:border-b-0"
+            data-task-id="${task.id}"
+            data-task-name="${task.name}"
+            data-project-name="${task.projectName}"
+            data-client-name="${task.clientName}"
+          >
+            <div class="font-medium text-gray-900">${task.name}</div>
+            <div class="text-xs text-gray-600">${task.projectName}</div>
+          </div>
+        `;
+      });
+    });
+
+    taskDropdown.innerHTML = dropdownHTML;
     taskDropdown.classList.remove('hidden');
 
     // Add click handlers to task items
@@ -963,18 +1070,22 @@ const user = await requireAuth('/')(Astro) as any;
         const projectName = item.getAttribute('data-project-name');
         const clientName = item.getAttribute('data-client-name');
 
-        if (timeEntryTask && timeEntryTask instanceof HTMLInputElement) {
+        const timeEntryTask = document.getElementById('timeEntryTask') as HTMLInputElement;
+        const timeEntryTaskId = document.getElementById('timeEntryTaskId') as HTMLInputElement;
+        
+        if (timeEntryTask) {
           timeEntryTask.value = `${taskName} (${clientName} • ${projectName})`;
         }
-        if (timeEntryTaskId && timeEntryTaskId instanceof HTMLInputElement) {
+        if (timeEntryTaskId) {
           timeEntryTaskId.value = taskId || '';
         }
-        if (taskDropdown) {
-          taskDropdown.classList.add('hidden');
-        }
+        
+        hideTaskDropdown();
       });
     });
   }
+  
+
 
   // Debounce function
   function debounce(func: Function, wait: number) {
