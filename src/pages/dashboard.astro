@@ -68,16 +68,7 @@ const user = await requireAuth('/')(Astro) as any;
                     </svg>
                     <span>Refresh</span>
                   </button>
-                  <button
-                    id="debugBtn"
-                    class="text-sm text-gray-600 hover:text-gray-800 font-medium transition-colors cursor-pointer flex items-center space-x-1"
-                    title="Debug calculations"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    <span>Debug</span>
-                  </button>
+
                   <button
                     id="viewAllEntriesBtn"
                     class="text-sm text-gray-600 hover:text-gray-800 font-medium transition-colors cursor-pointer"
@@ -231,8 +222,7 @@ const user = await requireAuth('/')(Astro) as any;
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <!-- Alternative spinner for debugging -->
-                <div id="saveButtonSpinnerAlt" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin hidden"></div>
+
               </button>
             </div>
           </form>
@@ -401,6 +391,7 @@ const user = await requireAuth('/')(Astro) as any;
 
   // Load dashboard data
   async function loadDashboardData() {
+    console.log('Loading dashboard data...');
     try {
       const userId = await getCurrentUserId();
       if (!userId) {
@@ -415,16 +406,19 @@ const user = await requireAuth('/')(Astro) as any;
       if (entriesResponse.ok) {
         const entriesData = await entriesResponse.json();
         const recentEntries = entriesData.data || [];
+        console.log('Loaded recent entries:', recentEntries.length);
         
         // Load ongoing timers - use user-specific endpoint for team members
         const ongoingResponse = await fetch('/api/timers/user-ongoing');
         if (ongoingResponse.ok) {
           const ongoingData = await ongoingResponse.json();
           const ongoingTimers = ongoingData.data || [];
+          console.log('Loaded ongoing timers:', ongoingTimers.length);
           
           // Combine recent entries with ongoing timers
           updateRecentEntries(recentEntries, ongoingTimers);
         } else {
+          console.log('No ongoing timers found');
           updateRecentEntries(recentEntries, []);
         }
       } else {
@@ -455,24 +449,7 @@ const user = await requireAuth('/')(Astro) as any;
     const container = document.getElementById('recentEntries');
     if (!container) return;
 
-    // Debug: Calculate manual total from entries
-    let manualTotalHours = 0;
-    entries.forEach(entry => {
-      if (entry.duration) {
-        manualTotalHours += entry.duration / 3600;
-      }
-    });
-    ongoingTimers.forEach(timer => {
-      if (timer.elapsedSeconds) {
-        manualTotalHours += timer.elapsedSeconds / 3600;
-      }
-    });
-    console.log('Manual calculation from displayed entries:', {
-      entriesCount: entries.length,
-      ongoingTimersCount: ongoingTimers.length,
-      manualTotalHours: manualTotalHours.toFixed(2),
-      entries: entries.map(e => ({ id: e.id, duration: e.duration, durationHours: e.duration ? (e.duration / 3600).toFixed(2) : '0' }))
-    });
+
 
     // Disable manual entry if there's an ongoing timer
     const addTimeEntryBtn = document.getElementById('addTimeEntryBtn') as HTMLButtonElement;
@@ -719,13 +696,7 @@ const user = await requireAuth('/')(Astro) as any;
       const hoursFromSeconds = (stats.totalHours || 0) / 3600;
       weeklyHours.textContent = formatHours(hoursFromSeconds);
       
-      // Debug information - log the raw data
-      console.log('Weekly Stats Debug:', {
-        totalSeconds: stats.totalHours,
-        totalHours: hoursFromSeconds,
-        formattedDisplay: formatHours(hoursFromSeconds),
-        rawStats: stats
-      });
+
     }
   }
 
@@ -821,42 +792,36 @@ const user = await requireAuth('/')(Astro) as any;
   });
 
   // Refresh button functionality
-  document.getElementById('refreshEntriesBtn')?.addEventListener('click', () => {
-    loadDashboardData();
-  });
-
-  // Debug button functionality
-  document.getElementById('debugBtn')?.addEventListener('click', async () => {
+  document.getElementById('refreshEntriesBtn')?.addEventListener('click', async () => {
+    const refreshBtn = document.getElementById('refreshEntriesBtn') as HTMLButtonElement;
+    if (refreshBtn) {
+      // Add visual feedback
+      refreshBtn.disabled = true;
+      refreshBtn.innerHTML = `
+        <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+        </svg>
+        <span>Refreshing...</span>
+      `;
+    }
+    
     try {
-      const userId = await getCurrentUserId();
-      if (!userId) {
-        alert('No user ID available');
-        return;
-      }
-
-      const response = await fetch('/api/debug-calculations?userId=' + encodeURIComponent(userId));
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Debug Calculations:', data);
-        
-        // Show a summary in an alert
-        const summary = `
-Debug Summary:
-- All Entries: ${data.totals.allEntries.totalHours} hours (${data.totals.allEntries.count} entries)
-- Weekly Entries: ${data.totals.weeklyEntries.totalHours} hours (${data.totals.weeklyEntries.count} entries)
-- Ongoing Timers: ${data.totals.ongoingTimers.totalHours} hours (${data.totals.ongoingTimers.count} timers)
-- Non-Archived Weekly: ${data.totals.nonArchivedWeeklyEntries.totalHours} hours
-- Non-Archived Ongoing: ${data.totals.nonArchivedOngoingTimers.totalHours} hours
+      await loadDashboardData();
+    } finally {
+      // Restore button state
+      if (refreshBtn) {
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = `
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          <span>Refresh</span>
         `;
-        alert(summary);
-      } else {
-        alert('Failed to get debug data');
       }
-    } catch (error) {
-      console.error('Debug error:', error);
-      alert('Error getting debug data');
     }
   });
+
+
 
   // All Entries button functionality
   document.getElementById('viewAllEntriesBtn')?.addEventListener('click', () => {
@@ -1033,14 +998,12 @@ Debug Summary:
       const submitButton = target.querySelector('button[type="submit"]') as HTMLButtonElement;
       const saveButtonText = document.getElementById('saveButtonText') as HTMLSpanElement;
       const saveButtonSpinner = document.getElementById('saveButtonSpinner') as HTMLElement;
-      const saveButtonSpinnerAlt = document.getElementById('saveButtonSpinnerAlt') as HTMLElement;
       const originalText = saveButtonText.textContent;
       
       // Show loading state
       submitButton.disabled = true;
       saveButtonText.textContent = 'Saving...';
       saveButtonSpinner.classList.remove('hidden');
-      saveButtonSpinnerAlt.classList.remove('hidden');
       
       const taskId = timeEntryTaskId instanceof HTMLInputElement ? timeEntryTaskId.value : '';
       const durationInput = document.getElementById('timeEntryDuration') as HTMLInputElement;
@@ -1056,7 +1019,6 @@ Debug Summary:
         submitButton.disabled = false;
         saveButtonText.textContent = originalText;
         saveButtonSpinner.classList.add('hidden');
-        saveButtonSpinnerAlt.classList.add('hidden');
         return;
       }
 
@@ -1083,7 +1045,6 @@ Debug Summary:
           saveButtonText.textContent = 'Saved!';
           submitButton.classList.add('bg-gray-800');
           saveButtonSpinner.classList.add('hidden');
-          saveButtonSpinnerAlt.classList.add('hidden');
           
           // Close modal and reload data after a brief delay
           setTimeout(() => {
@@ -1103,7 +1064,6 @@ Debug Summary:
         saveButtonText.textContent = originalText;
         submitButton.classList.remove('bg-gray-800');
         saveButtonSpinner.classList.add('hidden');
-        saveButtonSpinnerAlt.classList.add('hidden');
       }
     });
   }
