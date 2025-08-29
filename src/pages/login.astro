@@ -90,8 +90,6 @@ if (user) {
 </Layout>
 
 <script>
-  console.log('Login script loaded');
-
   // Function to check if both fields are filled and update button color
   function updateButtonColor() {
     const email = (document.getElementById('email') as HTMLInputElement)?.value;
@@ -112,19 +110,15 @@ if (user) {
   document.getElementById('password')?.addEventListener('input', updateButtonColor);
 
   const loginForm = document.getElementById('loginForm');
-  console.log('Login form found:', !!loginForm);
 
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
-      console.log('Form submitted');
       e.preventDefault();
       e.stopPropagation();
       
       const form = e.target as HTMLFormElement;
       const email = (form.elements.namedItem('email') as HTMLInputElement).value;
       const password = (form.elements.namedItem('password') as HTMLInputElement).value;
-      
-      console.log('Attempting login for:', email);
       
       const button = document.getElementById('loginButton') as HTMLButtonElement;
       const buttonText = document.getElementById('buttonText') as HTMLSpanElement;
@@ -139,7 +133,6 @@ if (user) {
       errorMessage.classList.add('hidden');
       
       try {
-        console.log('Making API call to /api/auth/login');
         const response = await fetch('/api/auth/login', {
           method: 'POST',
           headers: {
@@ -148,12 +141,9 @@ if (user) {
           body: JSON.stringify({ email, password }),
         });
         
-        console.log('Response status:', response.status);
         const data = await response.json();
-        console.log('Response data:', data);
         
         if (data.success) {
-          console.log('Login successful, redirecting...');
           // Redirect based on user role
           if (data.user.role === 'admin') {
             window.location.href = '/admin';
@@ -163,7 +153,6 @@ if (user) {
             window.location.href = '/dashboard';
           }
         } else {
-          console.log('Login failed:', data.error);
           // Show error message
           errorText.textContent = data.error || 'Login failed';
           errorMessage.classList.remove('hidden');
@@ -179,7 +168,5 @@ if (user) {
         loadingSpinner.classList.add('hidden');
       }
     });
-  } else {
-    console.error('Login form not found!');
   }
 </script> 
