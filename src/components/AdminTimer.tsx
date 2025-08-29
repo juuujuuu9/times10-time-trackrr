@@ -356,7 +356,7 @@ export default function AdminTimer() {
             {clientGroups[clientName].map((task, taskIndex) => (
               <div
                 key={task.id}
-                className="px-3 py-1 hover:bg-gray-100 cursor-pointer text-xs border-b border-gray-100 last:border-b-0"
+                className="pl-3 py-1 hover:bg-gray-100 cursor-pointer text-xs border-b border-gray-100 last:border-b-0"
                 onClick={() => {
                   setSelectedTask(task.id);
                   setTaskSearchTerm(task.displayName || `${task.projectName} - ${task.name}`);
@@ -366,11 +366,6 @@ export default function AdminTimer() {
                 <div className="font-medium text-gray-900">
                   {task.displayName || `${task.projectName} - ${task.name}`}
                 </div>
-                {!task.displayName && (
-                  <div className="text-xs text-gray-500">
-                    {task.projectName} • {task.name}
-                  </div>
-                )}
               </div>
             ))}
           </div>
