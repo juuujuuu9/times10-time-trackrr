@@ -303,14 +303,14 @@ class AdminRealTimeUpdates {
   }
 
   startPeriodicUpdates() {
-    // Update every 30 seconds for dashboard and reports
+    // Update every 5 minutes for dashboard and reports (increased from 30 seconds)
     this.updateInterval = setInterval(() => {
       if (this.currentPage === 'dashboard') {
         this.refreshDashboardData();
       } else if (this.currentPage === 'reports') {
         this.refreshReportsData();
       }
-    }, 30000); // 30 seconds
+    }, 300000); // 5 minutes (300,000 ms)
   }
 
   updateResultsCounter(count) {
