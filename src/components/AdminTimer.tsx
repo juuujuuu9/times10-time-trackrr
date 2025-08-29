@@ -249,6 +249,15 @@ export default function AdminTimer() {
     return task.displayName || task.name;
   };
 
+  // Get client name for display
+  const getSelectedTaskClientName = () => {
+    if (!selectedTask) return '';
+    const task = tasks.find(t => t.id === selectedTask);
+    if (!task) return '';
+    
+    return task.clientName;
+  };
+
   // Get full task info for display
   const getSelectedTaskInfo = () => {
     if (!selectedTask) return { taskName: '', projectName: '', clientName: '' };
@@ -432,8 +441,8 @@ export default function AdminTimer() {
       {/* Active Task Display */}
       {isRunning && selectedTask && (
         <div className="mb-3 px-1 py-0 bg-gray-200 border border-gray-200 rounded text-xs">
-          <p className="text-gray-700">{getSelectedTaskInfo().taskName}</p>
-          <p className="text-gray-600 text-xs">{getSelectedTaskInfo().projectName} • {getSelectedTaskInfo().clientName}</p>
+          <p className="text-gray-700 font-bold">{getSelectedTaskClientName()}</p>
+          <p className="text-gray-600">{getSelectedTaskName()}</p>
         </div>
       )}
 
