@@ -68,7 +68,7 @@ export default defineConfig({
         name: 'Times10 Trackr',
         short_name: 'Trackr',
         description: 'Professional time tracking and task management',
-        theme_color: '#10b981',
+        theme_color: '#f0eef5',
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait-primary',
