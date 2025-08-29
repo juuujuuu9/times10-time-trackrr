@@ -198,7 +198,7 @@ const allTasks = await db
           <tbody class="bg-white divide-y divide-gray-200">
             {allTimeEntries.map((entry) => {
               const taskDate = entry.startTime ? new Date(entry.startTime) : new Date(entry.createdAt);
-              const duration = entry.duration ? entry.duration / 3600 : 0;
+              const duration = entry.durationManual ? entry.durationManual / 3600 : 0;
               
               return (
                 <tr class="hover:bg-gray-50">
@@ -697,14 +697,14 @@ const allTasks = await db
         }
         
         // Convert duration from seconds to a readable format
-        if (durationInput && timeEntry.duration) {
-          const hours = timeEntry.duration / 3600;
+        if (durationInput && timeEntry.durationManual) {
+          const hours = timeEntry.durationManual / 3600;
           durationInput.value = hours.toFixed(2) + 'h';
           
           // Display current duration in human-readable format
           const currentDurationSpan = document.getElementById('currentDuration');
           if (currentDurationSpan) {
-            const formattedDuration = formatDurationHuman(timeEntry.duration);
+            const formattedDuration = formatDurationHuman(timeEntry.durationManual);
             currentDurationSpan.textContent = `- ${formattedDuration}`;
             currentDurationSpan.style.fontWeight = 'normal';
             currentDurationSpan.style.color = '#9CA3AF'; // text-gray-400
