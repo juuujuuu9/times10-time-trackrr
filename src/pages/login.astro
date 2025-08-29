@@ -25,7 +25,7 @@ if (user) {
 
       <!-- Login Form -->
       <div class="bg-white rounded-2xl shadow-xl p-8 border border-[#C8CDD0]">
-        <form id="loginForm" class="space-y-6">
+        <form id="loginForm" class="space-y-6" novalidate>
           <div>
             <label for="email" class="block text-sm font-medium text-[#415058] mb-2">
               Email Address
@@ -90,6 +90,8 @@ if (user) {
 </Layout>
 
 <script>
+  console.log('Login script loaded');
+
   // Function to check if both fields are filled and update button color
   function updateButtonColor() {
     const email = (document.getElementById('email') as HTMLInputElement)?.value;
@@ -109,59 +111,75 @@ if (user) {
   document.getElementById('email')?.addEventListener('input', updateButtonColor);
   document.getElementById('password')?.addEventListener('input', updateButtonColor);
 
-  document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const form = e.target as HTMLFormElement;
-    const email = (form.elements.namedItem('email') as HTMLInputElement).value;
-    const password = (form.elements.namedItem('password') as HTMLInputElement).value;
-    
-    const button = document.getElementById('loginButton') as HTMLButtonElement;
-    const buttonText = document.getElementById('buttonText') as HTMLSpanElement;
-    const loadingSpinner = document.getElementById('loadingSpinner') as HTMLSpanElement;
-    const errorMessage = document.getElementById('errorMessage') as HTMLDivElement;
-    const errorText = document.getElementById('errorText') as HTMLParagraphElement;
-    
-    // Show loading state
-    button.disabled = true;
-    buttonText.classList.add('hidden');
-    loadingSpinner.classList.remove('hidden');
-    errorMessage.classList.add('hidden');
-    
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+  const loginForm = document.getElementById('loginForm');
+  console.log('Login form found:', !!loginForm);
+
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      console.log('Form submitted');
+      e.preventDefault();
+      e.stopPropagation();
       
-      const data = await response.json();
+      const form = e.target as HTMLFormElement;
+      const email = (form.elements.namedItem('email') as HTMLInputElement).value;
+      const password = (form.elements.namedItem('password') as HTMLInputElement).value;
       
-      if (data.success) {
-        // Redirect based on user role
-        if (data.user.role === 'admin') {
-          window.location.href = '/admin';
-        } else if (data.user.role === 'manager') {
-          window.location.href = '/manager';
+      console.log('Attempting login for:', email);
+      
+      const button = document.getElementById('loginButton') as HTMLButtonElement;
+      const buttonText = document.getElementById('buttonText') as HTMLSpanElement;
+      const loadingSpinner = document.getElementById('loadingSpinner') as HTMLSpanElement;
+      const errorMessage = document.getElementById('errorMessage') as HTMLDivElement;
+      const errorText = document.getElementById('errorText') as HTMLParagraphElement;
+      
+      // Show loading state
+      button.disabled = true;
+      buttonText.classList.add('hidden');
+      loadingSpinner.classList.remove('hidden');
+      errorMessage.classList.add('hidden');
+      
+      try {
+        console.log('Making API call to /api/auth/login');
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, password }),
+        });
+        
+        console.log('Response status:', response.status);
+        const data = await response.json();
+        console.log('Response data:', data);
+        
+        if (data.success) {
+          console.log('Login successful, redirecting...');
+          // Redirect based on user role
+          if (data.user.role === 'admin') {
+            window.location.href = '/admin';
+          } else if (data.user.role === 'manager') {
+            window.location.href = '/manager';
+          } else {
+            window.location.href = '/dashboard';
+          }
         } else {
-          window.location.href = '/dashboard';
+          console.log('Login failed:', data.error);
+          // Show error message
+          errorText.textContent = data.error || 'Login failed';
+          errorMessage.classList.remove('hidden');
         }
-      } else {
-        // Show error message
-        errorText.textContent = data.error || 'Login failed';
+      } catch (error) {
+        console.error('Login error:', error);
+        errorText.textContent = 'Network error. Please try again.';
         errorMessage.classList.remove('hidden');
+      } finally {
+        // Reset button state
+        button.disabled = false;
+        buttonText.classList.remove('hidden');
+        loadingSpinner.classList.add('hidden');
       }
-    } catch (error) {
-      console.error('Login error:', error);
-      errorText.textContent = 'Network error. Please try again.';
-      errorMessage.classList.remove('hidden');
-    } finally {
-      // Reset button state
-      button.disabled = false;
-      buttonText.classList.remove('hidden');
-      loadingSpinner.classList.add('hidden');
-    }
-  });
+    });
+  } else {
+    console.error('Login form not found!');
+  }
 </script> 
