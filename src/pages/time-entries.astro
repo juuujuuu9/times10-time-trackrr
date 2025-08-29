@@ -1028,9 +1028,9 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
       }
 
       // Set duration based on entry duration
-      if (durationInput && entry.durationManual) {
-        const hours = Math.floor(entry.durationManual / 3600);
-        const minutes = Math.floor((entry.durationManual % 3600) / 60);
+      if (durationInput && entry.duration) {
+        const hours = Math.floor(entry.duration / 3600);
+        const minutes = Math.floor((entry.duration % 3600) / 60);
         durationInput.value = `${hours}h ${minutes}m`;
       }
 
