@@ -1614,6 +1614,9 @@ const user = await requireAuth('/')(Astro) as any;
         });
         
         if (response.ok) {
+
+
+
           // Show success message
           saveButtonText.textContent = 'Saved!';
           submitButton.classList.add('bg-gray-800');
