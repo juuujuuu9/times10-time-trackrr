@@ -8,6 +8,23 @@ const user = await requireAuth('/')(Astro) as any;
 ---
 
 <Layout title="Dashboard - Times10 Time Tracker">
+  <style>
+    /* Mobile-specific improvements */
+    @media (max-width: 767px) {
+      .mobile-card {
+        transition: transform 0.2s ease-in-out;
+      }
+      .mobile-card:active {
+        transform: scale(0.98);
+      }
+      .mobile-input {
+        font-size: 16px; /* Prevents zoom on iOS */
+      }
+      .mobile-button {
+        min-height: 44px; /* Better touch target */
+      }
+    }
+  </style>
   <div class="min-h-screen" style="background-color: #f0eef5;">
     <!-- Loading State (shown immediately) -->
     <div id="loadingState" class="min-h-screen flex items-center justify-center" style="background-color: #f0eef5;">
@@ -20,58 +37,60 @@ const user = await requireAuth('/')(Astro) as any;
     <!-- Dashboard Content (hidden initially) -->
     <div id="dashboardContent" class="hidden">
       <!-- Header -->
-      <header class="bg-white shadow-sm border-b border-gray-200 flex items-center" style="height: 58px;">
-        <div class="max-w-7xl mx-auto px-8 w-full">
-          <div class="flex justify-between items-center">
+      <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-0">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
             <div class="flex items-center">
               <a href="/" class="flex items-center hover:opacity-80 transition-opacity">
                 <img src="/trackr-icon.png" alt="Times10 Logo" class="w-auto mr-3 py-0" style="height: calc(58px - 1rem);" />
               </a>
             </div>
-            <div class="flex items-center space-x-4">
+            <div class="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
               <span class="text-sm text-gray-600">Welcome, {user?.name || 'User'}</span>
-              <span class="px-3 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
-                Team Member
-              </span>
-              <button
-                id="logoutButton"
-                class="text-sm text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                Sign Out
-              </button>
+              <div class="flex items-center space-x-3">
+                <span class="px-3 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
+                  Team Member
+                </span>
+                <button
+                  id="logoutButton"
+                  class="text-sm text-gray-600 hover:text-gray-900 transition-colors px-3 py-1 rounded-md hover:bg-gray-100"
+                >
+                  Sign Out
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           <!-- Main Content -->
-          <div class="lg:col-span-2 space-y-8">
+          <div class="xl:col-span-2 space-y-4 sm:space-y-6 lg:space-y-8">
             <!-- Timer Section -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
               <Timer client:load />
             </div>
 
             <!-- Recent Time Entries -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                <h2 class="text-xl font-semibold text-gray-900">Recent Time Entries</h2>
+              <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
+                <h2 class="text-lg sm:text-xl font-semibold text-gray-900">Recent Time Entries</h2>
                 <div class="flex space-x-4">
                   <button
                     id="refreshEntriesBtn"
-                    class="text-sm text-gray-600 hover:text-gray-800 font-medium transition-colors cursor-pointer flex items-center space-x-1"
+                    class="text-sm text-gray-600 hover:text-gray-800 font-medium transition-colors cursor-pointer flex items-center space-x-1 px-3 py-1 rounded-md hover:bg-gray-100"
                     title="Refresh data"
                   >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                     </svg>
-                    <span>Refresh</span>
+                    <span class="hidden sm:inline">Refresh</span>
                   </button>
 
                   <button
                     id="viewAllEntriesBtn"
-                    class="text-sm text-gray-600 hover:text-gray-800 font-medium transition-colors cursor-pointer"
+                    class="text-sm text-gray-600 hover:text-gray-800 font-medium transition-colors cursor-pointer px-3 py-1 rounded-md hover:bg-gray-100"
                   >
                     All Entries
                   </button>
@@ -88,14 +107,12 @@ const user = await requireAuth('/')(Astro) as any;
                 </div>
               </div>
             </div>
-
-
           </div>
 
           <!-- Sidebar -->
-          <div class="space-y-6">
+          <div class="space-y-4 sm:space-y-6">
             <!-- Quick Stats -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
               <h3 class="text-lg font-semibold text-gray-900 mb-4">Last 7 Days</h3>
               <div class="space-y-4">
                 <div class="flex justify-between items-center">
@@ -106,12 +123,12 @@ const user = await requireAuth('/')(Astro) as any;
             </div>
 
             <!-- Quick Actions -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
               <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
               <div class="space-y-3 mt-4">
                 <button
                   id="addTimeEntryBtn"
-                  class="w-full text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                  class="w-full text-white px-4 py-3 sm:py-2 rounded-lg transition-colors text-sm font-medium"
                   style={{
                     backgroundColor: '#1F292E'
                   }}
@@ -122,15 +139,12 @@ const user = await requireAuth('/')(Astro) as any;
                 </button>
                 <button
                   id="viewReportsBtn"
-                  class="w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                  class="w-full bg-gray-100 text-gray-700 px-4 py-3 sm:py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
                 >
                   View Reports
                 </button>
-
               </div>
             </div>
-
-
           </div>
         </div>
       </div>
@@ -140,12 +154,12 @@ const user = await requireAuth('/')(Astro) as any;
   <!-- Add Manual Time Entry Modal -->
   <div id="timeEntryModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-200 flex flex-col">
-        <div class="px-6 py-4 border-b border-gray-200 flex-shrink-0">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] border border-gray-200 flex flex-col">
+        <div class="px-4 sm:px-6 py-4 border-b border-gray-200 flex-shrink-0">
           <h3 class="text-lg font-medium text-gray-900">Add Manual Time Entry</h3>
         </div>
         <div class="flex-1 overflow-y-auto">
-          <form id="timeEntryForm" class="px-6 py-4">
+          <form id="timeEntryForm" class="px-4 sm:px-6 py-4">
             <div class="mb-4">
               <label for="timeEntryTask" class="block text-sm font-medium text-gray-700 mb-1">
                 Task <span class="text-gray-500 font-normal">(required)</span>
@@ -156,7 +170,7 @@ const user = await requireAuth('/')(Astro) as any;
                   id="timeEntryTask"
                   placeholder="🔍 Search tasks..."
                   required
-                  class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                  class="w-full px-3 py-3 sm:py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 text-base mobile-input"
                   oninput="handleTaskSearch(this.value)"
                   onfocus="showTaskDropdown()"
                   onblur="hideTaskDropdown()"
@@ -181,7 +195,7 @@ const user = await requireAuth('/')(Astro) as any;
                 id="timeEntryDuration"
                 placeholder="e.g., 2h, 3.5hr, 4:15, 90m"
                 required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                class="w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 text-base"
               />
               <p class="text-xs text-gray-500 mt-1">
                 Supported formats: 2h, 2hr, 3.5hr, 4:15, 90m, 5400s, etc.
@@ -195,7 +209,7 @@ const user = await requireAuth('/')(Astro) as any;
                 type="date"
                 id="timeEntryDate"
                 required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                class="w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 text-base"
               />
               <p class="text-xs text-gray-500 mt-1">
                 When did this task actually occur? (defaults to today)
@@ -209,28 +223,27 @@ const user = await requireAuth('/')(Astro) as any;
                 id="timeEntryNotes"
                 rows="3"
                 placeholder="Optional notes about this time entry..."
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                class="w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 text-base"
               ></textarea>
             </div>
-            <div class="flex justify-end space-x-3">
+            <div class="flex flex-col sm:flex-row sm:justify-end space-y-3 sm:space-y-0 sm:space-x-3">
               <button
                 type="button"
                 id="cancelTimeEntryBtn"
-                class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                class="w-full sm:w-auto px-4 py-3 sm:py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors text-base"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 id="saveTimeEntryBtn"
-                class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors flex items-center space-x-2"
+                class="w-full sm:w-auto px-4 py-3 sm:py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors flex items-center justify-center space-x-2 text-base"
               >
                 <span id="saveButtonText">Save Entry</span>
                 <svg id="saveButtonSpinner" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-
               </button>
             </div>
           </form>
@@ -242,12 +255,12 @@ const user = await requireAuth('/')(Astro) as any;
   <!-- Edit Time Entry Modal -->
   <div id="editTimeEntryModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-      <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-200 flex flex-col">
-        <div class="px-6 py-4 border-b border-gray-200 flex-shrink-0">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] border border-gray-200 flex flex-col">
+        <div class="px-4 sm:px-6 py-4 border-b border-gray-200 flex-shrink-0">
           <h3 class="text-lg font-medium text-gray-900">Edit Time Entry</h3>
         </div>
         <div class="flex-1 overflow-y-auto">
-          <form id="editTimeEntryForm" class="px-6 py-4">
+          <form id="editTimeEntryForm" class="px-4 sm:px-6 py-4">
             <input type="hidden" id="editTimeEntryId" />
             
             <!-- Time Entry Method Selection -->
@@ -275,7 +288,7 @@ const user = await requireAuth('/')(Astro) as any;
                   type="text"
                   id="editStartTime"
                   placeholder="9:30 AM"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                  class="w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 text-base"
                 />
               </div>
               <div>
@@ -286,7 +299,7 @@ const user = await requireAuth('/')(Astro) as any;
                   type="text"
                   id="editEndTime"
                   placeholder="5:30 PM"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                  class="w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 text-base"
                 />
               </div>
             </div>
@@ -301,7 +314,7 @@ const user = await requireAuth('/')(Astro) as any;
                   type="text"
                   id="editDuration"
                   placeholder="e.g., 2h, 3.5hr, 4:15, 90m"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                  class="w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 text-base"
                 />
                 <p class="text-xs text-gray-500 mt-1">
                   Supported formats: 2h, 2hr, 3.5hr, 4:15, 90m, 5400s, etc.
@@ -317,30 +330,30 @@ const user = await requireAuth('/')(Astro) as any;
                 id="editNotes"
                 rows="3"
                 placeholder="Optional notes about this time entry..."
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                class="w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 text-base"
               ></textarea>
             </div>
 
-            <div class="flex justify-between">
+            <div class="flex flex-col space-y-3">
               <button
                 type="button"
                 id="deleteTimeEntryBtn"
-                class="px-4 py-2 text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors border border-gray-200"
+                class="w-full px-4 py-3 sm:py-2 text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors border border-gray-200 text-base"
               >
                 Delete Entry
               </button>
-              <div class="flex space-x-3">
+              <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
                 <button
                   type="button"
                   id="cancelEditTimeEntryBtn"
-                  class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                  class="w-full sm:w-auto px-4 py-3 sm:py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors text-base mobile-button"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   id="saveEditTimeEntryBtn"
-                  class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors flex items-center space-x-2"
+                  class="w-full sm:w-auto px-4 py-3 sm:py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors flex items-center justify-center space-x-2 text-base"
                 >
                   <span id="saveEditButtonText">Save Changes</span>
                   <svg id="saveEditButtonSpinner" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24">
@@ -493,92 +506,66 @@ const user = await requireAuth('/')(Astro) as any;
     const ongoingTimerIds = new Set(ongoingTimers.map(timer => timer.id));
     const filteredEntries = displayEntries.filter(entry => !ongoingTimerIds.has(entry.id));
     
-    container.innerHTML = `
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Client
-            </th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Project
-            </th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Task
-            </th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              User
-            </th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Date
-            </th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Start
-            </th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Stop
-            </th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Duration
-            </th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Notes
-            </th>
-            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Actions
-            </th>
-          </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
+    // Check if we're on mobile (screen width < 768px)
+    const isMobile = window.innerWidth < 768;
+    
+    if (isMobile) {
+      // Mobile card layout
+      container.innerHTML = `
+        <div class="space-y-4">
           ${ongoingTimers.map((timer: any) => {
             const taskDate = new Date(timer.startTime);
             const elapsedHours = (timer.elapsedSeconds / 3600).toFixed(1);
             const startTime = new Date(timer.startTime);
             const startTimeDisplay = startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
             
-            return `
-              <tr class="hover:bg-gray-50 bg-green-50 border-l-4 border-green-400" data-timer-id="${timer.id}">
-                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                  ${timer.clientName || 'Unknown Client'}
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                  ${timer.projectName || 'Unknown Project'}
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                  ${timer.taskName || 'Unknown Task'}
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                  ${timer.userName || '-'}
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                  ${taskDate.toLocaleDateString()}
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                  ${startTimeDisplay}
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                         return `
+               <div class="bg-green-50 border-l-4 border-green-400 p-4 rounded-lg mobile-card" data-timer-id="${timer.id}">
+                <div class="flex justify-between items-start mb-3">
+                  <div class="flex-1">
+                    <h3 class="font-medium text-gray-900 text-sm">${timer.taskName || 'Unknown Task'}</h3>
+                    <p class="text-xs text-gray-600">${timer.clientName || 'Unknown Client'} • ${timer.projectName || 'Unknown Project'}</p>
+                  </div>
+                  <div class="flex items-center">
+                    <div class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                    <span class="text-xs text-green-600 font-medium">Running</span>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span class="text-gray-500 text-xs">Date:</span>
+                    <p class="text-gray-900">${taskDate.toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <span class="text-gray-500 text-xs">Started:</span>
+                    <p class="text-gray-900">${startTimeDisplay}</p>
+                  </div>
+                  <div>
+                    <span class="text-gray-500 text-xs">Duration:</span>
+                    <p class="text-gray-900 timer-duration" data-timer-id="${timer.id}">${elapsedHours} hours</p>
+                  </div>
+                  <div>
+                    <span class="text-gray-500 text-xs">User:</span>
+                    <p class="text-gray-900">${timer.userName || '-'}</p>
+                  </div>
+                </div>
+                <div class="mt-3 flex justify-end">
                   <button
-                    class="stop-timer-btn px-2 py-1 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded transition-colors"
+                    class="stop-timer-btn px-3 py-1 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded transition-colors"
                     data-timer-id="${timer.id}"
                     data-user-id="${timer.userId}"
                     title="Stop timer"
                   >
-                    Stop
+                    Stop Timer
                   </button>
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                  <span class="timer-duration" data-timer-id="${timer.id}">${elapsedHours} hours</span>
-                </td>
-                <td class="px-4 py-3 text-sm text-gray-500 max-w-xs truncate" title="${timer.notes || ''}">
-                  ${timer.notes || '-'}
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                  <div class="flex items-center justify-end">
-                    <div class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-                    <span class="text-xs text-green-600 font-medium">Running</span>
+                </div>
+                ${timer.notes ? `
+                  <div class="mt-3 pt-3 border-t border-gray-200">
+                    <span class="text-gray-500 text-xs">Notes:</span>
+                    <p class="text-gray-900 text-sm mt-1">${timer.notes}</p>
                   </div>
-                </td>
-              </tr>
+                ` : ''}
+              </div>
             `;
           }).join('')}
           ${filteredEntries.map((entry: any) => {
@@ -587,7 +574,6 @@ const user = await requireAuth('/')(Astro) as any;
             const durationHours = entry.duration ? (entry.duration / 3600).toFixed(1) : '0';
             
             // Check if this is a manual duration entry (no meaningful start/end times)
-            // Manual duration entries have durationManual but no endTime
             const isManualDurationEntry = entry.durationManual && !entry.endTime;
             const startTime = (!isManualDurationEntry && entry.startTime) ? new Date(entry.startTime) : null;
             const endTime = (!isManualDurationEntry && entry.endTime) ? new Date(entry.endTime) : null;
@@ -596,55 +582,13 @@ const user = await requireAuth('/')(Astro) as any;
             const startTimeDisplay = startTime ? startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:-- --';
             const endTimeDisplay = endTime ? endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:-- --';
             
-            return `
-              <tr class="hover:bg-gray-50" data-entry-id="${entry.id}">
-
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                  ${entry.clientName || 'Unknown Client'}
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                  ${entry.projectName || 'Unknown Project'}
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                  ${entry.taskName || 'Unknown Task'}
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                  ${entry.userName || '-'}
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                  ${taskDate.toLocaleDateString()}
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                  <input
-                    type="text"
-                    class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer ${isManualDurationEntry ? 'bg-gray-100 cursor-not-allowed' : ''}"
-                    value="${startTimeDisplay}"
-                    data-entry-id="${entry.id}"
-                    data-time-type="start"
-                    placeholder="9:30 AM"
-                    title="${isManualDurationEntry ? 'Manual duration entry - use edit button to modify' : 'Click to edit start time'}"
-                    ${isManualDurationEntry ? 'readonly' : ''}
-                  />
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                  <input
-                    type="text"
-                    class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer ${isManualDurationEntry ? 'bg-gray-100 cursor-not-allowed' : ''}"
-                    value="${endTimeDisplay}"
-                    data-entry-id="${entry.id}"
-                    data-time-type="end"
-                    placeholder="9:30 AM"
-                    title="${isManualDurationEntry ? 'Manual duration entry - use edit button to modify' : 'Click to edit end time'}"
-                    ${isManualDurationEntry ? 'readonly' : ''}
-                  />
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                  ${durationHours} hours
-                </td>
-                <td class="px-4 py-3 text-sm text-gray-500 max-w-xs truncate" title="${entry.notes || ''}">
-                  ${entry.notes || '-'}
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                         return `
+               <div class="bg-white border border-gray-200 p-4 rounded-lg mobile-card" data-entry-id="${entry.id}">
+                <div class="flex justify-between items-start mb-3">
+                  <div class="flex-1">
+                    <h3 class="font-medium text-gray-900 text-sm">${entry.taskName || 'Unknown Task'}</h3>
+                    <p class="text-xs text-gray-600">${entry.clientName || 'Unknown Client'} • ${entry.projectName || 'Unknown Project'}</p>
+                  </div>
                   <button
                     class="edit-time-entry-btn p-2 text-gray-400 hover:text-[#415058] hover:bg-gray-50 rounded-md transition-colors"
                     data-entry-id="${entry.id}"
@@ -653,13 +597,210 @@ const user = await requireAuth('/')(Astro) as any;
                   >
                     <img src="/icons/pencil.svg" alt="Edit" class="w-4 h-4" />
                   </button>
-                </td>
-              </tr>
+                </div>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span class="text-gray-500 text-xs">Date:</span>
+                    <p class="text-gray-900">${taskDate.toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <span class="text-gray-500 text-xs">Duration:</span>
+                    <p class="text-gray-900">${durationHours} hours</p>
+                  </div>
+                  <div>
+                    <span class="text-gray-500 text-xs">Start:</span>
+                    <p class="text-gray-900">${startTimeDisplay}</p>
+                  </div>
+                  <div>
+                    <span class="text-gray-500 text-xs">End:</span>
+                    <p class="text-gray-900">${endTimeDisplay}</p>
+                  </div>
+                  <div>
+                    <span class="text-gray-500 text-xs">User:</span>
+                    <p class="text-gray-900">${entry.userName || '-'}</p>
+                  </div>
+                </div>
+                ${entry.notes ? `
+                  <div class="mt-3 pt-3 border-t border-gray-200">
+                    <span class="text-gray-500 text-xs">Notes:</span>
+                    <p class="text-gray-900 text-sm mt-1">${entry.notes}</p>
+                  </div>
+                ` : ''}
+              </div>
             `;
           }).join('')}
-        </tbody>
-      </table>
-    `;
+        </div>
+      `;
+    } else {
+      // Desktop table layout
+      container.innerHTML = `
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Client
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Project
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Task
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                User
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Date
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Start
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Stop
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Duration
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Notes
+              </th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+                      ${ongoingTimers.map((timer: any) => {
+              const taskDate = new Date(timer.startTime);
+              const elapsedHours = (timer.elapsedSeconds / 3600).toFixed(1);
+              const startTime = new Date(timer.startTime);
+              const startTimeDisplay = startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+              
+              return `
+                <tr class="hover:bg-gray-50 bg-green-50 border-l-4 border-green-400" data-timer-id="${timer.id}">
+                  <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                    ${timer.clientName || 'Unknown Client'}
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                    ${timer.projectName || 'Unknown Project'}
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                    ${timer.taskName || 'Unknown Task'}
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                    ${timer.userName || '-'}
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                    ${taskDate.toLocaleDateString()}
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                    ${startTimeDisplay}
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                    <button
+                      class="stop-timer-btn px-2 py-1 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded transition-colors"
+                      data-timer-id="${timer.id}"
+                      data-user-id="${timer.userId}"
+                      title="Stop timer"
+                    >
+                      Stop
+                    </button>
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                    <span class="timer-duration" data-timer-id="${timer.id}">${elapsedHours} hours</span>
+                  </td>
+                  <td class="px-4 py-3 text-sm text-gray-500 max-w-xs truncate" title="${timer.notes || ''}">
+                    ${timer.notes || '-'}
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                    <div class="flex items-center justify-end">
+                      <div class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                      <span class="text-xs text-green-600 font-medium">Running</span>
+                    </div>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+            ${filteredEntries.map((entry: any) => {
+              // For manual duration entries, use createdAt for task date since startTime is null
+              const taskDate = entry.startTime ? new Date(entry.startTime) : new Date(entry.createdAt);
+              const durationHours = entry.duration ? (entry.duration / 3600).toFixed(1) : '0';
+              
+              // Check if this is a manual duration entry (no meaningful start/end times)
+              // Manual duration entries have durationManual but no endTime
+              const isManualDurationEntry = entry.durationManual && !entry.endTime;
+              const startTime = (!isManualDurationEntry && entry.startTime) ? new Date(entry.startTime) : null;
+              const endTime = (!isManualDurationEntry && entry.endTime) ? new Date(entry.endTime) : null;
+              
+              // Format times for display
+              const startTimeDisplay = startTime ? startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:-- --';
+              const endTimeDisplay = endTime ? endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:-- --';
+              
+              return `
+                <tr class="hover:bg-gray-50" data-entry-id="${entry.id}">
+
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                    ${entry.clientName || 'Unknown Client'}
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                    ${entry.projectName || 'Unknown Project'}
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                    ${entry.taskName || 'Unknown Task'}
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                    ${entry.userName || '-'}
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                    ${taskDate.toLocaleDateString()}
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                    <input
+                      type="text"
+                      class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer ${isManualDurationEntry ? 'bg-gray-100 cursor-not-allowed' : ''}"
+                      value="${startTimeDisplay}"
+                      data-entry-id="${entry.id}"
+                      data-time-type="start"
+                      placeholder="9:30 AM"
+                      title="${isManualDurationEntry ? 'Manual duration entry - use edit button to modify' : 'Click to edit start time'}"
+                      ${isManualDurationEntry ? 'readonly' : ''}
+                    />
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                    <input
+                      type="text"
+                      class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer ${isManualDurationEntry ? 'bg-gray-100 cursor-not-allowed' : ''}"
+                      value="${endTimeDisplay}"
+                      data-entry-id="${entry.id}"
+                      data-time-type="end"
+                      placeholder="9:30 AM"
+                      title="${isManualDurationEntry ? 'Manual duration entry - use edit button to modify' : 'Click to edit end time'}"
+                      ${isManualDurationEntry ? 'readonly' : ''}
+                    />
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                    ${durationHours} hours
+                  </td>
+                  <td class="px-4 py-3 text-sm text-gray-500 max-w-xs truncate" title="${entry.notes || ''}">
+                    ${entry.notes || '-'}
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      class="edit-time-entry-btn p-2 text-gray-400 hover:text-[#415058] hover:bg-gray-50 rounded-md transition-colors"
+                      data-entry-id="${entry.id}"
+                      data-entry='${JSON.stringify(entry)}'
+                      title="Edit time entry"
+                    >
+                      <img src="/icons/pencil.svg" alt="Edit" class="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+    }
 
     // Start updating ongoing timer durations
     startTimerDurationUpdates(ongoingTimers);
@@ -750,6 +891,16 @@ const user = await requireAuth('/')(Astro) as any;
 
   // Load data when page loads
   document.addEventListener('DOMContentLoaded', loadDashboardData);
+
+  // Handle window resize for responsive layout
+  let resizeTimeout: NodeJS.Timeout;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      // Reload dashboard data to update layout (mobile vs desktop)
+      loadDashboardData();
+    }, 250);
+  });
 
   // Add event listeners for stop timer buttons
   document.addEventListener('click', async (e) => {
