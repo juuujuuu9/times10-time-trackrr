@@ -44,7 +44,7 @@ const navItems = [
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/src/scripts/admin-realtime-updates.js"></script>
   </head>
-  <body class="font-sans" style="background-color: #f0eef5;">
+  <body class="font-sans admin-layout" style="background-color: #f0eef5;">
     {!user || !isAdmin ? (
       <!-- Access Denied -->
       <div class="min-h-[100dvh] flex items-center justify-center" style="background-color: #f0eef5;">
@@ -235,36 +235,9 @@ const navItems = [
   });
 </script>
 
-<style>
+<style is:global>
   @tailwind base;
   @tailwind components;
   @tailwind utilities;
-  @import "../styles/global.css";
-  
-  /* Force Istok Web font on admin pages */
-  * {
-    font-family: 'Istok Web', system-ui, sans-serif !important;
-  }
-
-  html, body {
-    font-family: 'Istok Web', system-ui, sans-serif !important;
-  }
-  
-  /* Override any Tailwind font classes in admin */
-  .font-sans, .font-serif, .font-mono {
-    font-family: 'Istok Web', system-ui, sans-serif !important;
-  }
-  
-  /* Additional admin-specific styles with new color theme */
-  .admin-sidebar {
-    background: linear-gradient(to bottom, #1F292E, #415058);
-  }
-  
-  .admin-card {
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
-  }
-  
-  .admin-card:hover {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-  }
-</style> 
+  @import "../styles/admin.css";
+</style>
