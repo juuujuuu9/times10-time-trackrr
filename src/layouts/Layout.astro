@@ -1,4 +1,6 @@
 ---
+import { unregisterServiceWorker } from '../utils/unregisterServiceWorker';
+
 export interface Props {
 	title: string;
 }
@@ -22,6 +24,12 @@ const { title } = Astro.props;
 	<body>
 		<slot />
 	</body>
+
+	<script>
+		// Unregister any existing service workers
+		import { unregisterServiceWorker } from '../utils/unregisterServiceWorker';
+		unregisterServiceWorker();
+	</script>
 </html>
 
 <style is:global>
