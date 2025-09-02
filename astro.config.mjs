@@ -10,7 +10,13 @@ export default defineConfig({
       enabled: false,
     },
   }),
-  integrations: [tailwind(), react()],
+  integrations: [
+    tailwind({
+      config: { path: './tailwind.config.mjs' },
+      applyBaseStyles: false,
+    }),
+    react(),
+  ],
   vite: {
     define: {
       'process.env.DATABASE_URL': JSON.stringify(process.env.DATABASE_URL || ''),
