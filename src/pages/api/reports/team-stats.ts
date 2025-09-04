@@ -40,7 +40,7 @@ export const GET: APIRoute = async ({ url }) => {
         totalSeconds: sql<number>`COALESCE(SUM(
           CASE 
             WHEN ${timeEntries.endTime} IS NOT NULL 
-            THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))
+            THEN ROUND(EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))::numeric, 0)
             ELSE COALESCE(${timeEntries.durationManual}, 0)
           END
         ), 0)`.as('total_seconds')
@@ -57,8 +57,8 @@ export const GET: APIRoute = async ({ url }) => {
         totalCost: sql<number>`COALESCE(SUM(
           CASE 
             WHEN ${timeEntries.endTime} IS NOT NULL 
-            THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime})) / 3600 * COALESCE(${users.payRate}, 0)
-            ELSE COALESCE(${timeEntries.durationManual}, 0) / 3600 * COALESCE(${users.payRate}, 0)
+            THEN ROUND((ROUND(EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))::numeric, 0) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
+            ELSE ROUND((COALESCE(${timeEntries.durationManual}, 0) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
           END
         ), 0)`.as('total_cost')
       })

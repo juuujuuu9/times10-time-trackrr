@@ -147,7 +147,7 @@ const totalHoursResult = await db
     totalSeconds: sql<number>`COALESCE(SUM(
       CASE 
         WHEN ${timeEntries.endTime} IS NOT NULL 
-        THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))
+        THEN ROUND(EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))::numeric, 0)
         ELSE COALESCE(${timeEntries.durationManual}, 0)
       END
     ), 0)`.as('total_seconds')
@@ -168,8 +168,8 @@ const totalCostResult = await db
     totalCost: sql<number>`COALESCE(SUM(
       CASE 
         WHEN ${timeEntries.endTime} IS NOT NULL 
-        THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime})) / 3600 * COALESCE(${users.payRate}, 0)
-        ELSE COALESCE(${timeEntries.durationManual}, 0) / 3600 * COALESCE(${users.payRate}, 0)
+        THEN ROUND((EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime})) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
+        ELSE ROUND((COALESCE(${timeEntries.durationManual}, 0) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
       END
     ), 0)`.as('total_cost')
   })
@@ -266,7 +266,8 @@ const formatDuration = (seconds: number) => {
 };
 
 const formatDurationToHours = (seconds: number) => {
-  return Math.round((seconds / 3600) * 100000) / 100000; // Use 5 decimal places for better precision
+  // Use more precise calculation to avoid floating-point precision issues
+  return Math.round((seconds / 3600) * 1000000) / 1000000; // Use 6 decimal places for better precision
 };
 
 const totalHoursFormatted = formatDuration(totalHours);
@@ -505,9 +506,9 @@ try {
             <!-- Average Rate -->
             <div class="text-left p-3 bg-gray-50 rounded border border-gray-200">
               <div class="text-lg font-semibold text-gray-900">
-                {totalHoursDecimal > 0 ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalCost / totalHoursDecimal) : '$0.00'}
+                {totalHoursDecimal > 0 ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(totalCost / totalHoursDecimal)) : '$0'}
               </div>
-              <div class="text-xs text-gray-600">Avg Rate/Hour</div>
+              <div class="text-xs text-gray-600">Avg Rate/Hour (Weighted)</div>
             </div>
           </div>
         </div>

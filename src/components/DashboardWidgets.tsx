@@ -29,7 +29,7 @@ export const DashboardWidgets: React.FC<DashboardWidgetsProps> = ({
   };
 
   const avgHoursPerMember = activeTeamMembers > 0 ? totalHours / activeTeamMembers : 0;
-  const avgCostPerHour = totalHours > 0 ? totalCost / (totalHours / 3600) : 0;
+  const avgCostPerHour = totalHours > 0 ? Math.round(totalCost / (totalHours / 3600)) : 0;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
