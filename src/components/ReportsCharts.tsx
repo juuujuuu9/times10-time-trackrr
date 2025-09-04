@@ -57,7 +57,16 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
 
   // Calculate better scaling for small value differences
   const maxCost = Math.max(...sortedData.map(item => item.totalCost));
-  const suggestedMax = maxCost < 100 ? Math.ceil(maxCost * 1.2) : undefined;
+  const suggestedMax = maxCost < 100 ? Math.ceil(maxCost * 1.2) : Math.ceil(maxCost * 1.1);
+
+  // Function to copy value to clipboard
+  const copyToClipboard = (value: number, label: string) => {
+    const text = `$${value.toLocaleString()}`;
+    navigator.clipboard.writeText(text).then(() => {
+      // You could add a toast notification here
+      console.log(`Copied ${text} for ${label}`);
+    });
+  };
 
   const chartData = {
     labels: sortedData.map(item => {
@@ -83,6 +92,14 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
     indexAxis: 'y' as const, // This makes it horizontal
     responsive: true,
     maintainAspectRatio: false,
+    layout: {
+      padding: {
+        top: 20,
+        bottom: 20,
+        left: 10,
+        right: 50, // Extra padding for value labels
+      },
+    },
     plugins: {
       legend: {
         display: false, // Hide legend for cleaner look
@@ -92,8 +109,11 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
         text: title,
         color: '#1F2937',
         font: {
-          size: 16,
+          size: 18,
           weight: 'bold' as const,
+        },
+        padding: {
+          bottom: 20,
         },
       },
       tooltip: {
@@ -116,10 +136,11 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
         },
       },
       datalabels: {
+        display: true,
         color: '#1F2937',
         anchor: 'end' as const,
         align: 'right' as const,
-        offset: 8,
+        offset: 10,
         font: {
           weight: 'bold' as const,
           size: 12,
@@ -129,6 +150,14 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
         },
       },
     },
+    onClick: (event: any, elements: any) => {
+      if (elements.length > 0) {
+        const elementIndex = elements[0].index;
+        const value = sortedData[elementIndex].totalCost;
+        const label = sortedData[elementIndex].projectName || sortedData[elementIndex].clientName || 'Unknown';
+        copyToClipboard(value, label);
+      }
+    },
     scales: {
       x: {
         type: 'linear' as const,
@@ -136,6 +165,9 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
         position: 'bottom' as const,
         ticks: {
           color: '#6B7280',
+          font: {
+            size: 12,
+          },
           callback: function(value: any) {
             return `$${value.toLocaleString()}`;
           },
@@ -148,12 +180,17 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
           text: 'Cost ($)',
           color: '#6B7280',
           font: {
-            size: 12,
+            size: 14,
+            weight: 'bold' as const,
           },
         },
         // Add better scaling for small value differences
         beginAtZero: true,
-        suggestedMax: suggestedMax
+        suggestedMax: suggestedMax,
+        // Add padding to prevent cut-off
+        afterBuildTicks: function(scale: any) {
+          scale.max = scale.max * 1.05; // Add 5% padding to the right
+        },
       },
       y: {
         type: 'category' as const,
@@ -163,7 +200,7 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
           color: '#6B7280',
           maxRotation: 0,
           font: {
-            size: 11,
+            size: 12,
           },
           callback: function(value: any, index: number) {
             const item = sortedData[index];
@@ -179,13 +216,25 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
         grid: {
           display: false,
         },
+        // Add more space between bars
+        afterBuildTicks: function(scale: any) {
+          scale.max = scale.max + 0.5; // Add padding at the top
+        },
       },
     },
   };
 
+  // Calculate dynamic height based on number of items
+  const minHeight = 400;
+  const itemHeight = 35; // Height per item
+  const calculatedHeight = Math.max(minHeight, sortedData.length * itemHeight + 100);
+
   return (
     <div className="bg-white rounded-lg border border-gray-300 p-6 shadow-sm">
-      <div className="h-96"> {/* Increased height for better readability */}
+      <div className="mb-4 text-sm text-gray-600">
+        💡 Click on any bar to copy the cost value to your clipboard
+      </div>
+      <div style={{ height: `${calculatedHeight}px` }}>
         <Bar data={chartData} options={options} />
       </div>
     </div>
