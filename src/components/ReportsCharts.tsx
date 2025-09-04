@@ -380,6 +380,7 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string }> =
         borderColor: colors.slice(0, data.length).map(color => color.replace('0.8', '1')),
         borderWidth: 2,
         hoverOffset: 4,
+        cutout: '40%', // Make the hole much smaller for thicker segments
       },
     ],
   };
@@ -387,6 +388,14 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string }> =
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    layout: {
+      padding: {
+        top: 5,
+        bottom: 5,
+        left: 5,
+        right: 5,
+      },
+    },
     plugins: {
       legend: {
         position: 'bottom' as const,
@@ -394,8 +403,12 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string }> =
           color: '#374151',
           font: {
             size: 11,
+            weight: 'bold' as const,
           },
-          padding: 15,
+          padding: 10,
+          usePointStyle: true,
+          pointStyle: 'circle',
+          boxWidth: 12,
         },
       },
       title: {
@@ -405,6 +418,10 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string }> =
         font: {
           size: 16,
           weight: 'bold' as const,
+        },
+        padding: {
+          top: 10,
+          bottom: 10,
         },
       },
       tooltip: {
@@ -458,7 +475,7 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string }> =
 
   return (
     <div className="bg-white rounded-lg border border-gray-300 p-6 shadow-sm">
-      <div className="h-80">
+      <div className="h-[500px]">
         <Doughnut data={chartData} options={options} />
       </div>
     </div>
@@ -601,9 +618,9 @@ export const ReportsCharts: React.FC<ReportsChartsProps> = ({
 
   return (
     <div className="space-y-8">
-      {/* Main Charts Section - Horizontal Bar and Doughnut side by side */}
+      {/* Main Charts Section - Full width Doughnut chart */}
       {currentData.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="space-y-8">
           {/* Horizontal Bar Chart - Cost per Project/Client */}
           <HorizontalBarChart 
             data={currentData} 
@@ -611,10 +628,10 @@ export const ReportsCharts: React.FC<ReportsChartsProps> = ({
             period={period} 
           />
 
-          {/* Doughnut Chart */}
+          {/* Doughnut Chart - Full Width */}
           <CostDoughnutChart 
             data={currentData} 
-            title={`${chartTitle} Distribution`} 
+            title={`${chartTitle} Distribution - ${period}`} 
           />
         </div>
       )}
