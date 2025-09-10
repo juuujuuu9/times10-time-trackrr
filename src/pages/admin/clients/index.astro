@@ -3,6 +3,11 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { db } from '../../../db/index';
 import { clients, users, projects, timeEntries, tasks } from '../../../db/schema';
 import { count, sql, sum, desc } from 'drizzle-orm';
+import { getSessionUser } from '../../../utils/session';
+
+// Get current user to check if they can view financial data
+const currentUser = await getSessionUser(Astro);
+const canViewFinancialData = currentUser ? currentUser.role === 'admin' : false;
 
 // Get all clients with enhanced information
 const allClients = await db
@@ -123,7 +128,12 @@ const allClients = await db
               <p class="text-sm font-medium text-gray-600">Total Revenue</p>
             </div>
           </div>
-          <p class="text-2xl font-bold text-gray-900">${allClients.reduce((sum, client) => sum + Number(client.totalCost), 0).toFixed(2)}</p>
+          <p class="text-2xl font-bold text-gray-900">
+            {canViewFinancialData 
+              ? `$${allClients.reduce((sum, client) => sum + Number(client.totalCost), 0).toFixed(2)}`
+              : '***'
+            }
+          </p>
         </div>
       </div>
     </div>
@@ -240,7 +250,10 @@ const allClients = await db
                 <span class="text-sm text-gray-600">Revenue</span>
               </div>
               <span class="text-sm font-medium text-gray-900">
-                ${Number(client.totalCost).toFixed(2)}
+                {canViewFinancialData 
+                  ? `$${Number(client.totalCost).toFixed(2)}`
+                  : '***'
+                }
               </span>
             </div>
 

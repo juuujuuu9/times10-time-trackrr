@@ -7,6 +7,7 @@ import { requireRole } from '../../../utils/session';
 
 // Get current user
 const currentUser = await requireRole('admin', '/admin')(Astro) as any;
+const canViewFinancialData = currentUser ? currentUser.role === 'admin' : false;
 
 // Get all users with their stats
 const allUsers = await db
@@ -221,7 +222,10 @@ const allUsers = await db
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  ${user.payRate ? parseFloat(user.payRate).toFixed(2) : '0.00'}/hr
+                  {canViewFinancialData 
+                    ? `${user.payRate ? parseFloat(user.payRate).toFixed(2) : '0.00'}/hr`
+                    : '***'
+                  }
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {new Date(user.createdAt).toLocaleDateString()}
