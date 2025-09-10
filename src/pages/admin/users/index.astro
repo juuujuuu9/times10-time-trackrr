@@ -36,15 +36,17 @@ const allUsers = await db
         <h1 class="text-2xl font-bold text-gray-900">Team Members</h1>
         <p class="text-gray-600">Manage team members and their roles</p>
       </div>
-      <button
-        id="inviteUserBtn"
-        class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
-      >
-        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-        </svg>
-        Invite Team Member
-      </button>
+      {canViewFinancialData && (
+        <button
+          id="inviteUserBtn"
+          class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+          </svg>
+          Invite Team Member
+        </button>
+      )}
     </div>
 
     <!-- Summary Stats -->
@@ -232,7 +234,7 @@ const allUsers = await db
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div class="flex justify-end space-x-2">
-                    {user.status === 'invited' && (
+                    {user.status === 'invited' && canViewFinancialData && (
                       <button
                         class="resend-invite-btn inline-flex items-center px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 text-sm font-medium rounded-md transition-colors duration-200"
                         data-user-id={user.id}
@@ -245,16 +247,18 @@ const allUsers = await db
                         Resend Invite
                       </button>
                     )}
-                    <button
-                      class="edit-user-btn inline-flex items-center px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-md transition-colors duration-200"
-                      data-user-id={user.id}
-                      title="Edit user details"
-                    >
-                      <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                      </svg>
-                      Edit
-                    </button>
+                    {canViewFinancialData && (
+                      <button
+                        class="edit-user-btn inline-flex items-center px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-md transition-colors duration-200"
+                        data-user-id={user.id}
+                        title="Edit user details"
+                      >
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                        Edit
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -287,7 +291,8 @@ const allUsers = await db
   </div>
 
   <!-- Invite Team Member Modal -->
-  <div id="inviteModal" class="fixed inset-0 bg-black/50 hidden z-50">
+  {canViewFinancialData && (
+    <div id="inviteModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
       <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-300 flex flex-col">
         <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex-shrink-0">
@@ -379,9 +384,11 @@ const allUsers = await db
       </div>
     </div>
   </div>
+  )}
 
   <!-- Edit Team Member Modal -->
-  <div id="editUserModal" class="fixed inset-0 bg-black/50 hidden z-50">
+  {canViewFinancialData && (
+    <div id="editUserModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
       <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-300 flex flex-col">
         <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex-shrink-0">
@@ -468,17 +475,19 @@ const allUsers = await db
               <p class="text-xs text-gray-500 mt-1">Enter the hourly rate in USD (e.g., 25.50)</p>
             </div>
             <div class="flex justify-between items-center">
-              <button
-                type="button"
-                id="deleteUserBtn"
-                class="delete-user-btn px-4 py-2 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-md transition-colors font-medium flex items-center space-x-2"
-                title="Delete team member"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                </svg>
-                <span>Delete</span>
-              </button>
+              {canViewFinancialData && (
+                <button
+                  type="button"
+                  id="deleteUserBtn"
+                  class="delete-user-btn px-4 py-2 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-md transition-colors font-medium flex items-center space-x-2"
+                  title="Delete team member"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                  </svg>
+                  <span>Delete</span>
+                </button>
+              )}
               <div class="flex space-x-3">
                 <button
                   type="button"
@@ -499,9 +508,11 @@ const allUsers = await db
       </div>
     </div>
   </div>
+  )}
 
   <!-- Change Role Modal -->
-  <div id="roleModal" class="fixed inset-0 bg-black/50 hidden z-50">
+  {canViewFinancialData && (
+    <div id="roleModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
       <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-300 flex flex-col">
         <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex-shrink-0">
@@ -551,6 +562,7 @@ const allUsers = await db
       </div>
     </div>
   </div>
+  )}
 
 
 

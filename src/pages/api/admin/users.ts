@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db/index';
-import { users } from '../../../db/schema';
+import { users, sessions } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
 import { hashPassword } from '../../../utils/auth';
 import { createInvitationToken } from '../../../utils/invitation';
@@ -22,8 +22,33 @@ export const GET: APIRoute = async () => {
   }
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
   try {
+    // Get the current user from session
+    const token = cookies.get('session_token')?.value;
+    let currentUser = null;
+
+    if (token) {
+      const session = await db.query.sessions.findFirst({
+        where: eq(sessions.token, token),
+        with: {
+          user: true
+        }
+      });
+
+      if (session && session.user.status === 'active') {
+        currentUser = session.user;
+      }
+    }
+
+    // Only admins can invite users
+    if (!currentUser || currentUser.role !== 'admin') {
+      return new Response(JSON.stringify({ error: 'Only administrators can invite team members' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const body = await request.json();
     const { name, email, role, status, payRate, password, invitedBy } = body;
 
@@ -173,8 +198,33 @@ export const POST: APIRoute = async ({ request }) => {
   }
 };
 
-export const PUT: APIRoute = async ({ request }) => {
+export const PUT: APIRoute = async ({ request, cookies }) => {
   try {
+    // Get the current user from session
+    const token = cookies.get('session_token')?.value;
+    let currentUser = null;
+
+    if (token) {
+      const session = await db.query.sessions.findFirst({
+        where: eq(sessions.token, token),
+        with: {
+          user: true
+        }
+      });
+
+      if (session && session.user.status === 'active') {
+        currentUser = session.user;
+      }
+    }
+
+    // Only admins can update users
+    if (!currentUser || currentUser.role !== 'admin') {
+      return new Response(JSON.stringify({ error: 'Only administrators can update team members' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const body = await request.json();
     const { id, name, email, role, status, payRate, password } = body;
 
