@@ -2,9 +2,20 @@ import type { APIRoute } from 'astro';
 import { db } from '../../../db';
 import { timeEntries, users, projects, tasks, clients } from '../../../db/schema';
 import { sql, gte, lte, and, eq } from 'drizzle-orm';
+import { getSessionUser } from '../../../utils/session';
 
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ url, request }) => {
   try {
+    // Check user session and permissions
+    const user = await getSessionUser(request);
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const canViewFinancialData = user.role === 'admin';
     const searchParams = url.searchParams;
     const period = searchParams.get('period') || 'last30';
     const teamMemberId = searchParams.get('teamMember');
@@ -132,13 +143,15 @@ export const GET: APIRoute = async ({ url }) => {
             ELSE COALESCE(${timeEntries.durationManual}, 0)
           END
         ), 0)`.as('total_seconds'),
-        totalCost: sql<number>`COALESCE(SUM(
-          CASE 
-            WHEN ${timeEntries.endTime} IS NOT NULL 
-            THEN ROUND((ROUND(EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))::numeric, 0) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
-            ELSE ROUND((COALESCE(${timeEntries.durationManual}, 0) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
-          END
-        ), 0)`.as('total_cost')
+        totalCost: canViewFinancialData 
+          ? sql<number>`COALESCE(SUM(
+              CASE 
+                WHEN ${timeEntries.endTime} IS NOT NULL 
+                THEN ROUND((ROUND(EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))::numeric, 0) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
+                ELSE ROUND((COALESCE(${timeEntries.durationManual}, 0) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
+              END
+            ), 0)`.as('total_cost')
+          : sql<number>`0`.as('total_cost')
       })
       .from(timeEntries)
       .innerJoin(users, eq(timeEntries.userId, users.id))
@@ -160,7 +173,7 @@ export const GET: APIRoute = async ({ url }) => {
       timeSeriesData.push({
         date: dateStr,
         hours: existingData?.totalSeconds || 0,
-        cost: existingData?.totalCost || 0
+        cost: canViewFinancialData ? (existingData?.totalCost || 0) : 0
       });
       
       currentDate.setDate(currentDate.getDate() + 1);

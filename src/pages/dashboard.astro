@@ -30,8 +30,14 @@ const user = await requireAuth('/')(Astro) as any;
             </div>
             <div class="flex items-center space-x-4">
               <span class="text-sm text-gray-600">Welcome, {user?.name || 'User'}</span>
-              <span class="px-3 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
-                Team Member
+              <span class={`px-3 py-1 text-xs font-medium rounded-full ${
+                user?.role === 'admin' 
+                  ? 'bg-purple-100 text-purple-800' 
+                  : user?.role === 'developer'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-gray-100 text-gray-800'
+              }`}>
+                {user?.role === 'admin' ? 'Admin' : user?.role === 'developer' ? 'Developer' : 'Team Member'}
               </span>
               <button
                 id="logoutButton"

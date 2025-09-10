@@ -6,6 +6,7 @@ import { count, sql, sum, gte, lte, and, eq } from 'drizzle-orm';
 import { getProjectCosts, getClientCosts } from '../../../db/queries';
 import { ReportsCharts } from '../../../components/ReportsCharts';
 import { DashboardWidgets } from '../../../components/DashboardWidgets';
+import { getSessionUser } from '../../../utils/session';
 
 // Get the selected time period from query params, default to 'last7' (more likely to have data)
 const period = Astro.url.searchParams.get('period') || 'last7';
@@ -21,6 +22,10 @@ const selectedClient = Astro.url.searchParams.get('client');
 // Get custom date range from query params
 const customStartDate = Astro.url.searchParams.get('startDate');
 const customEndDate = Astro.url.searchParams.get('endDate');
+
+// Get current user to check if they can view financial data
+const currentUser = await getSessionUser(Astro);
+const canViewFinancialData = currentUser ? currentUser.role === 'admin' : false;
 
 // Calculate date ranges based on selected period
 const now = new Date();
@@ -249,13 +254,13 @@ let clientCosts: Array<{
 try {
   if (selectedProject) {
     // If a specific project is selected, only show project data
-    projectCosts = await getProjectCosts(startDate, endDate, teamMemberId);
+    projectCosts = await getProjectCosts(startDate, endDate, teamMemberId, canViewFinancialData);
     // Filter to only show the selected project
     projectCosts = projectCosts.filter(project => project.projectId === parseInt(selectedProject));
     clientCosts = []; // No client costs when specific project is selected
   } else if (selectedClient) {
     // If a specific client is selected, show all projects for that client
-    projectCosts = await getProjectCosts(startDate, endDate, teamMemberId);
+    projectCosts = await getProjectCosts(startDate, endDate, teamMemberId, canViewFinancialData);
     // Filter to only show projects for the selected client
     projectCosts = projectCosts.filter(project => project.clientId === parseInt(selectedClient));
     clientCosts = []; // No client costs when specific client is selected
@@ -264,15 +269,15 @@ try {
     if (viewType === 'client') {
       // Show only client costs
       projectCosts = [];
-      clientCosts = await getClientCosts(startDate, endDate, teamMemberId);
+      clientCosts = await getClientCosts(startDate, endDate, teamMemberId, canViewFinancialData);
     } else if (viewType === 'project') {
       // Show only project costs
-      projectCosts = await getProjectCosts(startDate, endDate, teamMemberId);
+      projectCosts = await getProjectCosts(startDate, endDate, teamMemberId, canViewFinancialData);
       clientCosts = [];
     } else {
       // Default: show both project and client data
-      projectCosts = await getProjectCosts(startDate, endDate, teamMemberId);
-      clientCosts = await getClientCosts(startDate, endDate, teamMemberId);
+      projectCosts = await getProjectCosts(startDate, endDate, teamMemberId, canViewFinancialData);
+      clientCosts = await getClientCosts(startDate, endDate, teamMemberId, canViewFinancialData);
     }
   }
 } catch (error) {
@@ -534,6 +539,7 @@ try {
             timeSeriesData={timeSeriesData.timeSeriesData}
             period={periodDisplayName}
             viewType={viewType}
+            canViewFinancialData={canViewFinancialData}
           />
         </div>
       </div>

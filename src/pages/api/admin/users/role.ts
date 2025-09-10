@@ -15,8 +15,8 @@ export const PUT: APIRoute = async ({ request }) => {
       });
     }
 
-    if (!['admin', 'user'].includes(role)) {
-      return new Response(JSON.stringify({ error: 'Invalid role. Must be "admin" or "user"' }), {
+    if (!['admin', 'developer', 'user'].includes(role)) {
+      return new Response(JSON.stringify({ error: 'Invalid role. Must be "admin", "developer", or "user"' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });

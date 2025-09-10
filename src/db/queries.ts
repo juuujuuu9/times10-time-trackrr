@@ -158,20 +158,22 @@ export async function getWeeklyTotals() {
 }
 
 // Get project costs for a specific time period
-export async function getProjectCosts(startDate: Date, endDate: Date, teamMemberId?: number) {
+export async function getProjectCosts(startDate: Date, endDate: Date, teamMemberId?: number, canViewFinancialData: boolean = true) {
   return await db
     .select({
       projectId: projects.id,
       clientId: clients.id,
       projectName: projects.name,
       clientName: clients.name,
-      totalCost: sql<number>`COALESCE(SUM(
-        CASE 
-          WHEN ${timeEntries.endTime} IS NOT NULL 
-          THEN ROUND((ROUND(EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))::numeric, 0) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
-          ELSE ROUND((COALESCE(${timeEntries.durationManual}, 0) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
-        END
-      ), 0)`.as('total_cost'),
+      totalCost: canViewFinancialData 
+        ? sql<number>`COALESCE(SUM(
+            CASE 
+              WHEN ${timeEntries.endTime} IS NOT NULL 
+              THEN ROUND((ROUND(EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))::numeric, 0) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
+              ELSE ROUND((COALESCE(${timeEntries.durationManual}, 0) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
+            END
+          ), 0)`.as('total_cost')
+        : sql<number>`0`.as('total_cost'),
       totalHours: sql<number>`COALESCE(SUM(
         CASE 
           WHEN ${timeEntries.endTime} IS NOT NULL 
@@ -225,18 +227,20 @@ export async function getProjectCosts(startDate: Date, endDate: Date, teamMember
 }
 
 // Get client costs for a specific time period
-export async function getClientCosts(startDate: Date, endDate: Date, teamMemberId?: number) {
+export async function getClientCosts(startDate: Date, endDate: Date, teamMemberId?: number, canViewFinancialData: boolean = true) {
   return await db
     .select({
       clientId: clients.id,
       clientName: clients.name,
-      totalCost: sql<number>`COALESCE(SUM(
-        CASE 
-          WHEN ${timeEntries.endTime} IS NOT NULL 
-          THEN ROUND((ROUND(EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))::numeric, 0) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
-          ELSE ROUND((COALESCE(${timeEntries.durationManual}, 0) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
-        END
-      ), 0)`.as('total_cost'),
+      totalCost: canViewFinancialData 
+        ? sql<number>`COALESCE(SUM(
+            CASE 
+              WHEN ${timeEntries.endTime} IS NOT NULL 
+              THEN ROUND((ROUND(EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))::numeric, 0) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
+              ELSE ROUND((COALESCE(${timeEntries.durationManual}, 0) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
+            END
+          ), 0)`.as('total_cost')
+        : sql<number>`0`.as('total_cost'),
       totalHours: sql<number>`COALESCE(SUM(
         CASE 
           WHEN ${timeEntries.endTime} IS NOT NULL 

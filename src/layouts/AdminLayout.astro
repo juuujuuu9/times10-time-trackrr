@@ -11,7 +11,7 @@ const { title, currentPage = 'dashboard' } = Astro.props;
 
 // Get user session
 const user = await getSessionUser(Astro);
-const isAdmin = user && user.role === 'admin';
+const isAdmin = user && (user.role === 'admin' || user.role === 'developer');
 
 // If not authenticated or not admin, we'll handle this in the template
 
@@ -135,8 +135,14 @@ const navItems = [
               <!-- Title removed -->
             </div>
             <div class="flex items-center space-x-4">
-              <div class="px-3 py-1 bg-gray-100 text-gray-800 text-sm font-medium rounded-full">
-                Admin Panel
+              <div class={`px-3 py-1 text-sm font-medium rounded-full ${
+                user?.role === 'admin' 
+                  ? 'bg-purple-100 text-purple-800' 
+                  : user?.role === 'developer'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-gray-100 text-gray-800'
+              }`}>
+                {user?.role === 'admin' ? 'Admin' : user?.role === 'developer' ? 'Developer' : 'Admin Panel'}
               </div>
               <button 
                 id="logoutButton"
@@ -193,8 +199,8 @@ const navItems = [
       }
       
       const data = await response.json();
-      if (!data.user || data.user.role !== 'admin') {
-        console.log('User not admin, redirecting...');
+      if (!data.user || (data.user.role !== 'admin' && data.user.role !== 'developer')) {
+        console.log('User not admin or developer, redirecting...');
         window.location.replace('/');
         return;
       }

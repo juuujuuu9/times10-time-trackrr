@@ -16,12 +16,12 @@ async function createDemoUsers() {
         payRate: '50.00'
       },
       {
-        email: 'manager@times10.com',
-        name: 'Manager User',
-        password: 'manager123',
-        role: 'manager',
+        email: 'developer@times10.com',
+        name: 'Developer User',
+        password: 'developer123',
+        role: 'developer',
         status: 'active',
-        payRate: '35.00'
+        payRate: '40.00'
       },
       {
         email: 'user@times10.com',
@@ -70,7 +70,7 @@ async function createDemoUsers() {
     console.log('Demo users created successfully!');
     console.log('\nDemo Credentials:');
     console.log('Admin: admin@times10.com / admin123');
-    console.log('Manager: manager@times10.com / manager123');
+    console.log('Developer: developer@times10.com / developer123');
     console.log('User: user@times10.com / user123');
 
   } catch (error) {

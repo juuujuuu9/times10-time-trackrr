@@ -130,8 +130,14 @@ const user = await requireRole('admin', '/admin')(Astro) as any;
                 Role
               </label>
               <div class="px-4 py-3 bg-gray-100 border border-gray-200 rounded-lg">
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-purple-100 text-purple-800">
-                  {user?.role ? (user.role === 'admin' ? 'Admin' : 'Team Member') : 'Unknown'}
+                <span class={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
+                  user?.role === 'admin' 
+                    ? 'bg-purple-100 text-purple-800' 
+                    : user?.role === 'developer'
+                    ? 'bg-red-600 text-white'
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {user?.role === 'admin' ? 'Admin' : user?.role === 'developer' ? 'Developer' : 'Team Member'}
                 </span>
               </div>
             </div>
@@ -298,7 +304,7 @@ const user = await requireRole('admin', '/admin')(Astro) as any;
                 </div>
                 <div>
                   <h4 class="text-xl font-semibold text-gray-900">Admin</h4>
-                  <p class="text-sm text-gray-600">Full system access and control</p>
+                  <p class="text-sm text-gray-600">Full system access including all financial data</p>
                 </div>
               </div>
               <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-purple-100 text-purple-800">
@@ -322,6 +328,47 @@ const user = await requireRole('admin', '/admin')(Astro) as any;
                 <input type="checkbox" checked disabled class="rounded border-gray-300 text-gray-600 focus:ring-gray-400 bg-white" />
                 <span class="ml-3 text-sm font-medium text-gray-900">System Settings</span>
               </div>
+            </div>
+          </div>
+
+          <!-- Developer Role -->
+          <div class="border border-gray-200 rounded-xl p-6 bg-gray-50">
+            <div class="flex items-center justify-between mb-6">
+              <div class="flex items-center">
+                <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mr-4">
+                  <span class="text-blue-700 text-xl">💻</span>
+                </div>
+                <div>
+                  <h4 class="text-xl font-semibold text-gray-900">Developer</h4>
+                  <p class="text-sm text-gray-600">Full access with financial data hidden</p>
+                </div>
+              </div>
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800">
+                Advanced Role
+              </span>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div class="flex items-center p-3 bg-white rounded-lg border border-gray-200">
+                <input type="checkbox" checked disabled class="rounded border-gray-300 text-gray-600 focus:ring-gray-400 bg-white" />
+                <span class="ml-3 text-sm font-medium text-gray-900">Manage Users</span>
+              </div>
+              <div class="flex items-center p-3 bg-white rounded-lg border border-gray-200">
+                <input type="checkbox" checked disabled class="rounded border-gray-300 text-gray-600 focus:ring-gray-400 bg-white" />
+                <span class="ml-3 text-sm font-medium text-gray-900">Manage Projects</span>
+              </div>
+              <div class="flex items-center p-3 bg-white rounded-lg border border-gray-200">
+                <input type="checkbox" checked disabled class="rounded border-gray-300 text-gray-600 focus:ring-gray-400 bg-white" />
+                <span class="ml-3 text-sm font-medium text-gray-900">View Reports</span>
+              </div>
+              <div class="flex items-center p-3 bg-white rounded-lg border border-gray-200">
+                <input type="checkbox" checked disabled class="rounded border-gray-300 text-gray-600 focus:ring-gray-400 bg-white" />
+                <span class="ml-3 text-sm font-medium text-gray-900">System Settings</span>
+              </div>
+            </div>
+            <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p class="text-sm text-yellow-800">
+                <span class="font-medium">Note:</span> Financial data (dollar amounts, costs, pay rates) is hidden and appears as asterisks (***) for privacy.
+              </p>
             </div>
           </div>
 

@@ -6,9 +6,14 @@ import { count, sql, sum, gte, lte, and, eq } from 'drizzle-orm';
 import { getProjectCosts, getClientCosts } from '../../db/queries';
 import { ReportsCharts } from '../../components/ReportsCharts';
 import { DashboardWidgets } from '../../components/DashboardWidgets';
+import { getSessionUser } from '../../utils/session';
 
 // Get the selected time period from query params, default to 'week' (This Week)
 const period = Astro.url.searchParams.get('period') || 'week';
+
+// Get current user to check if they can view financial data
+const currentUser = await getSessionUser(Astro);
+const canViewFinancialData = currentUser ? currentUser.role === 'admin' : false;
 // Get the selected view type from query params, default to 'project'
 const viewTypeParam = Astro.url.searchParams.get('view') || 'project';
 const viewType = (viewTypeParam === 'client' || viewTypeParam === 'project') ? viewTypeParam : 'project';
@@ -162,27 +167,30 @@ const totalHoursResult = await db
     sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
   ));
 
-// Get total cost from time entries (with all filters applied)
-const totalCostResult = await db
-  .select({
-    totalCost: sql<number>`COALESCE(SUM(
-      CASE 
-        WHEN ${timeEntries.endTime} IS NOT NULL 
-        THEN ROUND((EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime})) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
-        ELSE ROUND((COALESCE(${timeEntries.durationManual}, 0) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
-      END
-    ), 0)`.as('total_cost')
-  })
-  .from(timeEntries)
-  .innerJoin(users, sql`${timeEntries.userId} = ${users.id}`)
-  .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-  .innerJoin(projects, eq(tasks.projectId, projects.id))
-  .innerJoin(clients, eq(projects.clientId, clients.id))
-  .where(and(
-    dateFilter,
-    // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
-    sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
-  ));
+// Get total cost from time entries (with all filters applied) - only for admins
+let totalCostResult = [{ totalCost: 0 }];
+if (canViewFinancialData) {
+  totalCostResult = await db
+    .select({
+      totalCost: sql<number>`COALESCE(SUM(
+        CASE 
+          WHEN ${timeEntries.endTime} IS NOT NULL 
+          THEN ROUND((EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime})) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
+          ELSE ROUND((COALESCE(${timeEntries.durationManual}, 0) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
+        END
+      ), 0)`.as('total_cost')
+    })
+    .from(timeEntries)
+    .innerJoin(users, sql`${timeEntries.userId} = ${users.id}`)
+    .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+    .innerJoin(projects, eq(tasks.projectId, projects.id))
+    .innerJoin(clients, eq(projects.clientId, clients.id))
+    .where(and(
+      dateFilter,
+      // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
+      sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
+    ));
+}
 
 // Get active team members (users with time entries, with all filters applied)
 const activeTeamMembersResult = await db
@@ -218,33 +226,39 @@ let clientCosts: Array<{
 }> = [];
 
 try {
-  if (selectedProject) {
-    // If a specific project is selected, only show project data
-    projectCosts = await getProjectCosts(startDate || new Date(0), endDate || new Date(), teamMemberId);
-    // Filter to only show the selected project
-    projectCosts = projectCosts.filter(project => project.projectId === parseInt(selectedProject));
-    clientCosts = []; // No client costs when specific project is selected
-  } else if (selectedClient) {
-    // If a specific client is selected, show all projects for that client
-    projectCosts = await getProjectCosts(startDate || new Date(0), endDate || new Date(), teamMemberId);
-    // Filter to only show projects for the selected client
-    projectCosts = projectCosts.filter(project => project.clientId === parseInt(selectedClient));
-    clientCosts = []; // No client costs when specific client is selected
-  } else {
-    // If no project or client is selected, show data based on view type
-    if (viewType === 'client') {
-      // Show only client costs
-      projectCosts = [];
-      clientCosts = await getClientCosts(startDate || new Date(0), endDate || new Date(), teamMemberId);
-    } else if (viewType === 'project') {
-      // Show only project costs
-      projectCosts = await getProjectCosts(startDate || new Date(0), endDate || new Date(), teamMemberId);
-      clientCosts = [];
+  if (canViewFinancialData) {
+    if (selectedProject) {
+      // If a specific project is selected, only show project data
+      projectCosts = await getProjectCosts(startDate || new Date(0), endDate || new Date(), teamMemberId, canViewFinancialData);
+      // Filter to only show the selected project
+      projectCosts = projectCosts.filter(project => project.projectId === parseInt(selectedProject));
+      clientCosts = []; // No client costs when specific project is selected
+    } else if (selectedClient) {
+      // If a specific client is selected, show all projects for that client
+      projectCosts = await getProjectCosts(startDate || new Date(0), endDate || new Date(), teamMemberId, canViewFinancialData);
+      // Filter to only show projects for the selected client
+      projectCosts = projectCosts.filter(project => project.clientId === parseInt(selectedClient));
+      clientCosts = []; // No client costs when specific client is selected
     } else {
-      // Default: show both project and client data
-      projectCosts = await getProjectCosts(startDate || new Date(0), endDate || new Date(), teamMemberId);
-      clientCosts = await getClientCosts(startDate || new Date(0), endDate || new Date(), teamMemberId);
+      // If no project or client is selected, show data based on view type
+      if (viewType === 'client') {
+        // Show only client costs
+        projectCosts = [];
+        clientCosts = await getClientCosts(startDate || new Date(0), endDate || new Date(), teamMemberId, canViewFinancialData);
+      } else if (viewType === 'project') {
+        // Show only project costs
+        projectCosts = await getProjectCosts(startDate || new Date(0), endDate || new Date(), teamMemberId, canViewFinancialData);
+        clientCosts = [];
+      } else {
+        // Default: show both project and client data
+        projectCosts = await getProjectCosts(startDate || new Date(0), endDate || new Date(), teamMemberId, canViewFinancialData);
+        clientCosts = await getClientCosts(startDate || new Date(0), endDate || new Date(), teamMemberId, canViewFinancialData);
+      }
     }
+  } else {
+    // For developers, set empty arrays to hide financial data
+    projectCosts = [];
+    clientCosts = [];
   }
 } catch (error) {
   console.error('Error fetching project/client data:', error);
@@ -272,10 +286,12 @@ const formatDurationToHours = (seconds: number) => {
 
 const totalHoursFormatted = formatDuration(totalHours);
 const totalHoursDecimal = formatDurationToHours(totalHours);
-const totalCostFormatted = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD'
-}).format(totalCost);
+const totalCostFormatted = canViewFinancialData 
+  ? new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(totalCost)
+  : '***';
 
 // Get period display name
 const getPeriodDisplayName = (period: string) => {
@@ -506,7 +522,10 @@ try {
             <!-- Average Rate -->
             <div class="text-left p-3 bg-gray-50 rounded border border-gray-200">
               <div class="text-lg font-semibold text-gray-900">
-                {totalHoursDecimal > 0 ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(totalCost / totalHoursDecimal)) : '$0'}
+                {canViewFinancialData 
+                  ? (totalHoursDecimal > 0 ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(totalCost / totalHoursDecimal)) : '$0')
+                  : '***'
+                }
               </div>
               <div class="text-xs text-gray-600">Avg Rate/Hour (Weighted)</div>
             </div>
@@ -524,6 +543,7 @@ try {
             timeSeriesData={timeSeriesData.timeSeriesData}
             period={periodDisplayName}
             viewType={viewType}
+            canViewFinancialData={canViewFinancialData}
           />
         </div>
       </div>

@@ -38,7 +38,7 @@ export function isTokenExpired(expiresAt: Date): boolean {
 // Role-based access control
 export const ROLES = {
   ADMIN: 'admin',
-  MANAGER: 'manager',
+  DEVELOPER: 'developer',
   USER: 'user',
 } as const;
 
@@ -47,7 +47,7 @@ export type UserRole = typeof ROLES[keyof typeof ROLES];
 export function hasPermission(userRole: UserRole, requiredRole: UserRole): boolean {
   const roleHierarchy = {
     [ROLES.ADMIN]: 3,
-    [ROLES.MANAGER]: 2,
+    [ROLES.DEVELOPER]: 3, // Same level as admin but with financial restrictions
     [ROLES.USER]: 1,
   };
   
@@ -55,9 +55,9 @@ export function hasPermission(userRole: UserRole, requiredRole: UserRole): boole
 }
 
 export function canAccessAdmin(userRole: UserRole): boolean {
-  return hasPermission(userRole, ROLES.ADMIN);
+  return hasPermission(userRole, ROLES.ADMIN) || userRole === ROLES.DEVELOPER;
 }
 
-export function canAccessManager(userRole: UserRole): boolean {
-  return hasPermission(userRole, ROLES.MANAGER);
-} 
+export function canViewFinancialData(userRole: UserRole): boolean {
+  return userRole === ROLES.ADMIN;
+}

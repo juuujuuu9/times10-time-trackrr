@@ -63,16 +63,18 @@ When tasks are assigned to users, they automatically receive email notifications
 ### User Roles
 
 1. **Admin** (`admin`)
-   - Full system access
+   - Full system access including all financial data
    - Manage all users, clients, projects, and tasks
    - Access to admin dashboard at `/admin`
    - Can view all reports and system settings
+   - Can see all dollar amounts and cost information
 
-2. **Manager** (`manager`)
-   - Team oversight capabilities
-   - View team members and their activities
-   - Manage projects and assign tasks
-   - Access to manager dashboard at `/manager`
+2. **Developer** (`developer`)
+   - Full system access EXCEPT financial data is hidden
+   - Manage all users, clients, projects, and tasks
+   - Access to admin dashboard at `/admin`
+   - Can view all reports and system settings
+   - Financial information appears as asterisks (***) for privacy
 
 3. **User** (`user`)
    - Basic time tracking functionality
@@ -84,7 +86,7 @@ When tasks are assigned to users, they automatically receive email notifications
 For testing purposes, the following demo accounts are available:
 
 - **Admin**: `admin@times10.com` / `admin123`
-- **Manager**: `manager@times10.com` / `manager123`
+- **Developer**: `developer@times10.com` / `developer123`
 - **User**: `user@times10.com` / `user123`
 
 ## 🕐 Time Entry Features

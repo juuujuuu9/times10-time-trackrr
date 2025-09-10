@@ -90,7 +90,7 @@ export function requireRole(requiredRole: string, redirectTo: string = '/dashboa
     
     const roleHierarchy = {
       'admin': 3,
-      'manager': 2,
+      'developer': 3,
       'user': 1,
     };
     

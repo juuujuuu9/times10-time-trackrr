@@ -49,9 +49,10 @@ interface ReportsChartsProps {
   timeSeriesData: TimeSeriesData[];
   period: string;
   viewType: 'project' | 'client';
+  canViewFinancialData: boolean;
 }
 
-export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; period: string }> = ({ data, title, period }) => {
+export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; period: string; canViewFinancialData: boolean }> = ({ data, title, period, canViewFinancialData }) => {
   // Sort data by cost in descending order for better visualization
   const sortedData = [...data].sort((a, b) => b.totalCost - a.totalCost);
 
@@ -77,10 +78,16 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
     }),
     datasets: [
       {
-        label: 'Cost ($)',
-        data: sortedData.map(item => item.totalCost),
-        backgroundColor: 'rgba(214, 58, 46, 0.8)',
-        borderColor: 'rgba(214, 58, 46, 1)',
+        label: canViewFinancialData ? 'Cost ($)' : 'Hours',
+        data: canViewFinancialData 
+          ? sortedData.map(item => item.totalCost)
+          : sortedData.map(item => item.totalHours / 3600), // Show hours instead of cost
+        backgroundColor: canViewFinancialData 
+          ? 'rgba(214, 58, 46, 0.8)' 
+          : 'rgba(59, 130, 246, 0.8)',
+        borderColor: canViewFinancialData 
+          ? 'rgba(214, 58, 46, 1)' 
+          : 'rgba(59, 130, 246, 1)',
         borderWidth: 2,
         borderRadius: 4,
         borderSkipped: false,
@@ -131,7 +138,11 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
             return item.projectName || item.clientName || 'Unknown';
           },
           label: function(context: any) {
-            return `Cost: $${context.parsed.x.toLocaleString()}`;
+            if (canViewFinancialData) {
+              return `Cost: $${context.parsed.x.toLocaleString()}`;
+            } else {
+              return `Hours: ${context.parsed.x.toFixed(1)}h`;
+            }
           },
         },
       },
@@ -146,14 +157,20 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
           size: 12,
         },
         formatter: function(value: any) {
-          return `$${parseFloat(value).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+          if (canViewFinancialData) {
+            return `$${parseFloat(value).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+          } else {
+            return `${parseFloat(value).toFixed(1)}h`;
+          }
         },
       },
     },
     onClick: (event: any, elements: any) => {
       if (elements.length > 0) {
         const elementIndex = elements[0].index;
-        const value = sortedData[elementIndex].totalCost;
+        const value = canViewFinancialData 
+          ? sortedData[elementIndex].totalCost 
+          : sortedData[elementIndex].totalHours / 3600;
         const label = sortedData[elementIndex].projectName || sortedData[elementIndex].clientName || 'Unknown';
         copyToClipboard(value, label);
       }
@@ -169,7 +186,11 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
             size: 12,
           },
           callback: function(value: any) {
-            return `$${value.toLocaleString()}`;
+            if (canViewFinancialData) {
+              return `$${value.toLocaleString()}`;
+            } else {
+              return `${value.toFixed(1)}h`;
+            }
           },
         },
         grid: {
@@ -177,7 +198,7 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
         },
         title: {
           display: true,
-          text: 'Cost ($)',
+          text: canViewFinancialData ? 'Cost ($)' : 'Hours',
           color: '#6B7280',
           font: {
             size: 14,
@@ -356,7 +377,7 @@ export const CostBarChart: React.FC<{ data: ChartData[]; title: string; period: 
   );
 };
 
-export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string }> = ({ data, title }) => {
+export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; canViewFinancialData: boolean }> = ({ data, title, canViewFinancialData }) => {
   const colors = [
     'rgba(59, 130, 246, 0.8)',   // Blue
     'rgba(16, 185, 129, 0.8)',   // Green
@@ -373,8 +394,13 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string }> =
     datasets: [
       {
         data: data.map(item => {
-          const cost = item.totalCost;
-          return cost || 0;
+          if (canViewFinancialData) {
+            const cost = item.totalCost;
+            return cost || 0;
+          } else {
+            const hours = item.totalHours / 3600;
+            return hours || 0;
+          }
         }),
         backgroundColor: colors.slice(0, data.length),
         borderColor: colors.slice(0, data.length).map(color => color.replace('0.8', '1')),
@@ -437,7 +463,11 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string }> =
             const total = dataValues.reduce((a: number, b: number) => a + b, 0);
             const value = parseFloat(context.parsed) || 0;
             const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
-            return `${context.label}: $${value.toLocaleString()} (${percentage}%)`;
+            if (canViewFinancialData) {
+              return `${context.label}: $${value.toLocaleString()} (${percentage}%)`;
+            } else {
+              return `${context.label}: ${value.toFixed(1)}h (${percentage}%)`;
+            }
           },
         },
       },
@@ -466,8 +496,12 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string }> =
           });
           
           const percentage = total > 0 ? ((numValue / total) * 100).toFixed(1) : '0.0';
-          const formattedValue = numValue.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-          return `${percentage}%\n$${formattedValue}`;
+          if (canViewFinancialData) {
+            const formattedValue = numValue.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            return `${percentage}%\n$${formattedValue}`;
+          } else {
+            return `${percentage}%\n${numValue.toFixed(1)}h`;
+          }
         },
       },
     },
@@ -611,10 +645,13 @@ export const ReportsCharts: React.FC<ReportsChartsProps> = ({
   clientCosts, 
   timeSeriesData, 
   period, 
-  viewType 
+  viewType,
+  canViewFinancialData
 }) => {
   const currentData = viewType === 'project' ? projectCosts : clientCosts;
-  const chartTitle = viewType === 'project' ? 'Project Costs' : 'Client Costs';
+  const chartTitle = canViewFinancialData 
+    ? (viewType === 'project' ? 'Project Costs' : 'Client Costs')
+    : (viewType === 'project' ? 'Project Hours' : 'Client Hours');
 
   return (
     <div className="space-y-8">
@@ -625,13 +662,15 @@ export const ReportsCharts: React.FC<ReportsChartsProps> = ({
           <HorizontalBarChart 
             data={currentData} 
             title={`${chartTitle} - ${period}`} 
-            period={period} 
+            period={period}
+            canViewFinancialData={canViewFinancialData}
           />
 
           {/* Doughnut Chart - Full Width */}
           <CostDoughnutChart 
             data={currentData} 
-            title={`${chartTitle} Distribution - ${period}`} 
+            title={`${chartTitle} Distribution - ${period}`}
+            canViewFinancialData={canViewFinancialData}
           />
         </div>
       )}

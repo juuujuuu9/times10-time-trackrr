@@ -133,6 +133,7 @@ const allUsers = await db
           >
             <option value="">All Roles</option>
             <option value="admin">Admin</option>
+            <option value="developer">Developer</option>
             <option value="user">Team Member</option>
           </select>
         </div>
@@ -201,9 +202,11 @@ const allUsers = await db
                   <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                     user.role === 'admin' 
                       ? 'bg-red-100 text-red-800' 
+                      : user.role === 'developer'
+                      ? 'bg-blue-100 text-blue-800'
                       : 'bg-gray-100 text-gray-800'
                   }`}>
-                    {user.role === 'admin' ? 'Admin' : 'Team Member'}
+                    {user.role === 'admin' ? 'Admin' : user.role === 'developer' ? 'Developer' : 'Team Member'}
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
@@ -331,6 +334,7 @@ const allUsers = await db
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
               >
                 <option value="user">Team Member</option>
+                <option value="developer">Developer</option>
                 <option value="admin">Admin</option>
               </select>
             </div>
@@ -425,6 +429,7 @@ const allUsers = await db
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
               >
                 <option value="user">Team Member</option>
+                <option value="developer">Developer</option>
                 <option value="admin">Admin</option>
               </select>
             </div>
@@ -519,6 +524,7 @@ const allUsers = await db
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
               >
                 <option value="user">Team Member</option>
+                <option value="developer">Developer</option>
                 <option value="admin">Admin</option>
               </select>
             </div>
@@ -593,7 +599,8 @@ const allUsers = await db
           // Check role filter
           const matchesRole = !selectedRole || 
             (selectedRole === 'admin' && roleText.toLowerCase().includes('admin')) ||
-            (selectedRole === 'user' && roleText.toLowerCase().includes('team member') && !roleText.toLowerCase().includes('admin'));
+            (selectedRole === 'developer' && roleText.toLowerCase().includes('developer')) ||
+            (selectedRole === 'user' && roleText.toLowerCase().includes('team member') && !roleText.toLowerCase().includes('admin') && !roleText.toLowerCase().includes('developer'));
           
           // Check status filter
           const matchesStatus = !selectedStatus || 
@@ -859,7 +866,8 @@ const allUsers = await db
         
         const currentName = nameElement?.textContent?.trim() || '';
         const currentEmail = emailElement?.textContent?.trim() || '';
-        const currentRole = roleElement?.textContent?.includes('Admin') ? 'admin' : 'user';
+        const currentRole = roleElement?.textContent?.includes('Admin') ? 'admin' : 
+                           roleElement?.textContent?.includes('Developer') ? 'developer' : 'user';
         const currentStatus = statusElement?.textContent?.includes('Active') ? 'active' : 'inactive';
         const currentPayRate = payRateElement?.textContent?.replace('/hr', '').replace('$', '').trim() || '0.00';
         
