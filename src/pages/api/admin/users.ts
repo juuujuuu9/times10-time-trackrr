@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { hashPassword } from '../../../utils/auth';
 import { createInvitationToken } from '../../../utils/invitation';
 import { sendInvitationEmail } from '../../../utils/email';
+import { assignGeneralTasksToUser } from '../../../utils/assignGeneralTasks';
 
 export const GET: APIRoute = async () => {
   try {
@@ -117,6 +118,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         status: status || 'active',
         payRate: payRate || '0.00',
       }).returning();
+
+      // If user is created as active, assign them to all existing general tasks
+      if ((status || 'active') === 'active') {
+        try {
+          const assignedTasks = await assignGeneralTasksToUser(newUser[0].id);
+          console.log(`Assigned ${assignedTasks} general tasks to new user ${newUser[0].email}`);
+        } catch (assignmentError) {
+          console.error('Error assigning general tasks to new user:', assignmentError);
+          // Don't fail the user creation if task assignment fails
+        }
+      }
 
       return new Response(JSON.stringify(newUser[0]), {
         status: 201,

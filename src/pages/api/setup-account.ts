@@ -4,6 +4,7 @@ import { users } from '../../db/schema';
 import { eq } from 'drizzle-orm';
 import { hashPassword } from '../../utils/auth';
 import { validateInvitationToken, markInvitationTokenAsUsed } from '../../utils/invitation';
+import { assignGeneralTasksToUser } from '../../utils/assignGeneralTasks';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -48,6 +49,15 @@ export const POST: APIRoute = async ({ request }) => {
       })
       .where(eq(users.id, user[0].id))
       .returning();
+
+    // Assign the user to all existing general tasks from all clients
+    try {
+      const assignedTasks = await assignGeneralTasksToUser(updatedUser[0].id);
+      console.log(`Assigned ${assignedTasks} general tasks to user ${updatedUser[0].email} during account setup`);
+    } catch (assignmentError) {
+      console.error('Error assigning general tasks during account setup:', assignmentError);
+      // Don't fail the account setup if task assignment fails
+    }
 
     // Mark the invitation token as used
     await markInvitationTokenAsUsed(token);
