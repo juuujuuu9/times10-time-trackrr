@@ -1,6 +1,13 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Only initialize Resend if we have a valid API key
+const getResendClient = () => {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey || apiKey === 'your_resend_api_key_here' || apiKey.trim() === '') {
+    return null;
+  }
+  return new Resend(apiKey);
+};
 
 export interface InvitationEmailData {
   email: string;
@@ -11,8 +18,9 @@ export interface InvitationEmailData {
 }
 
 export async function sendInvitationEmail(data: InvitationEmailData) {
-  // Check if we have a Resend API key configured
-  if (!process.env.RESEND_API_KEY) {
+  // Check if we have a valid Resend API key configured
+  const resend = getResendClient();
+  if (!resend) {
     console.log('📧 NO API KEY: Invitation would be sent to:', data.email);
     console.log('📧 Invitation URL:', data.invitationUrl);
     console.log('📧 Invitation Details:', {
@@ -210,8 +218,9 @@ export interface TaskAssignmentEmailData {
 }
 
 export async function sendTaskAssignmentEmail(data: TaskAssignmentEmailData) {
-  // Check if we have a Resend API key configured
-  if (!process.env.RESEND_API_KEY) {
+  // Check if we have a valid Resend API key configured
+  const resend = getResendClient();
+  if (!resend) {
     console.log('📧 NO API KEY: Task assignment notification would be sent to:', data.email);
     console.log('📧 Task Details:', {
       userName: data.userName,

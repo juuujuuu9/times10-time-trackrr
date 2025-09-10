@@ -64,6 +64,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     // Get all active users to assign the General task to everyone
     const allUsers = await db.select().from(users).where(eq(users.status, 'active'));
+    console.log(`Found ${allUsers.length} active users to assign General task to`);
 
     // Create the "General" task for the Time Tracking project
     const generalTask = await db.insert(tasks).values({
@@ -77,16 +78,27 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     // Assign the General task to all active users
     if (allUsers.length > 0) {
-      const taskAssignments = allUsers.map(user => ({
+      const assignmentData = allUsers.map(user => ({
         taskId: generalTask[0].id,
         userId: user.id,
       }));
 
-      await db.insert(taskAssignments).values(taskAssignments);
-      console.log(`Assigned General task to ${allUsers.length} users`);
+      console.log('Creating task assignments:', assignmentData);
+      try {
+        const assignments = await db.insert(taskAssignments).values(assignmentData).returning();
+        console.log(`Successfully assigned General task to ${assignments.length} users:`, assignments);
+      } catch (assignmentError) {
+        console.error('Error creating task assignments:', assignmentError);
+        // Don't fail the entire operation if assignments fail - the client and task are still created
+        // The user can manually assign tasks if needed
+      }
+    } else {
+      console.warn('No active users found to assign General task to');
     }
 
-    return new Response(JSON.stringify(newClient[0]), {
+    const result = newClient[0];
+
+    return new Response(JSON.stringify(result), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });

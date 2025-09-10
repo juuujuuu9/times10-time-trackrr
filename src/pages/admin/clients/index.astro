@@ -513,6 +513,9 @@ const allClients = await db
           if (response.ok) {
             const result = await response.json();
             console.log('Success response:', result);
+            // Close the modal first
+            (window as any).closeModal();
+            // Then reload to show the new client
             window.location.reload();
           } else {
             const errorData = await response.json();
