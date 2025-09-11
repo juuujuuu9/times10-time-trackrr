@@ -25,7 +25,7 @@ export interface EmailConfig {
 export const emailConfig: EmailConfig = {
   // Sender information
   senderName: 'Times10 Trackr',
-  senderEmail: 'noreply@trackr.times10.net',
+  senderEmail: 'noreply@trackr.times10.net', // Change this to a real email you can access for Gravatar
   replyTo: 'noreply@trackr.times10.net',
   senderAvatarUrl: 'https://trackr.times10.net/avatar.jpg', // Avatar for email clients
   
@@ -81,4 +81,16 @@ export function getSecondaryColor(): string {
  */
 export function getSenderAvatarUrl(): string {
   return emailConfig.senderAvatarUrl || `${emailConfig.websiteUrl}/trackr-icon.png`;
+}
+
+/**
+ * Get email headers with avatar information
+ * Some email clients use these headers to display avatars
+ */
+export function getEmailHeaders(): Record<string, string> {
+  return {
+    'X-Avatar-URL': getSenderAvatarUrl(),
+    'X-Sender-Name': emailConfig.senderName,
+    'X-Company': emailConfig.companyName,
+  };
 }

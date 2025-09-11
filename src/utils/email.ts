@@ -1,5 +1,5 @@
 import { Resend } from 'resend';
-import { getSenderString, getReplyToString, getLogoUrl, getPrimaryColor, getSecondaryColor } from './emailConfig';
+import { getSenderString, getReplyToString, getLogoUrl, getPrimaryColor, getSecondaryColor, getEmailHeaders } from './emailConfig';
 
 // Only initialize Resend if we have a valid API key
 const getResendClient = () => {
@@ -45,6 +45,7 @@ export async function sendInvitationEmail(data: InvitationEmailData) {
       replyTo: getReplyToString(),
       to: [data.email],
       subject: `You've been invited to join Times10 Time Tracker`,
+      headers: getEmailHeaders(),
       html: `
         <!DOCTYPE html>
         <html>
@@ -254,6 +255,7 @@ export async function sendTaskAssignmentEmail(data: TaskAssignmentEmailData) {
       replyTo: getReplyToString(),
       to: [data.email],
       subject: `New Task Assigned: ${data.taskName}`,
+      headers: getEmailHeaders(),
       html: `
         <!DOCTYPE html>
         <html>
@@ -465,6 +467,7 @@ export async function sendPasswordResetEmail(data: PasswordResetEmailData) {
       replyTo: getReplyToString(),
       to: [data.email],
       subject: 'Reset Your Times10 Password',
+      headers: getEmailHeaders(),
       html: `
         <!DOCTYPE html>
         <html>
