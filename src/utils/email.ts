@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { getSenderString, getReplyToString, getLogoUrl, getPrimaryColor, getSecondaryColor, getGravatarUrl, getInitialsAvatar } from './emailConfig';
 
 // Only initialize Resend if we have a valid API key
 const getResendClient = () => {
@@ -40,7 +41,8 @@ export async function sendInvitationEmail(data: InvitationEmailData) {
     console.log('📧 Attempting to send invitation email to:', data.email);
     
     const { data: emailData, error } = await resend.emails.send({
-      from: 'Times10 <noreply@trackr.times10.net>',
+      from: getSenderString(),
+      replyTo: getReplyToString(),
       to: [data.email],
       subject: `You've been invited to join Times10 Time Tracker`,
       html: `
@@ -156,6 +158,7 @@ export async function sendInvitationEmail(data: InvitationEmailData) {
         <body>
           <div class="container">
             <div class="header">
+              <img src="${getLogoUrl()}" alt="Times10 Logo" class="header-logo" style="max-width: 120px; height: auto; margin-bottom: 15px;" />
               <h1>🚀 Welcome to Times10!</h1>
               <p>You've been invited to join our time tracking platform</p>
             </div>
@@ -213,6 +216,7 @@ export interface TaskAssignmentEmailData {
   taskName: string;
   projectName: string;
   assignedBy: string;
+  assignedByEmail?: string; // For avatar generation
   taskDescription?: string;
   dashboardUrl: string;
 }
@@ -247,7 +251,8 @@ export async function sendTaskAssignmentEmail(data: TaskAssignmentEmailData) {
     console.log('📧 Attempting to send task assignment email to:', data.email);
     
     const { data: emailData, error } = await resend.emails.send({
-      from: 'Times10 <noreply@trackr.times10.net>',
+      from: getSenderString(),
+      replyTo: getReplyToString(),
       to: [data.email],
       subject: `New Task Assigned: ${data.taskName}`,
       html: `
@@ -389,7 +394,17 @@ export async function sendTaskAssignmentEmail(data: TaskAssignmentEmailData) {
             </div>
             <div class="content">
               <h2 class="text-dark">Hi ${data.userName},</h2>
-              <p class="text-mid">You have been assigned a new task by <strong class="highlight">${data.assignedBy}</strong>.</p>
+              
+              <!-- Sender Info with Avatar -->
+              <div class="sender-info" style="display: flex; align-items: center; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid ${getPrimaryColor()};">
+                <img src="${data.assignedByEmail ? getGravatarUrl(data.assignedByEmail, 50) : getInitialsAvatar(data.assignedBy, 50)}" 
+                     alt="${data.assignedBy}" 
+                     style="width: 50px; height: 50px; border-radius: 50%; margin-right: 15px; border: 2px solid ${getPrimaryColor()};" />
+                <div>
+                  <p class="text-dark" style="margin: 0; font-weight: bold;">${data.assignedBy}</p>
+                  <p class="text-mid" style="margin: 0; font-size: 14px;">assigned you a new task</p>
+                </div>
+              </div>
               
               <div class="task-card">
                 <h3>${data.taskName}</h3>
@@ -457,7 +472,8 @@ export async function sendPasswordResetEmail(data: PasswordResetEmailData) {
     console.log('📧 Attempting to send password reset email to:', data.email);
     
     const { data: emailData, error } = await resend.emails.send({
-      from: 'Times10 <noreply@trackr.times10.net>',
+      from: getSenderString(),
+      replyTo: getReplyToString(),
       to: [data.email],
       subject: 'Reset Your Times10 Password',
       html: `

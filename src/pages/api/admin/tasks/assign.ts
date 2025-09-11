@@ -130,6 +130,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
                 taskName: taskInfo.name,
                 projectName: taskInfo.projectName,
                 assignedBy: assignedByName,
+                assignedByEmail: currentUser.email, // Add assigner's email for avatar
                 taskDescription: taskInfo.description || undefined,
                 dashboardUrl: dashboardUrl,
               });
