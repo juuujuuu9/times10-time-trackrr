@@ -50,7 +50,7 @@ const user = await requireAuth('/')(Astro) as any;
         </div>
       </header>
 
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="max-w-7xl mx-auto px-4 sm:p-2 lg:px-8 py-8">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <!-- Main Content -->
           <div class="lg:col-span-2 space-y-8">
@@ -756,6 +756,7 @@ const user = await requireAuth('/')(Astro) as any;
 
   // Load data when page loads
   document.addEventListener('DOMContentLoaded', loadDashboardData);
+
 
   // Add event listeners for stop timer buttons
   document.addEventListener('click', async (e) => {

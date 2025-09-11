@@ -1,6 +1,4 @@
 ---
-import { unregisterServiceWorker } from '../utils/unregisterServiceWorker';
-
 export interface Props {
 	title: string;
 }
@@ -27,8 +25,14 @@ const { title } = Astro.props;
 
 	<script>
 		// Unregister any existing service workers
-		import { unregisterServiceWorker } from '../utils/unregisterServiceWorker';
-		unregisterServiceWorker();
+		if ('serviceWorker' in navigator) {
+			navigator.serviceWorker.getRegistrations().then(function(registrations) {
+				for(let registration of registrations) {
+					registration.unregister();
+					console.log('ServiceWorker unregistered');
+				}
+			});
+		}
 	</script>
 </html>
 
