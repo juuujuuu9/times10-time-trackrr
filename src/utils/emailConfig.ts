@@ -27,7 +27,7 @@ export const emailConfig: EmailConfig = {
   senderName: 'Times10 Trackr',
   senderEmail: 'noreply@trackr.times10.net',
   replyTo: 'noreply@trackr.times10.net',
-  senderAvatarUrl: 'https://trackr.times10.net/trackr-icon.png', // Avatar for email clients
+  senderAvatarUrl: 'https://trackr.times10.net/avatar.jpg', // Avatar for email clients
   
   // Branding
   companyName: 'Times10',
