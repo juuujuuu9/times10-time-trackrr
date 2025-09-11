@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getUserByEmail, createPasswordResetToken } from '../../../utils/passwordReset';
 import { sendPasswordResetEmail } from '../../../utils/email';
+import { getEmailBaseUrl } from '../../../utils/url';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -35,7 +36,7 @@ export const POST: APIRoute = async ({ request }) => {
     const token = await createPasswordResetToken(user.id);
 
     // Get base URL for reset link
-    const baseUrl = process.env.PUBLIC_BASE_URL || 'http://localhost:4321';
+    const baseUrl = getEmailBaseUrl();
     const resetUrl = `${baseUrl}/reset-password?token=${token}`;
 
     // Send password reset email

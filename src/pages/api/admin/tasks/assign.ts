@@ -5,6 +5,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { sendTaskAssignmentEmail } from '../../../../utils/email';
 import { getTaskWithProject, getUsersByIds, getUserById } from '../../../../db/queries';
 import { getSessionUser } from '../../../../utils/session';
+import { getEmailBaseUrl } from '../../../../utils/url';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
@@ -115,7 +116,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         const assignedUsers = await getUsersByIds(userIds.map(id => parseInt(id)));
         
         // Get the base URL for the dashboard link
-        const baseUrl = process.env.PUBLIC_SITE_URL || 'http://localhost:4321';
+        const baseUrl = getEmailBaseUrl();
         const dashboardUrl = `${baseUrl}/dashboard`;
 
         // Send emails to each assigned user
