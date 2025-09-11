@@ -1,5 +1,5 @@
 import { Resend } from 'resend';
-import { getSenderString, getReplyToString, getLogoUrl, getPrimaryColor, getSecondaryColor, getGravatarUrl, getInitialsAvatar } from './emailConfig';
+import { getSenderString, getReplyToString, getLogoUrl, getPrimaryColor, getSecondaryColor } from './emailConfig';
 
 // Only initialize Resend if we have a valid API key
 const getResendClient = () => {
@@ -216,7 +216,6 @@ export interface TaskAssignmentEmailData {
   taskName: string;
   projectName: string;
   assignedBy: string;
-  assignedByEmail?: string; // For avatar generation
   taskDescription?: string;
   dashboardUrl: string;
 }
@@ -394,17 +393,7 @@ export async function sendTaskAssignmentEmail(data: TaskAssignmentEmailData) {
             </div>
             <div class="content">
               <h2 class="text-dark">Hi ${data.userName},</h2>
-              
-              <!-- Sender Info with Avatar -->
-              <div class="sender-info" style="display: flex; align-items: center; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid ${getPrimaryColor()};">
-                <img src="${data.assignedByEmail ? getGravatarUrl(data.assignedByEmail, 50) : getInitialsAvatar(data.assignedBy, 50)}" 
-                     alt="${data.assignedBy}" 
-                     style="width: 50px; height: 50px; border-radius: 50%; margin-right: 15px; border: 2px solid ${getPrimaryColor()};" />
-                <div>
-                  <p class="text-dark" style="margin: 0; font-weight: bold;">${data.assignedBy}</p>
-                  <p class="text-mid" style="margin: 0; font-size: 14px;">assigned you a new task</p>
-                </div>
-              </div>
+              <p class="text-mid">You have been assigned a new task by <strong class="highlight">${data.assignedBy}</strong>.</p>
               
               <div class="task-card">
                 <h3>${data.taskName}</h3>

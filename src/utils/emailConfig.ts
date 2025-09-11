@@ -8,6 +8,7 @@ export interface EmailConfig {
   senderName: string;
   senderEmail: string;
   replyTo?: string;
+  senderAvatarUrl?: string; // Avatar that appears in email clients
   
   // Branding
   companyName: string;
@@ -23,9 +24,10 @@ export interface EmailConfig {
 // Default configuration - customize these values
 export const emailConfig: EmailConfig = {
   // Sender information
-  senderName: 'Times10 Team',
+  senderName: 'Times10 Trackr',
   senderEmail: 'noreply@trackr.times10.net',
-  replyTo: 'support@trackr.times10.net',
+  replyTo: 'noreply@trackr.times10.net',
+  senderAvatarUrl: 'https://trackr.times10.net/trackr-icon.png', // Avatar for email clients
   
   // Branding
   companyName: 'Times10',
@@ -34,7 +36,7 @@ export const emailConfig: EmailConfig = {
   secondaryColor: '#415058',
   
   // Contact information
-  supportEmail: 'support@trackr.times10.net',
+  supportEmail: 'noreply@trackr.times10.net',
   websiteUrl: 'https://trackr.times10.net',
 };
 
@@ -74,28 +76,9 @@ export function getSecondaryColor(): string {
 }
 
 /**
- * Generate Gravatar URL for user avatar
+ * Get the sender avatar URL for email clients
+ * This is the avatar that appears in email clients like Gmail, Outlook
  */
-export function getGravatarUrl(email: string, size: number = 40): string {
-  const crypto = require('crypto');
-  const hash = crypto.createHash('md5').update(email.toLowerCase().trim()).digest('hex');
-  return `https://www.gravatar.com/avatar/${hash}?s=${size}&d=identicon`;
-}
-
-/**
- * Generate a simple avatar URL with initials
- */
-export function getInitialsAvatar(name: string, size: number = 40): string {
-  const initials = name
-    .split(' ')
-    .map(word => word.charAt(0))
-    .join('')
-    .toUpperCase()
-    .substring(0, 2);
-  
-  const colors = ['#d63a2e', '#415058', '#1F292E', '#C8CDD0'];
-  const colorIndex = name.length % colors.length;
-  const backgroundColor = colors[colorIndex];
-  
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&size=${size}&background=${backgroundColor.replace('#', '')}&color=ffffff&bold=true`;
+export function getSenderAvatarUrl(): string {
+  return emailConfig.senderAvatarUrl || `${emailConfig.websiteUrl}/trackr-icon.png`;
 }
