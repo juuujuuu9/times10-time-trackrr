@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../../db/index';
-import { users, timeEntries, taskAssignments, sessions, clients, slackUsers, invitationTokens } from '../../../../db/schema';
-import { eq } from 'drizzle-orm';
+import { users, timeEntries, taskAssignments, sessions, clients, slackUsers, invitationTokens, passwordResetTokens, projects, tasks } from '../../../../db/schema';
+import { eq, inArray } from 'drizzle-orm';
 
 export const DELETE: APIRoute = async ({ params, cookies }) => {
   try {
@@ -79,7 +79,12 @@ export const DELETE: APIRoute = async ({ params, cookies }) => {
       .delete(sessions)
       .where(eq(sessions.userId, userId));
 
-    // 5. Delete any invitation tokens for this user's email
+    // 5. Delete related password reset tokens
+    await db
+      .delete(passwordResetTokens)
+      .where(eq(passwordResetTokens.userId, userId));
+
+    // 6. Delete any invitation tokens for this user's email
     const userToDelete = await db
       .select({ email: users.email })
       .from(users)
@@ -92,13 +97,63 @@ export const DELETE: APIRoute = async ({ params, cookies }) => {
         .where(eq(invitationTokens.email, userToDelete[0].email));
     }
 
-    // 6. Delete clients created by this user (or set createdBy to null if you want to keep them)
-    // For now, we'll delete them. If you want to keep clients, you'd need to update the schema
-    await db
-      .delete(clients)
+    // 7. Delete clients created by this user with proper cascading
+    // First, get all clients created by this user
+    const userClients = await db
+      .select({ id: clients.id })
+      .from(clients)
       .where(eq(clients.createdBy, userId));
 
-    // 7. Finally, delete the user
+    const clientIds = userClients.map(c => c.id);
+
+    if (clientIds.length > 0) {
+      // Get all projects for these clients
+      const clientProjects = await db
+        .select({ id: projects.id })
+        .from(projects)
+        .where(inArray(projects.clientId, clientIds));
+
+      const projectIds = clientProjects.map(p => p.id);
+
+      if (projectIds.length > 0) {
+        // Get all tasks for these projects
+        const projectTasks = await db
+          .select({ id: tasks.id })
+          .from(tasks)
+          .where(inArray(tasks.projectId, projectIds));
+
+        const taskIds = projectTasks.map(t => t.id);
+
+        if (taskIds.length > 0) {
+          // Delete time entries for these tasks (if not already deleted above)
+          await db
+            .delete(timeEntries)
+            .where(inArray(timeEntries.taskId, taskIds));
+
+          // Delete task assignments for these tasks (if not already deleted above)
+          await db
+            .delete(taskAssignments)
+            .where(inArray(taskAssignments.taskId, taskIds));
+
+          // Delete the tasks
+          await db
+            .delete(tasks)
+            .where(inArray(tasks.projectId, projectIds));
+        }
+
+        // Delete the projects
+        await db
+          .delete(projects)
+          .where(inArray(projects.clientId, clientIds));
+      }
+
+      // Finally, delete the clients
+      await db
+        .delete(clients)
+        .where(eq(clients.createdBy, userId));
+    }
+
+    // 8. Finally, delete the user
     const deletedUser = await db
       .delete(users)
       .where(eq(users.id, userId))
