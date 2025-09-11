@@ -25,7 +25,7 @@ export interface EmailConfig {
 export const emailConfig: EmailConfig = {
   // Sender information
   senderName: 'Times10 Trackr',
-  senderEmail: 'noreply@trackr.times10.net', // Change this to a real email you can access for Gravatar
+  senderEmail: 'support@trackr.times10.net', // Use a real email you can access for Gravatar
   replyTo: 'noreply@trackr.times10.net',
   senderAvatarUrl: 'https://trackr.times10.net/avatar.jpg', // Avatar for email clients
   
