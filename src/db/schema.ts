@@ -89,6 +89,16 @@ export const invitationTokens = pgTable('invitation_tokens', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// Password reset tokens table
+export const passwordResetTokens = pgTable('password_reset_tokens', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  token: varchar('token', { length: 255 }).notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
+  used: boolean('used').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // Slack Workspaces table
 export const slackWorkspaces = pgTable('slack_workspaces', {
   id: serial('id').primaryKey(),
@@ -134,6 +144,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   timeEntries: many(timeEntries),
   sessions: many(sessions),
   slackUsers: many(slackUsers),
+  passwordResetTokens: many(passwordResetTokens),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -199,4 +210,11 @@ export const slackUsersRelations = relations(slackUsers, ({ one }) => ({
 
 export const slackWorkspacesRelations = relations(slackWorkspaces, ({ many }) => ({
   slackUsers: many(slackUsers),
+}));
+
+export const passwordResetTokensRelations = relations(passwordResetTokens, ({ one }) => ({
+  user: one(users, {
+    fields: [passwordResetTokens.userId],
+    references: [users.id],
+  }),
 })); 

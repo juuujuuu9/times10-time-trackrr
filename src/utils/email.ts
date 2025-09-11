@@ -217,6 +217,12 @@ export interface TaskAssignmentEmailData {
   dashboardUrl: string;
 }
 
+export interface PasswordResetEmailData {
+  email: string;
+  name: string;
+  resetUrl: string;
+}
+
 export async function sendTaskAssignmentEmail(data: TaskAssignmentEmailData) {
   // Check if we have a valid Resend API key configured
   const resend = getResendClient();
@@ -427,6 +433,215 @@ export async function sendTaskAssignmentEmail(data: TaskAssignmentEmailData) {
     return emailData;
   } catch (error) {
     console.error('Error in sendTaskAssignmentEmail:', error);
+    throw error;
+  }
+}
+
+export async function sendPasswordResetEmail(data: PasswordResetEmailData) {
+  // Check if we have a valid Resend API key configured
+  const resend = getResendClient();
+  if (!resend) {
+    console.log('📧 NO API KEY: Password reset email would be sent to:', data.email);
+    console.log('📧 Reset URL:', data.resetUrl);
+    console.log('📧 User Details:', {
+      name: data.name,
+      email: data.email
+    });
+    
+    // Return success for testing
+    return { id: 'test-password-reset-' + Date.now() };
+  }
+
+  try {
+    // Log the attempt for debugging
+    console.log('📧 Attempting to send password reset email to:', data.email);
+    
+    const { data: emailData, error } = await resend.emails.send({
+      from: 'Times10 <noreply@trackr.times10.net>',
+      to: [data.email],
+      subject: 'Reset Your Times10 Password',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Password Reset - Times10</title>
+          <style>
+            /* Reset and base styles */
+            body { 
+              font-family: 'Istok Web', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+              line-height: 1.6; 
+              color: #1F292E; 
+              background-color: #F2F2F3; 
+              margin: 0; 
+              padding: 0; 
+            }
+            
+            /* Container and layout */
+            .container { 
+              max-width: 600px; 
+              margin: 0 auto; 
+              padding: 20px; 
+            }
+            
+            /* Header with brand color */
+            .header { 
+              background: #d63a2e; 
+              color: white; 
+              padding: 30px; 
+              text-align: center; 
+              border-radius: 10px 10px 0 0; 
+              box-shadow: 0 2px 4px rgba(214, 58, 46, 0.2);
+            }
+            
+            .header h1 {
+              margin: 0 0 10px 0;
+              font-size: 24px;
+              font-weight: bold;
+            }
+            
+            .header p {
+              margin: 0;
+              font-size: 16px;
+              opacity: 0.9;
+            }
+            
+            /* Content area */
+            .content { 
+              background: white; 
+              padding: 30px; 
+              border-radius: 0 0 10px 10px; 
+              border: 1px solid #C8CDD0; 
+              border-top: none;
+            }
+            
+            /* Button styling */
+            .button { 
+              display: inline-block; 
+              background: #d63a2e; 
+              color: #FFFFFF !important; 
+              padding: 15px 30px; 
+              text-decoration: none; 
+              border-radius: 8px; 
+              font-weight: bold; 
+              margin: 20px 0; 
+              transition: background-color 0.2s; 
+              box-shadow: 0 2px 4px rgba(214, 58, 46, 0.2);
+            }
+            
+            .button:hover { 
+              background: #b52a24; 
+            }
+            
+            /* Security notice */
+            .security-notice { 
+              background: #F2F2F3; 
+              border: 1px solid #C8CDD0; 
+              border-radius: 8px; 
+              padding: 20px; 
+              margin: 20px 0; 
+            }
+            
+            .security-notice h3 {
+              margin-top: 0;
+              color: #d63a2e;
+              font-size: 16px;
+              font-weight: bold;
+            }
+            
+            /* Footer */
+            .footer { 
+              text-align: center; 
+              margin-top: 30px; 
+              color: #415058; 
+              font-size: 14px; 
+            }
+            
+            /* Text color classes */
+            .highlight { color: #d63a2e; }
+            .text-dark { color: #1F292E; }
+            .text-mid { color: #415058; }
+            .text-light { color: #C8CDD0; }
+            
+            /* Dark mode support */
+            @media (prefers-color-scheme: dark) {
+              .content {
+                background: #1a1a1a;
+                color: #ffffff;
+                border-color: #333;
+              }
+              .security-notice {
+                background: #2a2a2a;
+                border-color: #444;
+              }
+              .text-dark { color: #ffffff; }
+              .text-mid { color: #cccccc; }
+              .text-light { color: #999999; }
+              .footer { color: #cccccc; }
+            }
+            
+            /* Mobile responsiveness */
+            @media (max-width: 600px) {
+              .container { padding: 10px; }
+              .header, .content { padding: 20px; }
+              .header h1 { font-size: 20px; }
+              .header p { font-size: 14px; }
+              .security-notice { padding: 15px; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🔐 Password Reset</h1>
+              <p>Reset your Times10 Time Tracker password</p>
+            </div>
+            <div class="content">
+              <h2 class="text-dark">Hi ${data.name},</h2>
+              <p class="text-mid">We received a request to reset your password for your Times10 Time Tracker account.</p>
+              
+              <div style="text-align: center;">
+                <a href="${data.resetUrl}" class="button">Reset My Password</a>
+              </div>
+              
+              <div class="security-notice">
+                <h3>🔒 Security Information</h3>
+                <ul class="text-mid">
+                  <li>This link will expire in 1 hour for security reasons</li>
+                  <li>If you didn't request this password reset, please ignore this email</li>
+                  <li>Your password will not be changed until you click the link above</li>
+                  <li>For security, this link can only be used once</li>
+                </ul>
+              </div>
+              
+              <p class="text-mid">If the button above doesn't work, you can copy and paste this link into your browser:</p>
+              <p class="text-light" style="word-break: break-all; font-size: 12px;">${data.resetUrl}</p>
+              
+              <p class="text-mid">If you have any questions or concerns, please contact your system administrator.</p>
+            </div>
+            <div class="footer">
+              <p>This is an automated message from Times10 Time Tracker</p>
+              <p>If you didn't request this password reset, please ignore this email.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    });
+
+    if (error) {
+      console.error('Error sending password reset email:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      if ((error as any).statusCode === 403) {
+        throw new Error('Email service error: Please verify your domain at resend.com/domains or check your API key configuration.');
+      }
+      throw new Error(`Failed to send password reset email: ${(error as any).message || 'Unknown error'}`);
+    }
+
+    return emailData;
+  } catch (error) {
+    console.error('Error in sendPasswordResetEmail:', error);
     throw error;
   }
 } 

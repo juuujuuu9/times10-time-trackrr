@@ -57,6 +57,13 @@
       "when": 1756488554938,
       "tag": "0007_smart_puff_adder",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1757615716079,
+      "tag": "0008_many_sleepwalker",
+      "breakpoints": true
     }
   ]
 }
