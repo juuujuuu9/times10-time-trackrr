@@ -100,16 +100,16 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
   <div class="min-h-screen" style="background-color: #f0eef5;">
     <!-- Header -->
     <header class="bg-white shadow-sm border-b border-gray-200 flex items-center" style="height: 58px;">
-      <div class="max-w-7xl mx-auto px-8 w-full">
+      <div class="max-w-7xl mx-auto px-4 sm:px-8 w-full">
         <div class="flex justify-between items-center">
           <div class="flex items-center">
             <a href="/" class="flex items-center hover:opacity-80 transition-opacity">
               <img src="/trackr-icon.png" alt="Times10 Logo" class="w-auto mr-3 py-0" style="height: calc(58px - 1rem);" />
             </a>
           </div>
-          <div class="flex items-center space-x-4">
-            <span class="text-sm text-gray-600">Welcome, {user?.name || 'User'}</span>
-            <span class={`px-3 py-1 text-xs font-medium rounded-full ${
+          <div class="flex items-center">
+            <!-- Desktop role badge (hidden on mobile) -->
+            <span class={`hidden sm:inline-block px-3 py-1 text-xs font-medium rounded-full mr-4 ${
               user?.role === 'admin' 
                 ? 'bg-purple-100 text-purple-800' 
                 : user?.role === 'developer'
@@ -118,29 +118,108 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             }`}>
               {user?.role === 'admin' ? 'Admin' : user?.role === 'developer' ? 'Developer' : 'Team Member'}
             </span>
+            <!-- Hamburger menu button -->
             <button
-              id="logoutButton"
-              class="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              id="mobileMenuButton"
+              class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+              aria-label="Open menu"
             >
-              Sign Out
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+              </svg>
             </button>
           </div>
         </div>
       </div>
     </header>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div class="space-y-6">
+    <!-- Mobile Menu Overlay -->
+    <div id="mobileMenuOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+      <div class="fixed inset-y-0 right-0 w-full max-w-sm bg-white shadow-xl transform transition-transform duration-300 ease-in-out translate-x-full" id="mobileMenu">
+        <div class="flex flex-col h-full">
+          <!-- Menu Header -->
+          <div class="flex items-center justify-between p-6 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Menu</h2>
+            <button
+              id="closeMobileMenuButton"
+              class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+              aria-label="Close menu"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Menu Content -->
+          <div class="flex-1 flex flex-col justify-between p-6">
+            <!-- Welcome Section -->
+            <div class="space-y-6">
+              <div class="text-center">
+                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span class="text-2xl text-gray-600">👋</span>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">Welcome, {user?.name || 'User'}!</h3>
+                <span class={`inline-block px-3 py-1 text-sm font-medium rounded-full ${
+                  user?.role === 'admin' 
+                    ? 'bg-purple-100 text-purple-800' 
+                    : user?.role === 'developer'
+                    ? 'bg-red-600 text-white'
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {user?.role === 'admin' ? 'Admin' : user?.role === 'developer' ? 'Developer' : 'Team Member'}
+                </span>
+              </div>
+
+              <!-- Quick Actions -->
+              <div class="space-y-3">
+                <button
+                  id="mobileViewDashboardBtn"
+                  class="w-full text-white px-4 py-3 rounded-lg transition-colors text-sm font-medium"
+                  style="background-color: #1F292E"
+                  onmouseover="this.style.backgroundColor='#000000'"
+                  onmouseout="this.style.backgroundColor='#1F292E'"
+                >
+                  Go to Dashboard
+                </button>
+                <button
+                  id="mobileViewReportsBtn"
+                  class="w-full bg-gray-100 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                >
+                  View Reports
+                </button>
+              </div>
+            </div>
+
+            <!-- Sign Out Button -->
+            <div class="pt-6 border-t border-gray-200">
+              <button
+                id="mobileLogoutButton"
+                class="w-full bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium flex items-center justify-center space-x-2"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                </svg>
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto p-2 sm:p-4 lg:p-8">
+      <div class="space-y-2 sm:space-y-4 lg:space-y-8">
         <!-- Header -->
-        <div class="flex justify-between items-center">
-          <div>
+        <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
+          <div class="w-full lg:w-auto">
             <h1 class="text-2xl font-bold text-gray-900">My Time Entries</h1>
             <p class="text-gray-600">View and manage your time tracking data</p>
           </div>
-          <div class="flex space-x-3">
+          <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 w-full lg:w-auto">
             <button
               id="exportCsvBtn"
-              class="inline-flex items-center px-4 py-2 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+              class="inline-flex items-center justify-center px-4 py-2 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md w-full sm:w-1/2 lg:w-auto"
               style="background-color: #1F292E;"
               onmouseover="this.style.backgroundColor='#000000'"
               onmouseout="this.style.backgroundColor='#1F292E'"
@@ -152,7 +231,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             </button>
             <a
               href={user?.role === 'admin' ? '/admin' : '/dashboard'}
-              class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+              class="inline-flex items-center justify-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md w-full sm:w-1/2 lg:w-auto"
             >
               <span class="mr-2">←</span>
               {user?.role === 'admin' ? 'Back to Dashboard' : 'Back to Timer'}
@@ -161,7 +240,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
         </div>
 
         <!-- Filters -->
-        <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-2 sm:p-4 lg:p-6">
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
@@ -226,9 +305,9 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
         </div>
 
         <!-- Time Entries Table -->
-        <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <!-- Results Counter -->
-          <div class="px-6 py-3 bg-gray-50 border-b border-gray-200">
+          <div class="px-2 sm:px-4 lg:px-6 py-3 bg-gray-50 border-b border-gray-200">
             <div class="flex justify-between items-center">
               <span id="resultsCounter" class="text-sm text-gray-600">
                 Showing {userTimeEntries.length} time entries
@@ -242,16 +321,16 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             <table class="min-w-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
                 <tr>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Client
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Project
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Task
                   </th>
-                  <th id="dateSortBtn" class="cursor-pointer px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors">
+                  <th id="dateSortBtn" class="cursor-pointer px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors">
                     <div class="flex items-center">
                       <span>Date</span>
                       <svg id="dateSortIcon" class="w-3 h-3 text-gray-400 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -259,19 +338,19 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                       </svg>
                     </div>
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Start
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Stop
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Duration
                   </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Notes
                   </th>
-                  <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="px-2 sm:px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -289,19 +368,19 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                   
                   return (
                     <tr class="hover:bg-gray-50" data-entry-id={entry.id}>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td class="px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {entry.clientName}
                       </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td class="px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {entry.projectName}
                       </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td class="px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {entry.taskName}
                       </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td class="px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {taskDate.toLocaleDateString()}
                       </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td class="px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <input
                           type="text"
                           class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer"
@@ -312,7 +391,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                           title="Click to edit start time"
                         />
                       </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td class="px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <input
                           type="text"
                           class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer"
@@ -323,13 +402,13 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                           title="Click to edit end time"
                         />
                       </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td class="px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {duration ? Math.round(duration * 10) / 10 : 0} hours
                       </td>
-                      <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title={entry.notes || ''}>
+                      <td class="px-2 sm:px-4 lg:px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title={entry.notes || ''}>
                         {entry.notes || '-'}
                       </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <td class="px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
                           class="edit-time-entry-btn p-2 text-gray-400 hover:text-[#415058] hover:bg-gray-50 rounded-md transition-colors"
                           data-entry-id={entry.id}
@@ -789,8 +868,68 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
       window.URL.revokeObjectURL(url);
     });
 
-    // Logout functionality
-    document.getElementById('logoutButton')?.addEventListener('click', async () => {
+    // Mobile Menu Functionality
+    const mobileMenuButton = document.getElementById('mobileMenuButton');
+    const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
+    const mobileMenu = document.getElementById('mobileMenu');
+    const closeMobileMenuButton = document.getElementById('closeMobileMenuButton');
+
+    function openMobileMenu() {
+      if (mobileMenuOverlay && mobileMenu) {
+        mobileMenuOverlay.classList.remove('hidden');
+        // Trigger reflow to ensure the overlay is visible before animation
+        mobileMenuOverlay.offsetHeight;
+        mobileMenu.classList.remove('translate-x-full');
+        // Prevent body scroll when menu is open
+        document.body.style.overflow = 'hidden';
+      }
+    }
+
+    function closeMobileMenu() {
+      if (mobileMenuOverlay && mobileMenu) {
+        mobileMenu.classList.add('translate-x-full');
+        // Wait for animation to complete before hiding overlay
+        setTimeout(() => {
+          mobileMenuOverlay.classList.add('hidden');
+          // Restore body scroll
+          document.body.style.overflow = '';
+        }, 300);
+      }
+    }
+
+    // Open mobile menu
+    mobileMenuButton?.addEventListener('click', openMobileMenu);
+
+    // Close mobile menu
+    closeMobileMenuButton?.addEventListener('click', closeMobileMenu);
+
+    // Close mobile menu when clicking overlay
+    mobileMenuOverlay?.addEventListener('click', (e) => {
+      if (e.target === mobileMenuOverlay) {
+        closeMobileMenu();
+      }
+    });
+
+    // Close mobile menu with Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && mobileMenuOverlay && !mobileMenuOverlay.classList.contains('hidden')) {
+        closeMobileMenu();
+      }
+    });
+
+    // Mobile menu button functionality
+    document.getElementById('mobileViewDashboardBtn')?.addEventListener('click', () => {
+      closeMobileMenu();
+      window.location.href = '/dashboard';
+    });
+
+    document.getElementById('mobileViewReportsBtn')?.addEventListener('click', () => {
+      closeMobileMenu();
+      window.location.href = '/admin';
+    });
+
+    // Logout functionality (both desktop and mobile)
+    async function performLogout() {
       try {
         const response = await fetch('/api/auth/logout', {
           method: 'POST',
@@ -802,7 +941,13 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
       } catch (error) {
         console.error('Logout error:', error);
       }
-    });
+    }
+
+    // Desktop logout (if it still exists)
+    document.getElementById('logoutButton')?.addEventListener('click', performLogout);
+
+    // Mobile logout
+    document.getElementById('mobileLogoutButton')?.addEventListener('click', performLogout);
 
     // Search functionality
     const searchInput = document.getElementById('search');
