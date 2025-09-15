@@ -564,6 +564,121 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
   </div>
 
   <script>
+    // Flexible time parser for natural human shorthand formats
+    function parseFlexibleTime(timeString: string): { hours: number; minutes: number } | null {
+      if (!timeString) return null;
+      
+      const trimmed = timeString.trim().toLowerCase();
+      
+      // Remove any extra spaces and normalize
+      const normalized = trimmed.replace(/\s+/g, '');
+      
+      // Pattern 1: "3p", "3pm", "3PM" -> 3:00 PM
+      let match = normalized.match(/^(\d{1,2})(p|pm)$/);
+      if (match) {
+        let hours = parseInt(match[1]);
+        if (hours >= 1 && hours <= 12) {
+          if (hours !== 12) hours += 12; // Convert to 24-hour format
+          return { hours, minutes: 0 };
+        }
+      }
+      
+      // Pattern 2: "3a", "3am", "3AM" -> 3:00 AM
+      match = normalized.match(/^(\d{1,2})(a|am)$/);
+      if (match) {
+        let hours = parseInt(match[1]);
+        if (hours >= 1 && hours <= 12) {
+          if (hours === 12) hours = 0; // 12 AM = 0:00
+          return { hours, minutes: 0 };
+        }
+      }
+      
+      // Pattern 3: "300p", "300pm", "300PM" -> 3:00 PM
+      match = normalized.match(/^(\d{1,2})(\d{2})(p|pm)$/);
+      if (match) {
+        let hours = parseInt(match[1]);
+        const minutes = parseInt(match[2]);
+        if (hours >= 1 && hours <= 12 && minutes >= 0 && minutes <= 59) {
+          if (hours !== 12) hours += 12;
+          return { hours, minutes };
+        }
+      }
+      
+      // Pattern 4: "300a", "300am", "300AM" -> 3:00 AM
+      match = normalized.match(/^(\d{1,2})(\d{2})(a|am)$/);
+      if (match) {
+        let hours = parseInt(match[1]);
+        const minutes = parseInt(match[2]);
+        if (hours >= 1 && hours <= 12 && minutes >= 0 && minutes <= 59) {
+          if (hours === 12) hours = 0;
+          return { hours, minutes };
+        }
+      }
+      
+      // Pattern 5: "3:30p", "3:30pm", "3:30PM" -> 3:30 PM
+      match = normalized.match(/^(\d{1,2}):(\d{2})(p|pm)$/);
+      if (match) {
+        let hours = parseInt(match[1]);
+        const minutes = parseInt(match[2]);
+        if (hours >= 1 && hours <= 12 && minutes >= 0 && minutes <= 59) {
+          if (hours !== 12) hours += 12;
+          return { hours, minutes };
+        }
+      }
+      
+      // Pattern 6: "3:30a", "3:30am", "3:30AM" -> 3:30 AM
+      match = normalized.match(/^(\d{1,2}):(\d{2})(a|am)$/);
+      if (match) {
+        let hours = parseInt(match[1]);
+        const minutes = parseInt(match[2]);
+        if (hours >= 1 && hours <= 12 && minutes >= 0 && minutes <= 59) {
+          if (hours === 12) hours = 0;
+          return { hours, minutes };
+        }
+      }
+      
+      // Pattern 7: "3:30 p", "3:30 pm", "3:30 PM" (with space)
+      match = normalized.match(/^(\d{1,2}):(\d{2})\s*(p|pm)$/);
+      if (match) {
+        let hours = parseInt(match[1]);
+        const minutes = parseInt(match[2]);
+        if (hours >= 1 && hours <= 12 && minutes >= 0 && minutes <= 59) {
+          if (hours !== 12) hours += 12;
+          return { hours, minutes };
+        }
+      }
+      
+      // Pattern 8: "3:30 a", "3:30 am", "3:30 AM" (with space)
+      match = normalized.match(/^(\d{1,2}):(\d{2})\s*(a|am)$/);
+      if (match) {
+        let hours = parseInt(match[1]);
+        const minutes = parseInt(match[2]);
+        if (hours >= 1 && hours <= 12 && minutes >= 0 && minutes <= 59) {
+          if (hours === 12) hours = 0;
+          return { hours, minutes };
+        }
+      }
+      
+      // Pattern 9: "12:00pm", "12:00am" (noon/midnight)
+      match = normalized.match(/^12:(\d{2})(p|pm)$/);
+      if (match) {
+        const minutes = parseInt(match[1]);
+        if (minutes >= 0 && minutes <= 59) {
+          return { hours: 12, minutes }; // 12 PM = 12:00
+        }
+      }
+      
+      match = normalized.match(/^12:(\d{2})(a|am)$/);
+      if (match) {
+        const minutes = parseInt(match[1]);
+        if (minutes >= 0 && minutes <= 59) {
+          return { hours: 0, minutes }; // 12 AM = 0:00
+        }
+      }
+      
+      return null; // No pattern matched
+    }
+
     // Week navigation and filtering
     document.addEventListener('DOMContentLoaded', function() {
       // Week navigation state - use last 7 days to match dashboard
@@ -660,6 +775,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
       // Initialize week display
       updateWeekDisplay();
 
+
       // Time input handling
       const timeInputs = document.querySelectorAll('.time-input');
       
@@ -681,10 +797,10 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
           const originalValue = this.getAttribute('data-original-value');
           if (timeValue === originalValue) return;
           
-          // Validate time format (12-hour with AM/PM)
-          const timeRegex = /^(1[0-2]|0?[1-9]):[0-5][0-9]\s*(am|pm|AM|PM)$/;
-          if (!timeRegex.test(timeValue)) {
-            alert('Please enter a valid time in 12-hour format (e.g., 9:30 AM, 2:45 PM)');
+          // Parse time using flexible parser
+          const parsedTime = parseFlexibleTime(timeValue);
+          if (!parsedTime) {
+            alert('Please enter a valid time format (e.g., 3p, 3:30pm, 12am, 300pm, etc.)');
             this.focus();
             return;
           }
@@ -707,24 +823,9 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             // Get the task date from the current entry
             const taskDate = currentEntry?.startTime ? new Date(currentEntry.startTime) : new Date(currentEntry?.createdAt);
             
-            // Parse the time input and create a proper datetime (12-hour format)
-            const timeMatch = timeValue.match(/^(1[0-2]|0?[1-9]):([0-5][0-9])\s*(am|pm|AM|PM)$/);
-            if (!timeMatch) {
-              alert('Invalid time format. Please use 12-hour format (e.g., 9:30 AM, 2:45 PM)');
-              this.focus();
-              return;
-            }
-            
-            let hours = parseInt(timeMatch[1]);
-            const minutes = parseInt(timeMatch[2]);
-            const period = timeMatch[3].toLowerCase();
-            
-            // Convert to 24-hour format
-            if (period === 'pm' && hours !== 12) {
-              hours += 12;
-            } else if (period === 'am' && hours === 12) {
-              hours = 0;
-            }
+            // Use the parsed time (already in 24-hour format)
+            const hours = parsedTime.hours;
+            const minutes = parsedTime.minutes;
             
             const newDateTime = new Date(taskDate);
             newDateTime.setHours(hours, minutes, 0, 0);
@@ -1308,51 +1409,35 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
           // Get the task date from the original entry (use startTime if it exists, otherwise use createdAt)
           const taskDate = currentEditingEntry?.startTime ? new Date(currentEditingEntry.startTime) : new Date(currentEditingEntry?.createdAt);
           
-          // Create start time by combining task date with user input (12-hour format)
-          const startTimeMatch = startTimeInput.value.match(/^(1[0-2]|0?[1-9]):([0-5][0-9])\s*(am|pm|AM|PM)$/);
-          if (!startTimeMatch) {
-            alert('Invalid start time format. Please use 12-hour format (e.g., 9:30 AM, 2:45 PM)');
+          // Parse start time using flexible parser
+          const startParsedTime = parseFlexibleTime(startTimeInput.value);
+          if (!startParsedTime) {
+            alert('Invalid start time format. Please use formats like 3p, 3:30pm, 12am, 300pm, etc.');
             submitButton.disabled = false;
             saveButtonText.textContent = originalText;
             saveButtonSpinner.classList.add('hidden');
             return;
           }
           
-          let startHours = parseInt(startTimeMatch[1]);
-          const startMinutes = parseInt(startTimeMatch[2]);
-          const startPeriod = startTimeMatch[3].toLowerCase();
-          
-          // Convert to 24-hour format
-          if (startPeriod === 'pm' && startHours !== 12) {
-            startHours += 12;
-          } else if (startPeriod === 'am' && startHours === 12) {
-            startHours = 0;
-          }
+          const startHours = startParsedTime.hours;
+          const startMinutes = startParsedTime.minutes;
           
           const startDateTime = new Date(taskDate);
           startDateTime.setHours(startHours, startMinutes, 0, 0);
           updateData.startTime = startDateTime.toISOString();
           
-          // Create end time by combining task date with user input (12-hour format)
-          const endTimeMatch = endTimeInput.value.match(/^(1[0-2]|0?[1-9]):([0-5][0-9])\s*(am|pm|AM|PM)$/);
-          if (!endTimeMatch) {
-            alert('Invalid end time format. Please use 12-hour format (e.g., 9:30 AM, 2:45 PM)');
+          // Parse end time using flexible parser
+          const endParsedTime = parseFlexibleTime(endTimeInput.value);
+          if (!endParsedTime) {
+            alert('Invalid end time format. Please use formats like 3p, 3:30pm, 12am, 300pm, etc.');
             submitButton.disabled = false;
             saveButtonText.textContent = originalText;
             saveButtonSpinner.classList.add('hidden');
             return;
           }
           
-          let endHours = parseInt(endTimeMatch[1]);
-          const endMinutes = parseInt(endTimeMatch[2]);
-          const endPeriod = endTimeMatch[3].toLowerCase();
-          
-          // Convert to 24-hour format
-          if (endPeriod === 'pm' && endHours !== 12) {
-            endHours += 12;
-          } else if (endPeriod === 'am' && endHours === 12) {
-            endHours = 0;
-          }
+          const endHours = endParsedTime.hours;
+          const endMinutes = endParsedTime.minutes;
           
           const endDateTime = new Date(taskDate);
           endDateTime.setHours(endHours, endMinutes, 0, 0);

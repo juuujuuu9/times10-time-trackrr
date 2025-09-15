@@ -250,7 +250,6 @@ const user = await requireAuth('/')(Astro) as any;
                   class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
                   oninput="handleTaskSearch(this.value)"
                   onfocus="showTaskDropdown()"
-                  onblur="hideTaskDropdown()"
                 />
                 <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
                   <svg id="taskDropdownArrow" class="fill-current h-5 w-5 transition-transform duration-200 cursor-pointer pointer-events-auto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" onclick="toggleTaskDropdown()">
@@ -1070,6 +1069,151 @@ const user = await requireAuth('/')(Astro) as any;
   // Enhanced task search functionality
   let taskSearchTimeout: NodeJS.Timeout;
   let taskDropdownOpen = false;
+
+  // Flexible time parser for natural human shorthand formats
+  function parseFlexibleTime(timeString: string): { hours: number; minutes: number } | null {
+    if (!timeString) return null;
+    
+    const trimmed = timeString.trim().toLowerCase();
+    
+    // Remove any extra spaces and normalize
+    const normalized = trimmed.replace(/\s+/g, '');
+    
+    // Pattern 1: "3p", "3pm", "3PM" -> 3:00 PM
+    let match = normalized.match(/^(\d{1,2})(p|pm)$/);
+    if (match) {
+      let hours = parseInt(match[1]);
+      if (hours >= 1 && hours <= 12) {
+        if (hours !== 12) hours += 12; // Convert to 24-hour format
+        return { hours, minutes: 0 };
+      }
+    }
+    
+    // Pattern 2: "3a", "3am", "3AM" -> 3:00 AM
+    match = normalized.match(/^(\d{1,2})(a|am)$/);
+    if (match) {
+      let hours = parseInt(match[1]);
+      if (hours >= 1 && hours <= 12) {
+        if (hours === 12) hours = 0; // 12 AM = 0:00
+        return { hours, minutes: 0 };
+      }
+    }
+    
+    // Pattern 3: "300p", "300pm", "300PM" -> 3:00 PM
+    match = normalized.match(/^(\d{1,2})(\d{2})(p|pm)$/);
+    if (match) {
+      let hours = parseInt(match[1]);
+      const minutes = parseInt(match[2]);
+      if (hours >= 1 && hours <= 12 && minutes >= 0 && minutes <= 59) {
+        if (hours !== 12) hours += 12;
+        return { hours, minutes };
+      }
+    }
+    
+    // Pattern 4: "300a", "300am", "300AM" -> 3:00 AM
+    match = normalized.match(/^(\d{1,2})(\d{2})(a|am)$/);
+    if (match) {
+      let hours = parseInt(match[1]);
+      const minutes = parseInt(match[2]);
+      if (hours >= 1 && hours <= 12 && minutes >= 0 && minutes <= 59) {
+        if (hours === 12) hours = 0;
+        return { hours, minutes };
+      }
+    }
+    
+    // Pattern 5: "3000p", "3000pm", "3000PM" -> 3:00 PM (4 digits)
+    match = normalized.match(/^(\d{1,2})(\d{2})(p|pm)$/);
+    if (match) {
+      let hours = parseInt(match[1]);
+      const minutes = parseInt(match[2]);
+      if (hours >= 1 && hours <= 12 && minutes >= 0 && minutes <= 59) {
+        if (hours !== 12) hours += 12;
+        return { hours, minutes };
+      }
+    }
+    
+    // Pattern 6: "3000a", "3000am", "3000AM" -> 3:00 AM (4 digits)
+    match = normalized.match(/^(\d{1,2})(\d{2})(a|am)$/);
+    if (match) {
+      let hours = parseInt(match[1]);
+      const minutes = parseInt(match[2]);
+      if (hours >= 1 && hours <= 12 && minutes >= 0 && minutes <= 59) {
+        if (hours === 12) hours = 0;
+        return { hours, minutes };
+      }
+    }
+    
+    // Pattern 7: "3:30p", "3:30pm", "3:30PM" -> 3:30 PM
+    match = normalized.match(/^(\d{1,2}):(\d{2})(p|pm)$/);
+    if (match) {
+      let hours = parseInt(match[1]);
+      const minutes = parseInt(match[2]);
+      if (hours >= 1 && hours <= 12 && minutes >= 0 && minutes <= 59) {
+        if (hours !== 12) hours += 12;
+        return { hours, minutes };
+      }
+    }
+    
+    // Pattern 8: "3:30a", "3:30am", "3:30AM" -> 3:30 AM
+    match = normalized.match(/^(\d{1,2}):(\d{2})(a|am)$/);
+    if (match) {
+      let hours = parseInt(match[1]);
+      const minutes = parseInt(match[2]);
+      if (hours >= 1 && hours <= 12 && minutes >= 0 && minutes <= 59) {
+        if (hours === 12) hours = 0;
+        return { hours, minutes };
+      }
+    }
+    
+    // Pattern 9: "3:30 p", "3:30 pm", "3:30 PM" (with space)
+    match = normalized.match(/^(\d{1,2}):(\d{2})\s*(p|pm)$/);
+    if (match) {
+      let hours = parseInt(match[1]);
+      const minutes = parseInt(match[2]);
+      if (hours >= 1 && hours <= 12 && minutes >= 0 && minutes <= 59) {
+        if (hours !== 12) hours += 12;
+        return { hours, minutes };
+      }
+    }
+    
+    // Pattern 10: "3:30 a", "3:30 am", "3:30 AM" (with space)
+    match = normalized.match(/^(\d{1,2}):(\d{2})\s*(a|am)$/);
+    if (match) {
+      let hours = parseInt(match[1]);
+      const minutes = parseInt(match[2]);
+      if (hours >= 1 && hours <= 12 && minutes >= 0 && minutes <= 59) {
+        if (hours === 12) hours = 0;
+        return { hours, minutes };
+      }
+    }
+    
+    // Pattern 11: "12:00pm", "12:00am" (noon/midnight)
+    match = normalized.match(/^12:(\d{2})(p|pm)$/);
+    if (match) {
+      const minutes = parseInt(match[1]);
+      if (minutes >= 0 && minutes <= 59) {
+        return { hours: 12, minutes }; // 12 PM = 12:00
+      }
+    }
+    
+    match = normalized.match(/^12:(\d{2})(a|am)$/);
+    if (match) {
+      const minutes = parseInt(match[1]);
+      if (minutes >= 0 && minutes <= 59) {
+        return { hours: 0, minutes }; // 12 AM = 0:00
+      }
+    }
+    
+    return null; // No pattern matched
+  }
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    const target = e.target as Element;
+    if (!target.closest('#timeEntryTask') && !target.closest('#taskDropdown') && !target.closest('#taskDropdownArrow')) {
+      hideTaskDropdown();
+    }
+  });
   
   // Task search functions
   function handleTaskSearch(searchTerm: string) {
@@ -1105,20 +1249,34 @@ const user = await requireAuth('/')(Astro) as any;
         return;
       }
 
-      const response = await fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=20`);
-      if (response.ok) {
-        const data = await response.json();
-        const tasks = data.data || [];
-        
-        // Filter tasks based on search term (including client and project names)
-        const filteredTasks = tasks.filter((task: any) => 
-          task.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          task.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          task.clientName.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+      // Fetch both regular tasks and system tasks
+      const [regularTasksResponse, systemTasksResponse] = await Promise.all([
+        fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=20`),
+        fetch(`/api/system-tasks?assignedTo=${encodeURIComponent(userId)}&limit=100`)
+      ]);
 
-        displayTaskDropdown(filteredTasks);
+      let allTasks: any[] = [];
+
+      // Get regular tasks
+      if (regularTasksResponse.ok) {
+        const regularData = await regularTasksResponse.json();
+        allTasks = [...(regularData.data || [])];
       }
+
+      // Get system tasks
+      if (systemTasksResponse.ok) {
+        const systemData = await systemTasksResponse.json();
+        allTasks = [...allTasks, ...(systemData.data || [])];
+      }
+      
+      // Filter tasks based on search term (including client and project names)
+      const filteredTasks = allTasks.filter((task: any) => 
+        task.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        task.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        task.clientName.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+
+      displayTaskDropdown(filteredTasks);
     } catch (error) {
       console.error('Error searching tasks:', error);
     }
@@ -1132,12 +1290,27 @@ const user = await requireAuth('/')(Astro) as any;
         return;
       }
 
-      const response = await fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=20`);
-      if (response.ok) {
-        const data = await response.json();
-        const tasks = data.data || [];
-        displayTaskDropdown(tasks);
+      // Fetch both regular tasks and system tasks
+      const [regularTasksResponse, systemTasksResponse] = await Promise.all([
+        fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=20`),
+        fetch(`/api/system-tasks?assignedTo=${encodeURIComponent(userId)}&limit=100`)
+      ]);
+
+      let allTasks: any[] = [];
+
+      // Get regular tasks
+      if (regularTasksResponse.ok) {
+        const regularData = await regularTasksResponse.json();
+        allTasks = [...(regularData.data || [])];
       }
+
+      // Get system tasks
+      if (systemTasksResponse.ok) {
+        const systemData = await systemTasksResponse.json();
+        allTasks = [...allTasks, ...(systemData.data || [])];
+      }
+
+      displayTaskDropdown(allTasks);
     } catch (error) {
       console.error('Error loading all tasks:', error);
     }
@@ -1156,18 +1329,15 @@ const user = await requireAuth('/')(Astro) as any;
   }
   
   function hideTaskDropdown() {
-    // Small delay to allow clicking on dropdown items
-    setTimeout(() => {
-      const dropdown = document.getElementById('taskDropdown');
-      const arrow = document.getElementById('taskDropdownArrow');
-      if (dropdown) {
-        dropdown.classList.add('hidden');
-        taskDropdownOpen = false;
-      }
-      if (arrow) {
-        arrow.style.transform = 'rotate(0deg)';
-      }
-    }, 150);
+    const dropdown = document.getElementById('taskDropdown');
+    const arrow = document.getElementById('taskDropdownArrow');
+    if (dropdown) {
+      dropdown.classList.add('hidden');
+      taskDropdownOpen = false;
+    }
+    if (arrow) {
+      arrow.style.transform = 'rotate(0deg)';
+    }
   }
   
   // Make functions available globally for HTML event handlers
@@ -1181,6 +1351,8 @@ const user = await requireAuth('/')(Astro) as any;
   function displayTaskDropdown(tasks: any[]) {
     const taskDropdown = document.getElementById('taskDropdown');
     if (!taskDropdown) return;
+
+    console.log('Displaying task dropdown with tasks:', tasks);
 
     if (tasks.length === 0) {
       taskDropdown.innerHTML = '<div class="px-3 py-2 text-gray-500 text-sm">No tasks found</div>';
@@ -1547,51 +1719,35 @@ const user = await requireAuth('/')(Astro) as any;
         // Get the task date from the original entry (use startTime if it exists, otherwise use createdAt)
         const taskDate = currentEditingEntry?.startTime ? new Date(currentEditingEntry.startTime) : new Date(currentEditingEntry?.createdAt);
         
-        // Create start time by combining task date with user input (12-hour format)
-        const startTimeMatch = startTimeInput.value.match(/^(1[0-2]|0?[1-9]):([0-5][0-9])\s*(am|pm|AM|PM)$/);
-        if (!startTimeMatch) {
-          alert('Invalid start time format. Please use 12-hour format (e.g., 9:30 AM, 2:45 PM)');
-          submitButton.disabled = false;
-          saveButtonText.textContent = originalText;
-          saveButtonSpinner.classList.add('hidden');
-          return;
-        }
-        
-        let startHours = parseInt(startTimeMatch[1]);
-        const startMinutes = parseInt(startTimeMatch[2]);
-        const startPeriod = startTimeMatch[3].toLowerCase();
-        
-        // Convert to 24-hour format
-        if (startPeriod === 'pm' && startHours !== 12) {
-          startHours += 12;
-        } else if (startPeriod === 'am' && startHours === 12) {
-          startHours = 0;
-        }
+          // Parse start time using flexible parser
+          const startParsedTime = parseFlexibleTime(startTimeInput.value);
+          if (!startParsedTime) {
+            alert('Invalid start time format. Please use formats like 3p, 3:30pm, 12am, 300pm, etc.');
+            submitButton.disabled = false;
+            saveButtonText.textContent = originalText;
+            saveButtonSpinner.classList.add('hidden');
+            return;
+          }
+          
+          const startHours = startParsedTime.hours;
+          const startMinutes = startParsedTime.minutes;
         
         const startDateTime = new Date(taskDate);
         startDateTime.setHours(startHours, startMinutes, 0, 0);
         updateData.startTime = startDateTime.toISOString();
         
-        // Create end time by combining task date with user input (12-hour format)
-        const endTimeMatch = endTimeInput.value.match(/^(1[0-2]|0?[1-9]):([0-5][0-9])\s*(am|pm|AM|PM)$/);
-        if (!endTimeMatch) {
-          alert('Invalid end time format. Please use 12-hour format (e.g., 9:30 AM, 2:45 PM)');
-          submitButton.disabled = false;
-          saveButtonText.textContent = originalText;
-          saveButtonSpinner.classList.add('hidden');
-          return;
-        }
-        
-        let endHours = parseInt(endTimeMatch[1]);
-        const endMinutes = parseInt(endTimeMatch[2]);
-        const endPeriod = endTimeMatch[3].toLowerCase();
-        
-        // Convert to 24-hour format
-        if (endPeriod === 'pm' && endHours !== 12) {
-          endHours += 12;
-        } else if (endPeriod === 'am' && endHours === 12) {
-          endHours = 0;
-        }
+          // Parse end time using flexible parser
+          const endParsedTime = parseFlexibleTime(endTimeInput.value);
+          if (!endParsedTime) {
+            alert('Invalid end time format. Please use formats like 3p, 3:30pm, 12am, 300pm, etc.');
+            submitButton.disabled = false;
+            saveButtonText.textContent = originalText;
+            saveButtonSpinner.classList.add('hidden');
+            return;
+          }
+          
+          const endHours = endParsedTime.hours;
+          const endMinutes = endParsedTime.minutes;
         
         const endDateTime = new Date(taskDate);
         endDateTime.setHours(endHours, endMinutes, 0, 0);
@@ -1722,10 +1878,10 @@ const user = await requireAuth('/')(Astro) as any;
             return; // Don't allow editing manual duration entries
           }
           
-          // Validate time format (12-hour with AM/PM)
-          const timeRegex = /^(1[0-2]|0?[1-9]):[0-5][0-9]\s*(am|pm|AM|PM)$/;
-          if (!timeRegex.test(timeValue)) {
-            alert('Please enter a valid time in 12-hour format (e.g., 9:30 AM, 2:45 PM)');
+          // Parse time using flexible parser
+          const parsedTime = parseFlexibleTime(timeValue);
+          if (!parsedTime) {
+            alert('Please enter a valid time format (e.g., 3p, 3:30pm, 12am, 300pm, etc.)');
             this.focus();
             return;
           }
@@ -1748,24 +1904,9 @@ const user = await requireAuth('/')(Astro) as any;
             // Get the task date from the current entry
             const taskDate = currentEntry?.startTime ? new Date(currentEntry.startTime) : new Date(currentEntry?.createdAt);
             
-            // Parse the time input and create a proper datetime (12-hour format)
-            const timeMatch = timeValue.match(/^(1[0-2]|0?[1-9]):([0-5][0-9])\s*(am|pm|AM|PM)$/);
-            if (!timeMatch) {
-              alert('Invalid time format. Please use 12-hour format (e.g., 9:30 AM, 2:45 PM)');
-              this.focus();
-              return;
-            }
-            
-            let hours = parseInt(timeMatch[1]);
-            const minutes = parseInt(timeMatch[2]);
-            const period = timeMatch[3].toLowerCase();
-            
-            // Convert to 24-hour format
-            if (period === 'pm' && hours !== 12) {
-              hours += 12;
-            } else if (period === 'am' && hours === 12) {
-              hours = 0;
-            }
+            // Use the parsed time (already in 24-hour format)
+            const hours = parsedTime.hours;
+            const minutes = parsedTime.minutes;
             
             const newDateTime = new Date(taskDate);
             newDateTime.setHours(hours, minutes, 0, 0);
