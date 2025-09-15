@@ -118,6 +118,10 @@ export default function Timer() {
         const savedLayoutMode = localStorage.getItem('timerLayoutMode') as 'dropdown' | 'list' | null;
         if (savedLayoutMode) {
           setLayoutMode(savedLayoutMode);
+          // Dispatch event to notify dashboard of initial layout mode
+          window.dispatchEvent(new CustomEvent('timerLayoutModeChanged', {
+            detail: { mode: savedLayoutMode }
+          }));
         }
 
         // Get current user
@@ -128,14 +132,48 @@ export default function Timer() {
             const userId = userData.user.id;
             setCurrentUserId(userId);
             
-            // Load curated task list from localStorage
-            const savedCuratedList = localStorage.getItem(`curatedTaskList_${userId}`);
-            if (savedCuratedList) {
-              try {
-                const parsedList = JSON.parse(savedCuratedList);
-                setCuratedTaskList(parsedList);
-              } catch (error) {
-                console.error('Error parsing curated task list:', error);
+            // Load curated task list from server, fallback to localStorage
+            try {
+              const taskListResponse = await fetch('/api/user-task-lists');
+              if (taskListResponse.ok) {
+                const taskListData = await taskListResponse.json();
+                if (taskListData.success) {
+                  setCuratedTaskList(taskListData.data || []);
+                } else {
+                  // Fallback to localStorage if API fails
+                  const savedCuratedList = localStorage.getItem(`curatedTaskList_${userId}`);
+                  if (savedCuratedList) {
+                    try {
+                      const parsedList = JSON.parse(savedCuratedList);
+                      setCuratedTaskList(parsedList);
+                    } catch (error) {
+                      console.error('Error parsing curated task list from localStorage:', error);
+                    }
+                  }
+                }
+              } else {
+                // Fallback to localStorage if API fails
+                const savedCuratedList = localStorage.getItem(`curatedTaskList_${userId}`);
+                if (savedCuratedList) {
+                  try {
+                    const parsedList = JSON.parse(savedCuratedList);
+                    setCuratedTaskList(parsedList);
+                  } catch (error) {
+                    console.error('Error parsing curated task list from localStorage:', error);
+                  }
+                }
+              }
+            } catch (error) {
+              console.error('Error loading curated task list from server:', error);
+              // Fallback to localStorage
+              const savedCuratedList = localStorage.getItem(`curatedTaskList_${userId}`);
+              if (savedCuratedList) {
+                try {
+                  const parsedList = JSON.parse(savedCuratedList);
+                  setCuratedTaskList(parsedList);
+                } catch (error) {
+                  console.error('Error parsing curated task list from localStorage:', error);
+                }
               }
             }
             
@@ -310,25 +348,80 @@ export default function Timer() {
   const handleLayoutModeToggle = (mode: 'dropdown' | 'list') => {
     setLayoutMode(mode);
     localStorage.setItem('timerLayoutMode', mode);
+    
+    // Dispatch custom event to notify dashboard of layout change
+    window.dispatchEvent(new CustomEvent('timerLayoutModeChanged', {
+      detail: { mode }
+    }));
   };
 
   // Add task to curated list
-  const addToCuratedList = (taskId: number) => {
+  const addToCuratedList = async (taskId: number) => {
     if (!curatedTaskList.includes(taskId)) {
-      const newList = [...curatedTaskList, taskId];
-      setCuratedTaskList(newList);
-      if (currentUserId) {
-        localStorage.setItem(`curatedTaskList_${currentUserId}`, JSON.stringify(newList));
+      try {
+        const response = await fetch('/api/user-task-lists', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ taskId }),
+        });
+
+        if (response.ok) {
+          const newList = [...curatedTaskList, taskId];
+          setCuratedTaskList(newList);
+        } else {
+          console.error('Failed to add task to list via API, falling back to localStorage');
+          // Fallback to localStorage
+          const newList = [...curatedTaskList, taskId];
+          setCuratedTaskList(newList);
+          if (currentUserId) {
+            localStorage.setItem(`curatedTaskList_${currentUserId}`, JSON.stringify(newList));
+          }
+        }
+      } catch (error) {
+        console.error('Error adding task to list via API, falling back to localStorage:', error);
+        // Fallback to localStorage
+        const newList = [...curatedTaskList, taskId];
+        setCuratedTaskList(newList);
+        if (currentUserId) {
+          localStorage.setItem(`curatedTaskList_${currentUserId}`, JSON.stringify(newList));
+        }
       }
     }
   };
 
   // Remove task from curated list
-  const removeFromCuratedList = (taskId: number) => {
-    const newList = curatedTaskList.filter(id => id !== taskId);
-    setCuratedTaskList(newList);
-    if (currentUserId) {
-      localStorage.setItem(`curatedTaskList_${currentUserId}`, JSON.stringify(newList));
+  const removeFromCuratedList = async (taskId: number) => {
+    try {
+      const response = await fetch('/api/user-task-lists', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ taskId }),
+      });
+
+      if (response.ok) {
+        const newList = curatedTaskList.filter(id => id !== taskId);
+        setCuratedTaskList(newList);
+      } else {
+        console.error('Failed to remove task from list via API, falling back to localStorage');
+        // Fallback to localStorage
+        const newList = curatedTaskList.filter(id => id !== taskId);
+        setCuratedTaskList(newList);
+        if (currentUserId) {
+          localStorage.setItem(`curatedTaskList_${currentUserId}`, JSON.stringify(newList));
+        }
+      }
+    } catch (error) {
+      console.error('Error removing task from list via API, falling back to localStorage:', error);
+      // Fallback to localStorage
+      const newList = curatedTaskList.filter(id => id !== taskId);
+      setCuratedTaskList(newList);
+      if (currentUserId) {
+        localStorage.setItem(`curatedTaskList_${currentUserId}`, JSON.stringify(newList));
+      }
     }
   };
 
@@ -352,8 +445,8 @@ export default function Timer() {
   };
 
   // Handle adding task from search dropdown
-  const handleAddTaskFromSearch = (taskId: number) => {
-    addToCuratedList(taskId);
+  const handleAddTaskFromSearch = async (taskId: number) => {
+    await addToCuratedList(taskId);
     setAddTaskDropdownOpen(false);
     setAddTaskSearchTerm('');
   };
@@ -569,7 +662,7 @@ export default function Timer() {
             <h3 className="text-sm font-medium text-gray-700">Your Task List</h3>
             <button
               onClick={() => setAddTaskDropdownOpen(!addTaskDropdownOpen)}
-              className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+              className="flex items-center space-x-1 px-3 py-1 text-sm bg-black text-white rounded hover:bg-gray-800 transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -837,14 +930,15 @@ export default function Timer() {
       )}
 
       {/* Task Selection - List Layout */}
-      {layoutMode === 'list' && !isRunning && (
+      {layoutMode === 'list' && (
         <div className="mb-6">
           {renderTaskList()}
         </div>
       )}
 
-      {/* Active Task Display */}
-      {isRunning && selectedTask && (
+
+      {/* Currently tracking box - show in dropdown mode when timer is running */}
+      {layoutMode === 'dropdown' && isRunning && selectedTask && (
         <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
           <p className="text-sm font-medium text-gray-900">Currently tracking:</p>
           <p className="text-lg font-medium text-gray-800">{getSelectedTaskClientName()}</p>

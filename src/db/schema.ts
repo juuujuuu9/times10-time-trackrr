@@ -137,6 +137,14 @@ export const slackCommands = pgTable('slack_commands', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// User Task Lists table (for storing user's curated task lists)
+export const userTaskLists = pgTable('user_task_lists', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  taskId: integer('task_id').references(() => tasks.id).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   clients: many(clients),
@@ -145,6 +153,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
   slackUsers: many(slackUsers),
   passwordResetTokens: many(passwordResetTokens),
+  userTaskLists: many(userTaskLists),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -216,5 +225,16 @@ export const passwordResetTokensRelations = relations(passwordResetTokens, ({ on
   user: one(users, {
     fields: [passwordResetTokens.userId],
     references: [users.id],
+  }),
+}));
+
+export const userTaskListsRelations = relations(userTaskLists, ({ one }) => ({
+  user: one(users, {
+    fields: [userTaskLists.userId],
+    references: [users.id],
+  }),
+  task: one(tasks, {
+    fields: [userTaskLists.taskId],
+    references: [tasks.id],
   }),
 })); 

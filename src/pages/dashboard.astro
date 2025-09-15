@@ -136,16 +136,16 @@ const user = await requireAuth('/')(Astro) as any;
       </div>
 
       <div class="max-w-7xl mx-auto p-2 sm:p-4 lg:p-8">
-        <div class="grid grid-cols-1 lg:grid-cols-3 lg:gap-8 sm:gap-4 gap-2">
+        <div id="dashboardGrid" class="grid grid-cols-1 lg:grid-cols-3 lg:gap-8 sm:gap-4 gap-2 transition-all duration-500 ease-in-out">
           <!-- Main Content -->
-          <div class="lg:col-span-2 lg:space-y-8 sm:space-y-4 space-y-2">
+          <div id="mainContent" class="lg:col-span-2 lg:space-y-8 sm:space-y-4 space-y-2 transition-all duration-500 ease-in-out">
             <!-- Timer Section -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-2 sm:p-4">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-2 sm:p-4 transition-all duration-500 ease-in-out">
               <Timer client:load />
             </div>
 
             <!-- Recent Time Entries -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden transition-all duration-500 ease-in-out">
               <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                 <h2 class="text-xl font-semibold text-gray-900">Recent Time Entries</h2>
                 <div class="flex space-x-4">
@@ -184,9 +184,9 @@ const user = await requireAuth('/')(Astro) as any;
           </div>
 
           <!-- Sidebar -->
-          <div class="g:space-y-8 sm:space-y-4 space-y-2">
+          <div id="sidebar" class="g:space-y-8 sm:space-y-4 space-y-2 transition-all duration-500 ease-in-out">
             <!-- Quick Stats -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-6">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-6 transition-all duration-500 ease-in-out">
               <h3 class="text-lg font-semibold text-gray-900 mb-4">Today</h3>
               <div class="space-y-4">
                 <div class="flex justify-between items-center">
@@ -197,7 +197,7 @@ const user = await requireAuth('/')(Astro) as any;
             </div>
 
             <!-- Weekly Stats -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-6">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-6 transition-all duration-500 ease-in-out">
               <h3 id="weeklyTitle" class="text-lg font-semibold text-gray-900 mb-4">This Week</h3>
               <div class="space-y-4">
                 <div class="flex justify-between items-center">
@@ -208,7 +208,7 @@ const user = await requireAuth('/')(Astro) as any;
             </div>
 
             <!-- Quick Actions -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-6">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-6 transition-all duration-500 ease-in-out">
               <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
               <div class="space-y-3 mt-4">
                 <button
@@ -1004,6 +1004,54 @@ const user = await requireAuth('/')(Astro) as any;
   window.addEventListener('timerStarted', () => {
     // Reload dashboard data when a timer is started
     loadDashboardData();
+  });
+
+  // Listen for timer layout mode changes to adjust dashboard layout
+  window.addEventListener('timerLayoutModeChanged', (event: Event) => {
+    const customEvent = event as CustomEvent;
+    const layoutMode = customEvent.detail?.mode;
+    const dashboardGrid = document.getElementById('dashboardGrid');
+    const mainContent = document.getElementById('mainContent');
+    const sidebar = document.getElementById('sidebar');
+    
+    if (layoutMode === 'list') {
+      // Smoothly hide sidebar and make main content full width
+      if (sidebar) {
+        sidebar.style.opacity = '0';
+        sidebar.style.transform = 'translateX(100%)';
+        // Hide after transition completes
+        setTimeout(() => {
+          sidebar.style.display = 'none';
+        }, 500);
+      }
+      // Delay grid layout change slightly to allow sidebar animation to start
+      setTimeout(() => {
+        if (dashboardGrid) {
+          dashboardGrid.className = 'grid grid-cols-1 gap-2 sm:gap-4 lg:gap-8 transition-all duration-500 ease-in-out';
+        }
+        if (mainContent) {
+          mainContent.className = 'space-y-2 sm:space-y-4 lg:space-y-8 transition-all duration-500 ease-in-out';
+        }
+      }, 50);
+    } else {
+      // Smoothly show sidebar and restore original layout
+      if (sidebar) {
+        sidebar.style.display = '';
+        // Force reflow to ensure display change takes effect
+        sidebar.offsetHeight;
+        sidebar.style.opacity = '1';
+        sidebar.style.transform = 'translateX(0)';
+      }
+      // Delay grid layout change slightly to allow sidebar animation to start
+      setTimeout(() => {
+        if (dashboardGrid) {
+          dashboardGrid.className = 'grid grid-cols-1 lg:grid-cols-3 lg:gap-8 sm:gap-4 gap-2 transition-all duration-500 ease-in-out';
+        }
+        if (mainContent) {
+          mainContent.className = 'lg:col-span-2 lg:space-y-8 sm:space-y-4 space-y-2 transition-all duration-500 ease-in-out';
+        }
+      }, 50);
+    }
   });
 
   // Refresh button functionality
