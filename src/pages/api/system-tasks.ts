@@ -35,7 +35,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
         projectId: projects.id,
         clientName: clients.name,
         clientId: clients.id,
-        displayName: sql<string>`CONCAT(${clients.name}, ' - ', ${projects.name}, ' - ', ${tasks.name})`.as('display_name')
+        displayName: sql<string>`CONCAT(${projects.name}, ' - ', ${tasks.name})`.as('display_name')
       })
       .from(tasks)
       .innerJoin(taskAssignments, eq(tasks.id, taskAssignments.taskId))
