@@ -785,7 +785,20 @@ export default function Timer() {
               placeholder="🔍 Search tasks..."
               value={taskSearchTerm}
               onChange={(e) => setTaskSearchTerm(e.target.value)}
-              onFocus={() => setTaskDropdownOpen(true)}
+              onFocus={() => {
+                setTaskDropdownOpen(true);
+                // Clear search term when opening dropdown to show all tasks
+                if (selectedTask) {
+                  setTaskSearchTerm('');
+                }
+              }}
+              onClick={() => {
+                setTaskDropdownOpen(true);
+                // Clear search term when clicking to show all tasks
+                if (selectedTask) {
+                  setTaskSearchTerm('');
+                }
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500"
             />
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
@@ -892,59 +905,11 @@ export default function Timer() {
                   </>
                 )}
               </button>
-              <button
-                onClick={handleForceStopTimer}
-                disabled={timerLoading}
-                className="flex items-center justify-center px-1 py-1 text-xs font-medium rounded transition-colors border-0 bg-gray-900 text-white hover:bg-gray-600"
-                title="Force stop timer without saving"
-              >
-                <svg className="h-10 w-10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                  <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-                  <g id="SVGRepo_iconCarrier">
-                    <g clip-path="url(#clip0_429_11083)">
-                      <path d="M7 7.00006L17 17.0001M7 17.0001L17 7.00006" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                    </g>
-                    <defs> 
-                      <clipPath id="clip0_429_11083">
-                        <rect width="24" height="24" fill="white"></rect>
-                      </clipPath>
-                    </defs>
-                  </g>
-                </svg>
-              </button>
             </>
           )}
         </div>
       )}
 
-      {/* Force Stop Button for List Mode */}
-      {layoutMode === 'list' && isRunning && (
-        <div className="flex justify-center mt-4">
-          <button
-            onClick={handleForceStopTimer}
-            disabled={timerLoading}
-            className="flex items-center justify-center px-4 py-2 text-sm font-medium rounded transition-colors border-0 bg-gray-900 text-white hover:bg-gray-600"
-            title="Force stop timer without saving"
-          >
-            <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-              <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-              <g id="SVGRepo_iconCarrier">
-                <g clip-path="url(#clip0_429_11083)">
-                  <path d="M7 7.00006L17 17.0001M7 17.0001L17 7.00006" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                </g>
-                <defs> 
-                  <clipPath id="clip0_429_11083">
-                    <rect width="24" height="24" fill="white"></rect>
-                  </clipPath>
-                </defs>
-              </g>
-            </svg>
-            Force Stop
-          </button>
-        </div>
-      )}
 
       {/* Status */}
       {isRunning && (
