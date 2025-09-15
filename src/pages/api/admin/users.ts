@@ -42,9 +42,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       }
     }
 
-    // Only admins can invite users
-    if (!currentUser || currentUser.role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Only administrators can invite team members' }), {
+    // Only admins and developers can invite users
+    if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'developer')) {
+      return new Response(JSON.stringify({ error: 'Only administrators and developers can invite team members' }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' },
       });

@@ -24,8 +24,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       }
     }
 
-    // Require authentication and admin role
-    if (!currentUser || currentUser.role !== 'admin') {
+    // Require authentication and admin or developer role
+    if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'developer')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' },

@@ -8,6 +8,7 @@ import { requireRole } from '../../../utils/session';
 // Get current user
 const currentUser = await requireRole('admin', '/admin')(Astro) as any;
 const canViewFinancialData = currentUser ? currentUser.role === 'admin' : false;
+const canManageUsers = currentUser ? (currentUser.role === 'admin' || currentUser.role === 'developer') : false;
 
 // Get all users with their stats
 const allUsers = await db
@@ -36,7 +37,7 @@ const allUsers = await db
         <h1 class="text-2xl font-bold text-gray-900">Team Members</h1>
         <p class="text-gray-600">Manage team members and their roles</p>
       </div>
-      {canViewFinancialData && (
+      {canManageUsers && (
         <button
           id="inviteUserBtn"
           class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
@@ -149,6 +150,7 @@ const allUsers = await db
             <option value="">All Statuses</option>
             <option value="active" selected>Active</option>
             <option value="inactive">Inactive</option>
+            <option value="pending">Pending</option>
           </select>
         </div>
       </div>
@@ -234,7 +236,7 @@ const allUsers = await db
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div class="flex justify-end space-x-2">
-                    {user.status === 'invited' && canViewFinancialData && (
+                    {user.status === 'invited' && canManageUsers && (
                       <button
                         class="resend-invite-btn inline-flex items-center px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 text-sm font-medium rounded-md transition-colors duration-200"
                         data-user-id={user.id}
@@ -291,7 +293,7 @@ const allUsers = await db
   </div>
 
   <!-- Invite Team Member Modal -->
-  {canViewFinancialData && (
+  {canManageUsers && (
     <div id="inviteModal" class="fixed inset-0 bg-black/50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
       <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-300 flex flex-col">
@@ -455,6 +457,7 @@ const allUsers = await db
               >
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
+                <option value="invited">Invited</option>
               </select>
             </div>
             <div class="mb-6">
@@ -621,7 +624,8 @@ const allUsers = await db
           // Check status filter
           const matchesStatus = !selectedStatus || 
             (selectedStatus === 'active' && statusText.includes('Active')) ||
-            (selectedStatus === 'inactive' && statusText.includes('Inactive'));
+            (selectedStatus === 'inactive' && statusText.includes('Inactive')) ||
+            (selectedStatus === 'pending' && statusText.includes('Invited'));
           
           // Show row only if it matches all active filters
           row.style.display = (matchesSearch && matchesRole && matchesStatus) ? '' : 'none';
@@ -884,7 +888,8 @@ const allUsers = await db
         const currentEmail = emailElement?.textContent?.trim() || '';
         const currentRole = roleElement?.textContent?.includes('Admin') ? 'admin' : 
                            roleElement?.textContent?.includes('Developer') ? 'developer' : 'user';
-        const currentStatus = statusElement?.textContent?.includes('Active') ? 'active' : 'inactive';
+        const currentStatus = statusElement?.textContent?.includes('Active') ? 'active' : 
+                             statusElement?.textContent?.includes('Invited') ? 'invited' : 'inactive';
         const currentPayRate = payRateElement?.textContent?.replace('/hr', '').replace('$', '').trim() || '0.00';
         
         console.log('Found team member data:', { currentName, currentEmail, currentRole, currentStatus, currentPayRate });
