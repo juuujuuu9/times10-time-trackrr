@@ -29,6 +29,13 @@ const userTimeEntries = await db
     taskName: tasks.name,
     projectName: projects.name,
     clientName: clients.name,
+    duration: sql<number>`CASE 
+      WHEN ${timeEntries.durationManual} IS NOT NULL 
+      THEN ${timeEntries.durationManual}
+      WHEN ${timeEntries.endTime} IS NOT NULL 
+      THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))
+      ELSE 0
+    END`.as('duration')
   })
   .from(timeEntries)
   .innerJoin(users, eq(timeEntries.userId, users.id))
@@ -37,7 +44,8 @@ const userTimeEntries = await db
   .innerJoin(clients, eq(projects.clientId, clients.id))
   .where(and(
     eq(timeEntries.userId, user.id),
-    isNotNull(timeEntries.endTime), // Only include completed time entries, not ongoing ones
+    // Include completed time entries (with endTime) OR manual duration entries (with durationManual)
+    sql`(${timeEntries.endTime} IS NOT NULL OR ${timeEntries.durationManual} IS NOT NULL)`,
     eq(clients.archived, false),
     eq(projects.archived, false),
     eq(tasks.archived, false)
@@ -358,7 +366,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
               <tbody class="bg-white divide-y divide-gray-200">
                 {userTimeEntries.map((entry) => {
                   const taskDate = entry.startTime ? new Date(entry.startTime) : new Date(entry.createdAt);
-                  const duration = entry.durationManual ? entry.durationManual / 3600 : 0;
+                  const duration = entry.duration ? entry.duration / 3600 : 0;
                   
                   // Check if this is a manual duration entry (no meaningful start/end times)
                   // Manual duration entries have startTime set to task date but endTime is null
