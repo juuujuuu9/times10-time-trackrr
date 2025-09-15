@@ -187,7 +187,18 @@ const user = await requireAuth('/')(Astro) as any;
           <div class="g:space-y-8 sm:space-y-4 space-y-2">
             <!-- Quick Stats -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-6">
-              <h3 class="text-lg font-semibold text-gray-900 mb-4">Last 7 Days</h3>
+              <h3 class="text-lg font-semibold text-gray-900 mb-4">Today</h3>
+              <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                  <span class="text-sm text-gray-600">Hours Tracked</span>
+                  <span id="todayHours" class="text-lg font-semibold text-gray-900">-</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Weekly Stats -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-6">
+              <h3 id="weeklyTitle" class="text-lg font-semibold text-gray-900 mb-4">This Week</h3>
               <div class="space-y-4">
                 <div class="flex justify-between items-center">
                   <span class="text-sm text-gray-600">Hours Tracked</span>
@@ -524,6 +535,13 @@ const user = await requireAuth('/')(Astro) as any;
         updateRecentEntries([], []);
       }
 
+      // Load today's stats
+      const todayStatsResponse = await fetch('/api/reports/today-stats?userId=' + encodeURIComponent(userId));
+      if (todayStatsResponse.ok) {
+        const todayStatsData = await todayStatsResponse.json();
+        updateTodayStats(todayStatsData);
+      }
+
       // Load weekly stats
       const statsResponse = await fetch('/api/reports/weekly-stats?userId=' + encodeURIComponent(userId));
       if (statsResponse.ok) {
@@ -787,15 +805,29 @@ const user = await requireAuth('/')(Astro) as any;
     timerUpdateIntervals = {};
   }
 
+  function updateTodayStats(stats: any) {
+    const todayHours = document.getElementById('todayHours');
+
+    if (todayHours && stats.success) {
+      // Convert seconds to hours for display
+      const hoursFromSeconds = (stats.data.totalHours || 0) / 3600;
+      todayHours.textContent = formatHours(hoursFromSeconds);
+    }
+  }
+
   function updateWeeklyStats(stats: any) {
     const weeklyHours = document.getElementById('weeklyHours');
+    const weeklyTitle = document.getElementById('weeklyTitle');
 
     if (weeklyHours) {
       // Convert seconds to hours for display
       const hoursFromSeconds = (stats.totalHours || 0) / 3600;
       weeklyHours.textContent = formatHours(hoursFromSeconds);
-      
+    }
 
+    if (weeklyTitle && stats.dateRangeDisplay) {
+      // Update the title to show the date range
+      weeklyTitle.textContent = `This Week (${stats.dateRangeDisplay})`;
     }
   }
 
@@ -1983,9 +2015,15 @@ const user = await requireAuth('/')(Astro) as any;
                 }
               }
               
-              // Reload weekly stats to update "This Week" hours
+              // Reload today and weekly stats to update hours
               const userId = await getCurrentUserId();
               if (userId) {
+                // Reload today's stats
+                const todayStatsResponse = await fetch('/api/reports/today-stats?userId=' + encodeURIComponent(userId));
+                if (todayStatsResponse.ok) {
+                  const todayStatsData = await todayStatsResponse.json();
+                  updateTodayStats(todayStatsData);
+                }
                 const statsResponse = await fetch('/api/reports/weekly-stats?userId=' + encodeURIComponent(userId));
                 if (statsResponse.ok) {
                   const statsData = await statsResponse.json();

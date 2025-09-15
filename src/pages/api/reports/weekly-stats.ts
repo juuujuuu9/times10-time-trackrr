@@ -8,12 +8,17 @@ export const GET: APIRoute = async ({ url }) => {
     const searchParams = url.searchParams;
     const userId = searchParams.get('userId');
     
-    // Calculate date range for last 7 days (to match admin dashboard default)
+    // Calculate date range for this week (Sunday to Saturday)
     const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek; // If today is Sunday, don't subtract any days
+    
     const startDate = new Date(now);
-    startDate.setDate(now.getDate() - 7);
+    startDate.setDate(now.getDate() - daysToSubtract);
     startDate.setHours(0, 0, 0, 0);
-    const endDate = new Date(now);
+    
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 6);
     endDate.setHours(23, 59, 59, 999);
 
     // Build filter conditions for non-archived activities - include both startTime-based entries and manual entries
@@ -25,7 +30,9 @@ export const GET: APIRoute = async ({ url }) => {
       )`,
       eq(clients.archived, false),
       eq(projects.archived, false),
-      eq(tasks.archived, false)
+      eq(tasks.archived, false),
+      // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
+      sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
     ];
     
     if (userId) {
@@ -142,13 +149,23 @@ export const GET: APIRoute = async ({ url }) => {
     const completedTasks = completedTasksResult[0]?.count || 0;
     const activeProjects = activeProjectsResult[0]?.count || 0;
 
+    // Format date range for display (e.g., "9/14-9/20")
+    const formatDateForDisplay = (date: Date) => {
+      const month = date.getMonth() + 1; // getMonth() returns 0-11
+      const day = date.getDate();
+      return `${month}/${day}`;
+    };
+
+    const dateRangeDisplay = `${formatDateForDisplay(startDate)}-${formatDateForDisplay(endDate)}`;
+
     return new Response(JSON.stringify({
       totalHours,
       completedTasks,
       activeProjects,
       period: 'This Week',
       startDate: startDate.toISOString(),
-      endDate: endDate.toISOString()
+      endDate: endDate.toISOString(),
+      dateRangeDisplay
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
