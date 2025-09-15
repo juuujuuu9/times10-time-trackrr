@@ -746,7 +746,7 @@ export default function Timer() {
         
         {/* Layout Toggle */}
         <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-600">Layout:</span>
+          {/* <span className="text-sm text-gray-600">View:</span> */}
           <div className="flex bg-gray-100 rounded-lg p-1">
             <button
               onClick={() => handleLayoutModeToggle('dropdown')}
@@ -756,7 +756,14 @@ export default function Timer() {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Dropdown
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6">
+                <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
+                <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g>
+                <g id="SVGRepo_iconCarrier"> 
+                  <path fillRule="evenodd" clipRule="evenodd" d="M12 20C15.866 20 19 16.866 19 13C19 11.0824 18.229 9.34498 16.98 8.08071L18.1872 6.87353L17.1265 5.81287L15.8116 7.12778C14.9125 6.54298 13.8708 6.15908 12.7499 6.0397V4.5H15V3H9V4.5H11.2499V6.03971C10.1292 6.1591 9.08749 6.54298 8.18844 7.12773L6.87352 5.81281L5.81286 6.87347L7.02004 8.08065C5.77106 9.34493 5 11.0824 5 13C5 16.866 8.13401 20 12 20ZM12 7.5C8.96243 7.5 6.5 9.96243 6.5 13C6.5 16.0376 8.96243 18.5 12 18.5C15.0376 18.5 17.5 16.0376 17.5 13C17.5 9.96243 15.0376 7.5 12 7.5Z" fill="currentColor"></path> 
+                  <path fillRule="evenodd" clipRule="evenodd" d="M12.5 12.5V8.99988H11V14H15V12.5H12.5Z" fill="currentColor"></path> 
+                </g>
+              </svg>
             </button>
             <button
               onClick={() => handleLayoutModeToggle('list')}
@@ -766,7 +773,7 @@ export default function Timer() {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              List
+              <svg className="w-4 h-4" fill="#000000" height="200px" width="200px" version="1.1" id="XMLID_209_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24" xml:space="preserve"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g id="schedule"> <g> <path d="M24,24H0V3h5V0h2v3h10V0h2v3h5V24z M2,22h20V5H2v3h20v2H2V22z M20,19H8v-2h12V19z M6,19H4v-2h2V19z M20,15H8v-2h12V15z M6,15H4v-2h2V15z"></path> </g> </g> </g></svg>
             </button>
           </div>
         </div>
