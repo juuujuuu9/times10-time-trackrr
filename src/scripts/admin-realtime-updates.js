@@ -1,6 +1,13 @@
 // Admin Real-time Updates Utility
 // This script handles real-time updates across admin pages when time entries are created/modified
 
+// Format duration in seconds to "Xh Xm" format
+function formatDuration(seconds) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  return `${hours}h ${minutes}m`;
+}
+
 class AdminRealTimeUpdates {
   constructor() {
     this.currentPage = this.getCurrentPage();
@@ -190,7 +197,7 @@ class AdminRealTimeUpdates {
         ${taskDate.toLocaleDateString()}
       </td>
       <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-        ${duration ? Math.round(duration * 10) / 10 : 0} hours
+        ${formatDuration(duration || 0)}
       </td>
       <td class="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
         ${entry.notes || '-'}

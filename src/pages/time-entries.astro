@@ -8,6 +8,13 @@ import { sql, eq, and, gte, lte, isNotNull } from 'drizzle-orm';
 // Require authentication
 const user = await requireAuth('/')(Astro) as any;
 
+// Format duration in seconds to "Xh Xm" format
+function formatDuration(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  return `${hours}h ${minutes}m`;
+}
+
 // Calculate last 7 days (to match dashboard)
 const now = new Date();
 const weekStart = new Date(now);
@@ -411,7 +418,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                         />
                       </td>
                       <td class="px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {duration ? Math.round(duration * 10) / 10 : 0} hours
+                        {formatDuration(entry.duration || 0)}
                       </td>
                       <td class="px-2 sm:px-4 lg:px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title={entry.notes || ''}>
                         {entry.notes || '-'}
@@ -687,6 +694,13 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
       return null; // No pattern matched
     }
 
+    // Format duration in seconds to "Xh Xm" format
+    function formatDuration(seconds: number): string {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      return `${hours}h ${minutes}m`;
+    }
+
     // Week navigation and filtering
     document.addEventListener('DOMContentLoaded', function() {
       // Week navigation state - use last 7 days to match dashboard
@@ -888,8 +902,8 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
               // Update the duration cell
               const durationCell = row.querySelector('td:nth-child(8)'); // Duration column
               if (durationCell && result.data) {
-                const duration = result.data.durationManual ? result.data.durationManual / 3600 : 0;
-                durationCell.textContent = `${duration ? Math.round(duration * 10) / 10 : 0} hours`;
+                const duration = result.data.durationManual || result.data.duration || 0;
+                durationCell.textContent = formatDuration(duration);
               }
               
               // Update the time input values to reflect the new data

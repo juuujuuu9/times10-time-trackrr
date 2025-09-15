@@ -675,7 +675,12 @@ const user = await requireAuth('/')(Astro) as any;
                   </button>
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                  <span class="timer-duration" data-timer-id="${timer.id}">${elapsedHours} hours</span>
+                  <span class="timer-duration" data-timer-id="${timer.id}">${(() => {
+                    const seconds = timer.elapsedSeconds;
+                    const hours = Math.floor(seconds / 3600);
+                    const minutes = Math.floor((seconds % 3600) / 60);
+                    return `${hours}h ${minutes}m`;
+                  })()}</span>
                 </td>
                 <td class="px-4 py-3 text-sm text-gray-500 max-w-xs truncate" title="${timer.notes || ''}">
                   ${timer.notes || '-'}
@@ -747,7 +752,12 @@ const user = await requireAuth('/')(Astro) as any;
                   />
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                  ${durationHours} hours
+                  ${(() => {
+                    const seconds = entry.duration || 0;
+                    const hours = Math.floor(seconds / 3600);
+                    const minutes = Math.floor((seconds % 3600) / 60);
+                    return `${hours}h ${minutes}m`;
+                  })()}
                 </td>
                 <td class="px-4 py-3 text-sm text-gray-500 max-w-xs truncate" title="${entry.notes || ''}">
                   ${entry.notes || '-'}
@@ -792,7 +802,7 @@ const user = await requireAuth('/')(Astro) as any;
         
         const durationElement = document.querySelector(`[data-timer-id="${timer.id}"] .timer-duration`);
         if (durationElement) {
-          durationElement.textContent = `${elapsedHours} hours`;
+          durationElement.textContent = formatDuration(elapsedSeconds);
         }
       }, 1000);
       
@@ -1989,8 +1999,8 @@ const user = await requireAuth('/')(Astro) as any;
               // Update the duration cell
               const durationCell = row?.querySelector('td:nth-child(8)'); // Duration column
               if (durationCell && result.data) {
-                const duration = result.data.durationManual ? result.data.durationManual / 3600 : 0;
-                durationCell.textContent = `${duration ? Math.round(duration * 10) / 10 : 0} hours`;
+                const duration = result.data.durationManual || result.data.duration || 0;
+                durationCell.textContent = formatDuration(duration);
               }
               
               // Update the time input values to reflect the new data
