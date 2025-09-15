@@ -15,12 +15,17 @@ function formatDuration(seconds: number): string {
   return `${hours}h ${minutes}m`;
 }
 
-// Calculate last 7 days (to match dashboard)
+// Calculate this week (Sunday to Saturday) to match dashboard
 const now = new Date();
+const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek; // If today is Sunday, don't subtract any days
+
 const weekStart = new Date(now);
-weekStart.setDate(now.getDate() - 7);
+weekStart.setDate(now.getDate() - daysToSubtract);
 weekStart.setHours(0, 0, 0, 0);
-const weekEnd = new Date(now);
+
+const weekEnd = new Date(weekStart);
+weekEnd.setDate(weekStart.getDate() + 6);
 weekEnd.setHours(23, 59, 59, 999);
 
 // Get current user's time entries with related data (only non-archived activities)
@@ -94,18 +99,15 @@ const userTasks = await db
   ))
   .orderBy(clients.name, projects.name, tasks.name);
 
-// Format date range for display
+// Format date range for display (matching dashboard format: M/D-M/D)
 const formatDateRange = (start: Date, end: Date) => {
-  const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
-  const startDay = start.getDate();
-  const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
-  const endDay = end.getDate();
+  const formatDateForDisplay = (date: Date) => {
+    const month = date.getMonth() + 1; // getMonth() returns 0-11
+    const day = date.getDate();
+    return `${month}/${day}`;
+  };
   
-  if (startMonth === endMonth) {
-    return `${startMonth} ${startDay} - ${endDay}`;
-  } else {
-    return `${startMonth} ${startDay} - ${endMonth} ${endDay}`;
-  }
+  return `${formatDateForDisplay(start)}-${formatDateForDisplay(end)}`;
 };
 
 const currentWeekRange = formatDateRange(weekStart, weekEnd);
@@ -703,23 +705,22 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
 
     // Week navigation and filtering
     document.addEventListener('DOMContentLoaded', function() {
-      // Week navigation state - use last 7 days to match dashboard
-      let currentWeekStart = new Date();
-      currentWeekStart.setDate(currentWeekStart.getDate() - 7);
-      currentWeekStart.setHours(0, 0, 0, 0);
+    // Week navigation state - use Sunday-Saturday week to match dashboard
+    let currentWeekStart = new Date();
+    const dayOfWeek = currentWeekStart.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek; // If today is Sunday, don't subtract any days
+    currentWeekStart.setDate(currentWeekStart.getDate() - daysToSubtract);
+    currentWeekStart.setHours(0, 0, 0, 0);
 
-      // Format date range for display
+      // Format date range for display (matching dashboard format: M/D-M/D)
       function formatDateRange(start, end) {
-        const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
-        const startDay = start.getDate();
-        const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
-        const endDay = end.getDate();
+        const formatDateForDisplay = (date) => {
+          const month = date.getMonth() + 1; // getMonth() returns 0-11
+          const day = date.getDate();
+          return `${month}/${day}`;
+        };
         
-        if (startMonth === endMonth) {
-          return `${startMonth} ${startDay} - ${endDay}`;
-        } else {
-          return `${startMonth} ${startDay} - ${endMonth} ${endDay}`;
-        }
+        return `${formatDateForDisplay(start)}-${formatDateForDisplay(end)}`;
       }
 
       // Update week display and filter entries
@@ -736,7 +737,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
         filterEntriesByWeek();
       }
 
-      // Filter entries by last 7 days
+      // Filter entries by current week (Sunday-Saturday)
       function filterEntriesByWeek() {
         const weekEnd = new Date(currentWeekStart);
         weekEnd.setDate(currentWeekStart.getDate() + 6);
@@ -749,7 +750,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
           const dateText = dateCell?.textContent?.trim() || '';
           const entryDate = new Date(dateText);
           
-          // Check if entry is within the last 7 days
+          // Check if entry is within the current week (Sunday-Saturday)
           const isInWeek = entryDate >= currentWeekStart && entryDate <= weekEnd;
           
           // Only hide if not already hidden by other filters
@@ -981,6 +982,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
         weekEnd.setDate(currentWeekStart.getDate() + 6);
         weekEnd.setHours(23, 59, 59, 999);
         
+        // Check if entry is within the current week (Sunday-Saturday)
         return entryDate >= currentWeekStart && entryDate <= weekEnd;
       }
 

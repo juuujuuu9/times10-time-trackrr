@@ -29,6 +29,7 @@ export default function Timer() {
   const [curatedTaskList, setCuratedTaskList] = useState<number[]>([]);
   const [addTaskDropdownOpen, setAddTaskDropdownOpen] = useState(false);
   const [addTaskSearchTerm, setAddTaskSearchTerm] = useState('');
+  const [contextMenuOpen, setContextMenuOpen] = useState<number | null>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -39,6 +40,9 @@ export default function Timer() {
       }
       if (!target.closest('.add-task-dropdown-container')) {
         setAddTaskDropdownOpen(false);
+      }
+      if (!target.closest('.context-menu-container')) {
+        setContextMenuOpen(null);
       }
     };
 
@@ -425,6 +429,52 @@ export default function Timer() {
     }
   };
 
+  // Delete task and all weekly entries
+  const deleteTaskAndWeeklyEntries = async (taskId: number) => {
+    try {
+      // Calculate current week (Sunday to Saturday)
+      const now = new Date();
+      const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - currentDay); // Go back to Sunday
+      startOfWeek.setHours(0, 0, 0, 0);
+      
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6); // Go to Saturday
+      endOfWeek.setHours(23, 59, 59, 999);
+
+      // Delete all time entries for this task in the current week
+      const deleteEntriesResponse = await fetch('/api/time-entries', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          taskId,
+          startDate: startOfWeek.toISOString(),
+          endDate: endOfWeek.toISOString()
+        }),
+      });
+
+      if (!deleteEntriesResponse.ok) {
+        console.error('Failed to delete time entries for task');
+      }
+
+      // Remove task from curated list
+      await removeFromCuratedList(taskId);
+      
+      // Close context menu
+      setContextMenuOpen(null);
+      
+      // Refresh timer data to update any running timers
+      if (refreshTimer) {
+        refreshTimer();
+      }
+    } catch (error) {
+      console.error('Error deleting task and weekly entries:', error);
+    }
+  };
+
   // Get curated tasks
   const getCuratedTasks = () => {
     return tasks.filter(task => curatedTaskList.includes(task.id));
@@ -712,84 +762,129 @@ export default function Timer() {
             </div>
           ) : (
             <div className="border border-gray-200 rounded-lg overflow-hidden">
-              {curatedTasks.map((task, index) => {
-                const isCurrentlyRunning = isRunning && selectedTask === task.id;
-                const isLastTask = index === curatedTasks.length - 1;
-                return (
-                  <div
-                    key={task.id}
-                    className={`p-4 border-b border-gray-200 transition-all ${
-                      isCurrentlyRunning
-                        ? 'bg-green-50'
-                        : 'bg-white hover:bg-gray-50'
-                    } ${isLastTask ? 'border-b-0' : ''}`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      {/* Start/Stop Button */}
-                      <div className="flex-shrink-0">
-                        {!isRunning ? (
-                          <button
-                            onClick={() => handleStartTimerForTask(task.id)}
-                            disabled={timerLoading}
-                            className="w-10 h-10 bg-gray-300 text-gray-600 rounded-full hover:bg-green-500 hover:text-white transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center"
-                            title="Start timer"
-                          >
-                            {timerLoading ? (
-                              <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
-                            ) : (
-                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M8 5v14l11-7z"/>
-                              </svg>
-                            )}
-                          </button>
-                        ) : isCurrentlyRunning ? (
-                          <button
-                            onClick={handleStopTimer}
-                            disabled={timerLoading}
-                            className="w-10 h-10 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center"
-                            title="Stop timer"
-                          >
-                            {timerLoading ? (
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            ) : (
-                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                <rect x="6" y="6" width="12" height="12"/>
-                              </svg>
-                            )}
-                          </button>
-                        ) : (
-                          <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center" title="Timer running on another task">
-                            <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+              {/* Table Header */}
+              <div className="bg-gray-50 border-b border-gray-200">
+                <div className="flex px-4 py-3 text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  <div className="w-80 flex-shrink-0">Task</div>
+                  <div className="flex-1 text-center">Sun</div>
+                  <div className="flex-1 text-center">Mon</div>
+                  <div className="flex-1 text-center">Tues</div>
+                  <div className="flex-1 text-center">Wed</div>
+                  <div className="flex-1 text-center">Thurs</div>
+                  <div className="flex-1 text-center">Fri</div>
+                  <div className="flex-1 text-center">Total</div>
+                </div>
+              </div>
+
+              {/* Table Body */}
+              <div className="divide-y divide-gray-200">
+                {curatedTasks.map((task, index) => {
+                  const isCurrentlyRunning = isRunning && selectedTask === task.id;
+                  return (
+                    <div
+                      key={task.id}
+                      className={`px-4 py-4 transition-all ${
+                        isCurrentlyRunning
+                          ? 'bg-green-50'
+                          : 'bg-white hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center">
+                        {/* Task Column */}
+                        <div className="w-80 flex-shrink-0">
+                          <div className="flex items-center space-x-3">
+                            {/* Start/Stop Button */}
+                            <div className="flex-shrink-0">
+                              {!isRunning ? (
+                                <button
+                                  onClick={() => handleStartTimerForTask(task.id)}
+                                  disabled={timerLoading}
+                                  className="w-8 h-8 bg-gray-300 text-gray-600 rounded-full hover:bg-green-500 hover:text-white transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center"
+                                  title="Start timer"
+                                >
+                                  {timerLoading ? (
+                                    <div className="w-3 h-3 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
+                                  ) : (
+                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                      <path d="M8 5v14l11-7z"/>
+                                    </svg>
+                                  )}
+                                </button>
+                              ) : isCurrentlyRunning ? (
+                                <button
+                                  onClick={handleStopTimer}
+                                  disabled={timerLoading}
+                                  className="w-8 h-8 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center"
+                                  title="Stop timer"
+                                >
+                                  {timerLoading ? (
+                                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                  ) : (
+                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                      <rect x="6" y="6" width="12" height="12"/>
+                                    </svg>
+                                  )}
+                                </button>
+                              ) : (
+                                <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center" title="Timer running on another task">
+                                  <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Task Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-gray-900 truncate">
+                                <strong>{task.clientName}</strong>
+                              </div>
+                              <div className="text-xs text-gray-500 truncate">
+                                {task.displayName || `${task.projectName} - ${task.name}`}
+                              </div>
+                            </div>
+
+                            {/* Context Menu Button */}
+                            <div className="relative context-menu-container">
+                              <button
+                                onClick={() => setContextMenuOpen(contextMenuOpen === task.id ? null : task.id)}
+                                className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                                title="More options"
+                              >
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                                </svg>
+                              </button>
+                              
+                              {/* Context Menu */}
+                              {contextMenuOpen === task.id && (
+                                <div className="absolute right-0 top-8 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[120px]">
+                                  <button
+                                    onClick={() => deleteTaskAndWeeklyEntries(task.id)}
+                                    className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                    <span>Delete row</span>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        )}
-                      </div>
-
-                      {/* Task Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-gray-900">
-                          <strong>{task.clientName}</strong>
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {task.displayName || `${task.projectName} - ${task.name}`}
-                        </div>
-                      </div>
 
-                      {/* Remove Button */}
-                      <div className="flex-shrink-0">
-                        <button
-                          onClick={() => removeFromCuratedList(task.id)}
-                          className="p-2 text-gray-400 hover:text-red-500 transition-colors"
-                          title="Remove from list"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                          </svg>
-                        </button>
+                        {/* Day Columns - Empty for now */}
+                        <div className="flex-1 text-center text-sm text-gray-400">-</div>
+                        <div className="flex-1 text-center text-sm text-gray-400">-</div>
+                        <div className="flex-1 text-center text-sm text-gray-400">-</div>
+                        <div className="flex-1 text-center text-sm text-gray-400">-</div>
+                        <div className="flex-1 text-center text-sm text-gray-400">-</div>
+                        <div className="flex-1 text-center text-sm text-gray-400">-</div>
+                        <div className="flex-1 text-center text-sm text-gray-400">-</div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
