@@ -103,8 +103,7 @@ export default function Timer() {
         
         setSelectedTask(null);
         
-        // Show notification to user
-        alert('The task you were tracking has been deleted. The timer has been stopped.');
+        // Task was deleted, timer stopped
       }
     } catch (error) {
       console.error('Error validating selected task:', error);
@@ -225,8 +224,7 @@ export default function Timer() {
         
         setSelectedTask(null);
         
-        // Show notification to user
-        alert('The task you were tracking has been deleted. The timer has been stopped.');
+        // Task was deleted, timer stopped
       }
     };
 
@@ -245,6 +243,20 @@ export default function Timer() {
     }
   }, [isRunning]);
 
+  // Listen for timer stopped events to refresh timer state
+  useEffect(() => {
+    const handleTimerStopped = () => {
+      // Refresh timer state immediately when timer is stopped from elsewhere
+      refreshTimer();
+    };
+
+    window.addEventListener('timerStopped', handleTimerStopped);
+    
+    return () => {
+      window.removeEventListener('timerStopped', handleTimerStopped);
+    };
+  }, [refreshTimer]);
+
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
@@ -254,11 +266,9 @@ export default function Timer() {
 
   const handleStartTimer = async () => {
     if (!selectedTask) {
-      alert('Please select a task first');
       return;
     }
     if (!currentUserId) {
-      alert('Please wait for user data to load, then try again');
       return;
     }
 
@@ -266,42 +276,32 @@ export default function Timer() {
     if (success) {
       // Close the dropdown when timer starts
       setTaskDropdownOpen(false);
-      alert('Timer started successfully!');
       // Trigger a custom event to notify the dashboard to refresh
       window.dispatchEvent(new CustomEvent('timerStarted'));
-    } else {
-      alert(timerError || 'Failed to start timer');
     }
   };
 
   const handleStopTimer = async () => {
     if (!timerData) {
-      alert('No active timer to stop');
       return;
     }
 
     const success = await stopTimer(timerData.id);
     if (success) {
-      alert('Time entry saved successfully!');
-        // Trigger a page refresh to update the recent entries
-        window.location.reload();
-      } else {
-      alert(timerError || 'Failed to stop timer');
+      // Trigger a page refresh to update the recent entries
+      window.location.reload();
     }
   };
 
   const handleForceStopTimer = async () => {
     if (!timerData) {
-      alert('No active timer to stop');
       return;
     }
 
     if (confirm('This will force stop the timer without saving. Are you sure?')) {
       const success = await forceStopTimer(timerData.id);
       if (success) {
-        alert('Timer has been force stopped. No time entry was saved.');
-      } else {
-        alert(timerError || 'Failed to force stop timer');
+        // Timer force stopped successfully
       }
     }
   };
@@ -340,18 +340,14 @@ export default function Timer() {
   // Handle start timer for specific task (used in list view)
   const handleStartTimerForTask = async (taskId: number) => {
     if (!currentUserId) {
-      alert('Please wait for user data to load, then try again');
       return;
     }
 
     setSelectedTask(taskId);
     const success = await startTimer(taskId);
     if (success) {
-      alert('Timer started successfully!');
       // Trigger a custom event to notify the dashboard to refresh
       window.dispatchEvent(new CustomEvent('timerStarted'));
-    } else {
-      alert(timerError || 'Failed to start timer');
     }
   };
 
@@ -777,7 +773,7 @@ export default function Timer() {
       </div>
       
       {/* Task Selection - Dropdown Layout */}
-      {layoutMode === 'dropdown' && (
+      {layoutMode === 'dropdown' && !isRunning && (
         <div className="mb-6 relative task-dropdown-container">
           <label htmlFor="taskSelect" className="block text-sm font-medium text-gray-700 mb-2">
             Select Task
@@ -789,9 +785,8 @@ export default function Timer() {
               placeholder="🔍 Search tasks..."
               value={taskSearchTerm}
               onChange={(e) => setTaskSearchTerm(e.target.value)}
-              onFocus={() => !isRunning && setTaskDropdownOpen(true)}
-              disabled={isRunning}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 disabled:bg-gray-100"
+              onFocus={() => setTaskDropdownOpen(true)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500"
             />
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
               <svg className="fill-current h-5 w-5 transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
@@ -801,7 +796,7 @@ export default function Timer() {
           </div>
           
           {/* Task Dropdown */}
-          {taskDropdownOpen && !isRunning && (
+          {taskDropdownOpen && (
             <div 
               className="absolute z-50 w-full bg-white border border-gray-300 rounded-lg shadow-lg overflow-hidden" 
               style={{ 
@@ -822,7 +817,7 @@ export default function Timer() {
       )}
 
       {/* Task Selection - List Layout */}
-      {layoutMode === 'list' && (
+      {layoutMode === 'list' && !isRunning && (
         <div className="mb-6">
           {renderTaskList()}
         </div>

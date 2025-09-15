@@ -89,8 +89,7 @@ export default function AdminTimer() {
         
         setSelectedTask(null);
         
-        // Show notification to user
-        alert('The task you were tracking has been deleted. The timer has been stopped.');
+        // Task was deleted, timer stopped
       }
     } catch (error) {
       console.error('Error validating selected task:', error);
@@ -175,6 +174,20 @@ export default function AdminTimer() {
     }
   }, [timerData?.elapsedSeconds]);
 
+  // Listen for timer stopped events to refresh timer state
+  useEffect(() => {
+    const handleTimerStopped = () => {
+      // Refresh timer state immediately when timer is stopped from elsewhere
+      refreshTimer();
+    };
+
+    window.addEventListener('timerStopped', handleTimerStopped);
+    
+    return () => {
+      window.removeEventListener('timerStopped', handleTimerStopped);
+    };
+  }, [refreshTimer]);
+
 
 
   const formatTime = (seconds: number) => {
@@ -189,48 +202,37 @@ export default function AdminTimer() {
       return;
     }
     if (!currentUserId) {
-      alert('Please wait for user data to load, then try again');
       return;
     }
 
     const success = await startTimer(selectedTask);
     if (success) {
-      alert('Timer started successfully!');
       // Trigger a custom event to notify the dashboard to refresh
       window.dispatchEvent(new CustomEvent('timerStarted'));
-    } else {
-      alert(timerError || 'Failed to start timer');
     }
   };
 
   const handleStopTimer = async () => {
     if (!timerData) {
-      alert('No active timer to stop');
       return;
     }
 
     const success = await stopTimer(timerData.id);
     if (success) {
-      alert('Time entry saved successfully!');
       // Trigger a page refresh to update the recent entries
       window.location.reload();
-    } else {
-      alert(timerError || 'Failed to stop timer');
     }
   };
 
   const handleForceStopTimer = async () => {
     if (!timerData) {
-      alert('No active timer to stop');
       return;
     }
 
     if (confirm('This will force stop the timer without saving. Are you sure?')) {
       const success = await forceStopTimer(timerData.id);
       if (success) {
-        alert('Timer has been force stopped. No time entry was saved.');
-      } else {
-        alert(timerError || 'Failed to force stop timer');
+        // Timer force stopped successfully
       }
     }
   };
@@ -408,39 +410,37 @@ export default function AdminTimer() {
       </div>
       
       {/* Task Selection */}
-      <div className="mb-3 relative task-dropdown-container">
-        <input
-          type="text"
-          placeholder={isRunning ? "Timer is running..." : "🔍 Search tasks..."}
-          value={taskSearchTerm}
-          onChange={(e) => setTaskSearchTerm(e.target.value)}
-          onFocus={() => !isRunning && setTaskDropdownOpen(true)}
-          disabled={isRunning}
-          className={`w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-400 ${
-            isRunning ? 'bg-gray-100 cursor-not-allowed' : ''
-          }`}
-        />
-        
-        {/* Task Dropdown */}
-        {taskDropdownOpen && !isRunning && (
-          <div 
-            className="absolute z-50 w-full bg-white border border-gray-300 rounded shadow-lg overflow-hidden" 
-            style={{ 
-              top: '100%', 
-              left: 0, 
-              maxHeight: '160px',
-              overflowY: 'auto'
-            }}
-          >
-            {renderTaskDropdown()}
-          </div>
-        )}
-        
-        {tasks.length === 0 && (
-          <p className="text-xs text-gray-500 mt-1">No tasks assigned</p>
-        )}
-
-      </div>
+      {!isRunning && (
+        <div className="mb-3 relative task-dropdown-container">
+          <input
+            type="text"
+            placeholder="🔍 Search tasks..."
+            value={taskSearchTerm}
+            onChange={(e) => setTaskSearchTerm(e.target.value)}
+            onFocus={() => setTaskDropdownOpen(true)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-400"
+          />
+          
+          {/* Task Dropdown */}
+          {taskDropdownOpen && (
+            <div 
+              className="absolute z-50 w-full bg-white border border-gray-300 rounded shadow-lg overflow-hidden" 
+              style={{ 
+                top: '100%', 
+                left: 0, 
+                maxHeight: '160px',
+                overflowY: 'auto'
+              }}
+            >
+              {renderTaskDropdown()}
+            </div>
+          )}
+          
+          {tasks.length === 0 && (
+            <p className="text-xs text-gray-500 mt-1">No tasks assigned</p>
+          )}
+        </div>
+      )}
 
       {/* Active Task Display */}
       {isRunning && selectedTask && (

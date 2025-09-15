@@ -810,7 +810,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
           // Parse time using flexible parser
           const parsedTime = parseFlexibleTime(timeValue);
           if (!parsedTime) {
-            alert('Please enter a valid time format (e.g., 3p, 3:30pm, 12am, 300pm, etc.)');
+            // Invalid time format
             this.focus();
             return;
           }
@@ -856,14 +856,14 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             if (timeType === 'end' && currentEntry?.startTime) {
               const existingStartTime = new Date(currentEntry.startTime);
               if (newDateTime <= existingStartTime) {
-                alert('End time must be after start time');
+                // End time must be after start time
                 this.focus();
                 return;
               }
             } else if (timeType === 'start' && currentEntry?.endTime) {
               const existingEndTime = new Date(currentEntry.endTime);
               if (newDateTime >= existingEndTime) {
-                alert('Start time must be before end time');
+                // Start time must be before end time
                 this.focus();
                 return;
               }
@@ -928,7 +928,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                 return;
               }
               
-              alert(`Error: ${error.error}`);
+              console.error(`Error: ${error.error}`);
               // Reset to original value on error
               this.focus();
             }
@@ -937,7 +937,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             // Reset styling on error
             this.style.borderColor = '';
             this.style.backgroundColor = '';
-            alert('Error updating time. Please check your input and try again.');
+            console.error('Error updating time. Please check your input and try again.');
             this.focus();
           }
         });
@@ -1411,7 +1411,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
 
         if (editMethod?.value === 'times') {
           if (!startTimeInput?.value || !endTimeInput?.value) {
-            alert('Please fill in both start and end times');
+            // Please fill in both start and end times
             submitButton.disabled = false;
             saveButtonText.textContent = originalText;
             saveButtonSpinner.classList.add('hidden');
@@ -1424,7 +1424,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
           // Parse start time using flexible parser
           const startParsedTime = parseFlexibleTime(startTimeInput.value);
           if (!startParsedTime) {
-            alert('Invalid start time format. Please use formats like 3p, 3:30pm, 12am, 300pm, etc.');
+            // Invalid start time format
             submitButton.disabled = false;
             saveButtonText.textContent = originalText;
             saveButtonSpinner.classList.add('hidden');
@@ -1441,7 +1441,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
           // Parse end time using flexible parser
           const endParsedTime = parseFlexibleTime(endTimeInput.value);
           if (!endParsedTime) {
-            alert('Invalid end time format. Please use formats like 3p, 3:30pm, 12am, 300pm, etc.');
+            // Invalid end time format
             submitButton.disabled = false;
             saveButtonText.textContent = originalText;
             saveButtonSpinner.classList.add('hidden');
@@ -1457,7 +1457,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
           
           // Validate that end time is after start time
           if (endDateTime <= startDateTime) {
-            alert('End time must be after start time');
+            // End time must be after start time
             submitButton.disabled = false;
             saveButtonText.textContent = originalText;
             saveButtonSpinner.classList.add('hidden');
@@ -1468,7 +1468,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
           updateData.durationManual = null;
         } else {
           if (!durationInput?.value) {
-            alert('Please enter a duration');
+            // Please enter a duration
             submitButton.disabled = false;
             saveButtonText.textContent = originalText;
             saveButtonSpinner.classList.add('hidden');
@@ -1500,11 +1500,11 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             }, 1000);
           } else {
             const errorData = await response.json();
-            alert(`Error updating time entry: ${errorData.error || 'Unknown error'}`);
+            console.error(`Error updating time entry: ${errorData.error || 'Unknown error'}`);
           }
         } catch (error) {
           console.error('Error:', error);
-          alert('Error updating time entry');
+          console.error('Error updating time entry');
         } finally {
           // Reset button state
           submitButton.disabled = false;
@@ -1521,7 +1521,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
         const entryId = document.getElementById('editTimeEntryId') as HTMLInputElement;
         
         if (!entryId?.value) {
-          alert('No time entry selected for deletion');
+          // No time entry selected for deletion
           return;
         }
 
@@ -1540,11 +1540,11 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             window.location.reload(); // Reload page to reflect deletion
           } else {
             const errorData = await response.json();
-            alert(`Error deleting time entry: ${errorData.error || 'Unknown error'}`);
+            console.error(`Error deleting time entry: ${errorData.error || 'Unknown error'}`);
           }
         } catch (error) {
           console.error('Error:', error);
-          alert('Error deleting time entry');
+          console.error('Error deleting time entry');
         }
       });
     }

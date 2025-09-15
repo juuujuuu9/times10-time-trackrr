@@ -972,13 +972,11 @@ const user = await requireAuth('/')(Astro) as any;
             if (response.ok) {
               // Reload dashboard data to update the display
               loadDashboardData();
-            } else {
-              const errorData = await response.json();
-              alert(`Error stopping timer: ${errorData.error || 'Unknown error'}`);
+              // Dispatch custom event to notify timer components
+              window.dispatchEvent(new CustomEvent('timerStopped'));
             }
           } catch (error) {
             console.error('Error stopping timer:', error);
-            alert('Error stopping timer');
           }
         }
       }
