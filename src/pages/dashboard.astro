@@ -1414,7 +1414,7 @@ const user = await requireAuth('/')(Astro) as any;
         const timeEntryTaskId = document.getElementById('timeEntryTaskId') as HTMLInputElement;
         
         if (timeEntryTask) {
-          timeEntryTask.value = `${taskName} (${projectName})`;
+          timeEntryTask.value = `${clientName} - ${projectName} - ${taskName}`;
         }
         if (timeEntryTaskId) {
           timeEntryTaskId.value = taskId || '';

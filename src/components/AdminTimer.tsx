@@ -150,7 +150,7 @@ export default function AdminTimer() {
       // Update search term to show the selected task
       const task = tasks.find(t => t.id === timerData.taskId);
       if (task) {
-        setTaskSearchTerm(task.displayName || `${task.projectName} - ${task.name}`);
+        setTaskSearchTerm(task.displayName || `${task.clientName} - ${task.projectName} - ${task.name}`);
       }
     }
   }, [timerData, tasks]);
@@ -368,12 +368,12 @@ export default function AdminTimer() {
                 className="pl-3 py-1 hover:bg-gray-100 cursor-pointer text-xs border-b border-gray-100 last:border-b-0"
                 onClick={() => {
                   setSelectedTask(task.id);
-                  setTaskSearchTerm(task.displayName || `${task.projectName} - ${task.name}`);
+                  setTaskSearchTerm(task.displayName || `${task.clientName} - ${task.projectName} - ${task.name}`);
                   setTaskDropdownOpen(false);
                 }}
               >
                 <div className="font-medium text-gray-900">
-                  {task.displayName || `${task.projectName} - ${task.name}`}
+                  {task.displayName || `${task.clientName} - ${task.projectName} - ${task.name}`}
                 </div>
               </div>
             ))}

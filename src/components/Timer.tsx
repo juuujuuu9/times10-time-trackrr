@@ -157,7 +157,7 @@ export default function Timer() {
       // Update search term to show the selected task
       const task = tasks.find(t => t.id === timerData.taskId);
       if (task) {
-        setTaskSearchTerm(task.displayName || `${task.projectName} - ${task.name}`);
+        setTaskSearchTerm(task.displayName || `${task.clientName} - ${task.projectName} - ${task.name}`);
       }
     }
   }, [timerData, tasks]);
@@ -290,7 +290,7 @@ export default function Timer() {
     if (!task) return '';
     
     // Use displayName for system-generated tasks, otherwise use the standard format
-    return task.displayName || `${task.projectName} - ${task.name}`;
+    return task.displayName || `${task.clientName} - ${task.projectName} - ${task.name}`;
   };
 
   // Get client name for display
@@ -396,12 +396,12 @@ export default function Timer() {
                 className="pl-8 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
                 onClick={() => {
                   setSelectedTask(task.id);
-                  setTaskSearchTerm(task.displayName || `${task.projectName} - ${task.name}`);
+                  setTaskSearchTerm(task.displayName || `${task.clientName} - ${task.projectName} - ${task.name}`);
                   setTaskDropdownOpen(false);
                 }}
               >
                 <div className="font-medium text-gray-900">
-                  {task.displayName || `${task.projectName} - ${task.name}`}
+                  {task.displayName || `${task.clientName} - ${task.projectName} - ${task.name}`}
                 </div>
               </div>
             ))}
