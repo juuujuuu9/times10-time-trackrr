@@ -165,6 +165,7 @@ export async function getProjectCosts(startDate: Date, endDate: Date, teamMember
       clientId: clients.id,
       projectName: projects.name,
       clientName: clients.name,
+      taskName: tasks.name,
       totalCost: canViewFinancialData 
         ? sql<number>`COALESCE(SUM(
             CASE 
@@ -215,7 +216,7 @@ export async function getProjectCosts(startDate: Date, endDate: Date, teamMember
             sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL)`
           )
     )
-    .groupBy(projects.id, projects.name, clients.id, clients.name)
+    .groupBy(projects.id, projects.name, clients.id, clients.name, tasks.id, tasks.name)
     .having(sql`COALESCE(SUM(
       CASE 
         WHEN ${timeEntries.endTime} IS NOT NULL 
@@ -223,7 +224,7 @@ export async function getProjectCosts(startDate: Date, endDate: Date, teamMember
         ELSE ROUND((COALESCE(${timeEntries.durationManual}, 0) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
       END
     ), 0) > 0`)
-    .orderBy(projects.name);
+    .orderBy(clients.name, projects.name, tasks.name);
 }
 
 // Get client costs for a specific time period

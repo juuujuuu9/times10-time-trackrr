@@ -33,6 +33,7 @@ ChartJS.register(
 interface ChartData {
   projectName?: string;
   clientName?: string;
+  taskName?: string;
   totalCost: number;
   totalHours: number;
 }
@@ -71,10 +72,11 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
 
   const chartData = {
     labels: sortedData.map(item => {
-      if (item.projectName && item.clientName) {
-        return `${item.projectName}\n${item.clientName}`;
-      }
-      return item.projectName || item.clientName || 'Unknown';
+      const parts = [];
+      if (item.clientName) parts.push(item.clientName);
+      if (item.projectName) parts.push(item.projectName);
+      if (item.taskName) parts.push(item.taskName);
+      return parts.length > 0 ? parts.join(' - ') : 'Unknown';
     }),
     datasets: [
       {
@@ -264,7 +266,13 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
 
 export const CostBarChart: React.FC<{ data: ChartData[]; title: string; period: string }> = ({ data, title, period }) => {
   const chartData = {
-    labels: data.map(item => item.projectName || item.clientName || 'Unknown'),
+    labels: data.map(item => {
+      const parts = [];
+      if (item.clientName) parts.push(item.clientName);
+      if (item.projectName) parts.push(item.projectName);
+      if (item.taskName) parts.push(item.taskName);
+      return parts.length > 0 ? parts.join(' - ') : 'Unknown';
+    }),
     datasets: [
       {
         label: 'Cost ($)',
@@ -390,7 +398,13 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
   ];
 
   const chartData = {
-    labels: data.map(item => item.projectName || item.clientName || 'Unknown'),
+    labels: data.map(item => {
+      const parts = [];
+      if (item.clientName) parts.push(item.clientName);
+      if (item.projectName) parts.push(item.projectName);
+      if (item.taskName) parts.push(item.taskName);
+      return parts.length > 0 ? parts.join(' - ') : 'Unknown';
+    }),
     datasets: [
       {
         data: data.map(item => {
@@ -425,16 +439,36 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
     plugins: {
       legend: {
         position: 'bottom' as const,
+        maxHeight: 200,
         labels: {
           color: '#374151',
           font: {
             size: 11,
             weight: 'bold' as const,
           },
-          padding: 10,
+          padding: 8,
           usePointStyle: true,
           pointStyle: 'circle',
           boxWidth: 12,
+          generateLabels: function(chart: any) {
+            const data = chart.data;
+            if (data.labels.length && data.datasets.length) {
+              return data.labels.map((label: string, i: number) => {
+                const dataset = data.datasets[0];
+                const backgroundColor = dataset.backgroundColor[i];
+                return {
+                  text: label,
+                  fillStyle: backgroundColor,
+                  strokeStyle: backgroundColor,
+                  lineWidth: 0,
+                  pointStyle: 'circle',
+                  hidden: false,
+                  index: i
+                };
+              });
+            }
+            return [];
+          }
         },
       },
       title: {

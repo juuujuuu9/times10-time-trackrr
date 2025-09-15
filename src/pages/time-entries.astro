@@ -710,7 +710,8 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
 
       // Update week display and filter entries
       function updateWeekDisplay() {
-        const weekEnd = new Date(); // Today
+        const weekEnd = new Date(currentWeekStart);
+        weekEnd.setDate(currentWeekStart.getDate() + 6);
         weekEnd.setHours(23, 59, 59, 999);
         
         const weekRangeDisplay = document.getElementById('weekRangeDisplay');
@@ -723,7 +724,8 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
 
       // Filter entries by last 7 days
       function filterEntriesByWeek() {
-        const weekEnd = new Date(); // Today
+        const weekEnd = new Date(currentWeekStart);
+        weekEnd.setDate(currentWeekStart.getDate() + 6);
         weekEnd.setHours(23, 59, 59, 999);
         
         const rows = document.querySelectorAll('tbody tr');
@@ -947,6 +949,105 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
           }
         });
       });
+
+      // Helper functions for filters
+      function checkSearchFilter(row: HTMLElement): boolean {
+        const searchInput = document.getElementById('search') as HTMLInputElement;
+        const searchTerm = searchInput?.value?.toLowerCase() || '';
+        const text = row.textContent?.toLowerCase() || '';
+        return !searchTerm || text.includes(searchTerm);
+      }
+
+      function checkWeekFilter(row: HTMLElement): boolean {
+        const dateCell = row.querySelector('td:nth-child(4)');
+        const dateText = dateCell?.textContent?.trim() || '';
+        const entryDate = new Date(dateText);
+        
+        const weekEnd = new Date(currentWeekStart);
+        weekEnd.setDate(currentWeekStart.getDate() + 6);
+        weekEnd.setHours(23, 59, 59, 999);
+        
+        return entryDate >= currentWeekStart && entryDate <= weekEnd;
+      }
+
+      function checkClientFilter(row: HTMLElement): boolean {
+        const clientFilter = document.getElementById('clientFilter') as HTMLSelectElement;
+        const selectedClient = clientFilter?.value || '';
+        const clientName = row.querySelector('td:nth-child(1)')?.textContent?.trim() || '';
+        return !selectedClient || clientName === selectedClient;
+      }
+
+      function checkTaskFilter(row: HTMLElement): boolean {
+        const taskFilter = document.getElementById('taskFilter') as HTMLSelectElement;
+        const selectedTask = taskFilter?.value || '';
+        const taskName = row.querySelector('td:nth-child(3)')?.textContent?.trim() || '';
+        return !selectedTask || taskName === selectedTask;
+      }
+
+      // Search functionality
+      const searchInput = document.getElementById('search');
+      const clientFilter = document.getElementById('clientFilter');
+      const taskFilter = document.getElementById('taskFilter');
+
+      if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+          const target = e.target as HTMLInputElement;
+          const searchTerm = target.value.toLowerCase();
+          const rows = document.querySelectorAll('tbody tr');
+          
+          rows.forEach(row => {
+            const text = row.textContent?.toLowerCase() || '';
+            const matchesSearch = text.includes(searchTerm);
+            const matchesWeek = checkWeekFilter(row as HTMLElement);
+            const matchesClient = checkClientFilter(row as HTMLElement);
+            const matchesTask = checkTaskFilter(row as HTMLElement);
+            
+            (row as HTMLElement).style.display = (matchesSearch && matchesWeek && matchesClient && matchesTask) ? '' : 'none';
+          });
+          
+          updateResultsCounter();
+        });
+      }
+
+      // Client filter functionality
+      if (clientFilter) {
+        clientFilter.addEventListener('change', (e) => {
+          const target = e.target as HTMLSelectElement;
+          const selectedClient = target.value;
+          const rows = document.querySelectorAll('tbody tr');
+          
+          rows.forEach(row => {
+            const matchesSearch = checkSearchFilter(row as HTMLElement);
+            const matchesWeek = checkWeekFilter(row as HTMLElement);
+            const matchesClient = !selectedClient || row.querySelector('td:nth-child(1)')?.textContent?.trim() === selectedClient;
+            const matchesTask = checkTaskFilter(row as HTMLElement);
+            
+            (row as HTMLElement).style.display = (matchesSearch && matchesWeek && matchesClient && matchesTask) ? '' : 'none';
+          });
+          
+          updateResultsCounter();
+        });
+      }
+
+      // Task filter functionality
+      if (taskFilter) {
+        taskFilter.addEventListener('change', (e) => {
+          const target = e.target as HTMLSelectElement;
+          const selectedTask = target.value;
+          const rows = document.querySelectorAll('tbody tr');
+          
+          rows.forEach(row => {
+            const matchesSearch = checkSearchFilter(row as HTMLElement);
+            const matchesWeek = checkWeekFilter(row as HTMLElement);
+            const matchesClient = checkClientFilter(row as HTMLElement);
+            const matchesTask = !selectedTask || row.querySelector('td:nth-child(3)')?.textContent?.trim() === selectedTask;
+            
+            (row as HTMLElement).style.display = (matchesSearch && matchesWeek && matchesClient && matchesTask) ? '' : 'none';
+          });
+          
+          updateResultsCounter();
+        });
+      }
     });
 
     // Export CSV functionality
@@ -1058,104 +1159,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
     // Mobile logout
     document.getElementById('mobileLogoutButton')?.addEventListener('click', performLogout);
 
-    // Search functionality
-    const searchInput = document.getElementById('search');
-    const clientFilter = document.getElementById('clientFilter');
-    const taskFilter = document.getElementById('taskFilter');
 
-    if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
-        const target = e.target;
-        const searchTerm = target.value.toLowerCase();
-        const rows = document.querySelectorAll('tbody tr');
-        
-        rows.forEach(row => {
-          const text = row.textContent?.toLowerCase() || '';
-          const matchesSearch = text.includes(searchTerm);
-          const matchesWeek = checkWeekFilter(row);
-          const matchesClient = checkClientFilter(row);
-          const matchesTask = checkTaskFilter(row);
-          
-          row.style.display = (matchesSearch && matchesWeek && matchesClient && matchesTask) ? '' : 'none';
-        });
-        
-        updateResultsCounter();
-      });
-    }
-
-    // Client filter functionality
-    if (clientFilter) {
-      clientFilter.addEventListener('change', (e) => {
-        const target = e.target;
-        const selectedClient = target.value;
-        const rows = document.querySelectorAll('tbody tr');
-        
-        rows.forEach(row => {
-          const matchesSearch = checkSearchFilter(row);
-          const matchesWeek = checkWeekFilter(row);
-          const matchesClient = !selectedClient || row.querySelector('td:nth-child(1)')?.textContent?.trim() === selectedClient;
-          const matchesTask = checkTaskFilter(row);
-          
-          row.style.display = (matchesSearch && matchesWeek && matchesClient && matchesTask) ? '' : 'none';
-        });
-        
-        updateResultsCounter();
-      });
-    }
-
-    // Task filter functionality
-    if (taskFilter) {
-      taskFilter.addEventListener('change', (e) => {
-        const target = e.target;
-        const selectedTask = target.value;
-        const rows = document.querySelectorAll('tbody tr');
-        
-        rows.forEach(row => {
-          const matchesSearch = checkSearchFilter(row);
-          const matchesWeek = checkWeekFilter(row);
-          const matchesClient = checkClientFilter(row);
-          const matchesTask = !selectedTask || row.querySelector('td:nth-child(3)')?.textContent?.trim() === selectedTask;
-          
-          row.style.display = (matchesSearch && matchesWeek && matchesClient && matchesTask) ? '' : 'none';
-        });
-        
-        updateResultsCounter();
-      });
-    }
-
-    // Helper functions for filters
-    function checkSearchFilter(row: HTMLElement): boolean {
-      const searchInput = document.getElementById('search') as HTMLInputElement;
-      const searchTerm = searchInput?.value?.toLowerCase() || '';
-      const text = row.textContent?.toLowerCase() || '';
-      return !searchTerm || text.includes(searchTerm);
-    }
-
-    function checkWeekFilter(row: HTMLElement): boolean {
-      const dateCell = row.querySelector('td:nth-child(4)');
-      const dateText = dateCell?.textContent?.trim() || '';
-      const entryDate = new Date(dateText);
-      
-      const weekEnd = new Date(currentWeekStart);
-      weekEnd.setDate(currentWeekStart.getDate() + 6);
-      weekEnd.setHours(23, 59, 59, 999);
-      
-      return entryDate >= currentWeekStart && entryDate <= weekEnd;
-    }
-
-    function checkClientFilter(row: HTMLElement): boolean {
-      const clientFilter = document.getElementById('clientFilter') as HTMLSelectElement;
-      const selectedClient = clientFilter?.value || '';
-      const clientName = row.querySelector('td:nth-child(1)')?.textContent?.trim() || '';
-      return !selectedClient || clientName === selectedClient;
-    }
-
-    function checkTaskFilter(row: HTMLElement): boolean {
-      const taskFilter = document.getElementById('taskFilter') as HTMLSelectElement;
-      const selectedTask = taskFilter?.value || '';
-      const taskName = row.querySelector('td:nth-child(3)')?.textContent?.trim() || '';
-      return !selectedTask || taskName === selectedTask;
-    }
 
     // Date sorting functionality
     const dateSortBtn = document.getElementById('dateSortBtn');
