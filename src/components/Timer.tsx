@@ -30,6 +30,13 @@ export default function Timer() {
   const [addTaskDropdownOpen, setAddTaskDropdownOpen] = useState(false);
   const [addTaskSearchTerm, setAddTaskSearchTerm] = useState('');
   const [contextMenuOpen, setContextMenuOpen] = useState<number | null>(null);
+  const [dailyDurationTotals, setDailyDurationTotals] = useState<Array<{
+    dayOfWeek: number;
+    totalSeconds: number;
+    hours: number;
+    minutes: number;
+    formatted: string;
+  }>>([]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -111,6 +118,29 @@ export default function Timer() {
       }
     } catch (error) {
       console.error('Error validating selected task:', error);
+    }
+  };
+
+  // Load daily duration totals for the current week
+  const loadDailyDurationTotals = async () => {
+    if (!currentUserId) {
+      console.log('loadDailyDurationTotals: No currentUserId, skipping');
+      return;
+    }
+
+    console.log('loadDailyDurationTotals: Loading for userId:', currentUserId);
+    try {
+      const response = await fetch(`/api/reports/daily-duration-totals?userId=${currentUserId}`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('loadDailyDurationTotals: Received data:', data);
+        console.log('loadDailyDurationTotals: weekTotals:', data.weekTotals);
+        setDailyDurationTotals(data.weekTotals || []);
+      } else {
+        console.error('Failed to load daily duration totals:', response.status);
+      }
+    } catch (error) {
+      console.error('Error loading daily duration totals:', error);
     }
   };
 
@@ -204,6 +234,9 @@ export default function Timer() {
             // Combine regular tasks and system tasks
             const allTasks = [...regularTasks, ...systemTasks];
             setTasks(allTasks);
+            
+            // Load daily duration totals (will be called again when currentUserId is set)
+            // await loadDailyDurationTotals();
           }
         }
       } catch (error) {
@@ -215,6 +248,13 @@ export default function Timer() {
 
     initializeData();
   }, []);
+
+  // Load daily duration totals when currentUserId changes
+  useEffect(() => {
+    if (currentUserId) {
+      loadDailyDurationTotals();
+    }
+  }, [currentUserId]);
 
   // Update selected task when timer data changes
   useEffect(() => {
@@ -285,19 +325,52 @@ export default function Timer() {
     }
   }, [isRunning]);
 
-  // Listen for timer stopped events to refresh timer state
+  // Listen for timer events to refresh timer state and daily totals
   useEffect(() => {
     const handleTimerStopped = () => {
       // Refresh timer state immediately when timer is stopped from elsewhere
       refreshTimer();
+      // Also refresh daily duration totals
+      loadDailyDurationTotals();
+    };
+
+    const handleTimerStarted = () => {
+      // Refresh timer state when timer is started from elsewhere
+      refreshTimer();
+      // Also refresh daily duration totals (in case of manual entries)
+      loadDailyDurationTotals();
+    };
+
+    const handleTimeEntryChanged = () => {
+      // Refresh daily duration totals when time entries are added/updated/deleted
+      loadDailyDurationTotals();
     };
 
     window.addEventListener('timerStopped', handleTimerStopped);
+    window.addEventListener('timerStarted', handleTimerStarted);
+    window.addEventListener('timeEntryAdded', handleTimeEntryChanged);
+    window.addEventListener('timeEntryUpdated', handleTimeEntryChanged);
+    window.addEventListener('timeEntryDeleted', handleTimeEntryChanged);
     
     return () => {
       window.removeEventListener('timerStopped', handleTimerStopped);
+      window.removeEventListener('timerStarted', handleTimerStarted);
+      window.removeEventListener('timeEntryAdded', handleTimeEntryChanged);
+      window.removeEventListener('timeEntryUpdated', handleTimeEntryChanged);
+      window.removeEventListener('timeEntryDeleted', handleTimeEntryChanged);
     };
   }, [refreshTimer]);
+
+  // Periodic refresh of daily totals to ensure they stay up-to-date
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (currentUserId) {
+        loadDailyDurationTotals();
+      }
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [currentUserId]);
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -773,6 +846,33 @@ export default function Timer() {
                   <div className="flex-1 text-center">Thurs</div>
                   <div className="flex-1 text-center">Fri</div>
                   <div className="flex-1 text-center">Total</div>
+                </div>
+                {/* Daily Duration Totals */}
+                <div className="flex px-4 pb-3 text-xs text-gray-500">
+                  <div className="w-80 flex-shrink-0"></div>
+                  {(() => {
+                    console.log('dailyDurationTotals state:', dailyDurationTotals);
+                    console.log('dailyDurationTotals.length:', dailyDurationTotals.length);
+                    return dailyDurationTotals.length > 0 ? dailyDurationTotals.map((dayTotal, index) => {
+                      console.log('Rendering day total:', index, dayTotal);
+                      return (
+                        <div key={index} className="flex-1 text-center">
+                          {dayTotal.formatted}
+                        </div>
+                      );
+                    }) : (
+                      // Show placeholder when no data is loaded yet
+                      <>
+                        <div className="flex-1 text-center">-</div>
+                        <div className="flex-1 text-center">-</div>
+                        <div className="flex-1 text-center">-</div>
+                        <div className="flex-1 text-center">-</div>
+                        <div className="flex-1 text-center">-</div>
+                        <div className="flex-1 text-center">-</div>
+                        <div className="flex-1 text-center">-</div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 

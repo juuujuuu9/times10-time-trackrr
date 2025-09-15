@@ -1589,6 +1589,8 @@ const user = await requireAuth('/')(Astro) as any;
           setTimeout(() => {
             closeTimeEntryModal();
             loadDashboardData(); // Reload dashboard data to show new entry
+            // Dispatch custom event to notify timer components to refresh daily totals
+            window.dispatchEvent(new CustomEvent('timeEntryAdded'));
           }, 1000);
         } else {
           const errorData = await response.json();
@@ -1883,6 +1885,8 @@ const user = await requireAuth('/')(Astro) as any;
           setTimeout(() => {
             closeEditTimeEntryModal();
             loadDashboardData(); // Reload dashboard data to show updated entry
+            // Dispatch custom event to notify timer components to refresh daily totals
+            window.dispatchEvent(new CustomEvent('timeEntryUpdated'));
           }, 1000);
         } else {
           const errorData = await response.json();
@@ -1924,6 +1928,8 @@ const user = await requireAuth('/')(Astro) as any;
           // Close modal and reload data
           closeEditTimeEntryModal();
           loadDashboardData(); // Reload dashboard data to reflect deletion
+          // Dispatch custom event to notify timer components to refresh daily totals
+          window.dispatchEvent(new CustomEvent('timeEntryDeleted'));
         } else {
           const errorData = await response.json();
           alert(`Error deleting time entry: ${errorData.error || 'Unknown error'}`);
