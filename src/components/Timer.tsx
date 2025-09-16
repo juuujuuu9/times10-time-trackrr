@@ -600,6 +600,133 @@ export default function Timer() {
     return tasks.filter(task => curatedTaskList.includes(task.id));
   };
 
+  // Get tasks with entries in the current week (including running timers and curated tasks)
+  const getTasksWithCurrentWeekEntries = () => {
+    const tasksWithEntries = taskDailyTotals
+      .filter(taskData => {
+        // Check if any day has time entries (totalSeconds > 0)
+        return taskData.dayTotals.some(day => day.totalSeconds > 0);
+      })
+      .map(taskData => {
+        // Find the corresponding task from the tasks array, or create a task object from taskDailyTotals data
+        const task = tasks.find(task => task.id === taskData.taskId);
+        if (task) {
+          return task;
+        } else {
+          // If task not found in tasks array, create a task object from taskDailyTotals data
+          return {
+            id: taskData.taskId,
+            name: taskData.taskName,
+            projectName: taskData.projectName,
+            clientName: taskData.clientName,
+            displayName: `${taskData.projectName} - ${taskData.taskName}`,
+            description: '',
+            status: 'active',
+            archived: false,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          } as Task;
+        }
+      })
+      .filter(task => task !== undefined); // Remove undefined entries
+
+    // Add running timer task if it's not already in the list
+    if (isRunning && selectedTask) {
+      const runningTask = tasks.find(task => task.id === selectedTask);
+      if (runningTask && !tasksWithEntries.some(task => task.id === selectedTask)) {
+        tasksWithEntries.push(runningTask);
+      }
+    }
+
+    // Add curated tasks that don't have time entries yet
+    const curatedTasks = tasks.filter(task => curatedTaskList.includes(task.id));
+    curatedTasks.forEach(curatedTask => {
+      if (!tasksWithEntries.some(task => task.id === curatedTask.id)) {
+        tasksWithEntries.push(curatedTask);
+      }
+    });
+
+    return tasksWithEntries;
+  };
+
+  // Get real-time daily totals for a task (including running timer)
+  const getRealTimeDailyTotals = (taskId: number) => {
+    // Get the base daily totals from taskDailyTotals
+    const baseTaskData = taskDailyTotals.find(t => t.taskId === taskId);
+    const dayTotals = baseTaskData ? [...baseTaskData.dayTotals] : [];
+    
+    // If no base data exists, create empty day totals
+    if (dayTotals.length === 0) {
+      for (let i = 0; i < 7; i++) {
+        dayTotals.push({
+          dayOfWeek: i,
+          totalSeconds: 0,
+          hours: 0,
+          minutes: 0,
+          formatted: '0h 0m'
+        });
+      }
+    }
+    
+    // If this task has a running timer, add the current session time to today's total
+    if (isRunning && selectedTask === taskId && timerData) {
+      const now = new Date();
+      const today = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+      
+      // Calculate current session time
+      const currentSessionSeconds = timerData.elapsedSeconds + localTime;
+      
+      // Add to today's total
+      const todayIndex = dayTotals.findIndex(day => day.dayOfWeek === today);
+      if (todayIndex !== -1) {
+        const newTotalSeconds = dayTotals[todayIndex].totalSeconds + currentSessionSeconds;
+        const hours = Math.floor(newTotalSeconds / 3600);
+        const minutes = Math.floor((newTotalSeconds % 3600) / 60);
+        
+        dayTotals[todayIndex] = {
+          dayOfWeek: today,
+          totalSeconds: newTotalSeconds,
+          hours,
+          minutes,
+          formatted: `${hours}h ${minutes}m`
+        };
+      }
+    }
+    
+    return dayTotals;
+  };
+
+  // Organize tasks with current week entries by client
+  const organizeTasksWithEntriesByClient = () => {
+    const tasksWithEntries = getTasksWithCurrentWeekEntries();
+    const clientGroups: { [clientName: string]: Task[] } = {};
+    
+    tasksWithEntries.forEach(task => {
+      const clientName = task.clientName;
+      if (!clientGroups[clientName]) {
+        clientGroups[clientName] = [];
+      }
+      clientGroups[clientName].push(task);
+    });
+    
+    // Sort clients alphabetically
+    const sortedClients = Object.keys(clientGroups).sort();
+    
+    // For each client, sort tasks: General task first, then other tasks alphabetically
+    sortedClients.forEach(clientName => {
+      clientGroups[clientName].sort((a, b) => {
+        // Put General tasks first
+        if (a.name === 'General' && b.name !== 'General') return -1;
+        if (a.name !== 'General' && b.name === 'General') return 1;
+        
+        // Then sort alphabetically
+        return a.name.localeCompare(b.name);
+      });
+    });
+    
+    return { clientGroups, sortedClients };
+  };
+
   // Handle start timer for specific task (used in list view)
   const handleStartTimerForTask = async (taskId: number) => {
     if (!currentUserId) {
@@ -810,7 +937,7 @@ export default function Timer() {
 
   // Render the list-based layout
   const renderTaskList = () => {
-    const curatedTasks = getCuratedTasks();
+    const { clientGroups, sortedClients } = organizeTasksWithEntriesByClient();
     
     return (
       <div className="space-y-4">
@@ -874,12 +1001,12 @@ export default function Timer() {
             </div>
           )}
 
-          {curatedTasks.length === 0 ? (
+          {sortedClients.length === 0 ? (
             <div className="text-center py-8 bg-gray-50 rounded-lg">
               <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-gray-400 text-xl">📝</span>
               </div>
-              <p className="text-gray-500 text-sm">No tasks in your list yet</p>
+              <p className="text-gray-500 text-sm">No tasks with time entries this week</p>
               <p className="text-gray-400 text-xs mt-1">Click "Add Task" to get started</p>
             </div>
           ) : (
@@ -945,7 +1072,15 @@ export default function Timer() {
 
               {/* Table Body */}
               <div className="divide-y divide-gray-200">
-                {curatedTasks.map((task, index) => {
+                {sortedClients.map((clientName, clientIndex) => (
+                  <div key={clientName}>
+                    {/* Client Header */}
+                    <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                      {clientName}
+                    </div>
+                    
+                    {/* Tasks for this client */}
+                    {clientGroups[clientName].map((task, taskIndex) => {
                   const isCurrentlyRunning = isRunning && selectedTask === task.id;
                   return (
                     <div
@@ -1001,10 +1136,7 @@ export default function Timer() {
 
                             {/* Task Info */}
                             <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-gray-900 truncate">
-                                <strong>{task.clientName}</strong>
-                              </div>
-                              <div className="text-xs text-gray-500 truncate">
+                              <div className="text-sm text-gray-600 truncate">
                                 {task.displayName || `${task.projectName} - ${task.name}`}
                               </div>
                             </div>
@@ -1039,53 +1171,54 @@ export default function Timer() {
                           </div>
                         </div>
 
-                        {/* Day Columns - Task-Specific Daily Totals */}
+                        {/* Day Columns - Real-Time Daily Totals */}
                         {(() => {
-                          const taskDailyData = taskDailyTotals.find(t => t.taskId === task.id);
-                          if (taskDailyData && taskDailyData.dayTotals.length > 0) {
-                            let totalSeconds = 0;
-                            const dayElements = taskDailyData.dayTotals.map((dayTotal, dayIndex) => {
-                              totalSeconds += dayTotal.totalSeconds;
-                              return (
-                                <div key={dayIndex} className="flex-1 text-center text-sm text-gray-600">
-                                  {dayTotal.totalSeconds > 0 ? dayTotal.formatted : '-'}
-                                </div>
-                              );
-                            });
-                            
-                            // Calculate total hours and minutes
-                            const totalHours = Math.floor(totalSeconds / 3600);
-                            const totalMinutes = Math.floor((totalSeconds % 3600) / 60);
-                            const totalFormatted = totalSeconds > 0 ? `${totalHours}h ${totalMinutes}m` : '-';
+                          const realTimeDayTotals = getRealTimeDailyTotals(task.id);
+                          let totalSeconds = 0;
+                          const dayElements = realTimeDayTotals.map((dayTotal, dayIndex) => {
+                            totalSeconds += dayTotal.totalSeconds;
+                            const isToday = new Date().getDay() === dayTotal.dayOfWeek;
+                            const isRunningToday = isRunning && selectedTask === task.id && isToday;
                             
                             return (
-                              <>
-                                {dayElements}
-                                <div className="flex-1 text-center text-sm font-semibold text-gray-700">
-                                  {totalFormatted}
-                                </div>
-                              </>
+                              <div 
+                                key={dayIndex} 
+                                className={`flex-1 text-center text-sm ${
+                                  isRunningToday 
+                                    ? 'text-green-600 font-semibold' 
+                                    : dayTotal.totalSeconds > 0 
+                                      ? 'text-gray-600' 
+                                      : 'text-gray-400'
+                                }`}
+                              >
+                                {dayTotal.totalSeconds > 0 ? dayTotal.formatted : '-'}
+                              </div>
                             );
-                          } else {
-                            // Show placeholder when no data is loaded yet
-                            return (
-                              <>
-                                <div className="flex-1 text-center text-sm text-gray-400">-</div>
-                                <div className="flex-1 text-center text-sm text-gray-400">-</div>
-                                <div className="flex-1 text-center text-sm text-gray-400">-</div>
-                                <div className="flex-1 text-center text-sm text-gray-400">-</div>
-                                <div className="flex-1 text-center text-sm text-gray-400">-</div>
-                                <div className="flex-1 text-center text-sm text-gray-400">-</div>
-                                <div className="flex-1 text-center text-sm text-gray-400">-</div>
-                                <div className="flex-1 text-center text-sm text-gray-400">-</div>
-                              </>
-                            );
-                          }
+                          });
+                          
+                          // Calculate total hours and minutes
+                          const totalHours = Math.floor(totalSeconds / 3600);
+                          const totalMinutes = Math.floor((totalSeconds % 3600) / 60);
+                          const totalFormatted = totalSeconds > 0 ? `${totalHours}h ${totalMinutes}m` : '-';
+                          const isRunningTask = isRunning && selectedTask === task.id;
+                          
+                          return (
+                            <>
+                              {dayElements}
+                              <div className={`flex-1 text-center text-sm font-semibold ${
+                                isRunningTask ? 'text-green-600' : 'text-gray-700'
+                              }`}>
+                                {totalFormatted}
+                              </div>
+                            </>
+                          );
                         })()}
                       </div>
                     </div>
                   );
-                })}
+                    })}
+                  </div>
+                ))}
               </div>
             </div>
           )}

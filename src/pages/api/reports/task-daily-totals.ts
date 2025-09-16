@@ -56,7 +56,7 @@ export const GET: APIRoute = async ({ url }) => {
 
     console.log('All tasks for user:', allTasks);
 
-    // Then get time entries for each task in the date range with SQL-calculated durations and day of week
+    // Then get time entries for each task in the date range with SQL-calculated durations
     const timeEntriesData = await db
       .select({
         taskId: timeEntries.taskId,
@@ -68,8 +68,7 @@ export const GET: APIRoute = async ({ url }) => {
           WHEN ${timeEntries.endTime} IS NOT NULL 
           THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))
           ELSE COALESCE(${timeEntries.durationManual}, 0)
-        END`.as('calculated_duration'),
-        dayOfWeek: sql<number>`EXTRACT(DOW FROM COALESCE(${timeEntries.startTime}, ${timeEntries.createdAt}))`.as('day_of_week')
+        END`.as('calculated_duration')
       })
       .from(timeEntries)
       .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
@@ -91,8 +90,20 @@ export const GET: APIRoute = async ({ url }) => {
         )
       );
 
-    console.log('Time entries in date range:', timeEntriesData);
-    console.log('Time entries count:', timeEntriesData.length);
+    // Calculate day of week in JavaScript using local timezone
+    const timeEntriesWithDayOfWeek = timeEntriesData.map(entry => {
+      const entryDate = entry.startTime || entry.createdAt;
+      if (!entryDate) return { ...entry, dayOfWeek: 0 };
+      
+      // Convert UTC timestamp to local timezone and get day of week
+      const localDate = new Date(entryDate);
+      const dayOfWeek = localDate.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+      
+      return { ...entry, dayOfWeek };
+    });
+
+    console.log('Time entries in date range:', timeEntriesWithDayOfWeek);
+    console.log('Time entries count:', timeEntriesWithDayOfWeek.length);
 
     // Process the data to calculate daily totals per task
     const taskDailyData = allTasks.map(task => {
@@ -103,12 +114,9 @@ export const GET: APIRoute = async ({ url }) => {
         let totalSeconds = 0;
         
         // Find all time entries for this task on this day of the week
-        const taskEntries = timeEntriesData.filter(entry => {
+        const taskEntries = timeEntriesWithDayOfWeek.filter(entry => {
           if (entry.taskId !== task.id) return false;
-          
-          // Use SQL-calculated day of week to match dropdown tab logic
-          const dayOfWeek = parseInt(entry.dayOfWeek.toString());
-          return dayOfWeek === i;
+          return entry.dayOfWeek === i;
         });
         
         // Calculate total seconds for this day using SQL-calculated duration

@@ -30,17 +30,18 @@ export const GET: APIRoute = async ({ url }) => {
     endDate.setDate(startDate.getDate() + 6);
     endDate.setHours(23, 59, 59, 999);
 
-    // Get daily duration totals for the current week
-    const dailyTotals = await db
+    // Get time entries for the current week
+    const timeEntriesData = await db
       .select({
-        dayOfWeek: sql<number>`EXTRACT(DOW FROM COALESCE(${timeEntries.startTime}, ${timeEntries.createdAt}))`.as('day_of_week'),
-        totalSeconds: sql<number>`COALESCE(SUM(
-          CASE 
-            WHEN ${timeEntries.endTime} IS NOT NULL 
-            THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))
-            ELSE COALESCE(${timeEntries.durationManual}, 0)
-          END
-        ), 0)`.as('total_seconds')
+        startTime: timeEntries.startTime,
+        endTime: timeEntries.endTime,
+        durationManual: timeEntries.durationManual,
+        createdAt: timeEntries.createdAt,
+        calculatedDuration: sql<number>`CASE 
+          WHEN ${timeEntries.endTime} IS NOT NULL 
+          THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))
+          ELSE COALESCE(${timeEntries.durationManual}, 0)
+        END`.as('calculated_duration')
       })
       .from(timeEntries)
       .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
@@ -58,8 +59,29 @@ export const GET: APIRoute = async ({ url }) => {
         eq(tasks.archived, false),
         // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
         sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
-      ))
-      .groupBy(sql`EXTRACT(DOW FROM COALESCE(${timeEntries.startTime}, ${timeEntries.createdAt}))`);
+      ));
+
+    // Calculate day of week in JavaScript using local timezone and group by day
+    const dailyTotalsMapLocal = new Map<number, number>();
+    
+    timeEntriesData.forEach(entry => {
+      const entryDate = entry.startTime || entry.createdAt;
+      if (!entryDate) return;
+      
+      // Convert UTC timestamp to local timezone and get day of week
+      const localDate = new Date(entryDate);
+      const dayOfWeek = localDate.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+      
+      const duration = parseInt(entry.calculatedDuration.toString());
+      const currentTotal = dailyTotalsMapLocal.get(dayOfWeek) || 0;
+      dailyTotalsMapLocal.set(dayOfWeek, currentTotal + duration);
+    });
+
+    // Convert map to array format
+    const dailyTotals = Array.from(dailyTotalsMapLocal.entries()).map(([dayOfWeek, totalSeconds]) => ({
+      dayOfWeek,
+      totalSeconds
+    }));
 
     // Debug: Log the raw results
     console.log('Daily duration totals debug:', {
