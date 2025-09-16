@@ -38,6 +38,20 @@ export default function Timer() {
     formatted: string;
   }>>([]);
 
+  const [taskDailyTotals, setTaskDailyTotals] = useState<Array<{
+    taskId: number;
+    taskName: string;
+    projectName: string;
+    clientName: string;
+    dayTotals: Array<{
+      dayOfWeek: number;
+      totalSeconds: number;
+      hours: number;
+      minutes: number;
+      formatted: string;
+    }>;
+  }>>([]);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -141,6 +155,29 @@ export default function Timer() {
       }
     } catch (error) {
       console.error('Error loading daily duration totals:', error);
+    }
+  };
+
+  // Load task-specific daily duration totals for the current week
+  const loadTaskDailyTotals = async () => {
+    if (!currentUserId) {
+      console.log('loadTaskDailyTotals: No currentUserId, skipping');
+      return;
+    }
+
+    console.log('loadTaskDailyTotals: Loading for userId:', currentUserId);
+    try {
+      const response = await fetch(`/api/reports/task-daily-totals?userId=${currentUserId}`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('loadTaskDailyTotals: Received data:', data);
+        console.log('loadTaskDailyTotals: taskDailyData:', data.taskDailyData);
+        setTaskDailyTotals(data.taskDailyData || []);
+      } else {
+        console.error('Failed to load task daily totals:', response.status);
+      }
+    } catch (error) {
+      console.error('Error loading task daily totals:', error);
     }
   };
 
@@ -253,6 +290,7 @@ export default function Timer() {
   useEffect(() => {
     if (currentUserId) {
       loadDailyDurationTotals();
+      loadTaskDailyTotals();
     }
   }, [currentUserId]);
 
@@ -332,6 +370,7 @@ export default function Timer() {
       refreshTimer();
       // Also refresh daily duration totals
       loadDailyDurationTotals();
+      loadTaskDailyTotals();
     };
 
     const handleTimerStarted = () => {
@@ -339,11 +378,13 @@ export default function Timer() {
       refreshTimer();
       // Also refresh daily duration totals (in case of manual entries)
       loadDailyDurationTotals();
+      loadTaskDailyTotals();
     };
 
     const handleTimeEntryChanged = () => {
       // Refresh daily duration totals when time entries are added/updated/deleted
       loadDailyDurationTotals();
+      loadTaskDailyTotals();
     };
 
     window.addEventListener('timerStopped', handleTimerStopped);
@@ -366,6 +407,7 @@ export default function Timer() {
     const interval = setInterval(() => {
       if (currentUserId) {
         loadDailyDurationTotals();
+        loadTaskDailyTotals();
       }
     }, 30000); // Refresh every 30 seconds
 
@@ -389,6 +431,11 @@ export default function Timer() {
 
     const success = await startTimer(selectedTask);
     if (success) {
+      // Automatically add the task to the curated list if it's not already there
+      if (!curatedTaskList.includes(selectedTask)) {
+        await addToCuratedList(selectedTask);
+      }
+      
       // Close the dropdown when timer starts
       setTaskDropdownOpen(false);
       // Trigger a custom event to notify the dashboard to refresh
@@ -767,32 +814,34 @@ export default function Timer() {
     
     return (
       <div className="space-y-4">
-        {/* Timer Display */}
-        <div 
-          className="text-[2.5rem] text-center mb-4 text-black"
-          style={{ 
-            fontFamily: 'RadiolandTest, monospace',
-            fontWeight: 'bold',
-            fontStyle: 'normal'
-          }}
-        >
-          {formatTime(time)}
+        {/* Timer Display and Add Task Button Row */}
+        <div className="flex items-center justify-between mb-4">
+          {/* Timer Display */}
+          <div 
+            className="text-[2.5rem] text-black"
+            style={{ 
+              fontFamily: 'RadiolandTest, monospace',
+              fontWeight: 'bold',
+              fontStyle: 'normal'
+            }}
+          >
+            {formatTime(time)}
+          </div>
+          
+          {/* Add Task Button */}
+          <button
+            onClick={() => setAddTaskDropdownOpen(!addTaskDropdownOpen)}
+            className="flex items-center space-x-1 px-3 py-1 text-sm bg-black text-white rounded hover:bg-gray-800 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            <span>Add Task</span>
+          </button>
         </div>
 
         {/* Curated Task List */}
         <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-gray-700">Your Task List</h3>
-            <button
-              onClick={() => setAddTaskDropdownOpen(!addTaskDropdownOpen)}
-              className="flex items-center space-x-1 px-3 py-1 text-sm bg-black text-white rounded hover:bg-gray-800 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-              </svg>
-              <span>Add Task</span>
-            </button>
-          </div>
 
           {/* Add Task Search Dropdown */}
           {addTaskDropdownOpen && (
@@ -845,7 +894,8 @@ export default function Timer() {
                   <div className="flex-1 text-center">Wed</div>
                   <div className="flex-1 text-center">Thurs</div>
                   <div className="flex-1 text-center">Fri</div>
-                  <div className="flex-1 text-center">Total</div>
+                  <div className="flex-1 text-center">Sat</div>
+                  <div className="flex-1 text-center font-semibold">Total</div>
                 </div>
                 {/* Daily Duration Totals */}
                 <div className="flex px-4 pb-3 text-xs text-gray-500">
@@ -853,11 +903,14 @@ export default function Timer() {
                   {(() => {
                     console.log('dailyDurationTotals state:', dailyDurationTotals);
                     console.log('dailyDurationTotals.length:', dailyDurationTotals.length);
-                    return dailyDurationTotals.length > 0 ? dailyDurationTotals.map((dayTotal, index) => {
+                    
+                    let totalSeconds = 0;
+                    const dayElements = dailyDurationTotals.length > 0 ? dailyDurationTotals.map((dayTotal, index) => {
                       console.log('Rendering day total:', index, dayTotal);
+                      totalSeconds += dayTotal.totalSeconds;
                       return (
                         <div key={index} className="flex-1 text-center">
-                          {dayTotal.formatted}
+                          {dayTotal.totalSeconds > 0 ? dayTotal.formatted : '-'}
                         </div>
                       );
                     }) : (
@@ -870,6 +923,20 @@ export default function Timer() {
                         <div className="flex-1 text-center">-</div>
                         <div className="flex-1 text-center">-</div>
                         <div className="flex-1 text-center">-</div>
+                      </>
+                    );
+                    
+                    // Calculate total hours and minutes
+                    const totalHours = Math.floor(totalSeconds / 3600);
+                    const totalMinutes = Math.floor((totalSeconds % 3600) / 60);
+                    const totalFormatted = totalSeconds > 0 ? `${totalHours}h ${totalMinutes}m` : '-';
+                    
+                    return (
+                      <>
+                        {dayElements}
+                        <div className="flex-1 text-center font-semibold text-gray-700">
+                          {totalFormatted}
+                        </div>
                       </>
                     );
                   })()}
@@ -972,14 +1039,49 @@ export default function Timer() {
                           </div>
                         </div>
 
-                        {/* Day Columns - Empty for now */}
-                        <div className="flex-1 text-center text-sm text-gray-400">-</div>
-                        <div className="flex-1 text-center text-sm text-gray-400">-</div>
-                        <div className="flex-1 text-center text-sm text-gray-400">-</div>
-                        <div className="flex-1 text-center text-sm text-gray-400">-</div>
-                        <div className="flex-1 text-center text-sm text-gray-400">-</div>
-                        <div className="flex-1 text-center text-sm text-gray-400">-</div>
-                        <div className="flex-1 text-center text-sm text-gray-400">-</div>
+                        {/* Day Columns - Task-Specific Daily Totals */}
+                        {(() => {
+                          const taskDailyData = taskDailyTotals.find(t => t.taskId === task.id);
+                          if (taskDailyData && taskDailyData.dayTotals.length > 0) {
+                            let totalSeconds = 0;
+                            const dayElements = taskDailyData.dayTotals.map((dayTotal, dayIndex) => {
+                              totalSeconds += dayTotal.totalSeconds;
+                              return (
+                                <div key={dayIndex} className="flex-1 text-center text-sm text-gray-600">
+                                  {dayTotal.totalSeconds > 0 ? dayTotal.formatted : '-'}
+                                </div>
+                              );
+                            });
+                            
+                            // Calculate total hours and minutes
+                            const totalHours = Math.floor(totalSeconds / 3600);
+                            const totalMinutes = Math.floor((totalSeconds % 3600) / 60);
+                            const totalFormatted = totalSeconds > 0 ? `${totalHours}h ${totalMinutes}m` : '-';
+                            
+                            return (
+                              <>
+                                {dayElements}
+                                <div className="flex-1 text-center text-sm font-semibold text-gray-700">
+                                  {totalFormatted}
+                                </div>
+                              </>
+                            );
+                          } else {
+                            // Show placeholder when no data is loaded yet
+                            return (
+                              <>
+                                <div className="flex-1 text-center text-sm text-gray-400">-</div>
+                                <div className="flex-1 text-center text-sm text-gray-400">-</div>
+                                <div className="flex-1 text-center text-sm text-gray-400">-</div>
+                                <div className="flex-1 text-center text-sm text-gray-400">-</div>
+                                <div className="flex-1 text-center text-sm text-gray-400">-</div>
+                                <div className="flex-1 text-center text-sm text-gray-400">-</div>
+                                <div className="flex-1 text-center text-sm text-gray-400">-</div>
+                                <div className="flex-1 text-center text-sm text-gray-400">-</div>
+                              </>
+                            );
+                          }
+                        })()}
                       </div>
                     </div>
                   );
@@ -987,6 +1089,7 @@ export default function Timer() {
               </div>
             </div>
           )}
+
         </div>
       </div>
     );
@@ -1055,7 +1158,7 @@ export default function Timer() {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <svg className="w-4 h-4" fill="#000000" height="200px" width="200px" version="1.1" id="XMLID_209_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24" xml:space="preserve"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g id="schedule"> <g> <path d="M24,24H0V3h5V0h2v3h10V0h2v3h5V24z M2,22h20V5H2v3h20v2H2V22z M20,19H8v-2h12V19z M6,19H4v-2h2V19z M20,15H8v-2h12V15z M6,15H4v-2h2V15z"></path> </g> </g> </g></svg>
+              <svg className="w-4 h-4" fill="#000000" height="200px" width="200px" version="1.1" id="XMLID_209_" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24" xmlSpace="preserve"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"> <g id="schedule"> <g> <path d="M24,24H0V3h5V0h2v3h10V0h2v3h5V24z M2,22h20V5H2v3h20v2H2V22z M20,19H8v-2h12V19z M6,19H4v-2h2V19z M20,15H8v-2h12V15z M6,15H4v-2h2V15z"></path> </g> </g> </g></svg>
             </button>
           </div>
         </div>
