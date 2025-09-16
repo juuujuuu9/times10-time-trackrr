@@ -205,6 +205,16 @@ export default function AdminTimer() {
       return;
     }
 
+    // If there's already a timer running, stop it first
+    if (isRunning && timerData) {
+      console.log('Stopping current timer before starting new one');
+      const stopSuccess = await stopTimer(timerData.id);
+      if (!stopSuccess) {
+        console.error('Failed to stop current timer');
+        return;
+      }
+    }
+
     const success = await startTimer(selectedTask);
     if (success) {
       // Trigger a custom event to notify the dashboard to refresh

@@ -468,6 +468,16 @@ export default function Timer() {
       return;
     }
 
+    // If there's already a timer running, stop it first
+    if (isRunning && timerData) {
+      console.log('Stopping current timer before starting new one');
+      const stopSuccess = await stopTimer(timerData.id);
+      if (!stopSuccess) {
+        console.error('Failed to stop current timer');
+        return;
+      }
+    }
+
     const success = await startTimer(selectedTask);
     if (success) {
       // Automatically add the task to the curated list if it's not already there
@@ -775,9 +785,24 @@ export default function Timer() {
       return;
     }
 
+    // If there's already a timer running, stop it first
+    if (isRunning && timerData) {
+      console.log('Stopping current timer before starting new one');
+      const stopSuccess = await stopTimer(timerData.id);
+      if (!stopSuccess) {
+        console.error('Failed to stop current timer');
+        return;
+      }
+    }
+
     setSelectedTask(taskId);
     const success = await startTimer(taskId);
     if (success) {
+      // Automatically add the task to the curated list if it's not already there
+      if (!curatedTaskList.includes(taskId)) {
+        await addToCuratedList(taskId);
+      }
+      
       // Trigger a custom event to notify the dashboard to refresh
       window.dispatchEvent(new CustomEvent('timerStarted'));
     }
@@ -1207,22 +1232,7 @@ export default function Timer() {
                           <div className="flex items-center space-x-3">
                             {/* Start/Stop Button */}
                             <div className="flex-shrink-0">
-                              {!isRunning ? (
-                                <button
-                                  onClick={() => handleStartTimerForTask(task.id)}
-                                  disabled={timerLoading}
-                                  className="w-8 h-8 bg-gray-300 text-gray-600 rounded-full hover:bg-green-500 hover:text-white transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center"
-                                  title="Start timer"
-                                >
-                                  {timerLoading ? (
-                                    <div className="w-3 h-3 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
-                                  ) : (
-                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                      <path d="M8 5v14l11-7z"/>
-                                    </svg>
-                                  )}
-                                </button>
-                              ) : isCurrentlyRunning ? (
+                              {isCurrentlyRunning ? (
                                 <button
                                   onClick={handleStopTimer}
                                   disabled={timerLoading}
@@ -1238,9 +1248,20 @@ export default function Timer() {
                                   )}
                                 </button>
                               ) : (
-                                <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center" title="Timer running on another task">
-                                  <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                                </div>
+                                <button
+                                  onClick={() => handleStartTimerForTask(task.id)}
+                                  disabled={timerLoading}
+                                  className="w-8 h-8 bg-gray-300 text-gray-600 rounded-full hover:bg-green-500 hover:text-white transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center"
+                                  title="Start timer"
+                                >
+                                  {timerLoading ? (
+                                    <div className="w-3 h-3 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
+                                  ) : (
+                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                      <path d="M8 5v14l11-7z"/>
+                                    </svg>
+                                  )}
+                                </button>
                               )}
                             </div>
 
