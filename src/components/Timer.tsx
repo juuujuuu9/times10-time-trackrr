@@ -30,6 +30,7 @@ export default function Timer() {
   const [addTaskDropdownOpen, setAddTaskDropdownOpen] = useState(false);
   const [addTaskSearchTerm, setAddTaskSearchTerm] = useState('');
   const [contextMenuOpen, setContextMenuOpen] = useState<number | null>(null);
+  const [weekDropdownOpen, setWeekDropdownOpen] = useState(false);
   const [dailyDurationTotals, setDailyDurationTotals] = useState<Array<{
     dayOfWeek: number;
     totalSeconds: number;
@@ -52,6 +53,32 @@ export default function Timer() {
     }>;
   }>>([]);
 
+  // Week navigation state
+  const [weekOffset, setWeekOffset] = useState<number>(0); // 0 = current week, -1 = last week, 1 = next week
+  const [selectedWeekStart, setSelectedWeekStart] = useState<Date | null>(null);
+  const [selectedWeekEnd, setSelectedWeekEnd] = useState<Date | null>(null);
+
+  // Compute week range (Sunday-Saturday) from an offset
+  const computeWeekRange = (offset: number): { start: Date; end: Date } => {
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek;
+    const start = new Date(now);
+    start.setDate(now.getDate() - daysToSubtract + offset * 7);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  };
+
+  // Update selected week dates when offset changes
+  useEffect(() => {
+    const { start, end } = computeWeekRange(weekOffset);
+    setSelectedWeekStart(start);
+    setSelectedWeekEnd(end);
+  }, [weekOffset]);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -64,6 +91,9 @@ export default function Timer() {
       }
       if (!target.closest('.context-menu-container')) {
         setContextMenuOpen(null);
+      }
+      if (!target.closest('.week-dropdown-container')) {
+        setWeekDropdownOpen(false);
       }
     };
 
@@ -142,9 +172,14 @@ export default function Timer() {
       return;
     }
 
+    // Require selected week range
+    if (!selectedWeekStart || !selectedWeekEnd) {
+      return;
+    }
+
     console.log('loadDailyDurationTotals: Loading for userId:', currentUserId);
     try {
-      const response = await fetch(`/api/reports/daily-duration-totals?userId=${currentUserId}`);
+      const response = await fetch(`/api/reports/daily-duration-totals?userId=${currentUserId}&startDate=${encodeURIComponent(selectedWeekStart.toISOString())}&endDate=${encodeURIComponent(selectedWeekEnd.toISOString())}`);
       if (response.ok) {
         const data = await response.json();
         console.log('loadDailyDurationTotals: Received data:', data);
@@ -165,9 +200,13 @@ export default function Timer() {
       return;
     }
 
+    if (!selectedWeekStart || !selectedWeekEnd) {
+      return;
+    }
+
     console.log('loadTaskDailyTotals: Loading for userId:', currentUserId);
     try {
-      const response = await fetch(`/api/reports/task-daily-totals?userId=${currentUserId}`);
+      const response = await fetch(`/api/reports/task-daily-totals?userId=${currentUserId}&startDate=${encodeURIComponent(selectedWeekStart.toISOString())}&endDate=${encodeURIComponent(selectedWeekEnd.toISOString())}`);
       if (response.ok) {
         const data = await response.json();
         console.log('loadTaskDailyTotals: Received data:', data);
@@ -286,13 +325,13 @@ export default function Timer() {
     initializeData();
   }, []);
 
-  // Load daily duration totals when currentUserId changes
+  // Load daily duration totals when currentUserId or selected week range changes
   useEffect(() => {
-    if (currentUserId) {
+    if (currentUserId && selectedWeekStart && selectedWeekEnd) {
       loadDailyDurationTotals();
       loadTaskDailyTotals();
     }
-  }, [currentUserId]);
+  }, [currentUserId, selectedWeekStart?.getTime(), selectedWeekEnd?.getTime()]);
 
   // Update selected task when timer data changes
   useEffect(() => {
@@ -630,21 +669,24 @@ export default function Timer() {
       })
       .filter(task => task !== undefined); // Remove undefined entries
 
-    // Add running timer task if it's not already in the list
-    if (isRunning && selectedTask) {
-      const runningTask = tasks.find(task => task.id === selectedTask);
-      if (runningTask && !tasksWithEntries.some(task => task.id === selectedTask)) {
-        tasksWithEntries.push(runningTask);
+    // For current week, include extras; for other weeks, show only tasks with entries
+    if (weekOffset === 0) {
+      // Add running timer task if it's not already in the list
+      if (isRunning && selectedTask) {
+        const runningTask = tasks.find(task => task.id === selectedTask);
+        if (runningTask && !tasksWithEntries.some(task => task.id === selectedTask)) {
+          tasksWithEntries.push(runningTask);
+        }
       }
-    }
 
-    // Add curated tasks that don't have time entries yet
-    const curatedTasks = tasks.filter(task => curatedTaskList.includes(task.id));
-    curatedTasks.forEach(curatedTask => {
-      if (!tasksWithEntries.some(task => task.id === curatedTask.id)) {
-        tasksWithEntries.push(curatedTask);
-      }
-    });
+      // Add curated tasks that don't have time entries yet
+      const curatedTasks = tasks.filter(task => curatedTaskList.includes(task.id));
+      curatedTasks.forEach(curatedTask => {
+        if (!tasksWithEntries.some(task => task.id === curatedTask.id)) {
+          tasksWithEntries.push(curatedTask);
+        }
+      });
+    }
 
     return tasksWithEntries;
   };
@@ -668,8 +710,8 @@ export default function Timer() {
       }
     }
     
-    // If this task has a running timer, add the current session time to today's total
-    if (isRunning && selectedTask === taskId && timerData) {
+    // If viewing current week and this task has a running timer, add live time to today's total
+    if (weekOffset === 0 && isRunning && selectedTask === taskId && timerData) {
       const now = new Date();
       const today = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
       
@@ -955,23 +997,89 @@ export default function Timer() {
             {formatTime(time)}
           </div>
           
-          {/* Add Task Button */}
-          <button
-            onClick={() => setAddTaskDropdownOpen(!addTaskDropdownOpen)}
-            className="flex items-center space-x-1 px-3 py-1 text-sm bg-black text-white rounded hover:bg-gray-800 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-            </svg>
-            <span>Add Task</span>
-          </button>
+          {/* Add Task Button (only for current week) */}
+          {weekOffset === 0 && (
+            <button
+              onClick={() => setAddTaskDropdownOpen(!addTaskDropdownOpen)}
+              className="flex items-center space-x-1 px-3 py-1 text-sm bg-black text-white rounded hover:bg-gray-800 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+              </svg>
+              <span>Add Task</span>
+            </button>
+          )}
+        </div>
+
+        {/* Week Navigation (full width, centered range picker) */}
+        <div className="w-full grid grid-cols-3 items-center">
+          {/* Left: Prev */}
+          <div className="justify-self-start">
+            <button
+              onClick={() => setWeekOffset(prev => prev - 1)}
+              className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
+            >
+              ◀ Prev Week
+            </button>
+          </div>
+
+          {/* Center: Date range dropdown button */}
+          <div className="justify-self-center text-center">
+            <div className="relative inline-block week-dropdown-container">
+              <button
+                onClick={() => setWeekDropdownOpen(prev => !prev)}
+                className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 inline-flex items-center space-x-2"
+              >
+                <span>
+                  {selectedWeekStart && selectedWeekEnd && (
+                    <>{selectedWeekStart.toLocaleDateString()} - {selectedWeekEnd.toLocaleDateString()}</>
+                  )}
+                </span>
+                <svg className={`w-4 h-4 transition-transform ${weekDropdownOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd" />
+                </svg>
+              </button>
+
+              {weekDropdownOpen && (
+                <div className="absolute left-1/2 -translate-x-1/2 z-50 mt-1 w-64 bg-white border border-gray-300 rounded shadow-lg overflow-hidden">
+                  <div className="max-h-80 overflow-y-auto">
+                    {[...Array(12)].map((_, idx) => {
+                      const offset = -idx; // absolute offsets: 0 current, -1 prev, etc.
+                      const { start, end } = computeWeekRange(offset);
+                      const label = `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`;
+                      const isCurrent = offset === weekOffset;
+                      return (
+                        <button
+                          key={idx}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${isCurrent ? 'bg-gray-50' : ''}`}
+                          onClick={() => { setWeekOffset(offset); setWeekDropdownOpen(false); }}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right: Next */}
+          <div className="justify-self-end">
+            <button
+              onClick={() => setWeekOffset(prev => prev + 1)}
+              className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
+            >
+              Next Week ▶
+            </button>
+          </div>
         </div>
 
         {/* Curated Task List */}
         <div>
 
           {/* Add Task Search Dropdown */}
-          {addTaskDropdownOpen && (
+          {weekOffset === 0 && addTaskDropdownOpen && (
             <div className="mb-4 relative add-task-dropdown-container">
               <div className="relative">
                 <input
@@ -1006,8 +1114,10 @@ export default function Timer() {
               <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-gray-400 text-xl">📝</span>
               </div>
-              <p className="text-gray-500 text-sm">No tasks with time entries this week</p>
-              <p className="text-gray-400 text-xs mt-1">Click "Add Task" to get started</p>
+              <p className="text-gray-500 text-sm">No tasks with time entries for this week</p>
+              {weekOffset === 0 && (
+                <p className="text-gray-400 text-xs mt-1">Click "Add Task" to get started</p>
+              )}
             </div>
           ) : (
             <div className="border border-gray-200 rounded-lg overflow-hidden">

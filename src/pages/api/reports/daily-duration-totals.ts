@@ -7,6 +7,8 @@ export const GET: APIRoute = async ({ url }) => {
   try {
     const searchParams = url.searchParams;
     const userId = searchParams.get('userId');
+    const startParam = searchParams.get('startDate');
+    const endParam = searchParams.get('endDate');
     
     if (!userId) {
       return new Response(JSON.stringify({
@@ -17,18 +19,35 @@ export const GET: APIRoute = async ({ url }) => {
       });
     }
 
-    // Calculate current week (Sunday to Saturday)
-    const now = new Date();
-    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-    const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek; // If today is Sunday, don't subtract any days
-    
-    const startDate = new Date(now);
-    startDate.setDate(now.getDate() - daysToSubtract);
-    startDate.setHours(0, 0, 0, 0);
-    
-    const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 6);
-    endDate.setHours(23, 59, 59, 999);
+    // Determine week (Sunday to Saturday) or use provided range
+    let startDate: Date;
+    let endDate: Date;
+
+    if (startParam || endParam) {
+      // If either provided, require both for clarity
+      if (!startParam || !endParam) {
+        return new Response(JSON.stringify({ error: 'Both startDate and endDate are required when specifying a range' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      startDate = new Date(startParam);
+      endDate = new Date(endParam);
+      // Normalize to day bounds
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
+    } else {
+      // Default to current week (Sunday to Saturday)
+      const now = new Date();
+      const dayOfWeek = now.getDay();
+      const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek;
+      startDate = new Date(now);
+      startDate.setDate(now.getDate() - daysToSubtract);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 6);
+      endDate.setHours(23, 59, 59, 999);
+    }
 
     // Get time entries for the current week
     const timeEntriesData = await db

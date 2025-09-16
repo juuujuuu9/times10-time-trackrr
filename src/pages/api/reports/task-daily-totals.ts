@@ -6,6 +6,8 @@ import { eq, and, gte, lte, sql } from 'drizzle-orm';
 export const GET: APIRoute = async ({ url }) => {
   try {
     const userId = url.searchParams.get('userId');
+    const startParam = url.searchParams.get('startDate');
+    const endParam = url.searchParams.get('endDate');
     
     if (!userId) {
       return new Response(JSON.stringify({ error: 'User ID is required' }), {
@@ -14,18 +16,32 @@ export const GET: APIRoute = async ({ url }) => {
       });
     }
 
-    // Calculate date range for this week (Sunday to Saturday)
-    const now = new Date();
-    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-    const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek; // If today is Sunday, don't subtract any days
-    
-    const startDate = new Date(now);
-    startDate.setDate(now.getDate() - daysToSubtract);
-    startDate.setHours(0, 0, 0, 0);
-    
-    const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 6);
-    endDate.setHours(23, 59, 59, 999);
+    // Determine date range (Sunday to Saturday) or use provided range
+    let startDate: Date;
+    let endDate: Date;
+
+    if (startParam || endParam) {
+      if (!startParam || !endParam) {
+        return new Response(JSON.stringify({ error: 'Both startDate and endDate are required when specifying a range' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      startDate = new Date(startParam);
+      endDate = new Date(endParam);
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
+    } else {
+      const now = new Date();
+      const dayOfWeek = now.getDay();
+      const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek;
+      startDate = new Date(now);
+      startDate.setDate(now.getDate() - daysToSubtract);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 6);
+      endDate.setHours(23, 59, 59, 999);
+    }
 
     console.log('Task daily totals debug:', {
       userId,
@@ -154,13 +170,15 @@ export const GET: APIRoute = async ({ url }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error fetching task daily totals:', error);
-    console.error('Error details:', error.message);
-    console.error('Error stack:', error.stack);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    const stack = error instanceof Error ? error.stack : undefined;
+    console.error('Error details:', message);
+    if (stack) console.error('Error stack:', stack);
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
-      details: error.message 
+      details: message 
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
