@@ -703,11 +703,10 @@ const user = await requireAuth('/')(Astro) as any;
             const taskDate = entry.startTime ? 
               (() => {
                 const date = new Date(entry.startTime);
-                // Extract date components using UTC to avoid timezone issues
-                const year = date.getUTCFullYear();
-                const month = date.getUTCMonth() + 1;
-                const day = date.getUTCDate();
-                // Create a new date with the extracted components
+                // Use local components so the date matches the times shown
+                const year = date.getFullYear();
+                const month = date.getMonth() + 1;
+                const day = date.getDate();
                 return new Date(year, month - 1, day, 0, 0, 0, 0);
               })() : 
               new Date(entry.createdAt);

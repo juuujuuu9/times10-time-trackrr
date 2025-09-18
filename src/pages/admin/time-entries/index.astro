@@ -211,15 +211,14 @@ const allTasks = await db
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             {allTimeEntries.map((entry) => {
-              // Use timezone-safe date handling for display
+              // Use the user's local date for display to match visible start time
               const taskDate = entry.startTime ? 
                 (() => {
                   const date = new Date(entry.startTime);
-                  // Extract date components using UTC to avoid timezone issues
-                  const year = date.getUTCFullYear();
-                  const month = date.getUTCMonth() + 1;
-                  const day = date.getUTCDate();
-                  // Create a new date with the extracted components
+                  // Extract LOCAL date components to preserve the date the user sees
+                  const year = date.getFullYear();
+                  const month = date.getMonth() + 1;
+                  const day = date.getDate();
                   return new Date(year, month - 1, day, 0, 0, 0, 0);
                 })() : 
                 new Date(entry.createdAt);
