@@ -4,10 +4,11 @@ interface QuickTimeEntryProps {
   userId: number;
   taskId: number;
   taskName: string;
+  taskDate?: string; // Optional task date in YYYY-MM-DD format
   onTimeEntryCreated?: () => void;
 }
 
-export default function QuickTimeEntry({ userId, taskId, taskName, onTimeEntryCreated }: QuickTimeEntryProps) {
+export default function QuickTimeEntry({ userId, taskId, taskName, taskDate, onTimeEntryCreated }: QuickTimeEntryProps) {
   const [duration, setDuration] = useState('');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,6 +33,7 @@ export default function QuickTimeEntry({ userId, taskId, taskName, onTimeEntryCr
           taskId,
           duration: duration.trim(),
           notes: notes.trim() || null,
+          taskDate: taskDate || new Date().toISOString().split('T')[0], // Default to today if not provided
         }),
       });
 

@@ -74,7 +74,7 @@ export const POST: APIRoute = async ({ request }) => {
       timeEntryData.startTime = new Date(startTime);
       timeEntryData.endTime = new Date(endTime);
       timeEntryData.durationManual = null;
-    } else if (duration && taskDate) {
+    } else if (duration) {
       // Manual duration entry
       let durationSeconds: number;
       try {
@@ -90,14 +90,18 @@ export const POST: APIRoute = async ({ request }) => {
       // The endTime remains null since we only have duration, not start/end times
       // Use timezone-safe date creation to preserve the intended date
       const { createUserDate, getTodayString } = await import('../../../utils/timezoneUtils');
+      
+      // Use provided taskDate or default to today's date
+      const effectiveTaskDate = taskDate || getTodayString();
+      
       // Use 12:00 UTC to preserve the intended calendar date across timezones
-      const taskStartTime = createUserDate(taskDate, 12, 0);
+      const taskStartTime = createUserDate(effectiveTaskDate, 12, 0);
 
       timeEntryData.startTime = taskStartTime;
       timeEntryData.endTime = null;
       timeEntryData.durationManual = durationSeconds;
     } else {
-      return new Response(JSON.stringify({ error: 'Either start/end times or duration with task date are required' }), {
+      return new Response(JSON.stringify({ error: 'Either start/end times or duration are required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });

@@ -2495,8 +2495,8 @@ const user = await requireAuth('/')(Astro) as any;
             const hours = parsedTime.hours;
             const minutes = parsedTime.minutes;
             
-            const newDateTime = new Date(taskDate);
-            newDateTime.setHours(hours, minutes, 0, 0);
+            // Use timezone-safe date creation
+            const newDateTime = createTaskDateTime(taskDate, hours, minutes);
             
             const updateData: { startTime?: string; endTime?: string; durationManual?: number | null } = {};
             if (timeType === 'start') {
