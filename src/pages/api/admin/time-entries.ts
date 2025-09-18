@@ -53,43 +53,57 @@ export const GET: APIRoute = async () => {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { userId, taskId, duration, notes, taskDate } = body;
+    const { userId, taskId, duration, notes, taskDate, startTime, endTime } = body;
 
-    if (!userId || !taskId || !duration) {
-      return new Response(JSON.stringify({ error: 'User ID, task ID, and duration are required' }), {
+    if (!userId || !taskId) {
+      return new Response(JSON.stringify({ error: 'User ID and task ID are required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    // Parse duration input (e.g., "2h", "3.5hr", "4:15", etc.)
-    let durationSeconds: number;
-    try {
-      durationSeconds = parseTimeInput(duration);
-    } catch (error) {
-      return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Invalid duration format' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    // For manual duration entries, set startTime to the task date to indicate when the work was done
-    // The endTime remains null since we only have duration, not start/end times
-    // Use timezone-safe date creation to preserve the intended date
-    const { createUserDate, getTodayString } = await import('../../../utils/timezoneUtils');
-    // Use 12:00 UTC to preserve the intended calendar date across timezones
-    const taskStartTime = taskDate
-      ? createUserDate(taskDate, 12, 0)
-      : createUserDate(getTodayString(), 12, 0);
-
-    const newTimeEntry = await db.insert(timeEntries).values({
+    // Determine entry type and validate accordingly
+    let timeEntryData: any = {
       userId: parseInt(userId),
       taskId: parseInt(taskId),
-      startTime: taskStartTime, // Set to the task date for manual entries
-      endTime: null, // No end time for manual entries
-      durationManual: durationSeconds,
       notes: notes || null,
-    }).returning();
+    };
+
+    if (startTime && endTime) {
+      // Start/end times entry
+      timeEntryData.startTime = startTime;
+      timeEntryData.endTime = endTime;
+      timeEntryData.durationManual = null;
+    } else if (duration && taskDate) {
+      // Manual duration entry
+      let durationSeconds: number;
+      try {
+        durationSeconds = parseTimeInput(duration);
+      } catch (error) {
+        return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Invalid duration format' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      // For manual duration entries, set startTime to the task date to indicate when the work was done
+      // The endTime remains null since we only have duration, not start/end times
+      // Use timezone-safe date creation to preserve the intended date
+      const { createUserDate, getTodayString } = await import('../../../utils/timezoneUtils');
+      // Use 12:00 UTC to preserve the intended calendar date across timezones
+      const taskStartTime = createUserDate(taskDate, 12, 0);
+
+      timeEntryData.startTime = taskStartTime;
+      timeEntryData.endTime = null;
+      timeEntryData.durationManual = durationSeconds;
+    } else {
+      return new Response(JSON.stringify({ error: 'Either start/end times or duration with task date are required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const newTimeEntry = await db.insert(timeEntries).values(timeEntryData).returning();
 
     // Update task status to "in-progress" if it's currently "pending"
     await db
