@@ -48,10 +48,13 @@ export const GET: APIRoute = async (context) => {
     )
     .orderBy(timeEntries.startTime);
 
-    // Calculate elapsed time for each timer
+    // Calculate elapsed time for each timer using timezone-safe methods
+    const { getTodayString, createUserDate } = await import('../../../utils/timezoneUtils');
     const now = new Date();
+    const todayString = getTodayString();
+    const currentTime = createUserDate(todayString, now.getHours(), now.getMinutes(), now.getSeconds());
     const timersWithElapsed = ongoingTimers.map(timer => {
-      const elapsedSeconds = timer.startTime ? Math.floor((now.getTime() - new Date(timer.startTime).getTime()) / 1000) : 0;
+      const elapsedSeconds = timer.startTime ? Math.floor((currentTime.getTime() - new Date(timer.startTime).getTime()) / 1000) : 0;
       return {
         ...timer,
         elapsedSeconds,

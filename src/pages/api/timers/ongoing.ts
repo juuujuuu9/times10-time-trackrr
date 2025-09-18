@@ -53,8 +53,11 @@ export const GET: APIRoute = async (context) => {
     }
 
     const timer = ongoingTimer[0];
+    const { getTodayString, createUserDate } = await import('../../../utils/timezoneUtils');
     const now = new Date();
-    const elapsedSeconds = Math.floor((now.getTime() - new Date(timer.startTime || '').getTime()) / 1000);
+    const todayString = getTodayString();
+    const currentTime = createUserDate(todayString, now.getHours(), now.getMinutes(), now.getSeconds());
+    const elapsedSeconds = Math.floor((currentTime.getTime() - new Date(timer.startTime || '').getTime()) / 1000);
 
     return new Response(JSON.stringify({
       success: true,
@@ -147,11 +150,16 @@ export const POST: APIRoute = async (context) => {
       });
     }
 
-    // Create new ongoing timer
+    // Create new ongoing timer using timezone-safe date creation
+    const { getTodayString, createUserDate } = await import('../../../utils/timezoneUtils');
+    const now = new Date();
+    const todayString = getTodayString();
+    const startTime = createUserDate(todayString, now.getHours(), now.getMinutes(), now.getSeconds());
+    
     const [newTimer] = await db.insert(timeEntries).values({
       userId: currentUser.id,
       taskId: taskId,
-      startTime: new Date(),
+      startTime: startTime,
       endTime: null,
       notes: notes || null
     }).returning();
@@ -234,7 +242,10 @@ export const PUT: APIRoute = async (context) => {
     }
 
     const timer = ongoingTimer[0];
-    const endTimeDate = endTime ? new Date(endTime) : new Date();
+    const { getTodayString, createUserDate } = await import('../../../utils/timezoneUtils');
+    const now = new Date();
+    const todayString = getTodayString();
+    const endTimeDate = endTime ? new Date(endTime) : createUserDate(todayString, now.getHours(), now.getMinutes(), now.getSeconds());
     const duration = Math.floor((endTimeDate.getTime() - new Date(timer.startTime || '').getTime()) / 1000);
 
     // Update the timer with end time
