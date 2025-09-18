@@ -177,7 +177,12 @@ class AdminRealTimeUpdates {
     const row = document.createElement('tr');
     row.className = 'hover:bg-gray-50';
     
-    const taskDate = new Date(entry.startTime);
+    // Use timezone-safe date handling for display
+    const date = new Date(entry.startTime);
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth() + 1;
+    const day = date.getUTCDate();
+    const taskDate = new Date(year, month - 1, day, 0, 0, 0, 0);
     const duration = entry.durationManual ? entry.durationManual / 3600 : 0;
     
     row.innerHTML = `

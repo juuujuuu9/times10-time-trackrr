@@ -460,7 +460,7 @@ const user = await requireAuth('/')(Astro) as any;
 
 <script>
   // Import timezone utilities
-  import { getTodayString, createTaskDateTime } from '../utils/timezoneUtils';
+  import { createTaskDateTime } from '../utils/timezoneUtils';
   
   // Show dashboard content after a brief delay to prevent flash
   document.addEventListener('DOMContentLoaded', () => {
@@ -699,7 +699,18 @@ const user = await requireAuth('/')(Astro) as any;
           }).join('')}
           ${filteredEntries.map((entry: any) => {
             // For manual duration entries, use createdAt for task date since startTime is null
-            const taskDate = entry.startTime ? new Date(entry.startTime) : new Date(entry.createdAt);
+            // Use timezone-safe date handling for display
+            const taskDate = entry.startTime ? 
+              (() => {
+                const date = new Date(entry.startTime);
+                // Extract date components using UTC to avoid timezone issues
+                const year = date.getUTCFullYear();
+                const month = date.getUTCMonth() + 1;
+                const day = date.getUTCDate();
+                // Create a new date with the extracted components
+                return new Date(year, month - 1, day, 0, 0, 0, 0);
+              })() : 
+              new Date(entry.createdAt);
             const durationHours = entry.duration ? (entry.duration / 3600).toFixed(1) : '0';
             
             // Check if this is a manual duration entry (no meaningful start/end times)
@@ -1116,9 +1127,12 @@ const user = await requireAuth('/')(Astro) as any;
         // Set default date to today
         const dateInput = document.getElementById('timeEntryDate') as HTMLInputElement;
         if (dateInput) {
-          // Use timezone-safe date handling for today's date
-          const today = getTodayString();
-          dateInput.value = today;
+          // Use client-side date to get user's actual "today"
+          const today = new Date();
+          const year = today.getFullYear();
+          const month = String(today.getMonth() + 1).padStart(2, '0');
+          const day = String(today.getDate()).padStart(2, '0');
+          dateInput.value = `${year}-${month}-${day}`;
         }
       }
     });

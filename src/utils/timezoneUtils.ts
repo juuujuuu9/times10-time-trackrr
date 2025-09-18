@@ -169,12 +169,16 @@ export function fromUserISOString(isoString: string): Date {
 /**
  * Gets today's date as a string in YYYY-MM-DD format
  * This should be used for date inputs to ensure consistency
+ * Uses the user's local timezone, not the server's timezone
  * 
  * @returns Today's date as YYYY-MM-DD string
  */
 export function getTodayString(): string {
   const today = new Date();
-  const { year, month, day } = getDateComponents(today);
+  // Use local date components to get the user's actual "today"
+  const year = today.getFullYear();
+  const month = today.getMonth() + 1;
+  const day = today.getDate();
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 

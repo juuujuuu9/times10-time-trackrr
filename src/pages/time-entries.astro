@@ -374,7 +374,18 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
                 {userTimeEntries.map((entry) => {
-                  const taskDate = entry.startTime ? new Date(entry.startTime) : new Date(entry.createdAt);
+                  // Use timezone-safe date handling for display
+                  const taskDate = entry.startTime ? 
+                    (() => {
+                      const date = new Date(entry.startTime);
+                      // Extract date components using UTC to avoid timezone issues
+                      const year = date.getUTCFullYear();
+                      const month = date.getUTCMonth() + 1;
+                      const day = date.getUTCDate();
+                      // Create a new date with the extracted components
+                      return new Date(year, month - 1, day, 0, 0, 0, 0);
+                    })() : 
+                    new Date(entry.createdAt);
                   const duration = entry.duration ? entry.duration / 3600 : 0;
                   
                   // Check if this is a manual duration entry (no meaningful start/end times)
