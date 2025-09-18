@@ -87,9 +87,9 @@ export const GET: APIRoute = async ({ url }) => {
       const entryDate = entry.startTime || entry.createdAt;
       if (!entryDate) return;
       
-      // Convert UTC timestamp to local timezone and get day of week
-      const localDate = new Date(entryDate);
-      const dayOfWeek = localDate.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+      // Use UTC day-of-week to align with timezone-safe UTC timestamps we store
+      const d = new Date(entryDate);
+      const dayOfWeek = d.getUTCDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
       
       const duration = parseInt(entry.calculatedDuration.toString());
       const currentTotal = dailyTotalsMapLocal.get(dayOfWeek) || 0;

@@ -106,14 +106,14 @@ export const GET: APIRoute = async ({ url }) => {
         )
       );
 
-    // Calculate day of week in JavaScript using local timezone
+    // Calculate day of week in JavaScript using UTC to align with stored timestamps
     const timeEntriesWithDayOfWeek = timeEntriesData.map(entry => {
       const entryDate = entry.startTime || entry.createdAt;
       if (!entryDate) return { ...entry, dayOfWeek: 0 };
       
-      // Convert UTC timestamp to local timezone and get day of week
-      const localDate = new Date(entryDate);
-      const dayOfWeek = localDate.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+      // Use UTC day-of-week to avoid shifting across local timezones
+      const utcDate = new Date(entryDate);
+      const dayOfWeek = utcDate.getUTCDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
       
       return { ...entry, dayOfWeek };
     });
