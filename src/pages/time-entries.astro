@@ -4,6 +4,7 @@ import { requireAuth } from '../utils/session';
 import { db } from '../db/index';
 import { timeEntries, users, tasks, projects, clients } from '../db/schema';
 import { sql, eq, and, gte, lte, isNotNull } from 'drizzle-orm';
+import { formatTimeForDisplay } from '../utils/timezoneUtils';
 
 // Require authentication
 const user = await requireAuth('/')(Astro) as any;
@@ -410,7 +411,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                         <input
                           type="text"
                           class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer"
-                          value={startTime ? startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:-- --'}
+                          value={startTime ? formatTimeForDisplay(startTime) : '--:-- --'}
                           data-entry-id={entry.id}
                           data-time-type="start"
                           placeholder="9:30 AM"
@@ -421,7 +422,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                         <input
                           type="text"
                           class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer"
-                          value={endTime ? endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:-- --'}
+                          value={endTime ? formatTimeForDisplay(endTime) : '--:-- --'}
                           data-entry-id={entry.id}
                           data-time-type="end"
                           placeholder="9:30 AM"
@@ -917,7 +918,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             const minutes = parsedTime.minutes;
             
             // Use timezone-safe date creation
-            const newDateTime = createTaskDateTime(taskDate, hours, minutes);
+            const newDateTime = new Date(Date.UTC(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), hours, minutes, 0, 0));
             
             const updateData: { startTime?: string; endTime?: string; durationManual?: number | null } = {};
             if (timeType === 'start') {
@@ -1704,8 +1705,8 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
           
           // Create datetime objects using the selected date
           const taskDate = new Date(editTimesDateInput.value);
-          const startDateTime = createTaskDateTime(taskDate, startParsedTime.hours, startParsedTime.minutes);
-          const endDateTime = createTaskDateTime(taskDate, endParsedTime.hours, endParsedTime.minutes);
+          const startDateTime = new Date(Date.UTC(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), startParsedTime.hours, startParsedTime.minutes, 0, 0));
+          const endDateTime = new Date(Date.UTC(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), endParsedTime.hours, endParsedTime.minutes, 0, 0));
           
           // Validate that end time is after start time
           if (endDateTime <= startDateTime) {

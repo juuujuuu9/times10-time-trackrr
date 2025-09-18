@@ -83,10 +83,10 @@ export function formatDateForDisplay(date: Date, options: Intl.DateTimeFormatOpt
 }
 
 /**
- * Formats a time for display in the user's local timezone
+ * Formats a time for display preserving the user's intended time
  * This should be used for all time displays to ensure consistency
  * 
- * @param date - Date object
+ * @param date - Date object (should be UTC)
  * @param options - Intl.DateTimeFormatOptions
  * @returns Formatted time string
  */
@@ -95,6 +95,7 @@ export function formatTimeForDisplay(date: Date, options: Intl.DateTimeFormatOpt
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
+    timeZone: 'UTC', // Display as UTC to preserve user's intended time
     ...options
   };
   

@@ -836,9 +836,9 @@ const user = await requireAuth('/')(Astro) as any;
             const startTime = (!isManualDurationEntry && entry.startTime) ? new Date(entry.startTime) : null;
             const endTime = (!isManualDurationEntry && entry.endTime) ? new Date(entry.endTime) : null;
             
-            // Format times for display
-            const startTimeDisplay = startTime ? startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:-- --';
-            const endTimeDisplay = endTime ? endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:-- --';
+            // Format times for display using timezone-safe function
+            const startTimeDisplay = startTime ? startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'UTC' }) : '--:-- --';
+            const endTimeDisplay = endTime ? endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'UTC' }) : '--:-- --';
             
             return `
               <tr class="hover:bg-gray-50" data-entry-id="${entry.id}">
@@ -2123,7 +2123,8 @@ const user = await requireAuth('/')(Astro) as any;
         startTimeInput.value = startDate.toLocaleTimeString('en-US', { 
           hour: 'numeric', 
           minute: '2-digit', 
-          hour12: true 
+          hour12: true,
+          timeZone: 'UTC'
         });
       } else {
         startTimeInput.value = '';
@@ -2136,7 +2137,8 @@ const user = await requireAuth('/')(Astro) as any;
         endTimeInput.value = endDate.toLocaleTimeString('en-US', { 
           hour: 'numeric', 
           minute: '2-digit', 
-          hour12: true 
+          hour12: true,
+          timeZone: 'UTC'
         });
       } else {
         endTimeInput.value = '';
