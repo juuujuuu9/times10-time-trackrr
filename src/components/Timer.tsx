@@ -1022,17 +1022,39 @@ export default function Timer() {
             {formatTime(time)}
           </div>
           
-          {/* Add Task Button (only for current week) */}
+          {/* Add Task and Quick Entry Buttons (only for current week) */}
           {weekOffset === 0 && (
-            <button
-              onClick={() => setAddTaskDropdownOpen(!addTaskDropdownOpen)}
-              className="flex items-center space-x-1 px-3 py-1 text-sm bg-black text-white rounded hover:bg-gray-800 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-              </svg>
-              <span>Add Task</span>
-            </button>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setAddTaskDropdownOpen(!addTaskDropdownOpen)}
+                className="flex items-center space-x-1 px-3 py-1 text-sm bg-black text-white rounded hover:bg-gray-800 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                <span>Add Task</span>
+              </button>
+              
+              <button
+                onClick={() => {
+                  // Trigger the existing add time entry modal
+                  const addTimeEntryBtn = document.getElementById('addTimeEntryBtn');
+                  if (addTimeEntryBtn) {
+                    addTimeEntryBtn.click();
+                  }
+                }}
+                className="flex items-center space-x-1 px-3 py-1 text-sm bg-black text-white rounded hover:bg-gray-800 transition-colors"
+              >
+                <svg fill="currentColor" viewBox="0 0 24 24" id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" className="w-4 h-4">
+                  <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
+                  <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g>
+                  <g id="SVGRepo_iconCarrier"> 
+                    <path d="M23,18H20V15a1,1,0,0,0-2,0v3H15a1,1,0,0,0,0,2h3v3a1,1,0,0,0,2,0V20h3a1,1,0,0,0,0-2Z M11,7v4.586L8.293,14.293a1,1,0,1,0,1.414,1.414l3-3A1,1,0,0,0,13,12V7a1,1,0,0,0-2,0Z M14.728,21.624a9.985,9.985,0,1,1,6.9-6.895,1,1,0,1,0,1.924.542,11.989,11.989,0,1,0-8.276,8.277,1,1,0,1,0-.544-1.924Z"></path>
+                  </g>
+                </svg>
+                <span>Quick Entry</span>
+              </button>
+            </div>
           )}
         </div>
 
