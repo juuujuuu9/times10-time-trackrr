@@ -2022,7 +2022,7 @@ const user = await requireAuth('/')(Astro) as any;
     // Populate task information
     if (editTaskInput && editTaskIdInput) {
       editTaskInput.value = `${entry.taskName} (${entry.projectName} - ${entry.clientName})`;
-      editTaskIdInput.value = entry.taskId.toString();
+      editTaskIdInput.value = entry.taskId ? entry.taskId.toString() : '';
     }
 
     // Format time inputs (12-hour format) - only if times exist

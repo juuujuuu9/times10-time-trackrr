@@ -643,8 +643,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
   </div>
 
   <script>
-    // Import timezone utilities
-    import { createTaskDateTime } from '../utils/timezoneUtils';
+    // Note: timezone utilities will be handled server-side
     
     // Flexible time parser for natural human shorthand formats
     function parseFlexibleTime(timeString: string): { hours: number; minutes: number } | null {
@@ -1309,6 +1308,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
     const deleteTimeEntryBtn = document.getElementById('deleteTimeEntryBtn');
     let currentEditingEntry: any = null; // Store the current entry being edited
 
+
     // Add event listeners for edit buttons (delegated event handling)
     document.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
@@ -1352,7 +1352,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
       // Populate task information
       if (editTaskInput && editTaskIdInput) {
         editTaskInput.value = `${entry.taskName} (${entry.projectName} - ${entry.clientName})`;
-        editTaskIdInput.value = entry.taskId.toString();
+        editTaskIdInput.value = entry.taskId ? entry.taskId.toString() : '';
       }
 
       // Format time inputs (12-hour format) - only if times exist
