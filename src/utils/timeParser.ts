@@ -220,7 +220,8 @@ export function parseTimeString(timeInput: string, baseDate: Date = new Date()):
   }
   
   // Create a new date with the parsed time, preserving the base date
-  const resultDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
+  // Use UTC to avoid timezone conversion issues
+  const resultDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0, 0));
   
   return resultDate;
 }

@@ -163,7 +163,7 @@ export function fromUserISOString(isoString: string): Date {
   const minutes = date.getUTCMinutes();
   const seconds = date.getUTCSeconds();
   
-  return new Date(year, month, day, hours, minutes, seconds);
+  return new Date(Date.UTC(year, month, day, hours, minutes, seconds));
 }
 
 /**
