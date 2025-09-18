@@ -48,7 +48,7 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
     }
 
     const body = await request.json();
-    const { startTime, endTime, duration } = body;
+    const { startTime, endTime, duration, taskId, taskDate, notes } = body;
 
     // Validate that at least one time is provided (unless this is a manual duration entry)
     if (!startTime && !endTime && !body.duration) {
@@ -193,10 +193,46 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
       updateData.durationManual = newDurationManual;
     }
     
-    // For manual duration entries, clear start and end times
+    // Add task ID if provided
+    if (taskId) {
+      updateData.taskId = parseInt(taskId);
+    }
+    
+    // Add notes if provided
+    if (notes !== undefined) {
+      updateData.notes = notes;
+    }
+    
+    // For manual duration entries, clear start and end times and set startTime to task date
     if (duration && !startTime && !endTime) {
       updateData.startTime = null;
       updateData.endTime = null;
+      
+      // If taskDate is provided, set startTime to the task date for manual duration entries
+      if (taskDate) {
+        const { createUserDate } = await import('../../../utils/timezoneUtils');
+        updateData.startTime = createUserDate(taskDate, 12, 0);
+      }
+    }
+    
+    // For start/end time entries, update startTime if taskDate is provided
+    if ((startTime || endTime) && taskDate) {
+      const { createUserDate } = await import('../../../utils/timezoneUtils');
+      // Keep the time portion but update the date
+      if (newStartTime) {
+        const taskDateObj = new Date(taskDate);
+        const timeOnly = new Date(newStartTime);
+        const combinedDateTime = new Date(taskDateObj.getFullYear(), taskDateObj.getMonth(), taskDateObj.getDate(), 
+                                        timeOnly.getHours(), timeOnly.getMinutes(), timeOnly.getSeconds());
+        updateData.startTime = combinedDateTime;
+      }
+      if (newEndTime) {
+        const taskDateObj = new Date(taskDate);
+        const timeOnly = new Date(newEndTime);
+        const combinedDateTime = new Date(taskDateObj.getFullYear(), taskDateObj.getMonth(), taskDateObj.getDate(), 
+                                        timeOnly.getHours(), timeOnly.getMinutes(), timeOnly.getSeconds());
+        updateData.endTime = combinedDateTime;
+      }
     }
 
     // Update the time entry
