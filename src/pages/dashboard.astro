@@ -1508,23 +1508,27 @@ const user = await requireAuth('/')(Astro) as any;
         return;
       }
 
-      // Fetch both regular tasks and system tasks
-      const [regularTasksResponse, systemTasksResponse] = await Promise.all([
-        fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=20`),
-        fetch(`/api/system-tasks?assignedTo=${encodeURIComponent(userId)}&limit=100`)
+      // Fetch both regular tasks and system tasks in parallel with timeout
+      const [regularTasksResponse, systemTasksResponse] = await Promise.allSettled([
+        fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=20`, { 
+          signal: AbortSignal.timeout(10000) // 10 second timeout
+        }),
+        fetch(`/api/system-tasks?assignedTo=${encodeURIComponent(userId)}&limit=100`, { 
+          signal: AbortSignal.timeout(10000) // 10 second timeout
+        })
       ]);
 
       let allTasks: any[] = [];
 
       // Get regular tasks
-      if (regularTasksResponse.ok) {
-        const regularData = await regularTasksResponse.json();
+      if (regularTasksResponse.status === 'fulfilled' && regularTasksResponse.value.ok) {
+        const regularData = await regularTasksResponse.value.json();
         allTasks = [...(regularData.data || [])];
       }
 
       // Get system tasks
-      if (systemTasksResponse.ok) {
-        const systemData = await systemTasksResponse.json();
+      if (systemTasksResponse.status === 'fulfilled' && systemTasksResponse.value.ok) {
+        const systemData = await systemTasksResponse.value.json();
         allTasks = [...allTasks, ...(systemData.data || [])];
       }
       
@@ -1551,30 +1555,34 @@ const user = await requireAuth('/')(Astro) as any;
 
       console.log('searchAllTasks called for user:', userId);
 
-      // Fetch both regular tasks and system tasks
-      const [regularTasksResponse, systemTasksResponse] = await Promise.all([
-        fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=20`),
-        fetch(`/api/system-tasks?assignedTo=${encodeURIComponent(userId)}&limit=100`)
+      // Fetch both regular tasks and system tasks in parallel with timeout
+      const [regularTasksResponse, systemTasksResponse] = await Promise.allSettled([
+        fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=20`, { 
+          signal: AbortSignal.timeout(10000) // 10 second timeout
+        }),
+        fetch(`/api/system-tasks?assignedTo=${encodeURIComponent(userId)}&limit=100`, { 
+          signal: AbortSignal.timeout(10000) // 10 second timeout
+        })
       ]);
 
       let allTasks: any[] = [];
 
       // Get regular tasks
-      if (regularTasksResponse.ok) {
-        const regularData = await regularTasksResponse.json();
+      if (regularTasksResponse.status === 'fulfilled' && regularTasksResponse.value.ok) {
+        const regularData = await regularTasksResponse.value.json();
         console.log('Regular tasks response:', regularData);
         allTasks = [...(regularData.data || [])];
       } else {
-        console.error('Regular tasks response not ok:', regularTasksResponse.status);
+        console.error('Regular tasks response failed:', regularTasksResponse.status === 'rejected' ? regularTasksResponse.reason : regularTasksResponse.value?.status);
       }
 
       // Get system tasks
-      if (systemTasksResponse.ok) {
-        const systemData = await systemTasksResponse.json();
+      if (systemTasksResponse.status === 'fulfilled' && systemTasksResponse.value.ok) {
+        const systemData = await systemTasksResponse.value.json();
         console.log('System tasks response:', systemData);
         allTasks = [...allTasks, ...(systemData.data || [])];
       } else {
-        console.error('System tasks response not ok:', systemTasksResponse.status);
+        console.error('System tasks response failed:', systemTasksResponse.status === 'rejected' ? systemTasksResponse.reason : systemTasksResponse.value?.status);
       }
 
       console.log('All tasks combined:', allTasks);
@@ -1679,30 +1687,34 @@ const user = await requireAuth('/')(Astro) as any;
 
       console.log('Searching all edit tasks for user:', userId);
 
-      // Fetch both regular tasks and system tasks
-      const [regularTasksResponse, systemTasksResponse] = await Promise.all([
-        fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=20`),
-        fetch(`/api/system-tasks?assignedTo=${encodeURIComponent(userId)}&limit=100`)
+      // Fetch both regular tasks and system tasks in parallel with timeout
+      const [regularTasksResponse, systemTasksResponse] = await Promise.allSettled([
+        fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=20`, { 
+          signal: AbortSignal.timeout(10000) // 10 second timeout
+        }),
+        fetch(`/api/system-tasks?assignedTo=${encodeURIComponent(userId)}&limit=100`, { 
+          signal: AbortSignal.timeout(10000) // 10 second timeout
+        })
       ]);
 
       let allTasks: any[] = [];
 
       // Get regular tasks
-      if (regularTasksResponse.ok) {
-        const regularData = await regularTasksResponse.json();
+      if (regularTasksResponse.status === 'fulfilled' && regularTasksResponse.value.ok) {
+        const regularData = await regularTasksResponse.value.json();
         console.log('Regular tasks response:', regularData);
         allTasks = [...allTasks, ...(regularData.data || [])];
       } else {
-        console.error('Regular tasks response not ok:', regularTasksResponse.status);
+        console.error('Regular tasks response failed:', regularTasksResponse.status === 'rejected' ? regularTasksResponse.reason : regularTasksResponse.value?.status);
       }
 
       // Get system tasks
-      if (systemTasksResponse.ok) {
-        const systemData = await systemTasksResponse.json();
+      if (systemTasksResponse.status === 'fulfilled' && systemTasksResponse.value.ok) {
+        const systemData = await systemTasksResponse.value.json();
         console.log('System tasks response:', systemData);
         allTasks = [...allTasks, ...(systemData.data || [])];
       } else {
-        console.error('System tasks response not ok:', systemTasksResponse.status);
+        console.error('System tasks response failed:', systemTasksResponse.status === 'rejected' ? systemTasksResponse.reason : systemTasksResponse.value?.status);
       }
 
       console.log('All tasks combined:', allTasks);

@@ -204,41 +204,63 @@ export default function Timer() {
     }
   };
 
-  // Load all tasks (regular and system tasks)
-  const loadTasks = async () => {
+  // Load all tasks (regular and system tasks) with retry logic
+  const loadTasks = async (retryCount = 0) => {
     if (!currentUserId) {
       console.log('loadTasks: No currentUserId, skipping');
       return;
     }
 
-    console.log('loadTasks: Loading tasks for userId:', currentUserId);
+    console.log('loadTasks: Loading tasks for userId:', currentUserId, 'retry:', retryCount);
     try {
-      // Load user's regular tasks
-      const tasksResponse = await fetch(`/api/tasks?assignedTo=${currentUserId}`);
+      // Load both regular tasks and system tasks in parallel with timeout
+      const [regularTasksResponse, systemTasksResponse] = await Promise.allSettled([
+        fetch(`/api/tasks?assignedTo=${currentUserId}`, { 
+          signal: AbortSignal.timeout(10000) // 10 second timeout
+        }),
+        fetch(`/api/system-tasks?assignedTo=${currentUserId}&limit=100`, { 
+          signal: AbortSignal.timeout(10000) // 10 second timeout
+        })
+      ]);
+
       let regularTasks = [];
-      if (tasksResponse.ok) {
-        const tasksData = await tasksResponse.json();
+      let systemTasks = [];
+
+      // Handle regular tasks response
+      if (regularTasksResponse.status === 'fulfilled' && regularTasksResponse.value.ok) {
+        const tasksData = await regularTasksResponse.value.json();
         regularTasks = tasksData.data || [];
+        console.log('loadTasks: Loaded', regularTasks.length, 'regular tasks');
       } else {
-        console.error('Failed to load regular tasks:', tasksResponse.status);
+        console.error('Failed to load regular tasks:', regularTasksResponse.status === 'rejected' ? regularTasksResponse.reason : regularTasksResponse.value?.status);
       }
 
-      // Load user's system-generated tasks (General tasks)
-      const systemTasksResponse = await fetch(`/api/system-tasks?assignedTo=${currentUserId}&limit=100`);
-      let systemTasks = [];
-      if (systemTasksResponse.ok) {
-        const systemTasksData = await systemTasksResponse.json();
+      // Handle system tasks response
+      if (systemTasksResponse.status === 'fulfilled' && systemTasksResponse.value.ok) {
+        const systemTasksData = await systemTasksResponse.value.json();
         systemTasks = systemTasksData.data || [];
+        console.log('loadTasks: Loaded', systemTasks.length, 'system tasks');
       } else {
-        console.error('Failed to load system tasks:', systemTasksResponse.status);
+        console.error('Failed to load system tasks:', systemTasksResponse.status === 'rejected' ? systemTasksResponse.reason : systemTasksResponse.value?.status);
       }
 
       // Combine regular tasks and system tasks
       const allTasks = [...regularTasks, ...systemTasks];
       setTasks(allTasks);
-      console.log('loadTasks: Loaded', allTasks.length, 'tasks');
+      console.log('loadTasks: Total loaded', allTasks.length, 'tasks');
+
+      // If no tasks were loaded and this is the first attempt, retry once
+      if (allTasks.length === 0 && retryCount === 0) {
+        console.log('loadTasks: No tasks loaded, retrying in 1 second...');
+        setTimeout(() => loadTasks(1), 1000);
+      }
     } catch (error) {
       console.error('Error loading tasks:', error);
+      // Retry once if this is the first attempt
+      if (retryCount === 0) {
+        console.log('loadTasks: Error occurred, retrying in 2 seconds...');
+        setTimeout(() => loadTasks(1), 2000);
+      }
     }
   };
 
@@ -325,6 +347,14 @@ export default function Timer() {
 
     initializeData();
   }, []);
+
+  // Reload tasks when currentUserId changes (in case it's set after initial load)
+  useEffect(() => {
+    if (currentUserId) {
+      console.log('currentUserId changed, reloading tasks:', currentUserId);
+      loadTasks();
+    }
+  }, [currentUserId]);
 
   // Load daily duration totals when currentUserId or selected week range changes
   useEffect(() => {
