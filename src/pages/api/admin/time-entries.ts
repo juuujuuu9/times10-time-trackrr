@@ -70,9 +70,10 @@ export const POST: APIRoute = async ({ request }) => {
     };
 
     if (startTime && endTime) {
-      // Start/end times entry
-      timeEntryData.startTime = new Date(startTime);
-      timeEntryData.endTime = new Date(endTime);
+      // Start/end times entry - use timezone-safe date parsing
+      const { fromUserISOString } = await import('../../../utils/timezoneUtils');
+      timeEntryData.startTime = fromUserISOString(startTime);
+      timeEntryData.endTime = fromUserISOString(endTime);
       timeEntryData.durationManual = null;
     } else if (duration) {
       // Manual duration entry
