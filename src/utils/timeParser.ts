@@ -35,8 +35,8 @@ export function parseTimeInput(input: string): number {
     const minutes = parseFloat(minuteMatch[1]);
     const result = Math.round(minutes * 60);
     
-    // Validate result bounds (max 24 hours in minutes)
-    if (result < 0 || result > 24 * 60) {
+    // Validate result bounds (max 24 hours in seconds)
+    if (result < 0 || result > 24 * 60 * 60) {
       throw new Error('Duration must be between 0 and 24 hours');
     }
     
