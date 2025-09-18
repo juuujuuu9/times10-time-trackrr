@@ -581,6 +581,9 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
   </div>
 
   <script>
+    // Import timezone utilities
+    import { createTaskDateTime } from '../utils/timezoneUtils';
+    
     // Flexible time parser for natural human shorthand formats
     function parseFlexibleTime(timeString: string): { hours: number; minutes: number } | null {
       if (!timeString) return null;
@@ -852,8 +855,8 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             const hours = parsedTime.hours;
             const minutes = parsedTime.minutes;
             
-            const newDateTime = new Date(taskDate);
-            newDateTime.setHours(hours, minutes, 0, 0);
+            // Use timezone-safe date creation
+            const newDateTime = createTaskDateTime(taskDate, hours, minutes);
             
             const updateData: { startTime?: string; endTime?: string; durationManual?: number | null } = {};
             if (timeType === 'start') {
@@ -1450,8 +1453,8 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
           const startHours = startParsedTime.hours;
           const startMinutes = startParsedTime.minutes;
           
-          const startDateTime = new Date(taskDate);
-          startDateTime.setHours(startHours, startMinutes, 0, 0);
+          // Use timezone-safe date creation to preserve user's intended date
+          const startDateTime = createTaskDateTime(taskDate, startHours, startMinutes);
           updateData.startTime = startDateTime.toISOString();
           
           // Parse end time using flexible parser
@@ -1467,8 +1470,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
           const endHours = endParsedTime.hours;
           const endMinutes = endParsedTime.minutes;
           
-          const endDateTime = new Date(taskDate);
-          endDateTime.setHours(endHours, endMinutes, 0, 0);
+          const endDateTime = createTaskDateTime(taskDate, endHours, endMinutes);
           updateData.endTime = endDateTime.toISOString();
           
           // Validate that end time is after start time

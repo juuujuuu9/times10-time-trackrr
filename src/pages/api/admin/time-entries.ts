@@ -75,7 +75,9 @@ export const POST: APIRoute = async ({ request }) => {
 
     // For manual duration entries, set startTime to the task date to indicate when the work was done
     // The endTime remains null since we only have duration, not start/end times
-    const taskStartTime = taskDate ? new Date(taskDate) : new Date();
+    // Use timezone-safe date creation to preserve the intended date
+    const { createUserDate, getTodayString } = await import('../../../utils/timezoneUtils');
+    const taskStartTime = taskDate ? createUserDate(taskDate, 0, 0) : createUserDate(getTodayString(), 0, 0);
 
     const newTimeEntry = await db.insert(timeEntries).values({
       userId: parseInt(userId),
@@ -144,7 +146,8 @@ export const PUT: APIRoute = async ({ request }) => {
 
     // For manual duration entries, update startTime to the task date if provided
     if (taskDate) {
-      updateData.startTime = new Date(taskDate);
+      const { createUserDate } = await import('../../../utils/timezoneUtils');
+      updateData.startTime = createUserDate(taskDate, 0, 0);
     }
 
     const updatedTimeEntry = await db

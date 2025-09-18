@@ -113,8 +113,11 @@ export function parseTimeInput(input: string): number {
 export function parseTimeString(timeInput: string, baseDate: Date = new Date()): Date {
   const trimmed = timeInput.trim().toLowerCase();
   
-  // Create a new date object based on the base date
-  const resultDate = new Date(baseDate);
+  // Import timezone utilities
+  const { getDateComponents } = require('./timezoneUtils');
+  
+  // Get date components to avoid timezone issues
+  const { year, month, day } = getDateComponents(baseDate);
   
   // Handle various time formats
   let hours = 0;
@@ -216,8 +219,8 @@ export function parseTimeString(timeInput: string, baseDate: Date = new Date()):
     hours = 0;
   }
   
-  // Set the time on the result date
-  resultDate.setHours(hours, minutes, 0, 0);
+  // Create a new date with the parsed time, preserving the base date
+  const resultDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
   
   return resultDate;
 }
