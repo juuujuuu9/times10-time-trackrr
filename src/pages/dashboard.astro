@@ -1457,6 +1457,9 @@ const user = await requireAuth('/')(Astro) as any;
     if (!target.closest('#timeEntryTask') && !target.closest('#taskDropdown') && !target.closest('#taskDropdownArrow')) {
       hideTaskDropdown();
     }
+    if (!target.closest('#editTimeEntryTask') && !target.closest('#editTaskDropdown') && !target.closest('#editTaskDropdownArrow')) {
+      hideEditTaskDropdown();
+    }
   });
   
   // Task search functions
@@ -1603,11 +1606,40 @@ const user = await requireAuth('/')(Astro) as any;
 
   async function searchEditTasks(searchTerm: string) {
     try {
-      const response = await fetch(`/api/tasks/search?q=${encodeURIComponent(searchTerm)}`);
-      if (response.ok) {
-        const tasks = await response.json();
-        displayEditTaskDropdown(tasks);
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        console.error('No user ID available for task search');
+        return;
       }
+
+      // Fetch both regular tasks and system tasks
+      const [regularTasksResponse, systemTasksResponse] = await Promise.all([
+        fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=20`),
+        fetch(`/api/system-tasks?assignedTo=${encodeURIComponent(userId)}&limit=100`)
+      ]);
+
+      let allTasks: any[] = [];
+
+      // Get regular tasks
+      if (regularTasksResponse.ok) {
+        const regularData = await regularTasksResponse.json();
+        allTasks = [...allTasks, ...(regularData.data || [])];
+      }
+
+      // Get system tasks
+      if (systemTasksResponse.ok) {
+        const systemData = await systemTasksResponse.json();
+        allTasks = [...allTasks, ...(systemData.data || [])];
+      }
+
+      // Filter tasks based on search term
+      const filteredTasks = allTasks.filter(task =>
+        task.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        task.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        task.clientName.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+
+      displayEditTaskDropdown(filteredTasks);
     } catch (error) {
       console.error('Error searching tasks:', error);
     }
@@ -1615,11 +1647,42 @@ const user = await requireAuth('/')(Astro) as any;
 
   async function searchAllEditTasks() {
     try {
-      const response = await fetch('/api/tasks/search');
-      if (response.ok) {
-        const tasks = await response.json();
-        displayEditTaskDropdown(tasks);
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        console.error('No user ID available for task search');
+        return;
       }
+
+      console.log('Searching all edit tasks for user:', userId);
+
+      // Fetch both regular tasks and system tasks
+      const [regularTasksResponse, systemTasksResponse] = await Promise.all([
+        fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=20`),
+        fetch(`/api/system-tasks?assignedTo=${encodeURIComponent(userId)}&limit=100`)
+      ]);
+
+      let allTasks: any[] = [];
+
+      // Get regular tasks
+      if (regularTasksResponse.ok) {
+        const regularData = await regularTasksResponse.json();
+        console.log('Regular tasks response:', regularData);
+        allTasks = [...allTasks, ...(regularData.data || [])];
+      } else {
+        console.error('Regular tasks response not ok:', regularTasksResponse.status);
+      }
+
+      // Get system tasks
+      if (systemTasksResponse.ok) {
+        const systemData = await systemTasksResponse.json();
+        console.log('System tasks response:', systemData);
+        allTasks = [...allTasks, ...(systemData.data || [])];
+      } else {
+        console.error('System tasks response not ok:', systemTasksResponse.status);
+      }
+
+      console.log('All tasks combined:', allTasks);
+      displayEditTaskDropdown(allTasks);
     } catch (error) {
       console.error('Error fetching all tasks:', error);
     }
@@ -1627,18 +1690,26 @@ const user = await requireAuth('/')(Astro) as any;
 
   function showEditTaskDropdown() {
     const editTaskDropdown = document.getElementById('editTaskDropdown');
+    const editTaskDropdownArrow = document.getElementById('editTaskDropdownArrow');
     if (editTaskDropdown) {
       editTaskDropdown.classList.remove('hidden');
       editTaskDropdownOpen = true;
       searchAllEditTasks();
     }
+    if (editTaskDropdownArrow) {
+      editTaskDropdownArrow.style.transform = 'rotate(180deg)';
+    }
   }
 
   function hideEditTaskDropdown() {
     const editTaskDropdown = document.getElementById('editTaskDropdown');
+    const editTaskDropdownArrow = document.getElementById('editTaskDropdownArrow');
     if (editTaskDropdown) {
       editTaskDropdown.classList.add('hidden');
       editTaskDropdownOpen = false;
+    }
+    if (editTaskDropdownArrow) {
+      editTaskDropdownArrow.style.transform = 'rotate(0deg)';
     }
   }
 
@@ -1653,6 +1724,8 @@ const user = await requireAuth('/')(Astro) as any;
   function displayEditTaskDropdown(tasks: any[]) {
     const editTaskDropdown = document.getElementById('editTaskDropdown');
     if (!editTaskDropdown) return;
+
+    console.log('Displaying edit task dropdown with tasks:', tasks);
 
     if (tasks.length === 0) {
       editTaskDropdown.innerHTML = '<div class="px-3 py-2 text-gray-500 text-sm">No tasks found</div>';
