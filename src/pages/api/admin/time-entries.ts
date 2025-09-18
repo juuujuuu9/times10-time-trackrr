@@ -71,8 +71,8 @@ export const POST: APIRoute = async ({ request }) => {
 
     if (startTime && endTime) {
       // Start/end times entry
-      timeEntryData.startTime = startTime;
-      timeEntryData.endTime = endTime;
+      timeEntryData.startTime = new Date(startTime);
+      timeEntryData.endTime = new Date(endTime);
       timeEntryData.durationManual = null;
     } else if (duration && taskDate) {
       // Manual duration entry
