@@ -124,25 +124,9 @@ export default function Timer() {
     if (!selectedTask || !currentUserId) return;
 
     try {
-      // Load regular tasks
-      const response = await fetch(`/api/tasks?assignedTo=${currentUserId}`);
-      let regularTasks = [];
-      if (response.ok) {
-        const tasksData = await response.json();
-        regularTasks = tasksData.data || [];
-      }
-
-      // Load system tasks
-      const systemResponse = await fetch(`/api/system-tasks?assignedTo=${currentUserId}&limit=100`);
-      let systemTasks = [];
-      if (systemResponse.ok) {
-        const systemTasksData = await systemResponse.json();
-        systemTasks = systemTasksData.data || [];
-      }
-
-      // Combine all tasks
-      const currentTasks = [...regularTasks, ...systemTasks];
-      setTasks(currentTasks);
+      // Load all tasks using the reusable function
+      await loadTasks();
+      const currentTasks = tasks;
       
       // Check if the selected task still exists
       const taskExists = currentTasks.some((task: Task) => task.id === selectedTask);
@@ -220,6 +204,44 @@ export default function Timer() {
     }
   };
 
+  // Load all tasks (regular and system tasks)
+  const loadTasks = async () => {
+    if (!currentUserId) {
+      console.log('loadTasks: No currentUserId, skipping');
+      return;
+    }
+
+    console.log('loadTasks: Loading tasks for userId:', currentUserId);
+    try {
+      // Load user's regular tasks
+      const tasksResponse = await fetch(`/api/tasks?assignedTo=${currentUserId}`);
+      let regularTasks = [];
+      if (tasksResponse.ok) {
+        const tasksData = await tasksResponse.json();
+        regularTasks = tasksData.data || [];
+      } else {
+        console.error('Failed to load regular tasks:', tasksResponse.status);
+      }
+
+      // Load user's system-generated tasks (General tasks)
+      const systemTasksResponse = await fetch(`/api/system-tasks?assignedTo=${currentUserId}&limit=100`);
+      let systemTasks = [];
+      if (systemTasksResponse.ok) {
+        const systemTasksData = await systemTasksResponse.json();
+        systemTasks = systemTasksData.data || [];
+      } else {
+        console.error('Failed to load system tasks:', systemTasksResponse.status);
+      }
+
+      // Combine regular tasks and system tasks
+      const allTasks = [...regularTasks, ...systemTasks];
+      setTasks(allTasks);
+      console.log('loadTasks: Loaded', allTasks.length, 'tasks');
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+    }
+  };
+
   // Initialize component and load user data
   useEffect(() => {
     const initializeData = async () => {
@@ -287,29 +309,8 @@ export default function Timer() {
               }
             }
             
-            // Load user's regular tasks
-            const tasksResponse = await fetch(`/api/tasks?assignedTo=${userId}`);
-            let regularTasks = [];
-            if (tasksResponse.ok) {
-              const tasksData = await tasksResponse.json();
-              regularTasks = tasksData.data || [];
-            } else {
-              console.error('Failed to load regular tasks:', tasksResponse.status);
-            }
-
-            // Load user's system-generated tasks (General tasks)
-            const systemTasksResponse = await fetch(`/api/system-tasks?assignedTo=${userId}&limit=100`);
-            let systemTasks = [];
-            if (systemTasksResponse.ok) {
-              const systemTasksData = await systemTasksResponse.json();
-              systemTasks = systemTasksData.data || [];
-            } else {
-              console.error('Failed to load system tasks:', systemTasksResponse.status);
-            }
-
-            // Combine regular tasks and system tasks
-            const allTasks = [...regularTasks, ...systemTasks];
-            setTasks(allTasks);
+            // Load tasks using the reusable function
+            await loadTasks();
             
             // Load daily duration totals (will be called again when currentUserId is set)
             // await loadDailyDurationTotals();
@@ -407,7 +408,8 @@ export default function Timer() {
     const handleTimerStopped = () => {
       // Refresh timer state immediately when timer is stopped from elsewhere
       refreshTimer();
-      // Also refresh daily duration totals
+      // Also refresh tasks and daily duration totals
+      loadTasks();
       loadDailyDurationTotals();
       loadTaskDailyTotals();
     };
@@ -415,13 +417,15 @@ export default function Timer() {
     const handleTimerStarted = () => {
       // Refresh timer state when timer is started from elsewhere
       refreshTimer();
-      // Also refresh daily duration totals (in case of manual entries)
+      // Also refresh tasks and daily duration totals (in case of manual entries)
+      loadTasks();
       loadDailyDurationTotals();
       loadTaskDailyTotals();
     };
 
     const handleTimeEntryChanged = () => {
-      // Refresh daily duration totals when time entries are added/updated/deleted
+      // Refresh tasks, daily duration totals, and task daily totals when time entries are added/updated/deleted
+      loadTasks();
       loadDailyDurationTotals();
       loadTaskDailyTotals();
     };
@@ -441,10 +445,11 @@ export default function Timer() {
     };
   }, [refreshTimer]);
 
-  // Periodic refresh of daily totals to ensure they stay up-to-date
+  // Periodic refresh of tasks and daily totals to ensure they stay up-to-date
   useEffect(() => {
     const interval = setInterval(() => {
       if (currentUserId) {
+        loadTasks();
         loadDailyDurationTotals();
         loadTaskDailyTotals();
       }
