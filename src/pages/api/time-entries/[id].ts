@@ -90,7 +90,9 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
       try {
         // Check if it's a datetime-local format (ISO string)
         if (startTime.includes('T') && startTime.includes('-')) {
-          newStartTime = new Date(startTime);
+          // Use timezone-safe date parsing for ISO strings
+          const { fromUserISOString } = await import('../../../utils/timezoneUtils');
+          newStartTime = fromUserISOString(startTime);
           if (isNaN(newStartTime.getTime())) {
             throw new Error('Invalid datetime format');
           }
@@ -113,7 +115,9 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
       try {
         // Check if it's a datetime-local format (ISO string)
         if (endTime.includes('T') && endTime.includes('-')) {
-          newEndTime = new Date(endTime);
+          // Use timezone-safe date parsing for ISO strings
+          const { fromUserISOString } = await import('../../../utils/timezoneUtils');
+          newEndTime = fromUserISOString(endTime);
           if (isNaN(newEndTime.getTime())) {
             throw new Error('Invalid datetime format');
           }
@@ -217,20 +221,16 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
     
     // For start/end time entries, update startTime if taskDate is provided
     if ((startTime || endTime) && taskDate) {
-      const { createUserDate } = await import('../../../utils/timezoneUtils');
-      // Keep the time portion but update the date
+      const { createTaskDateTime } = await import('../../../utils/timezoneUtils');
+      // Keep the time portion but update the date using timezone-safe methods
       if (newStartTime) {
-        const taskDateObj = new Date(taskDate);
         const timeOnly = new Date(newStartTime);
-        const combinedDateTime = new Date(taskDateObj.getFullYear(), taskDateObj.getMonth(), taskDateObj.getDate(), 
-                                        timeOnly.getHours(), timeOnly.getMinutes(), timeOnly.getSeconds());
+        const combinedDateTime = createTaskDateTime(new Date(taskDate), timeOnly.getHours(), timeOnly.getMinutes());
         updateData.startTime = combinedDateTime;
       }
       if (newEndTime) {
-        const taskDateObj = new Date(taskDate);
         const timeOnly = new Date(newEndTime);
-        const combinedDateTime = new Date(taskDateObj.getFullYear(), taskDateObj.getMonth(), taskDateObj.getDate(), 
-                                        timeOnly.getHours(), timeOnly.getMinutes(), timeOnly.getSeconds());
+        const combinedDateTime = createTaskDateTime(new Date(taskDate), timeOnly.getHours(), timeOnly.getMinutes());
         updateData.endTime = combinedDateTime;
       }
     }

@@ -89,14 +89,15 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Create the time entry
+    // Create the time entry using timezone-safe date parsing
+    const { fromUserISOString } = await import('../../utils/timezoneUtils');
     const [newEntry] = await db
       .insert(timeEntries)
       .values({
         taskId: parseInt(taskId),
         userId: parseInt(userId),
-        startTime: new Date(startTime),
-        endTime: new Date(endTime),
+        startTime: fromUserISOString(startTime),
+        endTime: fromUserISOString(endTime),
         durationManual: duration || null,
         notes: notes || null,
       })
