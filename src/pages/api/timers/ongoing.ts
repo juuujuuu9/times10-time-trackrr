@@ -104,7 +104,7 @@ export const POST: APIRoute = async (context) => {
     }
 
     const body = await context.request.json();
-    const { taskId, notes } = body;
+    const { taskId, notes, clientTime } = body;
 
     if (!taskId) {
       return new Response(JSON.stringify({ 
@@ -161,8 +161,8 @@ export const POST: APIRoute = async (context) => {
     
     // Use the current time as provided by the client (preserves user's timezone)
     // The client should send the current time in their timezone
-    const clientTime = body.clientTime ? new Date(body.clientTime) : now;
-    const startTime = createUserDate(todayString, clientTime.getHours(), clientTime.getMinutes(), clientTime.getSeconds());
+    const clientTimeDate = clientTime ? new Date(clientTime) : now;
+    const startTime = createUserDate(todayString, clientTimeDate.getHours(), clientTimeDate.getMinutes(), clientTimeDate.getSeconds());
     
     const [newTimer] = await db.insert(timeEntries).values({
       userId: currentUser.id,
@@ -214,7 +214,7 @@ export const PUT: APIRoute = async (context) => {
     }
 
     const body = await context.request.json();
-    const { timerId, endTime, notes } = body;
+    const { timerId, endTime, notes, clientTime } = body;
 
     if (!timerId) {
       return new Response(JSON.stringify({ 
@@ -255,8 +255,8 @@ export const PUT: APIRoute = async (context) => {
     const todayString = getTodayString();
     
     // Use the current time from the client to preserve user's timezone
-    const clientTime = body.clientTime ? new Date(body.clientTime) : now;
-    const endTimeDate = endTime ? new Date(endTime) : createUserDate(todayString, clientTime.getHours(), clientTime.getMinutes(), clientTime.getSeconds());
+    const clientTimeDate = clientTime ? new Date(clientTime) : now;
+    const endTimeDate = endTime ? new Date(endTime) : createUserDate(todayString, clientTimeDate.getHours(), clientTimeDate.getMinutes(), clientTimeDate.getSeconds());
     const duration = Math.floor((endTimeDate.getTime() - new Date(timer.startTime || '').getTime()) / 1000);
 
     // Update the timer with end time
