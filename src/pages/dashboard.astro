@@ -1106,7 +1106,7 @@ const user = await requireAuth('/')(Astro) as any;
               },
               body: JSON.stringify({ 
                 timerId: parseInt(timerId),
-                clientTime: new Date().toISOString() // Send client's current time to preserve timezone
+                clientTime: new Date().getTime() // Send client's current time as timestamp to preserve timezone
               }),
             });
 

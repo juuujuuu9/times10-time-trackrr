@@ -121,7 +121,7 @@ export function useRealtimeTimer(pollInterval: number = 2000): UseRealtimeTimerR
         body: JSON.stringify({ 
           taskId, 
           notes, 
-          clientTime: new Date().toISOString() // Send client's current time to preserve timezone
+          clientTime: new Date().getTime() // Send client's current time as timestamp to preserve timezone
         }),
       });
 
@@ -164,7 +164,7 @@ export function useRealtimeTimer(pollInterval: number = 2000): UseRealtimeTimerR
         body: JSON.stringify({ 
           timerId, 
           notes, 
-          clientTime: new Date().toISOString() // Send client's current time to preserve timezone
+          clientTime: new Date().getTime() // Send client's current time as timestamp to preserve timezone
         }),
       });
 
