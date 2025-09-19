@@ -61,7 +61,7 @@ export const GET: APIRoute = async (context) => {
       return {
         ...timer,
         elapsedSeconds,
-        startTime: timer.startTime?.toISOString() || null
+        startTime: timer.startTime // Keep the original time without conversion
       };
     });
 
