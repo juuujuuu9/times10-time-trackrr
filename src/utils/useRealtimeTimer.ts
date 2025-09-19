@@ -118,7 +118,11 @@ export function useRealtimeTimer(pollInterval: number = 2000): UseRealtimeTimerR
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ taskId, notes }),
+        body: JSON.stringify({ 
+          taskId, 
+          notes, 
+          clientTime: new Date().toISOString() // Send client's current time to preserve timezone
+        }),
       });
 
       if (!response.ok) {
@@ -157,7 +161,11 @@ export function useRealtimeTimer(pollInterval: number = 2000): UseRealtimeTimerR
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ timerId, notes }),
+        body: JSON.stringify({ 
+          timerId, 
+          notes, 
+          clientTime: new Date().toISOString() // Send client's current time to preserve timezone
+        }),
       });
 
       if (!response.ok) {

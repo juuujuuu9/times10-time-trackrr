@@ -56,6 +56,9 @@ export const GET: APIRoute = async (context) => {
     const { getTodayString, createUserDate } = await import('../../../utils/timezoneUtils');
     const now = new Date();
     const todayString = getTodayString();
+    
+    // For GET requests, we need to use the current server time since we don't have client time
+    // This is acceptable for elapsed time calculation as it's just for display
     const currentTime = createUserDate(todayString, now.getHours(), now.getMinutes(), now.getSeconds());
     const elapsedSeconds = Math.floor((currentTime.getTime() - new Date(timer.startTime || '').getTime()) / 1000);
 
@@ -151,10 +154,15 @@ export const POST: APIRoute = async (context) => {
     }
 
     // Create new ongoing timer using timezone-safe date creation
+    // Get the current time from the client to preserve user's timezone
     const { getTodayString, createUserDate } = await import('../../../utils/timezoneUtils');
     const now = new Date();
     const todayString = getTodayString();
-    const startTime = createUserDate(todayString, now.getHours(), now.getMinutes(), now.getSeconds());
+    
+    // Use the current time as provided by the client (preserves user's timezone)
+    // The client should send the current time in their timezone
+    const clientTime = body.clientTime ? new Date(body.clientTime) : now;
+    const startTime = createUserDate(todayString, clientTime.getHours(), clientTime.getMinutes(), clientTime.getSeconds());
     
     const [newTimer] = await db.insert(timeEntries).values({
       userId: currentUser.id,
@@ -245,7 +253,10 @@ export const PUT: APIRoute = async (context) => {
     const { getTodayString, createUserDate } = await import('../../../utils/timezoneUtils');
     const now = new Date();
     const todayString = getTodayString();
-    const endTimeDate = endTime ? new Date(endTime) : createUserDate(todayString, now.getHours(), now.getMinutes(), now.getSeconds());
+    
+    // Use the current time from the client to preserve user's timezone
+    const clientTime = body.clientTime ? new Date(body.clientTime) : now;
+    const endTimeDate = endTime ? new Date(endTime) : createUserDate(todayString, clientTime.getHours(), clientTime.getMinutes(), clientTime.getSeconds());
     const duration = Math.floor((endTimeDate.getTime() - new Date(timer.startTime || '').getTime()) / 1000);
 
     // Update the timer with end time

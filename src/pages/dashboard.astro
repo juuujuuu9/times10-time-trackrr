@@ -584,7 +584,7 @@ const user = await requireAuth('/')(Astro) as any;
 
 <script>
   // Import timezone utilities
-  import { createTaskDateTime } from '../utils/timezoneUtils';
+  import { createTaskDateTime, formatTimeForDisplay } from '../utils/timezoneUtils';
   
   // Show dashboard content after a brief delay to prevent flash
   document.addEventListener('DOMContentLoaded', () => {
@@ -766,7 +766,7 @@ const user = await requireAuth('/')(Astro) as any;
             const taskDate = new Date(timer.startTime);
             const elapsedHours = (timer.elapsedSeconds / 3600).toFixed(1);
             const startTime = new Date(timer.startTime);
-            const startTimeDisplay = startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            const startTimeDisplay = formatTimeForDisplay(startTime);
             
             return `
               <tr class="hover:bg-gray-50 bg-green-50 border-l-4 border-green-400" data-timer-id="${timer.id}">
@@ -837,8 +837,8 @@ const user = await requireAuth('/')(Astro) as any;
             const endTime = (!isManualDurationEntry && entry.endTime) ? new Date(entry.endTime) : null;
             
             // Format times for display using timezone-safe function
-            const startTimeDisplay = startTime ? startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'UTC' }) : '--:-- --';
-            const endTimeDisplay = endTime ? endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'UTC' }) : '--:-- --';
+            const startTimeDisplay = startTime ? formatTimeForDisplay(startTime) : '--:-- --';
+            const endTimeDisplay = endTime ? formatTimeForDisplay(endTime) : '--:-- --';
             
             return `
               <tr class="hover:bg-gray-50" data-entry-id="${entry.id}">
@@ -1104,7 +1104,10 @@ const user = await requireAuth('/')(Astro) as any;
               headers: {
                 'Content-Type': 'application/json',
               },
-              body: JSON.stringify({ timerId: parseInt(timerId) }),
+              body: JSON.stringify({ 
+                timerId: parseInt(timerId),
+                clientTime: new Date().toISOString() // Send client's current time to preserve timezone
+              }),
             });
 
             if (response.ok) {
@@ -2571,14 +2574,14 @@ const user = await requireAuth('/')(Astro) as any;
                 
                 if (startTimeInput && result.data.startTime) {
                   const startDate = new Date(result.data.startTime);
-                  startTimeInput.value = startDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                  startTimeInput.value = formatTimeForDisplay(startDate);
                 } else if (startTimeInput && !result.data.startTime) {
                   startTimeInput.value = '--:-- --';
                 }
                 
                 if (endTimeInput && result.data.endTime) {
                   const endDate = new Date(result.data.endTime);
-                  endTimeInput.value = endDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                  endTimeInput.value = formatTimeForDisplay(endDate);
                 } else if (endTimeInput && !result.data.endTime) {
                   endTimeInput.value = '--:-- --';
                 }

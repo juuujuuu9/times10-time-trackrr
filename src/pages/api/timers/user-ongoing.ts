@@ -53,6 +53,8 @@ export const GET: APIRoute = async (context) => {
     const { getTodayString, createUserDate } = await import('../../../utils/timezoneUtils');
     const now = new Date();
     const todayString = getTodayString();
+    
+    // For GET requests, we use server time for elapsed calculation (acceptable for display)
     const currentTime = createUserDate(todayString, now.getHours(), now.getMinutes(), now.getSeconds());
     const timersWithElapsed = ongoingTimers.map(timer => {
       const elapsedSeconds = timer.startTime ? Math.floor((currentTime.getTime() - new Date(timer.startTime).getTime()) / 1000) : 0;
