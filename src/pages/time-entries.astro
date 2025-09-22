@@ -918,8 +918,8 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             const hours = parsedTime.hours;
             const minutes = parsedTime.minutes;
             
-            // Use timezone-safe date creation
-            const newDateTime = new Date(Date.UTC(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), hours, minutes, 0, 0));
+            // Create a local date-time (not UTC) to preserve user's intended time
+            const newDateTime = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), hours, minutes, 0, 0);
             
             const updateData: { startTime?: string; endTime?: string; durationManual?: number | null } = {};
             if (timeType === 'start') {
@@ -1701,8 +1701,8 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
           
           // Create datetime objects using the selected date
           const taskDate = new Date(editTimesDateInput.value);
-          const startDateTime = new Date(Date.UTC(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), startParsedTime.hours, startParsedTime.minutes, 0, 0));
-          const endDateTime = new Date(Date.UTC(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), endParsedTime.hours, endParsedTime.minutes, 0, 0));
+          const startDateTime = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), startParsedTime.hours, startParsedTime.minutes, 0, 0);
+          const endDateTime = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), endParsedTime.hours, endParsedTime.minutes, 0, 0);
           
           // Validate that end time is after start time
           if (endDateTime <= startDateTime) {
