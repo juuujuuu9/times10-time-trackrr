@@ -114,9 +114,9 @@ export class TimeEntryService {
       updatedAt: new Date()
     };
 
-    // Handle start/end times
+    // Handle start/end times - support partial updates
     if (request.startTime && request.endTime) {
-      // ISO string format
+      // Both ISO strings provided
       updateData.startTime = TimezoneService.fromUserISOString(request.startTime);
       updateData.endTime = TimezoneService.fromUserISOString(request.endTime);
       updateData.durationManual = TimezoneService.calculateDuration(
@@ -125,7 +125,7 @@ export class TimeEntryService {
       );
     } else if (typeof request.startHours === 'number' && typeof request.startMinutes === 'number' && 
                typeof request.endHours === 'number' && typeof request.endMinutes === 'number') {
-      // Component hours/minutes format
+      // Both component hours/minutes provided
       updateData.startTime = TimezoneService.localToUTC(
         request.taskDate!,
         request.startHours,
@@ -142,6 +142,34 @@ export class TimeEntryService {
         updateData.startTime,
         updateData.endTime
       );
+    } else if (typeof request.startHours === 'number' && typeof request.startMinutes === 'number') {
+      // Only start time provided - preserve existing end time
+      updateData.startTime = TimezoneService.localToUTC(
+        request.taskDate!,
+        request.startHours,
+        request.startMinutes,
+        request.tzOffsetMinutes
+      );
+      if (entry.endTime) {
+        updateData.durationManual = TimezoneService.calculateDuration(
+          updateData.startTime,
+          entry.endTime
+        );
+      }
+    } else if (typeof request.endHours === 'number' && typeof request.endMinutes === 'number') {
+      // Only end time provided - preserve existing start time
+      updateData.endTime = TimezoneService.localToUTC(
+        request.taskDate!,
+        request.endHours,
+        request.endMinutes,
+        request.tzOffsetMinutes
+      );
+      if (entry.startTime) {
+        updateData.durationManual = TimezoneService.calculateDuration(
+          entry.startTime,
+          updateData.endTime
+        );
+      }
     } else if (request.duration) {
       // Manual duration entry
       const durationSeconds = ValidationService.parseDuration(request.duration);

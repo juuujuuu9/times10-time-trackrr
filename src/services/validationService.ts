@@ -148,13 +148,12 @@ export class ValidationService {
    * Validate update time entry request
    */
   static validateUpdateRequest(request: UpdateTimeEntryRequest): ValidationResult {
-    // Check if we have any time-related data
-    const hasStartEndTimes = (request.startTime && request.endTime) || 
-                            (typeof request.startHours === 'number' && typeof request.startMinutes === 'number' && 
-                             typeof request.endHours === 'number' && typeof request.endMinutes === 'number');
+    // Check if we have any time-related data (allow partial updates)
+    const hasStartTime = request.startTime || (typeof request.startHours === 'number' && typeof request.startMinutes === 'number');
+    const hasEndTime = request.endTime || (typeof request.endHours === 'number' && typeof request.endMinutes === 'number');
     const hasDuration = !!request.duration;
 
-    if (!hasStartEndTimes && !hasDuration && !request.taskId && request.notes === undefined) {
+    if (!hasStartTime && !hasEndTime && !hasDuration && !request.taskId && request.notes === undefined) {
       return { isValid: false, error: 'At least one field must be provided for update' };
     }
 
