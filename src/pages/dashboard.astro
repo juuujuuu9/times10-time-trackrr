@@ -640,7 +640,7 @@ const user = await requireAuth('/')(Astro) as any;
       }
 
       // Load user's recent time entries (limit to 10 most recent)
-      const entriesResponse = await fetch('/api/time-entries?userId=' + encodeURIComponent(userId) + '&limit=10');
+      const entriesResponse = await fetch('/api/time-entries-unified?userId=' + encodeURIComponent(userId) + '&limit=10');
       if (entriesResponse.ok) {
         const entriesData = await entriesResponse.json();
         const recentEntries = entriesData.data || [];
@@ -2048,7 +2048,7 @@ const user = await requireAuth('/')(Astro) as any;
           requestBody.tzOffsetMinutes = new Date().getTimezoneOffset();
         }
 
-        const response = await fetch('/api/admin/time-entries', {
+        const response = await fetch('/api/time-entries-unified', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(requestBody),
@@ -2378,7 +2378,7 @@ const user = await requireAuth('/')(Astro) as any;
       }
 
       try {
-        const response = await fetch(`/api/time-entries/${entryId?.value}`, {
+        const response = await fetch(`/api/time-entries-unified/${entryId?.value}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(updateData),
@@ -2429,7 +2429,7 @@ const user = await requireAuth('/')(Astro) as any;
       }
 
       try {
-        const response = await fetch(`/api/time-entries/${entryId.value}`, {
+        const response = await fetch(`/api/time-entries-unified/${entryId.value}`, {
           method: 'DELETE',
         });
         
@@ -2551,7 +2551,7 @@ const user = await requireAuth('/')(Astro) as any;
             this.style.borderColor = '#3B82F6';
             this.style.backgroundColor = '#F0F9FF';
             
-            const response = await fetch(`/api/time-entries/${entryId}`, {
+            const response = await fetch(`/api/time-entries-unified/${entryId}`, {
               method: 'PUT',
               headers: {
                 'Content-Type': 'application/json',

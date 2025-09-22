@@ -965,7 +965,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             this.style.borderColor = '#3B82F6';
             this.style.backgroundColor = '#F0F9FF';
             
-            const response = await fetch(`/api/time-entries/${entryId}`, {
+            const response = await fetch(`/api/time-entries-unified/${entryId}`, {
               method: 'PUT',
               headers: {
                 'Content-Type': 'application/json',
@@ -1749,7 +1749,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
         }
 
         try {
-          const response = await fetch(`/api/time-entries/${entryId?.value}`, {
+          const response = await fetch(`/api/time-entries-unified/${entryId?.value}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(updateData),
@@ -1802,9 +1802,9 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
         }
 
         try {
-          const response = await fetch(`/api/time-entries/${entryId.value}`, {
-            method: 'DELETE',
-          });
+        const response = await fetch(`/api/time-entries-unified/${entryId.value}`, {
+          method: 'DELETE',
+        });
           
           if (response.ok) {
             // Close modal and reload page
