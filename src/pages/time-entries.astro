@@ -411,7 +411,8 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                         <input
                           type="text"
                           class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer"
-                          value={startTime ? formatTimeForDisplay(startTime) : '--:-- --'}
+                          value={startTime ? '--:-- --' : '--:-- --'}
+                          data-iso={startTime ? new Date(startTime).toISOString() : ''}
                           data-entry-id={entry.id}
                           data-time-type="start"
                           placeholder="9:30 AM"
@@ -422,7 +423,8 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                         <input
                           type="text"
                           class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer"
-                          value={endTime ? formatTimeForDisplay(endTime) : '--:-- --'}
+                          value={endTime ? '--:-- --' : '--:-- --'}
+                          data-iso={endTime ? new Date(endTime).toISOString() : ''}
                           data-entry-id={entry.id}
                           data-time-type="end"
                           placeholder="9:30 AM"
@@ -770,7 +772,16 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
     }
 
     // Week navigation and filtering
-    document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', function() {
+    // Populate time inputs using local timezone formatting (initial render)
+    const timeInputsInitial = document.querySelectorAll('.time-input') as NodeListOf<HTMLInputElement>;
+    timeInputsInitial.forEach((el) => {
+      const iso = el.getAttribute('data-iso');
+      if (iso) {
+        const d = new Date(iso);
+        el.value = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(d);
+      }
+    });
     // Week navigation state - use Sunday-Saturday week to match dashboard
     let currentWeekStart = new Date();
     const dayOfWeek = currentWeekStart.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
