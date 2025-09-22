@@ -80,6 +80,7 @@ const allUsers = await db.select().from(users).orderBy(users.name);
             type="text"
             id="search"
             placeholder="Search tasks..."
+            autocomplete="off"
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
           />
         </div>

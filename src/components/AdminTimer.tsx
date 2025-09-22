@@ -427,6 +427,7 @@ export default function AdminTimer() {
             placeholder="🔍 Search tasks..."
             value={taskSearchTerm}
             onChange={(e) => setTaskSearchTerm(e.target.value)}
+            autoComplete="off"
             onFocus={() => {
               setTaskDropdownOpen(true);
               // Clear search term when opening dropdown to show all tasks
