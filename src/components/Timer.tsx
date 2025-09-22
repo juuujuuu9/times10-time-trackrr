@@ -1559,7 +1559,7 @@ export default function Timer() {
           <p className="text-lg font-medium text-gray-800">{getSelectedTaskClientName()}</p>
           <p className="text-sm text-gray-700">{getSelectedTaskName()}</p>
           <p className="text-xs text-gray-600 mt-1">
-            Started at: {startTime?.toLocaleTimeString()}
+            Started at: {startTime ? new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(startTime) : ''}
           </p>
         </div>
       )}

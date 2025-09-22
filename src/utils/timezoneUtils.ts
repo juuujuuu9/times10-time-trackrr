@@ -95,7 +95,6 @@ export function formatTimeForDisplay(date: Date, options: Intl.DateTimeFormatOpt
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
-    timeZone: 'UTC', // Display as UTC to preserve user's intended time
     ...options
   };
   

@@ -53,13 +53,8 @@ export const GET: APIRoute = async (context) => {
     }
 
     const timer = ongoingTimer[0];
-    const { getTodayString, createUserDate } = await import('../../../utils/timezoneUtils');
-    const now = new Date();
-    const todayString = getTodayString();
-    
-    // For GET requests, we need to use the current server time since we don't have client time
-    // This is acceptable for elapsed time calculation as it's just for display
-    const currentTime = createUserDate(todayString, now.getHours(), now.getMinutes(), now.getSeconds());
+    // Use server current time for elapsed calculation against stored timestamp
+    const currentTime = new Date();
     const elapsedSeconds = Math.floor((currentTime.getTime() - new Date(timer.startTime || '').getTime()) / 1000);
 
     return new Response(JSON.stringify({
@@ -155,14 +150,8 @@ export const POST: APIRoute = async (context) => {
 
     // Create new ongoing timer using timezone-safe date creation
     // Get the current time from the client to preserve user's timezone
-    const { getTodayString, createUserDate } = await import('../../../utils/timezoneUtils');
-    const now = new Date();
-    const todayString = getTodayString();
-    
-    // Use the current time as provided by the client (preserves user's timezone)
-    // The client sends a timestamp, so we create a date from it
-    const clientTimeDate = clientTime ? new Date(parseInt(clientTime)) : now;
-    const startTime = createUserDate(todayString, clientTimeDate.getHours(), clientTimeDate.getMinutes(), clientTimeDate.getSeconds());
+    // Use the exact client timestamp as the authoritative start time
+    const startTime = clientTime ? new Date(parseInt(clientTime)) : new Date();
     
     const [newTimer] = await db.insert(timeEntries).values({
       userId: currentUser.id,
@@ -250,14 +239,8 @@ export const PUT: APIRoute = async (context) => {
     }
 
     const timer = ongoingTimer[0];
-    const { getTodayString, createUserDate } = await import('../../../utils/timezoneUtils');
-    const now = new Date();
-    const todayString = getTodayString();
-    
-    // Use the current time from the client to preserve user's timezone
-    // The client sends a timestamp, so we create a date from it
-    const clientTimeDate = clientTime ? new Date(parseInt(clientTime)) : now;
-    const endTimeDate = endTime ? new Date(endTime) : createUserDate(todayString, clientTimeDate.getHours(), clientTimeDate.getMinutes(), clientTimeDate.getSeconds());
+    // Use the exact client timestamp as the authoritative end time when not provided
+    const endTimeDate = endTime ? new Date(endTime) : (clientTime ? new Date(parseInt(clientTime)) : new Date());
     const duration = Math.floor((endTimeDate.getTime() - new Date(timer.startTime || '').getTime()) / 1000);
 
     // Update the timer with end time
