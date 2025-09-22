@@ -1012,9 +1012,17 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
               const row = this.closest('tr');
               
               // Update the duration cell
-              const durationCell = row.querySelector('td:nth-child(8)'); // Duration column
+              const durationCell = row.querySelector('td:nth-child(7)'); // Duration column
               if (durationCell && result.data) {
-                const duration = result.data.durationManual || result.data.duration || 0;
+                let duration = result.data.durationManual || result.data.duration || 0;
+                
+                // Fallback: calculate duration from start/end times if not provided
+                if (duration === 0 && result.data.startTime && result.data.endTime) {
+                  const startTime = new Date(result.data.startTime);
+                  const endTime = new Date(result.data.endTime);
+                  duration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
+                }
+                
                 durationCell.textContent = formatDuration(duration);
               }
               

@@ -149,9 +149,20 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
 
     const updatedEntry = await TimeEntryService.updateTimeEntry(parseInt(entryId), updateRequest);
 
+    // Calculate duration for the response
+    let calculatedDuration = 0;
+    if (updatedEntry.durationManual) {
+      calculatedDuration = updatedEntry.durationManual;
+    } else if (updatedEntry.startTime && updatedEntry.endTime) {
+      calculatedDuration = Math.floor((new Date(updatedEntry.endTime).getTime() - new Date(updatedEntry.startTime).getTime()) / 1000);
+    }
+
     return new Response(JSON.stringify({
       success: true,
-      data: updatedEntry
+      data: {
+        ...updatedEntry,
+        duration: calculatedDuration
+      }
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
