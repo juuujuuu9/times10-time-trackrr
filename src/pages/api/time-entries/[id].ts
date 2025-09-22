@@ -51,7 +51,11 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
     const { startTime, endTime, duration, taskId, taskDate, notes, startHours, startMinutes, endHours, endMinutes } = body;
 
     // Validate that at least one time is provided (unless this is a manual duration entry)
-    if (!startTime && !endTime && !body.duration) {
+    const hasStartTime = startTime || (typeof startHours === 'number' && typeof startMinutes === 'number');
+    const hasEndTime = endTime || (typeof endHours === 'number' && typeof endMinutes === 'number');
+    const hasDuration = body.duration;
+    
+    if (!hasStartTime && !hasEndTime && !hasDuration) {
       return new Response(JSON.stringify({ error: 'At least startTime, endTime, or duration must be provided' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
