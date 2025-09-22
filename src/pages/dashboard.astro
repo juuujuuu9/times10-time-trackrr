@@ -2137,12 +2137,7 @@ const user = await requireAuth('/')(Astro) as any;
     if (startTimeInput) {
       if (entry.startTime) {
         const startDate = new Date(entry.startTime);
-        startTimeInput.value = startDate.toLocaleTimeString('en-US', { 
-          hour: 'numeric', 
-          minute: '2-digit', 
-          hour12: true,
-          timeZone: 'UTC'
-        });
+        startTimeInput.value = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(startDate);
       } else {
         startTimeInput.value = '';
       }
@@ -2151,12 +2146,7 @@ const user = await requireAuth('/')(Astro) as any;
     if (endTimeInput) {
       if (entry.endTime) {
         const endDate = new Date(entry.endTime);
-        endTimeInput.value = endDate.toLocaleTimeString('en-US', { 
-          hour: 'numeric', 
-          minute: '2-digit', 
-          hour12: true,
-          timeZone: 'UTC'
-        });
+        endTimeInput.value = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(endDate);
       } else {
         endTimeInput.value = '';
       }
@@ -2576,14 +2566,14 @@ const user = await requireAuth('/')(Astro) as any;
                 
                 if (startTimeInput && result.data.startTime) {
                   const startDate = new Date(result.data.startTime);
-                  startTimeInput.value = formatTimeForDisplay(startDate);
+                  startTimeInput.value = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(startDate);
                 } else if (startTimeInput && !result.data.startTime) {
                   startTimeInput.value = '--:-- --';
                 }
                 
                 if (endTimeInput && result.data.endTime) {
                   const endDate = new Date(result.data.endTime);
-                  endTimeInput.value = formatTimeForDisplay(endDate);
+                  endTimeInput.value = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(endDate);
                 } else if (endTimeInput && !result.data.endTime) {
                   endTimeInput.value = '--:-- --';
                 }

@@ -980,14 +980,14 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                 
                 if (startTimeInput && result.data.startTime) {
                   const startDate = new Date(result.data.startTime);
-                  startTimeInput.value = startDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                  startTimeInput.value = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(startDate);
                 } else if (startTimeInput && !result.data.startTime) {
                   startTimeInput.value = '--:-- --';
                 }
                 
                 if (endTimeInput && result.data.endTime) {
                   const endDate = new Date(result.data.endTime);
-                  endTimeInput.value = endDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                  endTimeInput.value = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(endDate);
                 } else if (endTimeInput && !result.data.endTime) {
                   endTimeInput.value = '--:-- --';
                 }
@@ -1361,11 +1361,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
       if (startTimeInput) {
         if (entry.startTime) {
           const startDate = new Date(entry.startTime);
-          startTimeInput.value = startDate.toLocaleTimeString('en-US', { 
-            hour: 'numeric', 
-            minute: '2-digit', 
-            hour12: true 
-          });
+          startTimeInput.value = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(startDate);
         } else {
           startTimeInput.value = '';
         }
@@ -1374,11 +1370,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
       if (endTimeInput) {
         if (entry.endTime) {
           const endDate = new Date(entry.endTime);
-          endTimeInput.value = endDate.toLocaleTimeString('en-US', { 
-            hour: 'numeric', 
-            minute: '2-digit', 
-            hour12: true 
-          });
+          endTimeInput.value = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(endDate);
         } else {
           endTimeInput.value = '';
         }
