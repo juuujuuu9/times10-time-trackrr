@@ -2510,7 +2510,7 @@ const user = await requireAuth('/')(Astro) as any;
             const hours = parsedTime.hours;
             const minutes = parsedTime.minutes;
             
-            const updateData: { startHours?: number; startMinutes?: number; endHours?: number; endMinutes?: number; taskDate?: string; durationManual?: number | null } = {};
+            const updateData: { startHours?: number; startMinutes?: number; endHours?: number; endMinutes?: number; taskDate?: string; tzOffsetMinutes?: number; durationManual?: number | null } = {};
             if (timeType === 'start') {
               updateData.startHours = hours;
               updateData.startMinutes = minutes;
@@ -2519,6 +2519,7 @@ const user = await requireAuth('/')(Astro) as any;
               updateData.endMinutes = minutes;
             }
             updateData.taskDate = `${taskDate.getFullYear()}-${String(taskDate.getMonth()+1).padStart(2,'0')}-${String(taskDate.getDate()).padStart(2,'0')}`;
+            updateData.tzOffsetMinutes = new Date().getTimezoneOffset();
             
             // If this was a manual duration entry and we're adding times, clear the manual duration
             if (currentEntry?.durationManual && !currentEntry?.endTime) {

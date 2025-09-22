@@ -48,7 +48,7 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
     }
 
     const body = await request.json();
-    const { startTime, endTime, duration, taskId, taskDate, notes, startHours, startMinutes, endHours, endMinutes } = body;
+    const { startTime, endTime, duration, taskId, taskDate, notes, startHours, startMinutes, endHours, endMinutes, tzOffsetMinutes } = body;
 
     // Validate that at least one time is provided (unless this is a manual duration entry)
     const hasStartTime = startTime || (typeof startHours === 'number' && typeof startMinutes === 'number');
@@ -227,13 +227,16 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
     if ((startTime || endTime || typeof startHours === 'number' || typeof endHours === 'number') && taskDate) {
       const taskDateObj = new Date(taskDate);
       if (typeof startHours === 'number' && typeof startMinutes === 'number') {
-        updateData.startTime = new Date(taskDateObj.getFullYear(), taskDateObj.getMonth(), taskDateObj.getDate(), startHours, startMinutes, 0, 0);
+        // Construct as UTC equivalent using client timezone offset to preserve wall time
+        const utcHours = startHours + ((typeof tzOffsetMinutes === 'number' ? -tzOffsetMinutes : 0) / 60);
+        updateData.startTime = new Date(Date.UTC(taskDateObj.getFullYear(), taskDateObj.getMonth(), taskDateObj.getDate(), utcHours, startMinutes, 0, 0));
       } else if (newStartTime) {
         const timeOnly = new Date(newStartTime);
         updateData.startTime = new Date(taskDateObj.getFullYear(), taskDateObj.getMonth(), taskDateObj.getDate(), timeOnly.getHours(), timeOnly.getMinutes(), 0, 0);
       }
       if (typeof endHours === 'number' && typeof endMinutes === 'number') {
-        updateData.endTime = new Date(taskDateObj.getFullYear(), taskDateObj.getMonth(), taskDateObj.getDate(), endHours, endMinutes, 0, 0);
+        const utcHours = endHours + ((typeof tzOffsetMinutes === 'number' ? -tzOffsetMinutes : 0) / 60);
+        updateData.endTime = new Date(Date.UTC(taskDateObj.getFullYear(), taskDateObj.getMonth(), taskDateObj.getDate(), utcHours, endMinutes, 0, 0));
       } else if (newEndTime) {
         const timeOnly = new Date(newEndTime);
         updateData.endTime = new Date(taskDateObj.getFullYear(), taskDateObj.getMonth(), taskDateObj.getDate(), timeOnly.getHours(), timeOnly.getMinutes(), 0, 0);

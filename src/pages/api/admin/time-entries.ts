@@ -53,7 +53,7 @@ export const GET: APIRoute = async () => {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { userId, taskId, duration, notes, taskDate, startTime, endTime, startHours, startMinutes, endHours, endMinutes } = body;
+    const { userId, taskId, duration, notes, taskDate, startTime, endTime, startHours, startMinutes, endHours, endMinutes, tzOffsetMinutes } = body;
 
     if (!userId || !taskId) {
       return new Response(JSON.stringify({ error: 'User ID and task ID are required' }), {
@@ -73,8 +73,9 @@ export const POST: APIRoute = async ({ request }) => {
       // Start/end times entry
       if (typeof startHours === 'number' && typeof startMinutes === 'number' && typeof endHours === 'number' && typeof endMinutes === 'number' && taskDate) {
         const dateObj = new Date(taskDate);
-        timeEntryData.startTime = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), startHours, startMinutes, 0, 0);
-        timeEntryData.endTime = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), endHours, endMinutes, 0, 0);
+        const offset = (typeof tzOffsetMinutes === 'number' ? -tzOffsetMinutes : 0) / 60;
+        timeEntryData.startTime = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), startHours + offset, startMinutes, 0, 0));
+        timeEntryData.endTime = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), endHours + offset, endMinutes, 0, 0));
       } else {
         const { fromUserISOString } = await import('../../../utils/timezoneUtils');
         timeEntryData.startTime = fromUserISOString(startTime);
