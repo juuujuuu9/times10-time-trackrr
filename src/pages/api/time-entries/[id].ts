@@ -164,12 +164,9 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
       });
     }
 
-    // Calculate new duration if both times are provided, or use provided duration
+    // Calculate new duration if provided as a string
     let newDurationManual = entry.durationManual;
-    if (newStartTime && newEndTime) {
-      const durationMs = newEndTime.getTime() - newStartTime.getTime();
-      newDurationManual = Math.floor(durationMs / 1000); // Convert to seconds
-    } else if (duration) {
+    if (duration) {
       // Parse duration string using the existing time parser
       try {
         const { parseTimeInput } = await import('../../../utils/timeParser');
@@ -197,7 +194,8 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
       updateData.endTime = newEndTime;
     }
     
-    if (newDurationManual !== undefined) {
+    if (newDurationManual !== undefined && !updateData.startTime && !updateData.endTime) {
+      // Only set durationManual if we're not setting start/end times (manual duration entry)
       updateData.durationManual = newDurationManual;
     }
     
@@ -244,6 +242,12 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
         const timeOnly = new Date(newEndTime);
         updateData.endTime = new Date(taskDateObj.getFullYear(), taskDateObj.getMonth(), taskDateObj.getDate(), timeOnly.getHours(), timeOnly.getMinutes(), 0, 0);
       }
+    }
+
+    // Calculate duration from final start/end times if both are set
+    if (updateData.startTime && updateData.endTime) {
+      const durationMs = updateData.endTime.getTime() - updateData.startTime.getTime();
+      updateData.durationManual = Math.floor(durationMs / 1000); // Convert to seconds
     }
 
     // Update the time entry
