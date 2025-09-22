@@ -214,23 +214,23 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
       
       // If taskDate is provided, set startTime to the task date for manual duration entries
       if (taskDate) {
-        const { createUserDate } = await import('../../../utils/timezoneUtils');
-        updateData.startTime = createUserDate(taskDate, 12, 0);
+        const taskDateObj = new Date(taskDate);
+        updateData.startTime = new Date(taskDateObj.getFullYear(), taskDateObj.getMonth(), taskDateObj.getDate(), 12, 0, 0, 0);
       }
     }
     
     // For start/end time entries, update startTime if taskDate is provided
     if ((startTime || endTime) && taskDate) {
-      const { createTaskDateTime } = await import('../../../utils/timezoneUtils');
-      // Keep the time portion but update the date using timezone-safe methods
+      // Create local dates to preserve user's intended times
+      const taskDateObj = new Date(taskDate);
       if (newStartTime) {
         const timeOnly = new Date(newStartTime);
-        const combinedDateTime = createTaskDateTime(new Date(taskDate), timeOnly.getHours(), timeOnly.getMinutes());
+        const combinedDateTime = new Date(taskDateObj.getFullYear(), taskDateObj.getMonth(), taskDateObj.getDate(), timeOnly.getHours(), timeOnly.getMinutes(), 0, 0);
         updateData.startTime = combinedDateTime;
       }
       if (newEndTime) {
         const timeOnly = new Date(newEndTime);
-        const combinedDateTime = createTaskDateTime(new Date(taskDate), timeOnly.getHours(), timeOnly.getMinutes());
+        const combinedDateTime = new Date(taskDateObj.getFullYear(), taskDateObj.getMonth(), taskDateObj.getDate(), timeOnly.getHours(), timeOnly.getMinutes(), 0, 0);
         updateData.endTime = combinedDateTime;
       }
     }
