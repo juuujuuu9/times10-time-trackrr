@@ -1767,13 +1767,17 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             }, 1000);
           } else {
             const errorData = await response.json();
-            console.error(`Error updating time entry: ${errorData.error || 'Unknown error'}`);
+            alert(`Error updating time entry: ${errorData.error || 'Unknown error'}`);
+            // Reset button state on error
+            submitButton.disabled = false;
+            saveButtonText.textContent = originalText;
+            submitButton.classList.remove('bg-gray-800');
+            saveButtonSpinner.classList.add('hidden');
           }
         } catch (error) {
           console.error('Error:', error);
-          console.error('Error updating time entry');
-        } finally {
-          // Reset button state
+          alert('Error updating time entry. Please try again.');
+          // Reset button state on error
           submitButton.disabled = false;
           saveButtonText.textContent = originalText;
           submitButton.classList.remove('bg-gray-800');
