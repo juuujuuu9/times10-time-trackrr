@@ -73,9 +73,9 @@ export const POST: APIRoute = async ({ request }) => {
       // Start/end times entry
       if (typeof startHours === 'number' && typeof startMinutes === 'number' && typeof endHours === 'number' && typeof endMinutes === 'number' && taskDate) {
         const dateObj = new Date(taskDate);
-        const offset = (typeof tzOffsetMinutes === 'number' ? -tzOffsetMinutes : 0) / 60;
-        timeEntryData.startTime = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), startHours + offset, startMinutes, 0, 0));
-        timeEntryData.endTime = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), endHours + offset, endMinutes, 0, 0));
+        const offsetHours = (typeof tzOffsetMinutes === 'number' ? tzOffsetMinutes : new Date().getTimezoneOffset()) / 60;
+        timeEntryData.startTime = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), startHours + offsetHours, startMinutes, 0, 0));
+        timeEntryData.endTime = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), endHours + offsetHours, endMinutes, 0, 0));
       } else {
         const { fromUserISOString } = await import('../../../utils/timezoneUtils');
         timeEntryData.startTime = fromUserISOString(startTime);
