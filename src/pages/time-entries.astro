@@ -887,6 +887,14 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
           this.setAttribute('data-original-value', this.value);
         });
         
+        // Handle Enter key press
+        input.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            this.blur(); // Trigger the blur event to save
+          }
+        });
+        
         input.addEventListener('blur', async function() {
           const entryId = this.getAttribute('data-entry-id');
           const timeType = this.getAttribute('data-time-type');
@@ -902,7 +910,14 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
           // Parse time using flexible parser
           const parsedTime = parseFlexibleTime(timeValue);
           if (!parsedTime) {
-            // Invalid time format
+            // Show error state
+            this.style.borderColor = '#EF4444';
+            this.style.backgroundColor = '#FEF2F2';
+            alert('Please enter a valid time format (e.g., 3p, 3:30pm, 12am, 300pm, etc.)');
+            setTimeout(() => {
+              this.style.borderColor = '';
+              this.style.backgroundColor = '';
+            }, 2000);
             this.focus();
             return;
           }
@@ -929,33 +944,52 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             const hours = parsedTime.hours;
             const minutes = parsedTime.minutes;
             
-            // Create a local date-time (not UTC) to preserve user's intended time
-            const newDateTime = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), hours, minutes, 0, 0);
-            
-            const updateData: { startTime?: string; endTime?: string; durationManual?: number | null } = {};
+            // Use the unified API format with component hours/minutes
+            const updateData: { startHours?: number; startMinutes?: number; endHours?: number; endMinutes?: number; taskDate?: string; tzOffsetMinutes?: number; durationManual?: number | null } = {};
             if (timeType === 'start') {
-              updateData.startTime = newDateTime.toISOString();
+              updateData.startHours = hours;
+              updateData.startMinutes = minutes;
             } else if (timeType === 'end') {
-              updateData.endTime = newDateTime.toISOString();
+              updateData.endHours = hours;
+              updateData.endMinutes = minutes;
             }
+            updateData.taskDate = `${taskDate.getFullYear()}-${String(taskDate.getMonth()+1).padStart(2,'0')}-${String(taskDate.getDate()).padStart(2,'0')}`;
+            updateData.tzOffsetMinutes = new Date().getTimezoneOffset();
             
             // If this was a manual duration entry and we're adding times, clear the manual duration
             if (currentEntry?.durationManual && !currentEntry?.endTime) {
               updateData.durationManual = null;
             }
             
+            // Build a local datetime for validation
+            const newDateTime = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), hours, minutes, 0, 0);
+            
             // Validate that end time is after start time if both times are being set
             if (timeType === 'end' && currentEntry?.startTime) {
               const existingStartTime = new Date(currentEntry.startTime);
               if (newDateTime <= existingStartTime) {
-                // End time must be after start time
+                // Show error state
+                this.style.borderColor = '#EF4444';
+                this.style.backgroundColor = '#FEF2F2';
+                alert('End time must be after start time');
+                setTimeout(() => {
+                  this.style.borderColor = '';
+                  this.style.backgroundColor = '';
+                }, 2000);
                 this.focus();
                 return;
               }
             } else if (timeType === 'start' && currentEntry?.endTime) {
               const existingEndTime = new Date(currentEntry.endTime);
               if (newDateTime >= existingEndTime) {
-                // Start time must be before end time
+                // Show error state
+                this.style.borderColor = '#EF4444';
+                this.style.backgroundColor = '#FEF2F2';
+                alert('Start time must be before end time');
+                setTimeout(() => {
+                  this.style.borderColor = '';
+                  this.style.backgroundColor = '';
+                }, 2000);
                 this.focus();
                 return;
               }
@@ -1006,10 +1040,11 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
               
               // Show success feedback
               this.style.borderColor = '#10B981';
-              this.style.backgroundColor = '';
+              this.style.backgroundColor = '#F0FDF4';
               setTimeout(() => {
                 this.style.borderColor = '';
-              }, 2000);
+                this.style.backgroundColor = '';
+              }, 1500);
             } else {
               const error = await response.json();
               
@@ -1020,7 +1055,14 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                 return;
               }
               
-              console.error(`Error: ${error.error}`);
+              // Show error state
+              this.style.borderColor = '#EF4444';
+              this.style.backgroundColor = '#FEF2F2';
+              alert(`Error: ${error.error}`);
+              setTimeout(() => {
+                this.style.borderColor = '';
+                this.style.backgroundColor = '';
+              }, 2000);
               // Reset to original value on error
               this.focus();
             }
