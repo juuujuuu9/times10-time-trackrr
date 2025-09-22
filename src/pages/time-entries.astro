@@ -1699,7 +1699,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             return;
           }
           
-          // Create datetime objects using the selected date
+          // Create datetime objects using the selected date (local) for validation
           const taskDate = new Date(editTimesDateInput.value);
           const startDateTime = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), startParsedTime.hours, startParsedTime.minutes, 0, 0);
           const endDateTime = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), endParsedTime.hours, endParsedTime.minutes, 0, 0);
@@ -1713,8 +1713,11 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             return;
           }
           
-          updateData.startTime = startDateTime.toISOString();
-          updateData.endTime = endDateTime.toISOString();
+          // Send components to avoid timezone shifts on server
+          updateData.startHours = startParsedTime.hours;
+          updateData.startMinutes = startParsedTime.minutes;
+          updateData.endHours = endParsedTime.hours;
+          updateData.endMinutes = endParsedTime.minutes;
           updateData.taskDate = editTimesDateInput.value;
           // Clear manual duration since we're now using start/end times
           updateData.durationManual = null;

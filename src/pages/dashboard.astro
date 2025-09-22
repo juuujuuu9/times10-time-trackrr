@@ -2027,8 +2027,9 @@ const user = await requireAuth('/')(Astro) as any;
             return;
           }
           
-          const startDateTime = createTaskDateTime(new Date(taskDate), startParsedTime.hours, startParsedTime.minutes);
-          const endDateTime = createTaskDateTime(new Date(taskDate), endParsedTime.hours, endParsedTime.minutes);
+          const taskDateObj = new Date(taskDate);
+          const startDateTime = new Date(taskDateObj.getFullYear(), taskDateObj.getMonth(), taskDateObj.getDate(), startParsedTime.hours, startParsedTime.minutes, 0, 0);
+          const endDateTime = new Date(taskDateObj.getFullYear(), taskDateObj.getMonth(), taskDateObj.getDate(), endParsedTime.hours, endParsedTime.minutes, 0, 0);
           
           // Validate that end time is after start time
           if (endDateTime <= startDateTime) {
@@ -2039,8 +2040,10 @@ const user = await requireAuth('/')(Astro) as any;
             return;
           }
           
-          requestBody.startTime = startDateTime.toISOString();
-          requestBody.endTime = endDateTime.toISOString();
+          requestBody.startHours = startParsedTime.hours;
+          requestBody.startMinutes = startParsedTime.minutes;
+          requestBody.endHours = endParsedTime.hours;
+          requestBody.endMinutes = endParsedTime.minutes;
           requestBody.taskDate = taskDate;
         }
 
@@ -2341,8 +2344,8 @@ const user = await requireAuth('/')(Astro) as any;
         
         // Create datetime objects using the selected date
         const taskDate = new Date(editTimesDateInput.value);
-        const startDateTime = createTaskDateTime(taskDate, startParsedTime.hours, startParsedTime.minutes);
-        const endDateTime = createTaskDateTime(taskDate, endParsedTime.hours, endParsedTime.minutes);
+        const startDateTime = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), startParsedTime.hours, startParsedTime.minutes, 0, 0);
+        const endDateTime = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), endParsedTime.hours, endParsedTime.minutes, 0, 0);
         
         // Validate that end time is after start time
         if (endDateTime <= startDateTime) {
@@ -2507,21 +2510,24 @@ const user = await requireAuth('/')(Astro) as any;
             const hours = parsedTime.hours;
             const minutes = parsedTime.minutes;
             
-            // Use timezone-safe date creation
-            const newDateTime = createTaskDateTime(taskDate, hours, minutes);
-            
-            const updateData: { startTime?: string; endTime?: string; durationManual?: number | null } = {};
+            const updateData: { startHours?: number; startMinutes?: number; endHours?: number; endMinutes?: number; taskDate?: string; durationManual?: number | null } = {};
             if (timeType === 'start') {
-              updateData.startTime = newDateTime.toISOString();
+              updateData.startHours = hours;
+              updateData.startMinutes = minutes;
             } else if (timeType === 'end') {
-              updateData.endTime = newDateTime.toISOString();
+              updateData.endHours = hours;
+              updateData.endMinutes = minutes;
             }
+            updateData.taskDate = `${taskDate.getFullYear()}-${String(taskDate.getMonth()+1).padStart(2,'0')}-${String(taskDate.getDate()).padStart(2,'0')}`;
             
             // If this was a manual duration entry and we're adding times, clear the manual duration
             if (currentEntry?.durationManual && !currentEntry?.endTime) {
               updateData.durationManual = null;
             }
             
+            // Build a local datetime for validation
+            const newDateTime = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), hours, minutes, 0, 0);
+
             // Validate that end time is after start time if both times are being set
             if (timeType === 'end' && currentEntry?.startTime) {
               const existingStartTime = new Date(currentEntry.startTime);
