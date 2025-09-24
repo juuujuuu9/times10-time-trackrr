@@ -271,7 +271,7 @@ const allUsers = await db.select().from(users).orderBy(users.name);
               >
                 <option value="">Select a project</option>
                 {allProjects.map((project) => (
-                  <option value={project.id}>{project.clientName} - {project.name}</option>
+                  <option value={project.id}>{project.clientName} - {project.name === 'Time Tracking' ? 'General' : project.name}</option>
                 ))}
               </select>
             </div>

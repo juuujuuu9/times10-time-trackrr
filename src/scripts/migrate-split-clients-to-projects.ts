@@ -53,6 +53,58 @@ async function assignGeneralToActiveUsers(taskId: number) {
   try { await db.insert(taskAssignments).values(rows); } catch {}
 }
 
+async function cleanupMigration() {
+  try {
+    console.log('Cleaning up migration issues...');
+
+    // Find any remaining clients with hyphenated names that should be cleaned up
+    const problematicClients = await db.select().from(clients).where(like(clients.name, '% - %'));
+    
+    for (const problematicClient of problematicClients) {
+      console.log(`Found problematic client: ${problematicClient.name} (ID: ${problematicClient.id})`);
+      
+      // Get all projects under this client
+      const clientProjects = await db.select().from(projects).where(eq(projects.clientId, problematicClient.id));
+      console.log(`Found ${clientProjects.length} projects under this client`);
+
+      // Try to find the corresponding new client
+      const parsed = splitClientName(problematicClient.name, ' - ');
+      if (!parsed) continue;
+      
+      const { brand } = parsed;
+      const newClient = await db.select().from(clients).where(eq(clients.name, brand)).limit(1);
+      
+      if (newClient.length === 0) {
+        console.log(`No corresponding new client found for brand "${brand}", skipping`);
+        continue;
+      }
+
+      console.log(`Found corresponding new client: ${newClient[0].name} (ID: ${newClient[0].id})`);
+
+      // Move all projects to the new client
+      for (const project of clientProjects) {
+        console.log(`Moving project "${project.name}" to new ${brand} client`);
+        
+        await db.update(projects)
+          .set({ clientId: newClient[0].id })
+          .where(eq(projects.id, project.id));
+          
+        console.log(`Project "${project.name}" moved successfully`);
+      }
+
+      // Delete the old problematic client
+      console.log(`Deleting old problematic client: ${problematicClient.name}`);
+      await db.delete(clients).where(eq(clients.id, problematicClient.id));
+      console.log('Old client deleted successfully');
+    }
+
+    console.log('Cleanup completed successfully!');
+
+  } catch (error) {
+    console.error('Error during cleanup:', error);
+  }
+}
+
 async function run() {
   const { execute, delimiter } = parseArgs();
 
@@ -113,8 +165,13 @@ async function run() {
   console.log('Planned actions:');
   for (const a of actions) console.log(a);
   console.log(`Total time entries ${execute ? 'moved' : 'to move'}: ${movedTimeEntries}`);
+  
   if (execute) {
     console.log('Migration completed successfully.');
+    
+    // Now run cleanup to handle any remaining issues
+    console.log('\nRunning cleanup...');
+    await cleanupMigration();
   } else {
     console.log('Done. Run with --execute to apply changes.');
   }
