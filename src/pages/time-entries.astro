@@ -492,7 +492,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                 <input
                   type="text"
                   id="editTimeEntryTask"
-                  placeholder="🔍 Search tasks..."
+                  placeholder="🔍 Search projects..."
                   required
                   autocomplete="off"
                   class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
@@ -1414,7 +1414,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
 
       // Populate task information
       if (editTaskInput && editTaskIdInput) {
-        editTaskInput.value = `${entry.taskName} (${entry.projectName} - ${entry.clientName})`;
+        editTaskInput.value = `${entry.clientName} - ${entry.taskName}`;
         editTaskIdInput.value = entry.taskId ? entry.taskId.toString() : '';
       }
 
@@ -1543,11 +1543,67 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
 
     async function searchEditTasks(searchTerm: string) {
       try {
-        const response = await fetch(`/api/tasks/search?q=${encodeURIComponent(searchTerm)}`);
-        if (response.ok) {
-          const tasks = await response.json();
-          displayEditTaskDropdown(tasks);
+        // Get current user first
+        const userResponse = await fetch('/api/auth/me');
+        if (!userResponse.ok) {
+          console.error('Failed to get current user');
+          return;
         }
+        const userData = await userResponse.json();
+        if (!userData.success || !userData.user) {
+          console.error('No user data available');
+          return;
+        }
+        const userId = userData.user.id;
+
+        // Load projects and get their General tasks (same as timer component)
+        const projectsResponse = await fetch(`/api/projects?userId=${userId}&limit=50`);
+        if (!projectsResponse.ok) {
+          throw new Error('Failed to load projects');
+        }
+
+        const projectsData = await projectsResponse.json();
+        const projects = projectsData.data || [];
+
+        // For each project, get its General task and filter by search term
+        const allTasks = [];
+        for (const project of projects) {
+          try {
+            const generalTaskResponse = await fetch(`/api/projects/${project.id}/general-task`);
+            if (generalTaskResponse.ok) {
+              const generalTask = await generalTaskResponse.json();
+              
+              // Use the same display logic as the timer component
+              const displayName = project.name === 'Time Tracking' 
+                ? generalTask.name  // Show "General" for legacy tasks
+                : project.name;    // Show project name for new structure
+              
+              // Filter by search term (case insensitive)
+              const searchLower = searchTerm.toLowerCase();
+              const matchesSearch = 
+                project.clientName.toLowerCase().includes(searchLower) ||
+                project.name.toLowerCase().includes(searchLower) ||
+                generalTask.name.toLowerCase().includes(searchLower) ||
+                displayName.toLowerCase().includes(searchLower);
+              
+              if (matchesSearch) {
+                allTasks.push({
+                  id: generalTask.id,
+                  name: displayName,
+                  projectName: project.name,
+                  clientName: project.clientName,
+                  projectId: project.id,
+                  clientId: project.clientId,
+                  displayName: displayName
+                });
+              }
+            }
+          } catch (error) {
+            console.warn(`Failed to load General task for project ${project.name}:`, error);
+          }
+        }
+
+        displayEditTaskDropdown(allTasks);
       } catch (error) {
         console.error('Error searching tasks:', error);
       }
@@ -1555,11 +1611,57 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
 
     async function searchAllEditTasks() {
       try {
-        const response = await fetch('/api/tasks/search');
-        if (response.ok) {
-          const tasks = await response.json();
-          displayEditTaskDropdown(tasks);
+        // Get current user first
+        const userResponse = await fetch('/api/auth/me');
+        if (!userResponse.ok) {
+          console.error('Failed to get current user');
+          return;
         }
+        const userData = await userResponse.json();
+        if (!userData.success || !userData.user) {
+          console.error('No user data available');
+          return;
+        }
+        const userId = userData.user.id;
+
+        // Load projects and get their General tasks (same as timer component)
+        const projectsResponse = await fetch(`/api/projects?userId=${userId}&limit=50`);
+        if (!projectsResponse.ok) {
+          throw new Error('Failed to load projects');
+        }
+
+        const projectsData = await projectsResponse.json();
+        const projects = projectsData.data || [];
+
+        // For each project, get its General task
+        const allTasks = [];
+        for (const project of projects) {
+          try {
+            const generalTaskResponse = await fetch(`/api/projects/${project.id}/general-task`);
+            if (generalTaskResponse.ok) {
+              const generalTask = await generalTaskResponse.json();
+              
+              // Use the same display logic as the timer component
+              const displayName = project.name === 'Time Tracking' 
+                ? generalTask.name  // Show "General" for legacy tasks
+                : project.name;    // Show project name for new structure
+              
+              allTasks.push({
+                id: generalTask.id,
+                name: displayName,
+                projectName: project.name,
+                clientName: project.clientName,
+                projectId: project.id,
+                clientId: project.clientId,
+                displayName: displayName
+              });
+            }
+          } catch (error) {
+            console.warn(`Failed to load General task for project ${project.name}:`, error);
+          }
+        }
+
+        displayEditTaskDropdown(allTasks);
       } catch (error) {
         console.error('Error fetching all tasks:', error);
       }
@@ -1617,20 +1719,24 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
         
         // Add client header
         dropdownHTML += `
-          <div class="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-600 uppercase tracking-wide border-b border-gray-200">
+          <div class="px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600 uppercase tracking-wide border-b border-gray-200">
             ${clientName}
           </div>
         `;
         
         // Add tasks for this client
         clientTasks.forEach(task => {
+          // Use the same display logic as the Select Task dropdown
+          const displayName = task.projectName === 'Time Tracking' 
+            ? (task.displayName || task.name)
+            : (task.displayName || task.projectName);
+            
           dropdownHTML += `
             <div 
-              class="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm pl-6 border-b border-gray-100 last:border-b-0"
+              class="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm pl-8 border-b border-gray-100 last:border-b-0"
               onclick="selectEditTask(${task.id}, '${task.name.replace(/'/g, "\\'")}', '${task.projectName.replace(/'/g, "\\'")}', '${task.clientName.replace(/'/g, "\\'")}')"
             >
-              <div class="font-medium text-gray-900">${task.name}</div>
-              <div class="text-xs text-gray-500">${task.projectName}</div>
+              <div class="font-medium text-gray-900">${displayName}</div>
             </div>
           `;
         });
@@ -1645,7 +1751,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
       const editTaskIdInput = document.getElementById('editTimeEntryTaskId') as HTMLInputElement;
       
       if (editTaskInput && editTaskIdInput) {
-        editTaskInput.value = `${taskName} (${projectName} - ${clientName})`;
+        editTaskInput.value = `${clientName} - ${taskName}`;
         editTaskIdInput.value = taskId.toString();
         hideEditTaskDropdown();
       }

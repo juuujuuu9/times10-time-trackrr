@@ -55,24 +55,41 @@ export default function AdminTimer() {
     if (!selectedTask || !currentUserId) return;
 
     try {
-      // Load regular tasks
-      const response = await fetch(`/api/tasks?assignedTo=${currentUserId}`);
-      let regularTasks = [];
-      if (response.ok) {
-        const tasksData = await response.json();
-        regularTasks = tasksData.data || [];
+      // Load projects and get their General tasks
+      const projectsResponse = await fetch(`/api/projects?userId=${currentUserId}&limit=50`);
+      let currentTasks = [];
+      
+      if (projectsResponse.ok) {
+        const projectsData = await projectsResponse.json();
+        const projects = projectsData.data || [];
+        
+        // For each project, get its General task (skip Time Tracking projects)
+        for (const project of projects) {
+          // Skip "Time Tracking" projects entirely
+          if (project.name === 'Time Tracking') {
+            continue;
+          }
+          
+          try {
+            const generalTaskResponse = await fetch(`/api/projects/${project.id}/general-task`);
+            if (generalTaskResponse.ok) {
+              const generalTask = await generalTaskResponse.json();
+              // Format as expected by the component
+              // Show just the project name as the task name
+              currentTasks.push({
+                id: generalTask.id,
+                name: project.name, // Just the project name, no "General" suffix
+                projectName: project.name,
+                clientName: project.clientName,
+                projectId: project.id,
+                clientId: project.clientId
+              });
+            }
+          } catch (error) {
+            console.warn(`Failed to load General task for project ${project.name}:`, error);
+          }
+        }
       }
-
-      // Load system tasks
-      const systemResponse = await fetch(`/api/system-tasks?assignedTo=${currentUserId}&limit=100`);
-      let systemTasks = [];
-      if (systemResponse.ok) {
-        const systemTasksData = await systemResponse.json();
-        systemTasks = systemTasksData.data || [];
-      }
-
-      // Combine all tasks
-      const currentTasks = [...regularTasks, ...systemTasks];
       setTasks(currentTasks);
       
       // Check if the selected task still exists
@@ -107,28 +124,43 @@ export default function AdminTimer() {
             const userId = userData.user.id;
             setCurrentUserId(userId);
             
-            // Load user's regular tasks
-            const tasksResponse = await fetch(`/api/tasks?assignedTo=${userId}`);
-            let regularTasks = [];
-            if (tasksResponse.ok) {
-              const tasksData = await tasksResponse.json();
-              regularTasks = tasksData.data || [];
+            // Load user's projects and get their General tasks
+            const projectsResponse = await fetch(`/api/projects?userId=${userId}&limit=50`);
+            let allTasks = [];
+            
+            if (projectsResponse.ok) {
+              const projectsData = await projectsResponse.json();
+              const projects = projectsData.data || [];
+              
+              // For each project, get its General task (include both new and legacy projects)
+              for (const project of projects) {
+                try {
+                  const generalTaskResponse = await fetch(`/api/projects/${project.id}/general-task`);
+                  if (generalTaskResponse.ok) {
+                    const generalTask = await generalTaskResponse.json();
+                    
+                    // For legacy "Time Tracking" projects: show task name (General)
+                    // For new structure projects: show project name
+                    const displayName = project.name === 'Time Tracking' 
+                      ? generalTask.name  // Show "General" for legacy tasks
+                      : project.name;    // Show project name for new structure
+                    
+                    allTasks.push({
+                      id: generalTask.id,
+                      name: displayName,
+                      projectName: project.name,
+                      clientName: project.clientName,
+                      projectId: project.id,
+                      clientId: project.clientId
+                    });
+                  }
+                } catch (error) {
+                  console.warn(`Failed to load General task for project ${project.name}:`, error);
+                }
+              }
             } else {
-              console.error('Failed to load regular tasks:', tasksResponse.status);
+              console.error('Failed to load projects:', projectsResponse.status);
             }
-
-            // Load user's system-generated tasks (General tasks)
-            const systemTasksResponse = await fetch(`/api/system-tasks?assignedTo=${userId}&limit=100`);
-            let systemTasks = [];
-            if (systemTasksResponse.ok) {
-              const systemTasksData = await systemTasksResponse.json();
-              systemTasks = systemTasksData.data || [];
-            } else {
-              console.error('Failed to load system tasks:', systemTasksResponse.status);
-            }
-
-            // Combine regular tasks and system tasks
-            const allTasks = [...regularTasks, ...systemTasks];
             setTasks(allTasks);
           }
         }
@@ -149,7 +181,12 @@ export default function AdminTimer() {
       // Update search term to show the selected task
       const task = tasks.find(t => t.id === timerData.taskId);
       if (task) {
-        setTaskSearchTerm(task.displayName || `${task.clientName} - ${task.projectName} - ${task.name}`);
+        // For legacy "Time Tracking" projects: show task name (General)
+        // For new structure projects: show project name
+        const displayText = task.projectName === 'Time Tracking' 
+          ? task.displayName || `${task.clientName} - ${task.name}`
+          : task.displayName || `${task.clientName} - ${task.projectName}`;
+        setTaskSearchTerm(displayText);
       }
     }
   }, [timerData, tasks]);
@@ -380,12 +417,20 @@ export default function AdminTimer() {
                 className="pl-3 py-1 hover:bg-gray-100 cursor-pointer text-xs border-b border-gray-100 last:border-b-0"
                 onClick={() => {
                   setSelectedTask(task.id);
-                  setTaskSearchTerm(task.displayName || `${task.clientName} - ${task.projectName} - ${task.name}`);
+                  // For legacy "Time Tracking" projects: show task name (General)
+        // For new structure projects: show project name
+        // In selected state, show Client - Task for better UX
+        const displayText = task.projectName === 'Time Tracking' 
+          ? task.displayName || `${task.clientName} - ${task.name}`
+          : task.displayName || `${task.clientName} - ${task.projectName}`;
+        setTaskSearchTerm(displayText);
                   setTaskDropdownOpen(false);
                 }}
               >
                 <div className="font-medium text-gray-900">
-                  {task.displayName || `${task.clientName} - ${task.projectName} - ${task.name}`}
+                  {task.projectName === 'Time Tracking' 
+                    ? (task.displayName || task.name)
+                    : (task.displayName || task.projectName)}
                 </div>
               </div>
             ))}
@@ -424,7 +469,7 @@ export default function AdminTimer() {
         <div className="mb-3 relative task-dropdown-container">
           <input
             type="text"
-            placeholder="🔍 Search tasks..."
+            placeholder="🔍 Search projects..."
             value={taskSearchTerm}
             onChange={(e) => setTaskSearchTerm(e.target.value)}
             autoComplete="off"

@@ -1,0 +1,32 @@
+Workflow and safety rules for Cursor in this repo
+
+- Database branching and promotion
+  - Keep schema changes in code using Drizzle. Run `npm run db:push` per environment (local → dev → prod).
+  - Use Neon branches:
+    - Develop/test on `local` branch (for local sandbox).
+    - Promote to dev by either:
+      - Switching the Vercel dev project's `DATABASE_URL` to a branch created from `local`, or
+      - Running seed/generator scripts against the dev DB.
+    - Promote to prod only after backup. Then run `npm run db:push` on prod.
+
+- Environment isolation
+  - Each Vercel project must use its own environment variables.
+  - Set `PUBLIC_SITE_URL`, `BASE_URL`, and `SITE_URL` to the current instance’s domain.
+  - Do not set `RESEND_API_KEY` on dev (or use a sandbox key) to prevent real emails.
+  - Never point local or dev to the production database.
+
+- ABSOLUTE PROTECTION RULE
+  - NEVER touch or modify the production project database unless explicitly instructed by the user in this session. This includes migrations, seeds, data changes, branch switches, or environment variable updates that would point to prod.
+
+- Seeding and test data
+  - Prefer using scripts in `src/scripts` to create or update test data.
+  - Avoid manual SQL for test data where possible.
+
+- Git and deployments
+  - Develop on feature branches → merge into `dev` → deploy dev.
+  - After QA on dev, merge `dev` → `main` for production deployment.
+
+- Operational defaults for assistants
+  - Default to read-only when interacting with prod resources.
+  - Confirm target environment before running migrations or seeds.
+  - When unsure, ask for explicit confirmation, especially if an action could affect prod.

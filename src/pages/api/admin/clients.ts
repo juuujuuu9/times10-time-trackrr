@@ -33,7 +33,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     const body = await request.json();
-    const { name } = body;
+    const { name, firstProjectName } = body;
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
       return new Response(JSON.stringify({ error: 'Client name is required and must be a non-empty string' }), {
@@ -53,24 +53,28 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     console.log('Client created successfully:', newClient[0]);
 
-    // Create the "Time Tracking" project for this client
-    const timeTrackingProject = await db.insert(projects).values({
-      name: 'Time Tracking',
+    // Create the initial project for this client
+    const initialProjectName = (typeof firstProjectName === 'string' && firstProjectName.trim().length > 0)
+      ? firstProjectName.trim()
+      : 'Time Tracking';
+
+    const initialProject = await db.insert(projects).values({
+      name: initialProjectName,
       clientId: newClient[0].id,
-      isSystem: true, // Mark as system-generated
+      isSystem: false,
     }).returning();
 
-    console.log('Time Tracking project created:', timeTrackingProject[0]);
+    console.log('Initial project created:', initialProject[0]);
 
     // Get all active users to assign the General task to everyone
     const allUsers = await db.select().from(users).where(eq(users.status, 'active'));
     console.log(`Found ${allUsers.length} active users to assign General task to`);
 
-    // Create the "General" task for the Time Tracking project
+    // Create the "General" task for the initial project
     const generalTask = await db.insert(tasks).values({
       name: 'General',
-      projectId: timeTrackingProject[0].id,
-      description: `General time tracking for ${trimmedName}`,
+      projectId: initialProject[0].id,
+      description: `General time tracking for ${trimmedName} / ${initialProjectName}`,
       isSystem: true, // Mark as system-generated
     }).returning();
 

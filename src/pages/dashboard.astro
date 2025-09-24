@@ -263,30 +263,30 @@ const user = await requireAuth('/')(Astro) as any;
         <div class="flex-1 overflow-y-auto">
           <form id="timeEntryForm" class="px-6 py-4">
             <div class="mb-4">
-              <label for="timeEntryTask" class="block text-sm font-medium text-gray-700 mb-1">
-                Task <span class="text-gray-500 font-normal">(required)</span>
+              <label for="timeEntryProject" class="block text-sm font-medium text-gray-700 mb-1">
+                Project <span class="text-gray-500 font-normal">(required; uses General task)</span>
               </label>
               <div class="relative">
                 <input
                   type="text"
-                  id="timeEntryTask"
-                  placeholder="🔍 Search tasks..."
+                  id="timeEntryProject"
+                  placeholder="🔍 Search projects..."
                   required
                   autocomplete="off"
                   class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
-                  oninput="handleTaskSearch(this.value)"
-                  onfocus="console.log('Input focused, calling showTaskDropdown'); showTaskDropdown()"
+                  oninput="handleProjectSearch(this.value)"
+                  onfocus="showProjectDropdown()"
                 />
                 <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-                  <svg id="taskDropdownArrow" class="fill-current h-5 w-5 transition-transform duration-200 cursor-pointer pointer-events-auto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" onclick="console.log('Arrow clicked, calling toggleTaskDropdown'); toggleTaskDropdown()">
+                  <svg id="projectDropdownArrow" class="fill-current h-5 w-5 transition-transform duration-200 cursor-pointer pointer-events-auto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" onclick="toggleProjectDropdown()">
                     <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
                   </svg>
                 </div>
                 <input type="hidden" id="timeEntryTaskId" />
-                <div id="taskDropdown" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto hidden">
-                  <!-- Task results will be populated here -->
-                </div>
+                <input type="hidden" id="timeEntryProjectId" />
+                <div id="projectDropdown" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto hidden"></div>
               </div>
+              <p class="mt-1 text-xs text-gray-500">We’ll automatically use the General task for the selected project.</p>
             </div>
 
             <!-- Time Entry Method Selection -->
@@ -1470,151 +1470,105 @@ const user = await requireAuth('/')(Astro) as any;
   // Close dropdown when clicking outside
   document.addEventListener('click', (e) => {
     const target = e.target as Element;
-    if (!target.closest('#timeEntryTask') && !target.closest('#taskDropdown') && !target.closest('#taskDropdownArrow')) {
-      hideTaskDropdown();
+    if (!target.closest('#timeEntryProject') && !target.closest('#projectDropdown') && !target.closest('#projectDropdownArrow')) {
+      hideProjectDropdown();
     }
     if (!target.closest('#editTimeEntryTask') && !target.closest('#editTaskDropdown') && !target.closest('#editTaskDropdownArrow')) {
       hideEditTaskDropdown();
     }
   });
   
-  // Task search functions
-  function handleTaskSearch(searchTerm: string) {
+  // Project search functions (replaces task search)
+  function handleProjectSearch(searchTerm: string) {
     clearTimeout(taskSearchTimeout);
     
     if (searchTerm.length < 1) {
-      searchAllTasks();
+      searchAllProjects();
       return;
     }
     
     taskSearchTimeout = setTimeout(() => {
-      searchTasks(searchTerm);
+      searchProjects(searchTerm);
     }, 300);
   }
   
-  function toggleTaskDropdown() {
-    const searchInput = document.getElementById('timeEntryTask');
-    console.log('toggleTaskDropdown called, searchInput:', searchInput, 'taskDropdownOpen:', taskDropdownOpen);
+  function toggleProjectDropdown() {
+    const searchInput = document.getElementById('timeEntryProject');
     if (!searchInput) return;
     
     if (taskDropdownOpen) {
-      hideTaskDropdown();
+      hideProjectDropdown();
     } else {
-      searchAllTasks();
-      showTaskDropdown();
+      searchAllProjects();
+      showProjectDropdown();
     }
   }
   
-  async function searchTasks(searchTerm: string) {
+  async function searchProjects(searchTerm: string) {
     try {
       const userId = await getCurrentUserId();
       if (!userId) {
-        console.error('No user ID available for task search');
+        console.error('No user ID available for project search');
         return;
       }
 
-      // Fetch both regular tasks and system tasks in parallel with timeout
-      const [regularTasksResponse, systemTasksResponse] = await Promise.allSettled([
-        fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=20`, { 
-          signal: AbortSignal.timeout(10000) // 10 second timeout
-        }),
-        fetch(`/api/system-tasks?assignedTo=${encodeURIComponent(userId)}&limit=100`, { 
-          signal: AbortSignal.timeout(10000) // 10 second timeout
-        })
-      ]);
-
-      let allTasks: any[] = [];
-
-      // Get regular tasks
-      if (regularTasksResponse.status === 'fulfilled' && regularTasksResponse.value.ok) {
-        const regularData = await regularTasksResponse.value.json();
-        allTasks = [...(regularData.data || [])];
+      const projectsResponse = await fetch(`/api/projects?userId=${encodeURIComponent(userId)}&limit=50`, {
+        signal: AbortSignal.timeout(10000)
+      });
+      if (!projectsResponse.ok) {
+        throw new Error('Failed to fetch projects');
       }
-
-      // Get system tasks
-      if (systemTasksResponse.status === 'fulfilled' && systemTasksResponse.value.ok) {
-        const systemData = await systemTasksResponse.value.json();
-        allTasks = [...allTasks, ...(systemData.data || [])];
-      }
-      
-      // Filter tasks based on search term (including client and project names)
-      const filteredTasks = allTasks.filter((task: any) => 
-        task.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        task.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        task.clientName.toLowerCase().includes(searchTerm.toLowerCase())
+      const projData = await projectsResponse.json();
+      const allProjects: any[] = projData.data || [];
+      const filteredProjects = allProjects.filter((p: any) => 
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.clientName || '').toLowerCase().includes(searchTerm.toLowerCase())
       );
 
-      displayTaskDropdown(filteredTasks);
+      displayProjectDropdown(filteredProjects);
     } catch (error) {
-      console.error('Error searching tasks:', error);
+      console.error('Error searching projects:', error);
     }
   }
   
-  async function searchAllTasks() {
+  async function searchAllProjects() {
     try {
       const userId = await getCurrentUserId();
       if (!userId) {
-        console.error('No user ID available for task search');
+        console.error('No user ID available for project search');
         return;
       }
 
-      console.log('searchAllTasks called for user:', userId);
-
-      // Fetch both regular tasks and system tasks in parallel with timeout
-      const [regularTasksResponse, systemTasksResponse] = await Promise.allSettled([
-        fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=20`, { 
-          signal: AbortSignal.timeout(10000) // 10 second timeout
-        }),
-        fetch(`/api/system-tasks?assignedTo=${encodeURIComponent(userId)}&limit=100`, { 
-          signal: AbortSignal.timeout(10000) // 10 second timeout
-        })
-      ]);
-
-      let allTasks: any[] = [];
-
-      // Get regular tasks
-      if (regularTasksResponse.status === 'fulfilled' && regularTasksResponse.value.ok) {
-        const regularData = await regularTasksResponse.value.json();
-        console.log('Regular tasks response:', regularData);
-        allTasks = [...(regularData.data || [])];
-      } else {
-        console.error('Regular tasks response failed:', regularTasksResponse.status === 'rejected' ? regularTasksResponse.reason : regularTasksResponse.value?.status);
+      const projectsResponse = await fetch(`/api/projects?userId=${encodeURIComponent(userId)}&limit=50`, {
+        signal: AbortSignal.timeout(10000)
+      });
+      if (!projectsResponse.ok) {
+        throw new Error('Failed to fetch projects');
       }
-
-      // Get system tasks
-      if (systemTasksResponse.status === 'fulfilled' && systemTasksResponse.value.ok) {
-        const systemData = await systemTasksResponse.value.json();
-        console.log('System tasks response:', systemData);
-        allTasks = [...allTasks, ...(systemData.data || [])];
-      } else {
-        console.error('System tasks response failed:', systemTasksResponse.status === 'rejected' ? systemTasksResponse.reason : systemTasksResponse.value?.status);
-      }
-
-      console.log('All tasks combined:', allTasks);
-      displayTaskDropdown(allTasks);
+      const projData = await projectsResponse.json();
+      const allProjects: any[] = projData.data || [];
+      displayProjectDropdown(allProjects);
     } catch (error) {
-      console.error('Error loading all tasks:', error);
+      console.error('Error loading projects:', error);
     }
   }
   
-  function showTaskDropdown() {
-    const dropdown = document.getElementById('taskDropdown');
-    const arrow = document.getElementById('taskDropdownArrow');
-    console.log('showTaskDropdown called, dropdown element:', dropdown);
+  function showProjectDropdown() {
+    const dropdown = document.getElementById('projectDropdown');
+    const arrow = document.getElementById('projectDropdownArrow');
     if (dropdown) {
       dropdown.classList.remove('hidden');
       taskDropdownOpen = true;
-      console.log('Task dropdown shown, taskDropdownOpen:', taskDropdownOpen);
-      searchAllTasks(); // Load tasks when showing dropdown
+      searchAllProjects();
     }
     if (arrow) {
       arrow.style.transform = 'rotate(180deg)';
     }
   }
   
-  function hideTaskDropdown() {
-    const dropdown = document.getElementById('taskDropdown');
-    const arrow = document.getElementById('taskDropdownArrow');
+  function hideProjectDropdown() {
+    const dropdown = document.getElementById('projectDropdown');
+    const arrow = document.getElementById('projectDropdownArrow');
     if (dropdown) {
       dropdown.classList.add('hidden');
       taskDropdownOpen = false;
@@ -1649,34 +1603,54 @@ const user = await requireAuth('/')(Astro) as any;
         return;
       }
 
-      // Fetch both regular tasks and system tasks
-      const [regularTasksResponse, systemTasksResponse] = await Promise.all([
-        fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=20`),
-        fetch(`/api/system-tasks?assignedTo=${encodeURIComponent(userId)}&limit=100`)
-      ]);
-
-      let allTasks: any[] = [];
-
-      // Get regular tasks
-      if (regularTasksResponse.ok) {
-        const regularData = await regularTasksResponse.json();
-        allTasks = [...allTasks, ...(regularData.data || [])];
+      // Load projects and get their General tasks (same as timer component)
+      const projectsResponse = await fetch(`/api/projects?userId=${userId}&limit=50`);
+      if (!projectsResponse.ok) {
+        throw new Error('Failed to load projects');
       }
 
-      // Get system tasks
-      if (systemTasksResponse.ok) {
-        const systemData = await systemTasksResponse.json();
-        allTasks = [...allTasks, ...(systemData.data || [])];
+      const projectsData = await projectsResponse.json();
+      const projects = projectsData.data || [];
+
+      // For each project, get its General task and filter by search term
+      const allTasks = [];
+      for (const project of projects) {
+        try {
+          const generalTaskResponse = await fetch(`/api/projects/${project.id}/general-task`);
+          if (generalTaskResponse.ok) {
+            const generalTask = await generalTaskResponse.json();
+            
+            // Use the same display logic as the timer component
+            const displayName = project.name === 'Time Tracking' 
+              ? generalTask.name  // Show "General" for legacy tasks
+              : project.name;    // Show project name for new structure
+            
+            // Filter by search term (case insensitive)
+            const searchLower = searchTerm.toLowerCase();
+            const matchesSearch = 
+              project.clientName.toLowerCase().includes(searchLower) ||
+              project.name.toLowerCase().includes(searchLower) ||
+              generalTask.name.toLowerCase().includes(searchLower) ||
+              displayName.toLowerCase().includes(searchLower);
+            
+            if (matchesSearch) {
+              allTasks.push({
+                id: generalTask.id,
+                name: displayName,
+                projectName: project.name,
+                clientName: project.clientName,
+                projectId: project.id,
+                clientId: project.clientId,
+                displayName: displayName
+              });
+            }
+          }
+        } catch (error) {
+          console.warn(`Failed to load General task for project ${project.name}:`, error);
+        }
       }
 
-      // Filter tasks based on search term
-      const filteredTasks = allTasks.filter(task =>
-        task.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        task.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        task.clientName.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-
-      displayEditTaskDropdown(filteredTasks);
+      displayEditTaskDropdown(allTasks);
     } catch (error) {
       console.error('Error searching tasks:', error);
     }
@@ -1692,37 +1666,44 @@ const user = await requireAuth('/')(Astro) as any;
 
       console.log('Searching all edit tasks for user:', userId);
 
-      // Fetch both regular tasks and system tasks in parallel with timeout
-      const [regularTasksResponse, systemTasksResponse] = await Promise.allSettled([
-        fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=20`, { 
-          signal: AbortSignal.timeout(10000) // 10 second timeout
-        }),
-        fetch(`/api/system-tasks?assignedTo=${encodeURIComponent(userId)}&limit=100`, { 
-          signal: AbortSignal.timeout(10000) // 10 second timeout
-        })
-      ]);
-
-      let allTasks: any[] = [];
-
-      // Get regular tasks
-      if (regularTasksResponse.status === 'fulfilled' && regularTasksResponse.value.ok) {
-        const regularData = await regularTasksResponse.value.json();
-        console.log('Regular tasks response:', regularData);
-        allTasks = [...allTasks, ...(regularData.data || [])];
-      } else {
-        console.error('Regular tasks response failed:', regularTasksResponse.status === 'rejected' ? regularTasksResponse.reason : regularTasksResponse.value?.status);
+      // Load projects and get their General tasks (same as timer component)
+      const projectsResponse = await fetch(`/api/projects?userId=${userId}&limit=50`);
+      if (!projectsResponse.ok) {
+        throw new Error('Failed to load projects');
       }
 
-      // Get system tasks
-      if (systemTasksResponse.status === 'fulfilled' && systemTasksResponse.value.ok) {
-        const systemData = await systemTasksResponse.value.json();
-        console.log('System tasks response:', systemData);
-        allTasks = [...allTasks, ...(systemData.data || [])];
-      } else {
-        console.error('System tasks response failed:', systemTasksResponse.status === 'rejected' ? systemTasksResponse.reason : systemTasksResponse.value?.status);
+      const projectsData = await projectsResponse.json();
+      const projects = projectsData.data || [];
+
+      // For each project, get its General task
+      const allTasks = [];
+      for (const project of projects) {
+        try {
+          const generalTaskResponse = await fetch(`/api/projects/${project.id}/general-task`);
+          if (generalTaskResponse.ok) {
+            const generalTask = await generalTaskResponse.json();
+            
+            // Use the same display logic as the timer component
+            const displayName = project.name === 'Time Tracking' 
+              ? generalTask.name  // Show "General" for legacy tasks
+              : project.name;    // Show project name for new structure
+            
+            allTasks.push({
+              id: generalTask.id,
+              name: displayName,
+              projectName: project.name,
+              clientName: project.clientName,
+              projectId: project.id,
+              clientId: project.clientId,
+              displayName: displayName
+            });
+          }
+        } catch (error) {
+          console.warn(`Failed to load General task for project ${project.name}:`, error);
+        }
       }
 
-      console.log('All tasks combined:', allTasks);
+      console.log('All tasks loaded:', allTasks);
       displayEditTaskDropdown(allTasks);
     } catch (error) {
       console.error('Error fetching all tasks:', error);
@@ -1791,20 +1772,24 @@ const user = await requireAuth('/')(Astro) as any;
       
       // Add client header
       dropdownHTML += `
-        <div class="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-600 uppercase tracking-wide border-b border-gray-200">
+        <div class="px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600 uppercase tracking-wide border-b border-gray-200">
           ${clientName}
         </div>
       `;
       
       // Add tasks for this client
       clientTasks.forEach(task => {
+        // Use the same display logic as the Select Task dropdown
+        const displayName = task.projectName === 'Time Tracking' 
+          ? (task.displayName || task.name)
+          : (task.displayName || task.projectName);
+          
         dropdownHTML += `
           <div 
-            class="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm pl-6 border-b border-gray-100 last:border-b-0"
+            class="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm pl-8 border-b border-gray-100 last:border-b-0"
             onclick="selectEditTask(${task.id}, '${task.name.replace(/'/g, "\\'")}', '${task.projectName.replace(/'/g, "\\'")}', '${task.clientName.replace(/'/g, "\\'")}')"
           >
-            <div class="font-medium text-gray-900">${task.name}</div>
-            <div class="text-xs text-gray-500">${task.projectName}</div>
+            <div class="font-medium text-gray-900">${displayName}</div>
           </div>
         `;
       });
@@ -1819,19 +1804,19 @@ const user = await requireAuth('/')(Astro) as any;
     const editTaskIdInput = document.getElementById('editTimeEntryTaskId') as HTMLInputElement;
     
     if (editTaskInput && editTaskIdInput) {
-      editTaskInput.value = `${taskName} (${projectName} - ${clientName})`;
+      editTaskInput.value = `${clientName} - ${taskName}`;
       editTaskIdInput.value = taskId.toString();
       hideEditTaskDropdown();
     }
   }
 
   // Make functions available globally for HTML event handlers
-  (window as any).handleTaskSearch = handleTaskSearch;
-  (window as any).toggleTaskDropdown = toggleTaskDropdown;
-  (window as any).searchTasks = searchTasks;
-  (window as any).searchAllTasks = searchAllTasks;
-  (window as any).showTaskDropdown = showTaskDropdown;
-  (window as any).hideTaskDropdown = hideTaskDropdown;
+  (window as any).handleProjectSearch = handleProjectSearch;
+  (window as any).toggleProjectDropdown = toggleProjectDropdown;
+  (window as any).searchProjects = searchProjects;
+  (window as any).searchAllProjects = searchAllProjects;
+  (window as any).showProjectDropdown = showProjectDropdown;
+  (window as any).hideProjectDropdown = hideProjectDropdown;
   
   // Edit task functions
   (window as any).handleEditTaskSearch = handleEditTaskSearch;
@@ -1842,79 +1827,74 @@ const user = await requireAuth('/')(Astro) as any;
   (window as any).hideEditTaskDropdown = hideEditTaskDropdown;
   (window as any).selectEditTask = selectEditTask;
   
-  function displayTaskDropdown(tasks: any[]) {
-    const taskDropdown = document.getElementById('taskDropdown');
-    if (!taskDropdown) return;
+  function displayProjectDropdown(projects: any[]) {
+    const projectDropdown = document.getElementById('projectDropdown');
+    if (!projectDropdown) return;
 
-    console.log('Displaying task dropdown with tasks:', tasks);
-
-    if (tasks.length === 0) {
-      taskDropdown.innerHTML = '<div class="px-3 py-2 text-gray-500 text-sm">No tasks found</div>';
-      taskDropdown.classList.remove('hidden');
+    if (projects.length === 0) {
+      projectDropdown.innerHTML = '<div class="px-3 py-2 text-gray-500 text-sm">No projects found</div>';
+      projectDropdown.classList.remove('hidden');
       return;
     }
 
-    // Group tasks by client for better organization
-    const tasksByClient: { [key: string]: any[] } = {};
-    tasks.forEach(task => {
-      const clientName = task.clientName || 'Unknown Client';
-      if (!tasksByClient[clientName]) {
-        tasksByClient[clientName] = [];
-      }
-      tasksByClient[clientName].push(task);
+    const projectsByClient: { [key: string]: any[] } = {};
+    projects.forEach((p) => {
+      const clientName = p.clientName || 'Unknown Client';
+      if (!projectsByClient[clientName]) projectsByClient[clientName] = [];
+      projectsByClient[clientName].push(p);
     });
 
     let dropdownHTML = '';
-    
-    Object.keys(tasksByClient).forEach(clientName => {
-      const clientTasks = tasksByClient[clientName];
-      
-      // Add client header
+    Object.keys(projectsByClient).forEach((clientName) => {
+      const clientProjects = projectsByClient[clientName];
       dropdownHTML += `
-        <div class="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-600 uppercase tracking-wide border-b border-gray-200">
-          ${clientName}
-        </div>
+        <div class="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-600 uppercase tracking-wide border-b border-gray-200">${clientName}</div>
       `;
-      
-      // Add tasks for this client
-      clientTasks.forEach(task => {
+      clientProjects.forEach((p) => {
         dropdownHTML += `
-          <div 
-            class="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm pl-6 border-b border-gray-100 last:border-b-0"
-            data-task-id="${task.id}"
-            data-task-name="${task.name}"
-            data-project-name="${task.projectName}"
-            data-client-name="${task.clientName}"
-          >
-            <div class="font-medium text-gray-900">${task.name}</div>
-            <div class="text-xs text-gray-600">${task.projectName}</div>
+          <div class="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm pl-6 border-b border-gray-100 last:border-b-0"
+               data-project-id="${p.id}" data-project-name="${p.name}" data-client-name="${p.clientName}">
+            <div class="font-medium text-gray-900">${p.name}</div>
+            <div class="text-xs text-gray-600">${p.clientName}</div>
           </div>
         `;
       });
     });
 
-    taskDropdown.innerHTML = dropdownHTML;
-    taskDropdown.classList.remove('hidden');
+    projectDropdown.innerHTML = dropdownHTML;
+    projectDropdown.classList.remove('hidden');
 
-    // Add click handlers to task items
-    taskDropdown.querySelectorAll('[data-task-id]').forEach((item: Element) => {
-      item.addEventListener('click', () => {
-        const taskId = item.getAttribute('data-task-id');
-        const taskName = item.getAttribute('data-task-name');
+    projectDropdown.querySelectorAll('[data-project-id]').forEach((item: Element) => {
+      item.addEventListener('click', async () => {
+        const projectId = item.getAttribute('data-project-id');
         const projectName = item.getAttribute('data-project-name');
         const clientName = item.getAttribute('data-client-name');
 
-        const timeEntryTask = document.getElementById('timeEntryTask') as HTMLInputElement;
-        const timeEntryTaskId = document.getElementById('timeEntryTaskId') as HTMLInputElement;
-        
-        if (timeEntryTask) {
-          timeEntryTask.value = `${clientName} - ${projectName} - ${taskName}`;
+        const projectInput = document.getElementById('timeEntryProject') as HTMLInputElement;
+        const projectIdInput = document.getElementById('timeEntryProjectId') as HTMLInputElement;
+        const taskIdInput = document.getElementById('timeEntryTaskId') as HTMLInputElement;
+
+        if (projectInput) {
+          projectInput.value = `${clientName} - ${projectName}`;
         }
-        if (timeEntryTaskId) {
-          timeEntryTaskId.value = taskId || '';
+        if (projectIdInput) {
+          projectIdInput.value = projectId || '';
         }
-        
-        hideTaskDropdown();
+
+        try {
+          // Ensure/get General task for this project
+          const resp = await fetch(`/api/projects/${encodeURIComponent(projectId || '')}/general-task`);
+          if (resp.ok) {
+            const general = await resp.json();
+            if (taskIdInput) taskIdInput.value = String(general.id);
+          } else {
+            console.warn('Could not fetch General task for project');
+          }
+        } catch (e) {
+          console.warn('Error ensuring General task:', e);
+        }
+
+        hideProjectDropdown();
       });
     });
   }
@@ -2133,7 +2113,7 @@ const user = await requireAuth('/')(Astro) as any;
 
     // Populate task information
     if (editTaskInput && editTaskIdInput) {
-      editTaskInput.value = `${entry.taskName} (${entry.projectName} - ${entry.clientName})`;
+      editTaskInput.value = `${entry.clientName} - ${entry.taskName}`;
       editTaskIdInput.value = entry.taskId ? entry.taskId.toString() : '';
     }
 

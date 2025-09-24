@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db/index';
-import { projects, clients } from '../../../db/schema';
+import { projects, clients, tasks, users, taskAssignments } from '../../../db/schema';
 import { eq, and } from 'drizzle-orm';
 
 export const GET: APIRoute = async ({ url }) => {
@@ -74,6 +74,29 @@ export const POST: APIRoute = async ({ request }) => {
       name,
       clientId: parseInt(clientId),
     }).returning();
+
+    // Ensure a default General system task exists for the new project
+    const existingGeneral = await db.select().from(tasks)
+      .where(and(eq(tasks.projectId, newProject[0].id), eq(tasks.name, 'General')));
+    if (existingGeneral.length === 0) {
+      const generalTask = await db.insert(tasks).values({
+        name: 'General',
+        projectId: newProject[0].id,
+        description: `General work for project ${name}`,
+        isSystem: true,
+      }).returning();
+
+      // Assign General to all active users (best-effort)
+      try {
+        const activeUsers = await db.select().from(users).where(eq(users.status, 'active'));
+        if (activeUsers.length > 0) {
+          const assignmentData = activeUsers.map(u => ({ taskId: generalTask[0].id, userId: u.id }));
+          await db.insert(taskAssignments).values(assignmentData);
+        }
+      } catch (e) {
+        console.warn('Skipping General task assignments due to error:', e);
+      }
+    }
 
     return new Response(JSON.stringify(newProject[0]), {
       status: 201,

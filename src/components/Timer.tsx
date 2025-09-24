@@ -213,39 +213,46 @@ export default function Timer() {
 
     console.log('loadTasks: Loading tasks for userId:', currentUserId, 'retry:', retryCount);
     try {
-      // Load both regular tasks and system tasks in parallel with timeout
-      const [regularTasksResponse, systemTasksResponse] = await Promise.allSettled([
-        fetch(`/api/tasks?assignedTo=${currentUserId}`, { 
-          signal: AbortSignal.timeout(10000) // 10 second timeout
-        }),
-        fetch(`/api/system-tasks?assignedTo=${currentUserId}&limit=100`, { 
-          signal: AbortSignal.timeout(10000) // 10 second timeout
-        })
-      ]);
+      // Load projects and get their General tasks
+      const projectsResponse = await fetch(`/api/projects?userId=${currentUserId}&limit=50`, {
+        signal: AbortSignal.timeout(10000)
+      });
 
-      let regularTasks = [];
-      let systemTasks = [];
-
-      // Handle regular tasks response
-      if (regularTasksResponse.status === 'fulfilled' && regularTasksResponse.value.ok) {
-        const tasksData = await regularTasksResponse.value.json();
-        regularTasks = tasksData.data || [];
-        console.log('loadTasks: Loaded', regularTasks.length, 'regular tasks');
-      } else {
-        console.error('Failed to load regular tasks:', regularTasksResponse.status === 'rejected' ? regularTasksResponse.reason : regularTasksResponse.value?.status);
+      if (!projectsResponse.ok) {
+        throw new Error('Failed to load projects');
       }
 
-      // Handle system tasks response
-      if (systemTasksResponse.status === 'fulfilled' && systemTasksResponse.value.ok) {
-        const systemTasksData = await systemTasksResponse.value.json();
-        systemTasks = systemTasksData.data || [];
-        console.log('loadTasks: Loaded', systemTasks.length, 'system tasks');
-      } else {
-        console.error('Failed to load system tasks:', systemTasksResponse.status === 'rejected' ? systemTasksResponse.reason : systemTasksResponse.value?.status);
-      }
+      const projectsData = await projectsResponse.json();
+      const projects = projectsData.data || [];
+      console.log('loadTasks: Loaded', projects.length, 'projects');
 
-      // Combine regular tasks and system tasks
-      const allTasks = [...regularTasks, ...systemTasks];
+      // For each project, get its General task (include both new and legacy projects)
+      const allTasks = [];
+      for (const project of projects) {
+        try {
+          const generalTaskResponse = await fetch(`/api/projects/${project.id}/general-task`);
+          if (generalTaskResponse.ok) {
+            const generalTask = await generalTaskResponse.json();
+            
+            // For legacy "Time Tracking" projects: show task name (General)
+            // For new structure projects: show project name
+            const displayName = project.name === 'Time Tracking' 
+              ? generalTask.name  // Show "General" for legacy tasks
+              : project.name;    // Show project name for new structure
+            
+            allTasks.push({
+              id: generalTask.id,
+              name: displayName,
+              projectName: project.name,
+              clientName: project.clientName,
+              projectId: project.id,
+              clientId: project.clientId
+            });
+          }
+        } catch (error) {
+          console.warn(`Failed to load General task for project ${project.name}:`, error);
+        }
+      }
       setTasks(allTasks);
       console.log('loadTasks: Total loaded', allTasks.length, 'tasks');
 
@@ -371,7 +378,12 @@ export default function Timer() {
       // Update search term to show the selected task
       const task = tasks.find(t => t.id === timerData.taskId);
       if (task) {
-        setTaskSearchTerm(task.displayName || `${task.projectName} - ${task.name}`);
+        // For legacy "Time Tracking" projects: show task name (General)
+        // For new structure projects: show project name
+        const displayText = task.projectName === 'Time Tracking' 
+          ? task.displayName || `${task.clientName} - ${task.name}`
+          : task.displayName || `${task.clientName} - ${task.projectName}`;
+        setTaskSearchTerm(displayText);
       }
     }
   }, [timerData, tasks]);
@@ -703,7 +715,7 @@ export default function Timer() {
             name: taskData.taskName,
             projectName: taskData.projectName,
             clientName: taskData.clientName,
-            displayName: `${taskData.projectName} - ${taskData.taskName}`,
+            displayName: `${taskData.clientName} - ${taskData.projectName}`,
             description: '',
             status: 'active',
             archived: false,
@@ -858,8 +870,12 @@ export default function Timer() {
     const task = tasks.find(t => t.id === selectedTask);
     if (!task) return '';
     
-    // Use displayName for system-generated tasks, otherwise use project - task format
-    return task.displayName || `${task.projectName} - ${task.name}`;
+    // For legacy "Time Tracking" projects: show task name (General)
+    // For new structure projects: show project name
+    if (task.projectName === 'Time Tracking') {
+      return task.displayName || `${task.clientName} - ${task.name}`;
+    }
+    return task.displayName || `${task.clientName} - ${task.projectName}`;
   };
 
   // Get client name for display
@@ -967,12 +983,20 @@ export default function Timer() {
                 className="pl-8 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
                 onClick={() => {
                   setSelectedTask(task.id);
-                  setTaskSearchTerm(task.displayName || `${task.projectName} - ${task.name}`);
+                  // For legacy "Time Tracking" projects: show task name (General)
+        // For new structure projects: show project name
+        // In selected state, show Client - Task for better UX
+        const displayText = task.projectName === 'Time Tracking' 
+          ? task.displayName || `${task.clientName} - ${task.name}`
+          : task.displayName || `${task.clientName} - ${task.projectName}`;
+        setTaskSearchTerm(displayText);
                   setTaskDropdownOpen(false);
                 }}
               >
                 <div className="font-medium text-gray-900">
-                  {task.displayName || `${task.projectName} - ${task.name}`}
+                  {task.projectName === 'Time Tracking' 
+                    ? (task.displayName || task.name)
+                    : (task.displayName || task.projectName)}
                 </div>
               </div>
             ))}
@@ -1022,7 +1046,9 @@ export default function Timer() {
                 >
                   <div className="font-medium text-gray-900 flex items-center justify-between">
                     <span>
-                      {task.displayName || `${task.projectName} - ${task.name}`}
+                      {task.projectName === 'Time Tracking' 
+                        ? (task.displayName || task.name)
+                        : (task.displayName || task.projectName)}
                     </span>
                     {isAlreadyAdded && (
                       <span className="text-xs text-gray-500">Added</span>
@@ -1166,7 +1192,7 @@ export default function Timer() {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="🔍 Search tasks to add..."
+                  placeholder="🔍 Search projects to add..."
                   value={addTaskSearchTerm}
                   onChange={(e) => setAddTaskSearchTerm(e.target.value)}
                   autoComplete="off"
@@ -1326,7 +1352,9 @@ export default function Timer() {
                             {/* Task Info */}
                             <div className="flex-1 min-w-0">
                               <div className="text-sm text-gray-600 truncate">
-                                {task.displayName || `${task.projectName} - ${task.name}`}
+                                {task.projectName === 'Time Tracking' 
+                    ? (task.displayName || `${task.clientName} - ${task.name}`)
+                    : (task.displayName || `${task.clientName} - ${task.projectName}`)}
                               </div>
                             </div>
 
@@ -1496,7 +1524,7 @@ export default function Timer() {
             <input
               type="text"
               id="taskSelect"
-              placeholder="🔍 Search tasks..."
+              placeholder="🔍 Search projects..."
               value={taskSearchTerm}
               onChange={(e) => setTaskSearchTerm(e.target.value)}
               autoComplete="off"
