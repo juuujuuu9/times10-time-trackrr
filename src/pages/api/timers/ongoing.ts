@@ -289,7 +289,7 @@ export const PUT: APIRoute = async (context) => {
       success: true,
       data: {
         id: updatedTimer.id,
-        taskId: updatedTimer.taskId,
+        projectId: updatedTimer.projectId,
         startTime: updatedTimer.startTime,
         endTime: updatedTimer.endTime,
         duration,

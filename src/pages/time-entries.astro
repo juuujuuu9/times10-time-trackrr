@@ -39,7 +39,7 @@ const userTimeEntries = await db
     notes: timeEntries.notes,
     createdAt: timeEntries.createdAt,
     userName: users.name,
-    taskName: tasks.name,
+    taskName: sql<string>`'General'`.as('taskName'), // Since we're now using projects as tasks
     projectName: projects.name,
     clientName: clients.name,
     duration: sql<number>`CASE 
@@ -52,16 +52,14 @@ const userTimeEntries = await db
   })
   .from(timeEntries)
   .innerJoin(users, eq(timeEntries.userId, users.id))
-  .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-  .innerJoin(projects, eq(tasks.projectId, projects.id))
+  .innerJoin(projects, eq(timeEntries.projectId, projects.id))
   .innerJoin(clients, eq(projects.clientId, clients.id))
   .where(and(
     eq(timeEntries.userId, user.id),
     // Include completed time entries (with endTime) OR manual duration entries (with durationManual)
     sql`(${timeEntries.endTime} IS NOT NULL OR ${timeEntries.durationManual} IS NOT NULL)`,
     eq(clients.archived, false),
-    eq(projects.archived, false),
-    eq(tasks.archived, false)
+    eq(projects.archived, false)
   ))
   .orderBy(sql`${timeEntries.createdAt} DESC`);
 
@@ -69,36 +67,32 @@ const userTimeEntries = await db
 const userClients = await db
   .selectDistinct({ name: clients.name })
   .from(timeEntries)
-  .innerJoin(tasks, sql`${timeEntries.taskId} = ${tasks.id}`)
-  .innerJoin(projects, sql`${tasks.projectId} = ${projects.id}`)
-  .innerJoin(clients, sql`${projects.clientId} = ${clients.id}`)
+  .innerJoin(projects, eq(timeEntries.projectId, projects.id))
+  .innerJoin(clients, eq(projects.clientId, clients.id))
   .where(and(
     eq(timeEntries.userId, user.id),
     eq(clients.archived, false),
-    eq(projects.archived, false),
-    eq(tasks.archived, false)
+    eq(projects.archived, false)
   ))
   .orderBy(clients.name);
 
-// Get all tasks for filtering (only those the user has worked on - non-archived activities)
+// Get all projects for filtering (only those the user has worked on - non-archived activities)
 const userTasks = await db
   .selectDistinct({
-    id: tasks.id,
-    name: tasks.name,
+    id: projects.id,
+    name: sql<string>`'General'`.as('name'),
     projectName: projects.name,
     clientName: clients.name,
   })
   .from(timeEntries)
-  .innerJoin(tasks, sql`${timeEntries.taskId} = ${tasks.id}`)
-  .innerJoin(projects, sql`${tasks.projectId} = ${projects.id}`)
-  .innerJoin(clients, sql`${projects.clientId} = ${clients.id}`)
+  .innerJoin(projects, eq(timeEntries.projectId, projects.id))
+  .innerJoin(clients, eq(projects.clientId, clients.id))
   .where(and(
     eq(timeEntries.userId, user.id),
     eq(clients.archived, false),
-    eq(projects.archived, false),
-    eq(tasks.archived, false)
+    eq(projects.archived, false)
   ))
-  .orderBy(clients.name, projects.name, tasks.name);
+  .orderBy(clients.name, projects.name);
 
 // Format date range for display (matching dashboard format: M/D-M/D)
 const formatDateRange = (start: Date, end: Date) => {
