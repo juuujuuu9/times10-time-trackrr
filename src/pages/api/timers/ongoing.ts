@@ -87,8 +87,11 @@ export const GET: APIRoute = async (context) => {
 // POST: Start a new timer
 export const POST: APIRoute = async (context) => {
   try {
+    console.log('🔍 [TIMER DEBUG] POST /api/timers/ongoing - Starting timer request');
+    
     const currentUser = await requireAuth()(context);
     if (!currentUser || typeof currentUser === 'string') {
+      console.log('❌ [TIMER DEBUG] Authentication failed');
       return new Response(JSON.stringify({ 
         success: false, 
         error: 'Authentication required' 
@@ -98,10 +101,15 @@ export const POST: APIRoute = async (context) => {
       });
     }
 
+    console.log('✅ [TIMER DEBUG] User authenticated:', currentUser.id);
+
     const body = await context.request.json();
     const { taskId, notes, clientTime } = body;
+    
+    console.log('📝 [TIMER DEBUG] Request body:', { taskId, notes, clientTime });
 
     if (!taskId) {
+      console.log('❌ [TIMER DEBUG] No taskId provided');
       return new Response(JSON.stringify({ 
         success: false, 
         error: 'Task ID is required' 
@@ -113,6 +121,7 @@ export const POST: APIRoute = async (context) => {
 
     // Check if user already has an ongoing timer
     // Exclude manual duration entries (entries with durationManual but no endTime)
+    console.log('🔍 [TIMER DEBUG] Checking for existing timers for user:', currentUser.id);
     const existingTimer = await db.select()
       .from(timeEntries)
       .where(and(
@@ -122,7 +131,10 @@ export const POST: APIRoute = async (context) => {
         sql`${timeEntries.startTime} IS NOT NULL` // Only include entries with actual start times
       ));
 
+    console.log('📊 [TIMER DEBUG] Existing timers found:', existingTimer.length);
+
     if (existingTimer.length > 0) {
+      console.log('❌ [TIMER DEBUG] User already has ongoing timer:', existingTimer[0]);
       return new Response(JSON.stringify({ 
         success: false, 
         error: 'User already has an ongoing timer' 
@@ -133,12 +145,19 @@ export const POST: APIRoute = async (context) => {
     }
 
     // Verify task exists and is assigned to user
+    console.log('🔍 [TIMER DEBUG] Verifying task exists:', taskId);
     const task = await db.select()
       .from(tasks)
       .where(eq(tasks.id, taskId))
       .limit(1);
 
+    console.log('📊 [TIMER DEBUG] Task found:', task.length > 0 ? 'Yes' : 'No');
+    if (task.length > 0) {
+      console.log('📝 [TIMER DEBUG] Task details:', task[0]);
+    }
+
     if (task.length === 0) {
+      console.log('❌ [TIMER DEBUG] Task not found for ID:', taskId);
       return new Response(JSON.stringify({ 
         success: false, 
         error: 'Task not found' 
@@ -153,6 +172,14 @@ export const POST: APIRoute = async (context) => {
     // Use the exact client timestamp as the authoritative start time
     const startTime = clientTime ? new Date(parseInt(clientTime)) : new Date();
     
+    console.log('⏰ [TIMER DEBUG] Creating timer with startTime:', startTime);
+    console.log('📝 [TIMER DEBUG] Timer data:', {
+      userId: currentUser.id,
+      taskId: taskId,
+      startTime: startTime,
+      notes: notes || null
+    });
+    
     const [newTimer] = await db.insert(timeEntries).values({
       userId: currentUser.id,
       taskId: taskId,
@@ -160,6 +187,8 @@ export const POST: APIRoute = async (context) => {
       endTime: null,
       notes: notes || null
     }).returning();
+
+    console.log('✅ [TIMER DEBUG] Timer created successfully:', newTimer);
 
     return new Response(JSON.stringify({
       success: true,
@@ -177,7 +206,7 @@ export const POST: APIRoute = async (context) => {
     });
 
   } catch (error) {
-    console.error('Error starting timer:', error);
+    console.error('❌ [TIMER DEBUG] Error starting timer:', error);
     return new Response(JSON.stringify({ 
       success: false, 
       error: 'Internal server error' 

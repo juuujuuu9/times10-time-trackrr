@@ -482,27 +482,38 @@ export default function Timer() {
   };
 
   const handleStartTimer = async () => {
+    console.log('🔍 [TIMER COMPONENT DEBUG] handleStartTimer called');
+    console.log('📝 [TIMER COMPONENT DEBUG] selectedTask:', selectedTask);
+    console.log('📝 [TIMER COMPONENT DEBUG] currentUserId:', currentUserId);
+    
     if (!selectedTask) {
+      console.log('❌ [TIMER COMPONENT DEBUG] No selectedTask');
       return;
     }
     if (!currentUserId) {
+      console.log('❌ [TIMER COMPONENT DEBUG] No currentUserId');
       return;
     }
 
     // If there's already a timer running, stop it first
     if (isRunning && timerData) {
-      console.log('Stopping current timer before starting new one');
+      console.log('🔄 [TIMER COMPONENT DEBUG] Stopping current timer before starting new one');
       const stopSuccess = await stopTimer(timerData.id);
       if (!stopSuccess) {
-        console.error('Failed to stop current timer');
+        console.error('❌ [TIMER COMPONENT DEBUG] Failed to stop current timer');
         return;
       }
     }
 
+    console.log('🚀 [TIMER COMPONENT DEBUG] Starting timer for task:', selectedTask);
     const success = await startTimer(selectedTask);
+    console.log('📊 [TIMER COMPONENT DEBUG] startTimer result:', success);
+    
     if (success) {
+      console.log('✅ [TIMER COMPONENT DEBUG] Timer started successfully');
       // Automatically add the task to the curated list if it's not already there
       if (!curatedTaskList.includes(selectedTask)) {
+        console.log('📝 [TIMER COMPONENT DEBUG] Adding task to curated list');
         await addToCuratedList(selectedTask);
       }
       
@@ -510,6 +521,8 @@ export default function Timer() {
       setTaskDropdownOpen(false);
       // Trigger a custom event to notify the dashboard to refresh
       window.dispatchEvent(new CustomEvent('timerStarted'));
+    } else {
+      console.log('❌ [TIMER COMPONENT DEBUG] Timer failed to start');
     }
   };
 

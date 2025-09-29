@@ -109,40 +109,52 @@ export function useRealtimeTimer(pollInterval: number = 2000): UseRealtimeTimerR
 
   // Start a new timer
   const startTimer = useCallback(async (taskId: number, notes?: string): Promise<boolean> => {
+    console.log('🔍 [REALTIME TIMER DEBUG] startTimer called with taskId:', taskId, 'notes:', notes);
     setIsLoading(true);
     setError(null);
     
     try {
+      const requestBody = { 
+        taskId, 
+        notes, 
+        clientTime: new Date().getTime() // Send client's current time as timestamp to preserve timezone
+      };
+      
+      console.log('📝 [REALTIME TIMER DEBUG] Sending request to /api/timers/ongoing with body:', requestBody);
+      
       const response = await fetch('/api/timers/ongoing', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          taskId, 
-          notes, 
-          clientTime: new Date().getTime() // Send client's current time as timestamp to preserve timezone
-        }),
+        body: JSON.stringify(requestBody),
       });
+
+      console.log('📊 [REALTIME TIMER DEBUG] Response status:', response.status);
+      console.log('📊 [REALTIME TIMER DEBUG] Response ok:', response.ok);
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.log('❌ [REALTIME TIMER DEBUG] Error response:', errorData);
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
       const result = await response.json();
+      console.log('📊 [REALTIME TIMER DEBUG] Response data:', result);
       
       if (result.success) {
+        console.log('✅ [REALTIME TIMER DEBUG] Timer started successfully, setting timer data');
         setTimerData(result.data);
         // Start polling when timer is active
         startPolling();
         return true;
       } else {
+        console.log('❌ [REALTIME TIMER DEBUG] Timer start failed:', result.error);
         setError(result.error || 'Failed to start timer');
         return false;
       }
     } catch (err) {
-      console.error('Error starting timer:', err);
+      console.error('❌ [REALTIME TIMER DEBUG] Error starting timer:', err);
       setError(err instanceof Error ? err.message : 'Network error');
       return false;
     } finally {
