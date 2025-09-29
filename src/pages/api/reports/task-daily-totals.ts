@@ -52,7 +52,7 @@ export const GET: APIRoute = async ({ url }) => {
     // Get all projects that the user has time entries for in the selected date range
     // Since we're now using projects as tasks, we get projects directly
     const projectsWithEntries = await db
-      .select({
+      .selectDistinct({
         id: projects.id,
         name: projects.name,
         projectName: projects.name,
