@@ -206,58 +206,45 @@ export default function Timer() {
       return;
     }
 
-    console.log('loadTasks: Loading tasks for userId:', currentUserId, 'retry:', retryCount);
+    console.log('loadProjects: Loading projects for userId:', currentUserId, 'retry:', retryCount);
     try {
-      // Load both regular tasks and system tasks in parallel with timeout
-      const [regularTasksResponse, systemTasksResponse] = await Promise.allSettled([
-        fetch(`/api/tasks?assignedOnly=false&limit=500&assignedTo=${currentUserId}`, {
-          signal: AbortSignal.timeout(10000) // 10 second timeout
-        }),
-        fetch(`/api/system-tasks?limit=500`, { 
-          signal: AbortSignal.timeout(10000) // 10 second timeout
-        })
-      ]);
+      // Load projects for the user
+      const projectsResponse = await fetch(`/api/projects?userId=${currentUserId}&limit=500`, {
+        signal: AbortSignal.timeout(10000) // 10 second timeout
+      });
 
-      let regularTasks = [];
-      let systemTasks = [];
+      let allProjects = [];
 
-      // Handle regular tasks response
-      if (regularTasksResponse.status === 'fulfilled' && regularTasksResponse.value.ok) {
-        const tasksData = await regularTasksResponse.value.json();
-        regularTasks = tasksData.data || [];
-        console.log('loadTasks: Loaded', regularTasks.length, 'regular tasks');
-        console.log('loadTasks: Regular tasks data:', tasksData);
-        console.log('loadTasks: Regular tasks meta:', tasksData.meta);
+      if (projectsResponse.ok) {
+        const projectsData = await projectsResponse.json();
+        allProjects = projectsData.data || [];
+        console.log('loadProjects: Loaded', allProjects.length, 'projects');
+        console.log('loadProjects: Projects data:', projectsData);
       } else {
-        console.error('Failed to load regular tasks:', regularTasksResponse.status === 'rejected' ? regularTasksResponse.reason : regularTasksResponse.value?.status);
+        console.error('Failed to load projects:', projectsResponse.status);
       }
 
-      // Handle system tasks response
-      if (systemTasksResponse.status === 'fulfilled' && systemTasksResponse.value.ok) {
-        const systemTasksData = await systemTasksResponse.value.json();
-        systemTasks = systemTasksData.data || [];
-        console.log('loadTasks: Loaded', systemTasks.length, 'system tasks');
-        console.log('loadTasks: System tasks data:', systemTasksData);
-        console.log('loadTasks: System tasks sample:', systemTasks.slice(0, 3));
-      } else {
-        console.error('Failed to load system tasks:', systemTasksResponse.status === 'rejected' ? systemTasksResponse.reason : systemTasksResponse.value?.status);
-      }
+      // Transform projects to include display names and ensure proper structure
+      const transformedProjects = allProjects.map(project => ({
+        ...project,
+        displayName: project.name,
+        // Ensure clientName is available
+        clientName: project.clientName || 'Unknown Client'
+      }));
 
-      // Combine regular tasks and system tasks
-      const allTasks = [...regularTasks, ...systemTasks];
-      setTasks(allTasks);
-      console.log('loadTasks: Total loaded', allTasks.length, 'tasks');
+      setTasks(transformedProjects);
+      console.log('loadProjects: Total loaded', transformedProjects.length, 'projects');
 
-      // If no tasks were loaded and this is the first attempt, retry once
-      if (allTasks.length === 0 && retryCount === 0) {
-        console.log('loadTasks: No tasks loaded, retrying in 1 second...');
+      // If no projects were loaded and this is the first attempt, retry once
+      if (transformedProjects.length === 0 && retryCount === 0) {
+        console.log('loadProjects: No projects loaded, retrying in 1 second...');
         setTimeout(() => loadTasks(1), 1000);
       }
     } catch (error) {
-      console.error('Error loading tasks:', error);
+      console.error('Error loading projects:', error);
       // Retry once if this is the first attempt
       if (retryCount === 0) {
-        console.log('loadTasks: Error occurred, retrying in 2 seconds...');
+        console.log('loadProjects: Error occurred, retrying in 2 seconds...');
         setTimeout(() => loadTasks(1), 2000);
       }
     }
@@ -938,14 +925,14 @@ export default function Timer() {
     return { clientGroups, sortedClients };
   };
 
-  // Render the task dropdown
+  // Render the project dropdown
   const renderTaskDropdown = () => {
     const { clientGroups, sortedClients } = getFilteredTasks();
     
     if (sortedClients.length === 0) {
       return (
         <div className="px-4 py-2 text-gray-500 text-sm">
-          {taskSearchTerm.trim() ? 'No tasks found' : 'No tasks assigned'}
+          {taskSearchTerm.trim() ? 'No projects found' : 'No projects assigned'}
         </div>
       );
     }
@@ -959,19 +946,19 @@ export default function Timer() {
               {clientName}
             </div>
             
-            {/* Tasks for this client */}
-            {clientGroups[clientName].map((task, taskIndex) => (
+            {/* Projects for this client */}
+            {clientGroups[clientName].map((project, projectIndex) => (
               <div
-                key={task.id}
+                key={project.id}
                 className="pl-8 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
                 onClick={() => {
-                  setSelectedTask(task.id);
-                  setTaskSearchTerm(task.displayName || `${task.projectName} - ${task.name}`);
+                  setSelectedTask(project.id);
+                  setTaskSearchTerm(project.displayName || project.name);
                   setTaskDropdownOpen(false);
                 }}
               >
                 <div className="font-medium text-gray-900">
-                  {task.displayName || `${task.projectName} - ${task.name}`}
+                  {project.displayName || project.name}
                 </div>
               </div>
             ))}
@@ -988,7 +975,7 @@ export default function Timer() {
     if (sortedClients.length === 0) {
       return (
         <div className="px-4 py-2 text-gray-500 text-sm">
-          {addTaskSearchTerm.trim() ? 'No tasks found' : 'No tasks assigned'}
+          {addTaskSearchTerm.trim() ? 'No projects found' : 'No projects assigned'}
         </div>
       );
     }
@@ -1002,12 +989,12 @@ export default function Timer() {
               {clientName}
             </div>
             
-            {/* Tasks for this client */}
-            {clientGroups[clientName].map((task, taskIndex) => {
-              const isAlreadyAdded = curatedTaskList.includes(task.id);
+            {/* Projects for this client */}
+            {clientGroups[clientName].map((project, projectIndex) => {
+              const isAlreadyAdded = curatedTaskList.includes(project.id);
               return (
                 <div
-                  key={task.id}
+                  key={project.id}
                   className={`pl-8 py-2 text-sm border-b border-gray-100 last:border-b-0 ${
                     isAlreadyAdded 
                       ? 'bg-gray-50 text-gray-400 cursor-not-allowed' 
@@ -1015,13 +1002,13 @@ export default function Timer() {
                   }`}
                   onClick={() => {
                     if (!isAlreadyAdded) {
-                      handleAddTaskFromSearch(task.id);
+                      handleAddTaskFromSearch(project.id);
                     }
                   }}
                 >
                   <div className="font-medium text-gray-900 flex items-center justify-between">
                     <span>
-                      {task.displayName || `${task.projectName} - ${task.name}`}
+                      {project.displayName || project.name}
                     </span>
                     {isAlreadyAdded && (
                       <span className="text-xs text-gray-500">Added</span>

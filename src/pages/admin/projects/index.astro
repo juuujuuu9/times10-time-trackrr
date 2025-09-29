@@ -176,18 +176,6 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                       <div class="flex justify-end space-x-2">
                         <button
                           type="button"
-                          class="view-tasks-btn inline-flex items-center px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
-                          data-project-id={project.id}
-                          data-project-name={project.name}
-                          title="View project tasks"
-                        >
-                          <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
-                          </svg>
-                          View Tasks
-                        </button>
-                        <button
-                          type="button"
                           class="edit-project-btn inline-flex items-center px-3 py-2 bg-white hover:bg-gray-100 text-gray-700 text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-gray-300"
                           data-project-id={project.id}
                           title="Edit project details"
@@ -1223,14 +1211,6 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       
 
       
-      // Handle view tasks buttons
-      if (target.classList.contains('view-tasks-btn') || target.closest('.view-tasks-btn')) {
-        const button = target.classList.contains('view-tasks-btn') ? target : target.closest('.view-tasks-btn') as HTMLElement;
-        const projectId = parseInt(button?.getAttribute('data-project-id') || '0');
-        const projectName = button?.getAttribute('data-project-name') || 'Unknown Project';
-        (window as any).viewProjectTasks(projectId, projectName);
-        return;
-      }
       
       // Handle edit project buttons
       if (target.classList.contains('edit-project-btn')) {

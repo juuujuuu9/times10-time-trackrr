@@ -1509,44 +1509,33 @@ const user = await requireAuth('/')(Astro) as any;
     try {
       const userId = await getCurrentUserId();
       if (!userId) {
-        console.error('No user ID available for task search');
+        console.error('No user ID available for project search');
         return;
       }
 
-      // Fetch both regular tasks and system tasks in parallel with timeout
-      const [regularTasksResponse, systemTasksResponse] = await Promise.allSettled([
-        fetch(`/api/tasks?assignedOnly=false&limit=500&assignedTo=${encodeURIComponent(userId)}`, { 
-          signal: AbortSignal.timeout(10000) // 10 second timeout
-        }),
-        fetch(`/api/system-tasks?limit=500`, { 
-          signal: AbortSignal.timeout(10000) // 10 second timeout
-        })
-      ]);
+      // Fetch projects for the user
+      const projectsResponse = await fetch(`/api/projects?userId=${encodeURIComponent(userId)}&limit=500`, { 
+        signal: AbortSignal.timeout(10000) // 10 second timeout
+      });
 
-      let allTasks: any[] = [];
+      let allProjects: any[] = [];
 
-      // Get regular tasks
-      if (regularTasksResponse.status === 'fulfilled' && regularTasksResponse.value.ok) {
-        const regularData = await regularTasksResponse.value.json();
-        allTasks = [...(regularData.data || [])];
-      }
-
-      // Get system tasks
-      if (systemTasksResponse.status === 'fulfilled' && systemTasksResponse.value.ok) {
-        const systemData = await systemTasksResponse.value.json();
-        allTasks = [...allTasks, ...(systemData.data || [])];
+      if (projectsResponse.ok) {
+        const projectData = await projectsResponse.json();
+        allProjects = [...(projectData.data || [])];
+      } else {
+        console.error('Projects response failed:', projectsResponse.status);
       }
       
-      // Filter tasks based on search term (including client and project names)
-      const filteredTasks = allTasks.filter((task: any) => 
-        task.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        task.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        task.clientName.toLowerCase().includes(searchTerm.toLowerCase())
+      // Filter projects based on search term (including client and project names)
+      const filteredProjects = allProjects.filter((project: any) => 
+        project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        project.clientName.toLowerCase().includes(searchTerm.toLowerCase())
       );
 
-      displayTaskDropdown(filteredTasks);
+      displayTaskDropdown(filteredProjects);
     } catch (error) {
-      console.error('Error searching tasks:', error);
+      console.error('Error searching projects:', error);
     }
   }
   
@@ -1554,46 +1543,31 @@ const user = await requireAuth('/')(Astro) as any;
     try {
       const userId = await getCurrentUserId();
       if (!userId) {
-        console.error('No user ID available for task search');
+        console.error('No user ID available for project search');
         return;
       }
 
-      console.log('searchAllTasks called for user:', userId);
+      console.log('searchAllProjects called for user:', userId);
 
-      // Fetch both regular tasks and system tasks in parallel with timeout
-      const [regularTasksResponse, systemTasksResponse] = await Promise.allSettled([
-        fetch(`/api/tasks?assignedOnly=false&limit=500&assignedTo=${encodeURIComponent(userId)}`, { 
-          signal: AbortSignal.timeout(10000) // 10 second timeout
-        }),
-        fetch(`/api/system-tasks?limit=500`, { 
-          signal: AbortSignal.timeout(10000) // 10 second timeout
-        })
-      ]);
+      // Fetch projects for the user
+      const projectsResponse = await fetch(`/api/projects?userId=${encodeURIComponent(userId)}&limit=500`, { 
+        signal: AbortSignal.timeout(10000) // 10 second timeout
+      });
 
-      let allTasks: any[] = [];
+      let allProjects: any[] = [];
 
-      // Get regular tasks
-      if (regularTasksResponse.status === 'fulfilled' && regularTasksResponse.value.ok) {
-        const regularData = await regularTasksResponse.value.json();
-        console.log('Regular tasks response:', regularData);
-        allTasks = [...(regularData.data || [])];
+      if (projectsResponse.ok) {
+        const projectData = await projectsResponse.json();
+        console.log('Projects response:', projectData);
+        allProjects = [...(projectData.data || [])];
       } else {
-        console.error('Regular tasks response failed:', regularTasksResponse.status === 'rejected' ? regularTasksResponse.reason : regularTasksResponse.value?.status);
+        console.error('Projects response failed:', projectsResponse.status);
       }
 
-      // Get system tasks
-      if (systemTasksResponse.status === 'fulfilled' && systemTasksResponse.value.ok) {
-        const systemData = await systemTasksResponse.value.json();
-        console.log('System tasks response:', systemData);
-        allTasks = [...allTasks, ...(systemData.data || [])];
-      } else {
-        console.error('System tasks response failed:', systemTasksResponse.status === 'rejected' ? systemTasksResponse.reason : systemTasksResponse.value?.status);
-      }
-
-      console.log('All tasks combined:', allTasks);
-      displayTaskDropdown(allTasks);
+      console.log('All projects:', allProjects);
+      displayTaskDropdown(allProjects);
     } catch (error) {
-      console.error('Error loading all tasks:', error);
+      console.error('Error loading all projects:', error);
     }
   }
   
@@ -1645,40 +1619,29 @@ const user = await requireAuth('/')(Astro) as any;
     try {
       const userId = await getCurrentUserId();
       if (!userId) {
-        console.error('No user ID available for task search');
+        console.error('No user ID available for project search');
         return;
       }
 
-      // Fetch both regular tasks and system tasks
-      const [regularTasksResponse, systemTasksResponse] = await Promise.all([
-        fetch(`/api/tasks?assignedOnly=false&limit=500&assignedTo=${encodeURIComponent(userId)}`),
-        fetch(`/api/system-tasks?limit=500`)
-      ]);
+      // Fetch projects for the user
+      const projectsResponse = await fetch(`/api/projects?userId=${encodeURIComponent(userId)}&limit=500`);
 
-      let allTasks: any[] = [];
+      let allProjects: any[] = [];
 
-      // Get regular tasks
-      if (regularTasksResponse.ok) {
-        const regularData = await regularTasksResponse.json();
-        allTasks = [...allTasks, ...(regularData.data || [])];
+      if (projectsResponse.ok) {
+        const projectData = await projectsResponse.json();
+        allProjects = [...(projectData.data || [])];
       }
 
-      // Get system tasks
-      if (systemTasksResponse.ok) {
-        const systemData = await systemTasksResponse.json();
-        allTasks = [...allTasks, ...(systemData.data || [])];
-      }
-
-      // Filter tasks based on search term
-      const filteredTasks = allTasks.filter(task =>
-        task.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        task.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        task.clientName.toLowerCase().includes(searchTerm.toLowerCase())
+      // Filter projects based on search term
+      const filteredProjects = allProjects.filter(project =>
+        project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        project.clientName.toLowerCase().includes(searchTerm.toLowerCase())
       );
 
-      displayEditTaskDropdown(filteredTasks);
+      displayEditTaskDropdown(filteredProjects);
     } catch (error) {
-      console.error('Error searching tasks:', error);
+      console.error('Error searching projects:', error);
     }
   }
 
@@ -1686,46 +1649,31 @@ const user = await requireAuth('/')(Astro) as any;
     try {
       const userId = await getCurrentUserId();
       if (!userId) {
-        console.error('No user ID available for task search');
+        console.error('No user ID available for project search');
         return;
       }
 
-      console.log('Searching all edit tasks for user:', userId);
+      console.log('Searching all edit projects for user:', userId);
 
-      // Fetch both regular tasks and system tasks in parallel with timeout
-      const [regularTasksResponse, systemTasksResponse] = await Promise.allSettled([
-        fetch(`/api/tasks?assignedOnly=false&limit=500&assignedTo=${encodeURIComponent(userId)}`, { 
-          signal: AbortSignal.timeout(10000) // 10 second timeout
-        }),
-        fetch(`/api/system-tasks?limit=500`, { 
-          signal: AbortSignal.timeout(10000) // 10 second timeout
-        })
-      ]);
+      // Fetch projects for the user
+      const projectsResponse = await fetch(`/api/projects?userId=${encodeURIComponent(userId)}&limit=500`, { 
+        signal: AbortSignal.timeout(10000) // 10 second timeout
+      });
 
-      let allTasks: any[] = [];
+      let allProjects: any[] = [];
 
-      // Get regular tasks
-      if (regularTasksResponse.status === 'fulfilled' && regularTasksResponse.value.ok) {
-        const regularData = await regularTasksResponse.value.json();
-        console.log('Regular tasks response:', regularData);
-        allTasks = [...allTasks, ...(regularData.data || [])];
+      if (projectsResponse.ok) {
+        const projectData = await projectsResponse.json();
+        console.log('Projects response:', projectData);
+        allProjects = [...(projectData.data || [])];
       } else {
-        console.error('Regular tasks response failed:', regularTasksResponse.status === 'rejected' ? regularTasksResponse.reason : regularTasksResponse.value?.status);
+        console.error('Projects response failed:', projectsResponse.status);
       }
 
-      // Get system tasks
-      if (systemTasksResponse.status === 'fulfilled' && systemTasksResponse.value.ok) {
-        const systemData = await systemTasksResponse.value.json();
-        console.log('System tasks response:', systemData);
-        allTasks = [...allTasks, ...(systemData.data || [])];
-      } else {
-        console.error('System tasks response failed:', systemTasksResponse.status === 'rejected' ? systemTasksResponse.reason : systemTasksResponse.value?.status);
-      }
-
-      console.log('All tasks combined:', allTasks);
-      displayEditTaskDropdown(allTasks);
+      console.log('All projects:', allProjects);
+      displayEditTaskDropdown(allProjects);
     } catch (error) {
-      console.error('Error fetching all tasks:', error);
+      console.error('Error fetching all projects:', error);
     }
   }
 
@@ -1762,32 +1710,32 @@ const user = await requireAuth('/')(Astro) as any;
     }
   }
 
-  function displayEditTaskDropdown(tasks: any[]) {
+  function displayEditTaskDropdown(projects: any[]) {
     const editTaskDropdown = document.getElementById('editTaskDropdown');
     if (!editTaskDropdown) return;
 
-    console.log('Displaying edit task dropdown with tasks:', tasks);
+    console.log('Displaying edit project dropdown with projects:', projects);
 
-    if (tasks.length === 0) {
-      editTaskDropdown.innerHTML = '<div class="px-3 py-2 text-gray-500 text-sm">No tasks found</div>';
+    if (projects.length === 0) {
+      editTaskDropdown.innerHTML = '<div class="px-3 py-2 text-gray-500 text-sm">No projects found</div>';
       editTaskDropdown.classList.remove('hidden');
       return;
     }
 
-    // Group tasks by client for better organization
-    const tasksByClient: { [key: string]: any[] } = {};
-    tasks.forEach(task => {
-      const clientName = task.clientName || 'Unknown Client';
-      if (!tasksByClient[clientName]) {
-        tasksByClient[clientName] = [];
+    // Group projects by client for better organization
+    const projectsByClient: { [key: string]: any[] } = {};
+    projects.forEach(project => {
+      const clientName = project.clientName || 'Unknown Client';
+      if (!projectsByClient[clientName]) {
+        projectsByClient[clientName] = [];
       }
-      tasksByClient[clientName].push(task);
+      projectsByClient[clientName].push(project);
     });
 
     let dropdownHTML = '';
     
-    Object.keys(tasksByClient).forEach(clientName => {
-      const clientTasks = tasksByClient[clientName];
+    Object.keys(projectsByClient).forEach(clientName => {
+      const clientProjects = projectsByClient[clientName];
       
       // Add client header
       dropdownHTML += `
@@ -1796,15 +1744,15 @@ const user = await requireAuth('/')(Astro) as any;
         </div>
       `;
       
-      // Add tasks for this client
-      clientTasks.forEach(task => {
+      // Add projects for this client
+      clientProjects.forEach(project => {
         dropdownHTML += `
           <div 
             class="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm pl-6 border-b border-gray-100 last:border-b-0"
-            onclick="selectEditTask(${task.id}, '${task.name.replace(/'/g, "\\'")}', '${task.projectName.replace(/'/g, "\\'")}', '${task.clientName.replace(/'/g, "\\'")}')"
+            onclick="selectEditTask(${project.id}, '${project.name.replace(/'/g, "\\'")}', '${project.clientName.replace(/'/g, "\\'")}')"
           >
-            <div class="font-medium text-gray-900">${task.name}</div>
-            <div class="text-xs text-gray-500">${task.projectName}</div>
+            <div class="font-medium text-gray-900">${project.name}</div>
+            <div class="text-xs text-gray-500">${project.clientName}</div>
           </div>
         `;
       });
@@ -1814,13 +1762,13 @@ const user = await requireAuth('/')(Astro) as any;
     editTaskDropdown.classList.remove('hidden');
   }
 
-  function selectEditTask(taskId: number, taskName: string, projectName: string, clientName: string) {
+  function selectEditTask(projectId: number, projectName: string, clientName: string) {
     const editTaskInput = document.getElementById('editTimeEntryTask') as HTMLInputElement;
     const editTaskIdInput = document.getElementById('editTimeEntryTaskId') as HTMLInputElement;
     
     if (editTaskInput && editTaskIdInput) {
-      editTaskInput.value = `${taskName} (${projectName} - ${clientName})`;
-      editTaskIdInput.value = taskId.toString();
+      editTaskInput.value = `${projectName} (${clientName})`;
+      editTaskIdInput.value = projectId.toString();
       hideEditTaskDropdown();
     }
   }
@@ -1842,32 +1790,32 @@ const user = await requireAuth('/')(Astro) as any;
   (window as any).hideEditTaskDropdown = hideEditTaskDropdown;
   (window as any).selectEditTask = selectEditTask;
   
-  function displayTaskDropdown(tasks: any[]) {
+  function displayTaskDropdown(projects: any[]) {
     const taskDropdown = document.getElementById('taskDropdown');
     if (!taskDropdown) return;
 
-    console.log('Displaying task dropdown with tasks:', tasks);
+    console.log('Displaying project dropdown with projects:', projects);
 
-    if (tasks.length === 0) {
-      taskDropdown.innerHTML = '<div class="px-3 py-2 text-gray-500 text-sm">No tasks found</div>';
+    if (projects.length === 0) {
+      taskDropdown.innerHTML = '<div class="px-3 py-2 text-gray-500 text-sm">No projects found</div>';
       taskDropdown.classList.remove('hidden');
       return;
     }
 
-    // Group tasks by client for better organization
-    const tasksByClient: { [key: string]: any[] } = {};
-    tasks.forEach(task => {
-      const clientName = task.clientName || 'Unknown Client';
-      if (!tasksByClient[clientName]) {
-        tasksByClient[clientName] = [];
+    // Group projects by client for better organization
+    const projectsByClient: { [key: string]: any[] } = {};
+    projects.forEach(project => {
+      const clientName = project.clientName || 'Unknown Client';
+      if (!projectsByClient[clientName]) {
+        projectsByClient[clientName] = [];
       }
-      tasksByClient[clientName].push(task);
+      projectsByClient[clientName].push(project);
     });
 
     let dropdownHTML = '';
     
-    Object.keys(tasksByClient).forEach(clientName => {
-      const clientTasks = tasksByClient[clientName];
+    Object.keys(projectsByClient).forEach(clientName => {
+      const clientProjects = projectsByClient[clientName];
       
       // Add client header
       dropdownHTML += `
@@ -1876,18 +1824,17 @@ const user = await requireAuth('/')(Astro) as any;
         </div>
       `;
       
-      // Add tasks for this client
-      clientTasks.forEach(task => {
+      // Add projects for this client
+      clientProjects.forEach(project => {
         dropdownHTML += `
           <div 
             class="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm pl-6 border-b border-gray-100 last:border-b-0"
-            data-task-id="${task.id}"
-            data-task-name="${task.name}"
-            data-project-name="${task.projectName}"
-            data-client-name="${task.clientName}"
+            data-project-id="${project.id}"
+            data-project-name="${project.name}"
+            data-client-name="${project.clientName}"
           >
-            <div class="font-medium text-gray-900">${task.name}</div>
-            <div class="text-xs text-gray-600">${task.projectName}</div>
+            <div class="font-medium text-gray-900">${project.name}</div>
+            <div class="text-xs text-gray-600">${project.clientName}</div>
           </div>
         `;
       });
@@ -1896,11 +1843,10 @@ const user = await requireAuth('/')(Astro) as any;
     taskDropdown.innerHTML = dropdownHTML;
     taskDropdown.classList.remove('hidden');
 
-    // Add click handlers to task items
-    taskDropdown.querySelectorAll('[data-task-id]').forEach((item: Element) => {
+    // Add click handlers to project items
+    taskDropdown.querySelectorAll('[data-project-id]').forEach((item: Element) => {
       item.addEventListener('click', () => {
-        const taskId = item.getAttribute('data-task-id');
-        const taskName = item.getAttribute('data-task-name');
+        const projectId = item.getAttribute('data-project-id');
         const projectName = item.getAttribute('data-project-name');
         const clientName = item.getAttribute('data-client-name');
 
@@ -1908,10 +1854,10 @@ const user = await requireAuth('/')(Astro) as any;
         const timeEntryTaskId = document.getElementById('timeEntryTaskId') as HTMLInputElement;
         
         if (timeEntryTask) {
-          timeEntryTask.value = `${clientName} - ${projectName} - ${taskName}`;
+          timeEntryTask.value = `${clientName} - ${projectName}`;
         }
         if (timeEntryTaskId) {
-          timeEntryTaskId.value = taskId || '';
+          timeEntryTaskId.value = projectId || '';
         }
         
         hideTaskDropdown();
