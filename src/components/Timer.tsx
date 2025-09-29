@@ -161,13 +161,10 @@ export default function Timer() {
       return;
     }
 
-    console.log('loadDailyDurationTotals: Loading for userId:', currentUserId);
     try {
       const response = await fetch(`/api/reports/daily-duration-totals?userId=${currentUserId}&startDate=${encodeURIComponent(selectedWeekStart.toISOString())}&endDate=${encodeURIComponent(selectedWeekEnd.toISOString())}`);
       if (response.ok) {
         const data = await response.json();
-        console.log('loadDailyDurationTotals: Received data:', data);
-        console.log('loadDailyDurationTotals: weekTotals:', data.weekTotals);
         setDailyDurationTotals(data.weekTotals || []);
       } else {
         console.error('Failed to load daily duration totals:', response.status);
@@ -185,16 +182,14 @@ export default function Timer() {
     }
 
     if (!selectedWeekStart || !selectedWeekEnd) {
+      console.log('loadTaskDailyTotals: No selected week dates, skipping');
       return;
     }
 
-    console.log('loadTaskDailyTotals: Loading for userId:', currentUserId);
     try {
       const response = await fetch(`/api/reports/task-daily-totals?userId=${currentUserId}&startDate=${encodeURIComponent(selectedWeekStart.toISOString())}&endDate=${encodeURIComponent(selectedWeekEnd.toISOString())}`);
       if (response.ok) {
         const data = await response.json();
-        console.log('loadTaskDailyTotals: Received data:', data);
-        console.log('loadTaskDailyTotals: taskDailyData:', data.taskDailyData);
         setTaskDailyTotals(data.taskDailyData || []);
       } else {
         console.error('Failed to load task daily totals:', response.status);
@@ -215,7 +210,7 @@ export default function Timer() {
     try {
       // Load both regular tasks and system tasks in parallel with timeout
       const [regularTasksResponse, systemTasksResponse] = await Promise.allSettled([
-        fetch(`/api/tasks?assignedTo=${currentUserId}`, { 
+        fetch(`/api/tasks?assignedTo=${currentUserId}&limit=200`, { 
           signal: AbortSignal.timeout(10000) // 10 second timeout
         }),
         fetch(`/api/system-tasks?assignedTo=${currentUserId}&limit=100`, { 
