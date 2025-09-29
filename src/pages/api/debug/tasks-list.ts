@@ -44,12 +44,11 @@ export const GET: APIRoute = async ({ url }) => {
     const allNonArchived = assignedOnly ? [] : await db
       .select({ id: tasks.id, name: tasks.name, projectName: projects.name, clientName: clients.name })
       .from(tasks)
-      .innerJoin(projects, eq(tasks.projectId, projects.id))
-      .innerJoin(clients, eq(projects.clientId, clients.id))
+      .leftJoin(projects, eq(tasks.projectId, projects.id))
+      .leftJoin(clients, eq(projects.clientId, clients.id))
       .where(and(
         eq(tasks.archived, false),
-        sql`COALESCE(${tasks.isSystem}, false) = false`,
-        eq(clients.archived, false)
+        sql`COALESCE(${tasks.isSystem}, false) = false`
       ))
       .orderBy(desc(tasks.createdAt))
       .limit(limit);

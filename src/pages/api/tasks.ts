@@ -79,7 +79,8 @@ export const GET: APIRoute = async ({ url }) => {
       .orderBy(tasks.createdAt)
       .limit(limit) : [];
 
-    // 3) If not assignedOnly, include all non-archived, non-system tasks (for broad selection)
+    // 3) If not assignedOnly, include ALL non-archived, non-system tasks regardless of assignment
+    //    Use LEFT JOINs to be resilient to any dangling relationships after migration
     const allNonArchived = assignedOnly ? [] : await db
       .select({
         id: tasks.id,
@@ -95,12 +96,11 @@ export const GET: APIRoute = async ({ url }) => {
         clientId: clients.id
       })
       .from(tasks)
-      .innerJoin(projects, eq(tasks.projectId, projects.id))
-      .innerJoin(clients, eq(projects.clientId, clients.id))
+      .leftJoin(projects, eq(tasks.projectId, projects.id))
+      .leftJoin(clients, eq(projects.clientId, clients.id))
       .where(and(
         eq(tasks.archived, false),
-        sql`COALESCE(${tasks.isSystem}, false) = false`,
-        eq(clients.archived, false)
+        sql`COALESCE(${tasks.isSystem}, false) = false`
       ))
       .orderBy(tasks.createdAt)
       .limit(limit);
