@@ -105,7 +105,7 @@ export const GET: APIRoute = async ({ url }) => {
       .orderBy(tasks.createdAt)
       .limit(limit);
 
-    // Merge and de-duplicate by task id
+    // Merge and de-duplicate by task id (no creator/owner filtering by design)
     const map = new Map<number, any>();
     for (const t of assignedTasks) map.set(t.id, t);
     for (const t of tasksWithEntries) map.set(t.id, t);
@@ -116,6 +116,7 @@ export const GET: APIRoute = async ({ url }) => {
     let fallbackUsed = false;
     if (merged.length === 0) {
       fallbackUsed = true;
+      // Ultra-simple fallback: just get non-archived tasks, no joins at all
       merged = await db
         .select({
           id: tasks.id,
@@ -125,14 +126,12 @@ export const GET: APIRoute = async ({ url }) => {
           archived: tasks.archived,
           createdAt: tasks.createdAt,
           updatedAt: tasks.updatedAt,
-          projectName: projects.name,
-          projectId: projects.id,
-          clientName: clients.name,
-          clientId: clients.id
+          projectName: sql<string>`'Unknown Project'`.as('project_name'),
+          projectId: sql<number>`0`.as('project_id'),
+          clientName: sql<string>`'Unknown Client'`.as('client_name'),
+          clientId: sql<number>`0`.as('client_id')
         })
         .from(tasks)
-        .leftJoin(projects, eq(tasks.projectId, projects.id))
-        .leftJoin(clients, eq(projects.clientId, clients.id))
         .where(and(
           eq(tasks.archived, false),
           sql`COALESCE(${tasks.isSystem}, false) = false`
