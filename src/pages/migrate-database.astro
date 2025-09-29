@@ -1,0 +1,86 @@
+---
+// Simple page to run database migration
+import { db } from '../db';
+import { sql } from 'drizzle-orm';
+
+let migrationResult = null;
+let error = null;
+
+try {
+  // Check if the column already exists
+  const checkColumn = await db.execute(sql`
+    SELECT column_name 
+    FROM information_schema.columns 
+    WHERE table_name = 'time_entries' 
+    AND column_name = 'project_id'
+  `);
+
+  if (checkColumn.rows.length > 0) {
+    migrationResult = 'project_id column already exists - migration already completed!';
+  } else {
+    // Step 1: Check for orphaned time entries
+    const orphanedEntries = await db.execute(sql`
+      SELECT te.id, te.task_id 
+      FROM time_entries te 
+      LEFT JOIN projects p ON te.task_id = p.id 
+      WHERE p.id IS NULL
+    `);
+
+    if (orphanedEntries.rows.length > 0) {
+      // Delete orphaned entries
+      await db.execute(sql`
+        DELETE FROM time_entries 
+        WHERE id IN (
+          SELECT te.id 
+          FROM time_entries te 
+          LEFT JOIN projects p ON te.task_id = p.id 
+          WHERE p.id IS NULL
+        )
+      `);
+    }
+
+    // Step 2: Rename task_id to project_id
+    await db.execute(sql`ALTER TABLE time_entries RENAME COLUMN task_id TO project_id;`);
+
+    // Step 3: Drop old foreign key constraint
+    await db.execute(sql`ALTER TABLE time_entries DROP CONSTRAINT IF EXISTS time_entries_task_id_tasks_id_fk;`);
+
+    // Step 4: Add new foreign key constraint
+    await db.execute(sql`ALTER TABLE time_entries ADD CONSTRAINT time_entries_project_id_projects_id_fk FOREIGN KEY (project_id) REFERENCES projects(id);`);
+
+    migrationResult = 'Migration completed successfully! Database schema updated.';
+  }
+} catch (err) {
+  error = err instanceof Error ? err.message : 'Unknown error';
+}
+---
+
+<html>
+<head>
+  <title>Database Migration</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+    .success { color: green; background: #f0fff0; padding: 15px; border-radius: 5px; }
+    .error { color: red; background: #fff0f0; padding: 15px; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <h1>Database Migration</h1>
+  
+  {migrationResult && (
+    <div class="success">
+      <h2>✅ Success!</h2>
+      <p>{migrationResult}</p>
+    </div>
+  )}
+  
+  {error && (
+    <div class="error">
+      <h2>❌ Error</h2>
+      <p>{error}</p>
+    </div>
+  )}
+  
+  <p><a href="/dashboard">← Back to Dashboard</a></p>
+</body>
+</html>
