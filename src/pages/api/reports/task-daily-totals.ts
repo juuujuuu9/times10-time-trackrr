@@ -49,39 +49,17 @@ export const GET: APIRoute = async ({ url }) => {
       endDate: endDate.toISOString()
     });
 
-    // First, get all tasks explicitly assigned to the user
-    const assignedTasks = await db
+    // Get all projects that the user has time entries for in the selected date range
+    // Since we're now using projects as tasks, we get projects directly
+    const projectsWithEntries = await db
       .select({
-        id: tasks.id,
-        name: tasks.name,
-        projectName: projects.name,
-        clientName: clients.name
-      })
-      .from(tasks)
-      .innerJoin(taskAssignments, eq(tasks.id, taskAssignments.taskId))
-      .innerJoin(projects, eq(tasks.projectId, projects.id))
-      .innerJoin(clients, eq(projects.clientId, clients.id))
-      .where(
-        and(
-          eq(taskAssignments.userId, parseInt(userId)),
-          eq(tasks.archived, false),
-          eq(projects.archived, false),
-          eq(clients.archived, false)
-        )
-      );
-
-    // Next, include any tasks that the user has time entries for in the selected date range,
-    // even if they are not currently assigned. This ensures historical entries still appear.
-    const tasksWithEntries = await db
-      .select({
-        id: tasks.id,
-        name: tasks.name,
+        id: projects.id,
+        name: projects.name,
         projectName: projects.name,
         clientName: clients.name
       })
       .from(timeEntries)
-      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(projects, eq(timeEntries.projectId, projects.id))
       .innerJoin(clients, eq(projects.clientId, clients.id))
       .where(
         and(
@@ -92,23 +70,19 @@ export const GET: APIRoute = async ({ url }) => {
             (${timeEntries.startTime} IS NULL AND ${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${startDate} AND ${timeEntries.createdAt} <= ${endDate})
           )`,
           eq(clients.archived, false),
-          eq(projects.archived, false),
-          eq(tasks.archived, false)
+          eq(projects.archived, false)
         )
       );
 
-    // Merge assigned tasks with tasks that have entries, de-duplicated by id
-    const taskMap = new Map<number, { id: number; name: string; projectName: string; clientName: string }>();
-    for (const t of assignedTasks) taskMap.set(t.id, t);
-    for (const t of tasksWithEntries) taskMap.set(t.id, t);
-    const allTasks = Array.from(taskMap.values());
+    // Use projects as tasks since we're now using projects as the main entities
+    const allTasks = projectsWithEntries;
 
-    console.log('Tasks considered for weekly grid:', { assignedCount: assignedTasks.length, withEntriesCount: tasksWithEntries.length, total: allTasks.length });
+    console.log('Projects considered for weekly grid:', { total: allTasks.length });
 
-    // Then get time entries for each task in the date range with SQL-calculated durations
+    // Then get time entries for each project in the date range with SQL-calculated durations
     const timeEntriesData = await db
       .select({
-        taskId: timeEntries.taskId,
+        taskId: timeEntries.projectId, // Map projectId to taskId for backward compatibility
         startTime: timeEntries.startTime,
         endTime: timeEntries.endTime,
         durationManual: timeEntries.durationManual,
@@ -120,8 +94,7 @@ export const GET: APIRoute = async ({ url }) => {
         END`.as('calculated_duration')
       })
       .from(timeEntries)
-      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(projects, eq(timeEntries.projectId, projects.id))
       .innerJoin(clients, eq(projects.clientId, clients.id))
       .where(
         and(
@@ -133,7 +106,6 @@ export const GET: APIRoute = async ({ url }) => {
           )`,
           eq(clients.archived, false),
           eq(projects.archived, false),
-          eq(tasks.archived, false),
           // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
           sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
         )

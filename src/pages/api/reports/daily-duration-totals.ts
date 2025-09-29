@@ -63,8 +63,7 @@ export const GET: APIRoute = async ({ url }) => {
         END`.as('calculated_duration')
       })
       .from(timeEntries)
-      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(projects, eq(timeEntries.projectId, projects.id))
       .innerJoin(clients, eq(projects.clientId, clients.id))
       .where(and(
         eq(timeEntries.userId, parseInt(userId)),
@@ -75,7 +74,6 @@ export const GET: APIRoute = async ({ url }) => {
         )`,
         eq(clients.archived, false),
         eq(projects.archived, false),
-        eq(tasks.archived, false),
         // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
         sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
       ));
