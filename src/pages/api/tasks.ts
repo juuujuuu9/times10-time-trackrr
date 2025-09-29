@@ -110,10 +110,41 @@ export const GET: APIRoute = async ({ url }) => {
     for (const t of assignedTasks) map.set(t.id, t);
     for (const t of tasksWithEntries) map.set(t.id, t);
     for (const t of allNonArchived) map.set(t.id, t);
-    const merged = Array.from(map.values()).slice(0, limit);
+    let merged = Array.from(map.values());
+
+    // Fallback: if merged is empty, return raw non-archived tasks directly from tasks table
+    let fallbackUsed = false;
+    if (merged.length === 0) {
+      fallbackUsed = true;
+      merged = await db
+        .select({
+          id: tasks.id,
+          name: tasks.name,
+          description: tasks.description,
+          status: tasks.status,
+          archived: tasks.archived,
+          createdAt: tasks.createdAt,
+          updatedAt: tasks.updatedAt,
+        })
+        .from(tasks)
+        .where(eq(tasks.archived, false))
+        .orderBy(tasks.createdAt)
+        .limit(limit);
+    }
+
+    const result = merged.slice(0, limit);
 
     return new Response(JSON.stringify({
-      data: merged
+      data: result,
+      meta: {
+        counts: {
+          assigned: assignedTasks.length,
+          withEntries: tasksWithEntries.length,
+          allNonArchived: allNonArchived.length,
+          merged: merged.length
+        },
+        fallbackUsed
+      }
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
