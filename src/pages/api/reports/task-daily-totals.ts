@@ -49,8 +49,8 @@ export const GET: APIRoute = async ({ url }) => {
       endDate: endDate.toISOString()
     });
 
-    // First, get all tasks for the user
-    const allTasks = await db
+    // First, get all tasks explicitly assigned to the user
+    const assignedTasks = await db
       .select({
         id: tasks.id,
         name: tasks.name,
@@ -70,7 +70,40 @@ export const GET: APIRoute = async ({ url }) => {
         )
       );
 
-    console.log('All tasks for user:', allTasks);
+    // Next, include any tasks that the user has time entries for in the selected date range,
+    // even if they are not currently assigned. This ensures historical entries still appear.
+    const tasksWithEntries = await db
+      .select({
+        id: tasks.id,
+        name: tasks.name,
+        projectName: projects.name,
+        clientName: clients.name
+      })
+      .from(timeEntries)
+      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(clients, eq(projects.clientId, clients.id))
+      .where(
+        and(
+          eq(timeEntries.userId, parseInt(userId)),
+          sql`(
+            (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate})
+            OR 
+            (${timeEntries.startTime} IS NULL AND ${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${startDate} AND ${timeEntries.createdAt} <= ${endDate})
+          )`,
+          eq(clients.archived, false),
+          eq(projects.archived, false),
+          eq(tasks.archived, false)
+        )
+      );
+
+    // Merge assigned tasks with tasks that have entries, de-duplicated by id
+    const taskMap = new Map<number, { id: number; name: string; projectName: string; clientName: string }>();
+    for (const t of assignedTasks) taskMap.set(t.id, t);
+    for (const t of tasksWithEntries) taskMap.set(t.id, t);
+    const allTasks = Array.from(taskMap.values());
+
+    console.log('Tasks considered for weekly grid:', { assignedCount: assignedTasks.length, withEntriesCount: tasksWithEntries.length, total: allTasks.length });
 
     // Then get time entries for each task in the date range with SQL-calculated durations
     const timeEntriesData = await db

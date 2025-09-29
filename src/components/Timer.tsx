@@ -1193,14 +1193,68 @@ export default function Timer() {
           )}
 
           {sortedClients.length === 0 ? (
-            <div className="text-center py-8 bg-gray-50 rounded-lg">
-              <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-gray-400 text-xl">📝</span>
+            <div className="bg-gray-50 rounded-lg">
+              {/* Daily totals should still be visible even if there are no task rows */}
+              <div className="border-b border-gray-200">
+                <div className="flex px-4 py-3 text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  <div className="w-80 flex-shrink-0">&nbsp;</div>
+                  <div className="flex-1 text-center">Sun</div>
+                  <div className="flex-1 text-center">Mon</div>
+                  <div className="flex-1 text-center">Tues</div>
+                  <div className="flex-1 text-center">Wed</div>
+                  <div className="flex-1 text-center">Thurs</div>
+                  <div className="flex-1 text-center">Fri</div>
+                  <div className="flex-1 text-center">Sat</div>
+                  <div className="flex-1 text-center font-semibold">Total</div>
+                </div>
+                <div className="flex px-4 pb-3 text-xs text-gray-500">
+                  <div className="w-80 flex-shrink-0"></div>
+                  {(() => {
+                    let totalSeconds = 0;
+                    const dayElements = (dailyDurationTotals && dailyDurationTotals.length > 0) ? dailyDurationTotals.map((dayTotal, index) => {
+                      totalSeconds += dayTotal.totalSeconds;
+                      return (
+                        <div key={index} className="flex-1 text-center">
+                          {dayTotal.totalSeconds > 0 ? dayTotal.formatted : '-'}
+                        </div>
+                      );
+                    }) : (
+                      <>
+                        <div className="flex-1 text-center">-</div>
+                        <div className="flex-1 text-center">-</div>
+                        <div className="flex-1 text-center">-</div>
+                        <div className="flex-1 text-center">-</div>
+                        <div className="flex-1 text-center">-</div>
+                        <div className="flex-1 text-center">-</div>
+                        <div className="flex-1 text-center">-</div>
+                      </>
+                    );
+
+                    const totalHours = Math.floor(totalSeconds / 3600);
+                    const totalMinutes = Math.floor((totalSeconds % 3600) / 60);
+                    const totalFormatted = totalSeconds > 0 ? `${totalHours}h ${totalMinutes}m` : '-';
+                    return (
+                      <>
+                        {dayElements}
+                        <div className="flex-1 text-center font-semibold text-gray-700">
+                          {totalFormatted}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
-              <p className="text-gray-500 text-sm">No tasks with time entries for this week</p>
-              {weekOffset === 0 && (
-                <p className="text-gray-400 text-xs mt-1">Click "Add Task" to get started</p>
-              )}
+
+              {/* Empty state for task rows */}
+              <div className="text-center py-8">
+                <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-gray-400 text-xl">📝</span>
+                </div>
+                <p className="text-gray-500 text-sm">No tasks with time entries for this week</p>
+                {weekOffset === 0 && (
+                  <p className="text-gray-400 text-xs mt-1">Click "Add Task" to get started</p>
+                )}
+              </div>
             </div>
           ) : (
             <div className="border border-gray-200 rounded-lg overflow-hidden">
