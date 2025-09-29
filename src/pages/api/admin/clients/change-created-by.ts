@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { db } from '../../../db';
+import { db } from '../../../db/index';
 import { clients, users } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
 import { getSessionUser } from '../../../utils/session';
