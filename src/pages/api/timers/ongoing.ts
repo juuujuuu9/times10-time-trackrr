@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db/index';
-import { timeEntries, tasks, users } from '../../../db/schema';
+import { timeEntries, tasks, projects, users } from '../../../db/schema';
 import { eq, and, isNull, sql } from 'drizzle-orm';
 import { requireAuth } from '../../../utils/session';
 
@@ -22,18 +22,18 @@ export const GET: APIRoute = async (context) => {
     // Exclude manual duration entries (entries with durationManual but no endTime)
     const ongoingTimer = await db.select({
       id: timeEntries.id,
-      taskId: timeEntries.taskId,
+      projectId: timeEntries.projectId,
       startTime: timeEntries.startTime,
       notes: timeEntries.notes,
-      task: {
-        id: tasks.id,
-        name: tasks.name,
-        projectId: tasks.projectId,
-        status: tasks.status
+      project: {
+        id: projects.id,
+        name: projects.name,
+        clientId: projects.clientId,
+        status: projects.status
       }
     })
     .from(timeEntries)
-    .leftJoin(tasks, eq(timeEntries.taskId, tasks.id))
+    .leftJoin(projects, eq(timeEntries.projectId, projects.id))
     .where(and(
       eq(timeEntries.userId, currentUser.id),
       isNull(timeEntries.endTime),
@@ -61,11 +61,11 @@ export const GET: APIRoute = async (context) => {
       success: true,
       data: {
         id: timer.id,
-        taskId: timer.taskId,
+        projectId: timer.projectId,
         startTime: timer.startTime,
         elapsedSeconds,
         notes: timer.notes,
-        task: timer.task
+        project: timer.project
       }
     }), {
       status: 200,
@@ -104,15 +104,18 @@ export const POST: APIRoute = async (context) => {
     console.log('✅ [TIMER DEBUG] User authenticated:', currentUser.id);
 
     const body = await context.request.json();
-    const { taskId, notes, clientTime } = body;
+    const { taskId, projectId, notes, clientTime } = body;
     
-    console.log('📝 [TIMER DEBUG] Request body:', { taskId, notes, clientTime });
+    // Use projectId if provided, otherwise fall back to taskId for backward compatibility
+    const finalProjectId = projectId || taskId;
+    
+    console.log('📝 [TIMER DEBUG] Request body:', { taskId, projectId, finalProjectId, notes, clientTime });
 
-    if (!taskId) {
-      console.log('❌ [TIMER DEBUG] No taskId provided');
+    if (!finalProjectId) {
+      console.log('❌ [TIMER DEBUG] No projectId or taskId provided');
       return new Response(JSON.stringify({ 
         success: false, 
-        error: 'Task ID is required' 
+        error: 'Project ID is required' 
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
@@ -144,23 +147,23 @@ export const POST: APIRoute = async (context) => {
       });
     }
 
-    // Verify task exists and is assigned to user
-    console.log('🔍 [TIMER DEBUG] Verifying task exists:', taskId);
-    const task = await db.select()
-      .from(tasks)
-      .where(eq(tasks.id, taskId))
+    // Verify project exists and is assigned to user
+    console.log('🔍 [TIMER DEBUG] Verifying project exists:', finalProjectId);
+    const project = await db.select()
+      .from(projects)
+      .where(eq(projects.id, finalProjectId))
       .limit(1);
 
-    console.log('📊 [TIMER DEBUG] Task found:', task.length > 0 ? 'Yes' : 'No');
-    if (task.length > 0) {
-      console.log('📝 [TIMER DEBUG] Task details:', task[0]);
+    console.log('📊 [TIMER DEBUG] Project found:', project.length > 0 ? 'Yes' : 'No');
+    if (project.length > 0) {
+      console.log('📝 [TIMER DEBUG] Project details:', project[0]);
     }
 
-    if (task.length === 0) {
-      console.log('❌ [TIMER DEBUG] Task not found for ID:', taskId);
+    if (project.length === 0) {
+      console.log('❌ [TIMER DEBUG] Project not found for ID:', finalProjectId);
       return new Response(JSON.stringify({ 
         success: false, 
-        error: 'Task not found' 
+        error: 'Project not found' 
       }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' },
@@ -175,14 +178,14 @@ export const POST: APIRoute = async (context) => {
     console.log('⏰ [TIMER DEBUG] Creating timer with startTime:', startTime);
     console.log('📝 [TIMER DEBUG] Timer data:', {
       userId: currentUser.id,
-      taskId: taskId,
+      projectId: finalProjectId,
       startTime: startTime,
       notes: notes || null
     });
     
     const [newTimer] = await db.insert(timeEntries).values({
       userId: currentUser.id,
-      taskId: taskId,
+      projectId: finalProjectId,
       startTime: startTime,
       endTime: null,
       notes: notes || null
@@ -194,11 +197,11 @@ export const POST: APIRoute = async (context) => {
       success: true,
       data: {
         id: newTimer.id,
-        taskId: newTimer.taskId,
+        projectId: newTimer.projectId,
         startTime: newTimer.startTime,
         elapsedSeconds: 0,
         notes: newTimer.notes,
-        task: task[0]
+        project: project[0]
       }
     }), {
       status: 201,
