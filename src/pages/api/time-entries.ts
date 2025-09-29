@@ -28,7 +28,6 @@ export const GET: APIRoute = async ({ url }) => {
         createdAt: timeEntries.createdAt,
         updatedAt: timeEntries.updatedAt,
         userName: users.name,
-        taskName: tasks.name,
         projectName: projects.name,
         clientName: clients.name,
         duration: sql<number>`CASE 
@@ -41,8 +40,7 @@ export const GET: APIRoute = async ({ url }) => {
       })
       .from(timeEntries)
       .innerJoin(users, eq(timeEntries.userId, users.id))
-      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(projects, eq(timeEntries.projectId, projects.id))
       .innerJoin(clients, eq(projects.clientId, clients.id))
       .where(and(
         eq(timeEntries.userId, parseInt(userId)),
@@ -50,8 +48,7 @@ export const GET: APIRoute = async ({ url }) => {
         sql`(${timeEntries.endTime} IS NOT NULL OR ${timeEntries.durationManual} IS NOT NULL)`,
         // Filter out archived activities
         eq(clients.archived, false),
-        eq(projects.archived, false),
-        eq(tasks.archived, false)
+        eq(projects.archived, false)
       ))
       .orderBy(desc(timeEntries.createdAt))
       .limit(limit);
@@ -77,12 +74,15 @@ export const GET: APIRoute = async ({ url }) => {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { taskId, userId, startTime, endTime, duration, notes } = body;
+    const { projectId, taskId, userId, startTime, endTime, duration, notes } = body;
+
+    // Support both projectId and taskId for backward compatibility
+    const finalProjectId = projectId || taskId;
 
     // Validate required fields
-    if (!taskId || !userId || !startTime || !endTime) {
+    if (!finalProjectId || !userId || !startTime || !endTime) {
       return new Response(JSON.stringify({
-        error: 'Missing required fields: taskId, userId, startTime, endTime'
+        error: 'Missing required fields: projectId (or taskId), userId, startTime, endTime'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -94,7 +94,7 @@ export const POST: APIRoute = async ({ request }) => {
     const [newEntry] = await db
       .insert(timeEntries)
       .values({
-        taskId: parseInt(taskId),
+        projectId: parseInt(finalProjectId),
         userId: parseInt(userId),
         startTime: fromUserISOString(startTime),
         endTime: fromUserISOString(endTime),
@@ -102,17 +102,6 @@ export const POST: APIRoute = async ({ request }) => {
         notes: notes || null,
       })
       .returning();
-
-    // Update task status to "in-progress" if it's currently "pending"
-    await db
-      .update(tasks)
-      .set({ status: 'in-progress' })
-      .where(
-        and(
-          eq(tasks.id, parseInt(taskId)),
-          eq(tasks.status, 'pending')
-        )
-      );
 
     return new Response(JSON.stringify({
       data: newEntry,

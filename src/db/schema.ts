@@ -69,7 +69,7 @@ export const taskAssignments = pgTable('task_assignments', {
 // Time entries table
 export const timeEntries = pgTable('time_entries', {
   id: serial('id').primaryKey(),
-  taskId: integer('task_id').references(() => tasks.id).notNull(),
+  projectId: integer('project_id').references(() => projects.id).notNull(),
   userId: integer('user_id').references(() => users.id).notNull(),
   startTime: timestamp('start_time'),
   endTime: timestamp('end_time'),
@@ -177,6 +177,7 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
     references: [clients.id],
   }),
   tasks: many(tasks),
+  timeEntries: many(timeEntries),
 }));
 
 export const tasksRelations = relations(tasks, ({ one, many }) => ({
@@ -185,7 +186,6 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
     references: [projects.id],
   }),
   taskAssignments: many(taskAssignments),
-  timeEntries: many(timeEntries),
 }));
 
 export const taskAssignmentsRelations = relations(taskAssignments, ({ one }) => ({
@@ -200,9 +200,9 @@ export const taskAssignmentsRelations = relations(taskAssignments, ({ one }) => 
 }));
 
 export const timeEntriesRelations = relations(timeEntries, ({ one }) => ({
-  task: one(tasks, {
-    fields: [timeEntries.taskId],
-    references: [tasks.id],
+  project: one(projects, {
+    fields: [timeEntries.projectId],
+    references: [projects.id],
   }),
   user: one(users, {
     fields: [timeEntries.userId],

@@ -34,7 +34,7 @@ export const clients = pgTable("clients", {
 
 export const timeEntries = pgTable("time_entries", {
 	id: serial().primaryKey().notNull(),
-	taskId: integer("task_id").notNull(),
+	projectId: integer("project_id").notNull(),
 	userId: integer("user_id").notNull(),
 	startTime: timestamp("start_time", { mode: 'string' }),
 	endTime: timestamp("end_time", { mode: 'string' }),
@@ -44,9 +44,9 @@ export const timeEntries = pgTable("time_entries", {
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
 	foreignKey({
-			columns: [table.taskId],
-			foreignColumns: [tasks.id],
-			name: "time_entries_task_id_tasks_id_fk"
+			columns: [table.projectId],
+			foreignColumns: [projects.id],
+			name: "time_entries_project_id_projects_id_fk"
 		}),
 	foreignKey({
 			columns: [table.userId],

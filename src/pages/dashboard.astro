@@ -1896,7 +1896,7 @@ const user = await requireAuth('/')(Astro) as any;
       saveButtonText.textContent = 'Saving...';
       saveButtonSpinner.classList.remove('hidden');
       
-      const taskId = timeEntryTaskId instanceof HTMLInputElement ? timeEntryTaskId.value : '';
+      const projectId = timeEntryTaskId instanceof HTMLInputElement ? timeEntryTaskId.value : '';
       const notesInput = document.getElementById('timeEntryNotes') as HTMLTextAreaElement;
       const notes = notesInput?.value;
       
@@ -1904,7 +1904,7 @@ const user = await requireAuth('/')(Astro) as any;
       const selectedMethod = document.querySelector('input[name="entryMethod"]:checked') as HTMLInputElement;
       const entryMethod = selectedMethod?.value;
       
-      if (!taskId || !entryMethod) {
+      if (!projectId || !entryMethod) {
         alert('Please fill in all required fields');
         submitButton.disabled = false;
         saveButtonText.textContent = originalText;
@@ -1920,7 +1920,7 @@ const user = await requireAuth('/')(Astro) as any;
 
         let requestBody: any = {
           userId: parseInt(userId),
-          taskId: parseInt(taskId),
+          projectId: parseInt(projectId),
           notes: notes || null
         };
 
