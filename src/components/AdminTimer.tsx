@@ -64,7 +64,7 @@ export default function AdminTimer() {
       }
 
       // Load system tasks
-      const systemResponse = await fetch(`/api/system-tasks?assignedTo=${currentUserId}&limit=100`);
+      const systemResponse = await fetch(`/api/system-tasks?limit=500`);
       let systemTasks = [];
       if (systemResponse.ok) {
         const systemTasksData = await systemResponse.json();
@@ -118,7 +118,7 @@ export default function AdminTimer() {
             }
 
             // Load user's system-generated tasks (General tasks)
-            const systemTasksResponse = await fetch(`/api/system-tasks?assignedTo=${userId}&limit=100`);
+            const systemTasksResponse = await fetch(`/api/system-tasks?limit=500`);
             let systemTasks = [];
             if (systemTasksResponse.ok) {
               const systemTasksData = await systemTasksResponse.json();
