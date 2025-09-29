@@ -7,8 +7,8 @@ import { getSessionUser } from '../../utils/session';
 export const GET: APIRoute = async ({ url, cookies }) => {
   try {
     const searchParams = url.searchParams;
-    const assignedTo = searchParams.get('assignedTo');
-    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 10;
+  const assignedTo = searchParams.get('assignedTo');
+  const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 200; // show more by default
     
     // Get the authenticated user
     const user = await getSessionUser({ cookies } as any);
