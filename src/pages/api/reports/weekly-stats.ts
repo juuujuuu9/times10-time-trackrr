@@ -30,7 +30,6 @@ export const GET: APIRoute = async ({ url }) => {
       )`,
       eq(clients.archived, false),
       eq(projects.archived, false),
-      eq(tasks.archived, false),
       // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
       sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
     ];
@@ -53,8 +52,7 @@ export const GET: APIRoute = async ({ url }) => {
         ), 0)`.as('total_seconds')
       })
       .from(timeEntries)
-      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(projects, eq(timeEntries.projectId, projects.id))
       .innerJoin(clients, eq(projects.clientId, clients.id))
       .where(dateFilter);
 
@@ -70,13 +68,12 @@ export const GET: APIRoute = async ({ url }) => {
           THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))
           ELSE COALESCE(${timeEntries.durationManual}, 0)
         END`.as('calculated_duration'),
-        taskName: tasks.name,
+        taskName: sql<string>`'General'`.as('taskName'),
         projectName: projects.name,
         clientName: clients.name
       })
       .from(timeEntries)
-      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(projects, eq(timeEntries.projectId, projects.id))
       .innerJoin(clients, eq(projects.clientId, clients.id))
       .where(dateFilter)
       .orderBy(timeEntries.startTime);

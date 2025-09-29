@@ -236,7 +236,7 @@ export class TimeEntryService {
       .select({
         id: timeEntries.id,
         userId: timeEntries.userId,
-        taskId: timeEntries.taskId,
+        taskId: timeEntries.projectId, // Map projectId to taskId for backward compatibility
         startTime: timeEntries.startTime,
         endTime: timeEntries.endTime,
         durationManual: timeEntries.durationManual,
@@ -244,7 +244,7 @@ export class TimeEntryService {
         createdAt: timeEntries.createdAt,
         updatedAt: timeEntries.updatedAt,
         userName: users.name,
-        taskName: tasks.name,
+        taskName: sql<string>`'General'`.as('taskName'), // Since we're now using projects as tasks
         projectName: projects.name,
         clientName: clients.name,
         duration: sql<number>`CASE 
@@ -257,15 +257,13 @@ export class TimeEntryService {
       })
       .from(timeEntries)
       .innerJoin(users, eq(timeEntries.userId, users.id))
-      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(projects, eq(timeEntries.projectId, projects.id))
       .innerJoin(clients, eq(projects.clientId, clients.id))
       .where(and(
         eq(timeEntries.userId, userId),
         sql`(${timeEntries.endTime} IS NOT NULL OR ${timeEntries.durationManual} IS NOT NULL)`,
         eq(clients.archived, false),
-        eq(projects.archived, false),
-        eq(tasks.archived, false)
+        eq(projects.archived, false)
       ))
       .orderBy(sql`${timeEntries.createdAt} DESC`)
       .limit(limit);
@@ -284,7 +282,7 @@ export class TimeEntryService {
       .select({
         id: timeEntries.id,
         userId: timeEntries.userId,
-        taskId: timeEntries.taskId,
+        taskId: timeEntries.projectId, // Map projectId to taskId for backward compatibility
         startTime: timeEntries.startTime,
         endTime: timeEntries.endTime,
         durationManual: timeEntries.durationManual,
@@ -292,7 +290,7 @@ export class TimeEntryService {
         createdAt: timeEntries.createdAt,
         updatedAt: timeEntries.updatedAt,
         userName: users.name,
-        taskName: tasks.name,
+        taskName: sql<string>`'General'`.as('taskName'), // Since we're now using projects as tasks
         projectName: projects.name,
         clientName: clients.name,
         duration: sql<number>`CASE 
@@ -305,13 +303,11 @@ export class TimeEntryService {
       })
       .from(timeEntries)
       .innerJoin(users, eq(timeEntries.userId, users.id))
-      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(projects, eq(timeEntries.projectId, projects.id))
       .innerJoin(clients, eq(projects.clientId, clients.id))
       .where(and(
         eq(clients.archived, false),
-        eq(projects.archived, false),
-        eq(tasks.archived, false)
+        eq(projects.archived, false)
       ))
       .orderBy(sql`${timeEntries.createdAt} DESC`);
 
