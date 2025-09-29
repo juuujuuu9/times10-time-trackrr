@@ -8,10 +8,12 @@ export const GET: APIRoute = async ({ url }) => {
     const searchParams = url.searchParams;
     const assignedTo = searchParams.get('assignedTo');
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 200; // show more by default
+    const assignedOnly = searchParams.get('assignedOnly') === 'true';
     
-    if (!assignedTo) {
+    // If assignedOnly=true we require assignedTo. Otherwise we will return all tasks (non-archived)
+    if (assignedOnly && !assignedTo) {
       return new Response(JSON.stringify({
-        error: 'assignedTo parameter is required'
+        error: 'assignedTo parameter is required when assignedOnly=true'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -19,7 +21,7 @@ export const GET: APIRoute = async ({ url }) => {
     }
 
     // 1) Tasks explicitly assigned to the user (non-system)
-    const assignedTasks = await db
+    const assignedTasks = assignedTo ? await db
       .select({
         id: tasks.id,
         name: tasks.name,
@@ -43,7 +45,7 @@ export const GET: APIRoute = async ({ url }) => {
         eq(tasks.isSystem, false)
       ))
       .orderBy(tasks.createdAt)
-      .limit(limit);
+      .limit(limit) : [];
 
     // 2) Additionally include any tasks the user has time entries for in the last 180 days
     //    This preserves visibility for migrated/unassigned tasks with historical entries
@@ -51,7 +53,7 @@ export const GET: APIRoute = async ({ url }) => {
     const sinceDate = new Date();
     sinceDate.setDate(sinceDate.getDate() - 180);
 
-    const tasksWithEntries = await db
+    const tasksWithEntries = assignedTo ? await db
       .select({
         id: tasks.id,
         name: tasks.name,
@@ -75,12 +77,39 @@ export const GET: APIRoute = async ({ url }) => {
         eq(tasks.isSystem, false)
       ))
       .orderBy(tasks.createdAt)
+      .limit(limit) : [];
+
+    // 3) If not assignedOnly, include all non-archived, non-system tasks (for broad selection)
+    const allNonArchived = assignedOnly ? [] : await db
+      .select({
+        id: tasks.id,
+        name: tasks.name,
+        description: tasks.description,
+        status: tasks.status,
+        archived: tasks.archived,
+        createdAt: tasks.createdAt,
+        updatedAt: tasks.updatedAt,
+        projectName: projects.name,
+        projectId: projects.id,
+        clientName: clients.name,
+        clientId: clients.id
+      })
+      .from(tasks)
+      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(clients, eq(projects.clientId, clients.id))
+      .where(and(
+        eq(tasks.archived, false),
+        eq(tasks.isSystem, false),
+        eq(clients.archived, false)
+      ))
+      .orderBy(tasks.createdAt)
       .limit(limit);
 
     // Merge and de-duplicate by task id
     const map = new Map<number, any>();
     for (const t of assignedTasks) map.set(t.id, t);
     for (const t of tasksWithEntries) map.set(t.id, t);
+    for (const t of allNonArchived) map.set(t.id, t);
     const merged = Array.from(map.values()).slice(0, limit);
 
     return new Response(JSON.stringify({

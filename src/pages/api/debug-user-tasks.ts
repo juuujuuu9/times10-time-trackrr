@@ -1,100 +1,73 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../db';
-import { tasks, taskAssignments, projects, users, clients } from '../../db/schema';
-import { eq, and } from 'drizzle-orm';
-import { getSessionUser } from '../../utils/session';
+import { tasks, projects, clients, taskAssignments, timeEntries } from '../../db/schema';
+import { and, eq, sql, desc } from 'drizzle-orm';
 
-export const GET: APIRoute = async ({ cookies }) => {
+export const GET: APIRoute = async ({ url }) => {
   try {
-    // Get the authenticated user
-    const user = await getSessionUser({ cookies } as any);
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
+    const userIdParam = url.searchParams.get('userId');
+    if (!userIdParam) {
+      return new Response(JSON.stringify({ error: 'userId is required' }), {
+        status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+    const userId = parseInt(userIdParam);
 
-    console.log(`🔍 Debugging tasks for user: ${user.name} (${user.email})`);
-
-    // Get all task assignments for this user
-    const userAssignments = await db
-      .select({
-        taskId: taskAssignments.taskId,
-        userId: taskAssignments.userId,
-        taskName: tasks.name,
-        taskIsSystem: tasks.isSystem,
-        projectName: projects.name,
-        projectIsSystem: projects.isSystem,
-        clientName: clients.name,
-        clientArchived: clients.archived
-      })
-      .from(taskAssignments)
-      .innerJoin(tasks, eq(taskAssignments.taskId, tasks.id))
+    // Assigned tasks
+    const assigned = await db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .innerJoin(taskAssignments, eq(tasks.id, taskAssignments.taskId))
       .innerJoin(projects, eq(tasks.projectId, projects.id))
       .innerJoin(clients, eq(projects.clientId, clients.id))
-      .where(eq(taskAssignments.userId, user.id));
+      .where(and(eq(taskAssignments.userId, userId), eq(tasks.archived, false), eq(clients.archived, false)));
 
-    console.log(`Found ${userAssignments.length} task assignments for user ${user.id}`);
+    // With entries
+    const withEntries = await db
+      .select({ id: tasks.id })
+      .from(timeEntries)
+      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(clients, eq(projects.clientId, clients.id))
+      .where(and(eq(timeEntries.userId, userId), eq(tasks.archived, false), eq(clients.archived, false)));
 
-    // Separate regular and system tasks
-    const regularTasks = userAssignments.filter(assignment => !assignment.taskIsSystem);
-    const systemTasks = userAssignments.filter(assignment => assignment.taskIsSystem);
+    // All visible
+    const allVisible = await db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(clients, eq(projects.clientId, clients.id))
+      .where(and(eq(tasks.archived, false), eq(clients.archived, false)));
 
-    // Get all general tasks in the system
-    const allGeneralTasks = await db
+    // Sample list for quick inspection
+    const sample = await db
       .select({
         id: tasks.id,
         name: tasks.name,
-        isSystem: tasks.isSystem,
         projectName: projects.name,
-        projectIsSystem: projects.isSystem,
-        clientName: clients.name,
-        clientArchived: clients.archived
+        clientName: clients.name
       })
       .from(tasks)
       .innerJoin(projects, eq(tasks.projectId, projects.id))
       .innerJoin(clients, eq(projects.clientId, clients.id))
-      .where(and(
-        eq(tasks.name, 'General'),
-        eq(tasks.isSystem, true),
-        eq(projects.isSystem, true),
-        eq(clients.archived, false)
-      ));
-
-    console.log(`Found ${allGeneralTasks.length} general tasks in the system`);
+      .where(and(eq(tasks.archived, false), eq(clients.archived, false)))
+      .orderBy(desc(tasks.createdAt))
+      .limit(20);
 
     return new Response(JSON.stringify({
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        status: user.status
+      counts: {
+        assigned: assigned.length,
+        withEntries: withEntries.length,
+        allVisible: allVisible.length
       },
-      taskAssignments: {
-        total: userAssignments.length,
-        regular: regularTasks.length,
-        system: systemTasks.length,
-        details: userAssignments
-      },
-      generalTasksInSystem: {
-        total: allGeneralTasks.length,
-        details: allGeneralTasks
-      },
-      missingGeneralTasks: allGeneralTasks.filter(generalTask => 
-        !userAssignments.some(assignment => assignment.taskId === generalTask.id)
-      )
+      sample
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-
-  } catch (error) {
-    console.error('Error debugging user tasks:', error);
-    return new Response(JSON.stringify({
-      error: 'Failed to debug user tasks',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }), {
+  } catch (err) {
+    return new Response(JSON.stringify({ error: 'debug failed' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
