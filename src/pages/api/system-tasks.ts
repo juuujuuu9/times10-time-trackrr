@@ -22,73 +22,112 @@ export const GET: APIRoute = async ({ url, cookies }) => {
     // If assignedTo is provided, use that; otherwise use the authenticated user
     const userId = assignedTo ? parseInt(assignedTo) : user.id;
 
-    // 1) System tasks explicitly assigned to the user
-    const assignedSystemTasks = await db
-      .select({
-        id: tasks.id,
-        name: tasks.name,
-        description: tasks.description,
-        status: tasks.status,
-        archived: tasks.archived,
-        createdAt: tasks.createdAt,
-        updatedAt: tasks.updatedAt,
-        projectName: projects.name,
-        projectId: projects.id,
-        clientName: clients.name,
-        clientId: clients.id,
-        displayName: sql<string>`CONCAT(${projects.name}, ' - ', ${tasks.name})`.as('display_name')
-      })
-      .from(tasks)
-      .innerJoin(taskAssignments, eq(tasks.id, taskAssignments.taskId))
-      .innerJoin(projects, eq(tasks.projectId, projects.id))
-      .innerJoin(clients, eq(projects.clientId, clients.id))
-      .where(and(
-        eq(taskAssignments.userId, userId),
-        eq(tasks.archived, false),
-        eq(tasks.isSystem, true), // Only include system-generated tasks
-        eq(projects.isSystem, true), // Only include system-generated projects
-        eq(clients.archived, false)
-      ))
-      .orderBy(tasks.createdAt)
-      .limit(limit);
+    let assignedSystemTasks = [];
+    let systemTasksWithEntries = [];
 
-    // 2) Additionally include any system tasks the user has time entries for in last 180 days
-    const sinceDate = new Date();
-    sinceDate.setDate(sinceDate.getDate() - 180);
+    // 1) System tasks explicitly assigned to the user (only if assignedTo is provided)
+    if (assignedTo) {
+      assignedSystemTasks = await db
+        .select({
+          id: tasks.id,
+          name: tasks.name,
+          description: tasks.description,
+          status: tasks.status,
+          archived: tasks.archived,
+          createdAt: tasks.createdAt,
+          updatedAt: tasks.updatedAt,
+          projectName: projects.name,
+          projectId: projects.id,
+          clientName: clients.name,
+          clientId: clients.id,
+          displayName: sql<string>`CONCAT(${projects.name}, ' - ', ${tasks.name})`.as('display_name')
+        })
+        .from(tasks)
+        .innerJoin(taskAssignments, eq(tasks.id, taskAssignments.taskId))
+        .innerJoin(projects, eq(tasks.projectId, projects.id))
+        .innerJoin(clients, eq(projects.clientId, clients.id))
+        .where(and(
+          eq(taskAssignments.userId, userId),
+          eq(tasks.archived, false),
+          eq(tasks.isSystem, true), // Only include system-generated tasks
+          eq(projects.isSystem, true), // Only include system-generated projects
+          eq(clients.archived, false)
+        ))
+        .orderBy(tasks.createdAt)
+        .limit(limit);
+    }
 
-    const systemTasksWithEntries = await db
-      .select({
-        id: tasks.id,
-        name: tasks.name,
-        description: tasks.description,
-        status: tasks.status,
-        archived: tasks.archived,
-        createdAt: tasks.createdAt,
-        updatedAt: tasks.updatedAt,
-        projectName: projects.name,
-        projectId: projects.id,
-        clientName: clients.name,
-        clientId: clients.id,
-        displayName: sql<string>`CONCAT(${projects.name}, ' - ', ${tasks.name})`.as('display_name')
-      })
-      .from(timeEntries)
-      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-      .innerJoin(projects, eq(tasks.projectId, projects.id))
-      .innerJoin(clients, eq(projects.clientId, clients.id))
-      .where(and(
-        eq(timeEntries.userId, userId),
-        eq(tasks.archived, false),
-        eq(tasks.isSystem, true),
-        eq(projects.isSystem, true),
-        eq(clients.archived, false)
-      ))
-      .orderBy(tasks.createdAt)
-      .limit(limit);
+    // 2) Additionally include any system tasks the user has time entries for in last 180 days (only if assignedTo is provided)
+    if (assignedTo) {
+      const sinceDate = new Date();
+      sinceDate.setDate(sinceDate.getDate() - 180);
+
+      systemTasksWithEntries = await db
+        .select({
+          id: tasks.id,
+          name: tasks.name,
+          description: tasks.description,
+          status: tasks.status,
+          archived: tasks.archived,
+          createdAt: tasks.createdAt,
+          updatedAt: tasks.updatedAt,
+          projectName: projects.name,
+          projectId: projects.id,
+          clientName: clients.name,
+          clientId: clients.id,
+          displayName: sql<string>`CONCAT(${projects.name}, ' - ', ${tasks.name})`.as('display_name')
+        })
+        .from(timeEntries)
+        .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+        .innerJoin(projects, eq(tasks.projectId, projects.id))
+        .innerJoin(clients, eq(projects.clientId, clients.id))
+        .where(and(
+          eq(timeEntries.userId, userId),
+          eq(tasks.archived, false),
+          eq(tasks.isSystem, true),
+          eq(projects.isSystem, true),
+          eq(clients.archived, false)
+        ))
+        .orderBy(tasks.createdAt)
+        .limit(limit);
+    }
+
+    // 3) If no assignedTo provided, return ALL system tasks
+    let allSystemTasks = [];
+    if (!assignedTo) {
+      allSystemTasks = await db
+        .select({
+          id: tasks.id,
+          name: tasks.name,
+          description: tasks.description,
+          status: tasks.status,
+          archived: tasks.archived,
+          createdAt: tasks.createdAt,
+          updatedAt: tasks.updatedAt,
+          projectName: projects.name,
+          projectId: projects.id,
+          clientName: clients.name,
+          clientId: clients.id,
+          displayName: sql<string>`CONCAT(${projects.name}, ' - ', ${tasks.name})`.as('display_name')
+        })
+        .from(tasks)
+        .innerJoin(projects, eq(tasks.projectId, projects.id))
+        .innerJoin(clients, eq(projects.clientId, clients.id))
+        .where(and(
+          eq(tasks.archived, false),
+          eq(tasks.isSystem, true),
+          eq(projects.isSystem, true),
+          eq(clients.archived, false)
+        ))
+        .orderBy(tasks.createdAt)
+        .limit(limit);
+    }
 
     // Merge and dedupe by id
     const map = new Map<number, any>();
     for (const t of assignedSystemTasks) map.set(t.id, t);
     for (const t of systemTasksWithEntries) map.set(t.id, t);
+    for (const t of allSystemTasks) map.set(t.id, t);
     const merged = Array.from(map.values()).slice(0, limit);
 
     return new Response(JSON.stringify({
