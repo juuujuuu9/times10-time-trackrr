@@ -213,7 +213,7 @@ export default function Timer() {
         fetch(`/api/tasks?assignedOnly=false&limit=500&assignedTo=${currentUserId}`, {
           signal: AbortSignal.timeout(10000) // 10 second timeout
         }),
-        fetch(`/api/system-tasks?assignedTo=${currentUserId}&limit=200`, { 
+        fetch(`/api/system-tasks?limit=500`, { 
           signal: AbortSignal.timeout(10000) // 10 second timeout
         })
       ]);
