@@ -210,7 +210,7 @@ export default function Timer() {
     try {
       // Load both regular tasks and system tasks in parallel with timeout
       const [regularTasksResponse, systemTasksResponse] = await Promise.allSettled([
-        fetch(`/api/tasks?assignedTo=${currentUserId}&limit=200`, {
+        fetch(`/api/tasks?assignedOnly=false&limit=500&assignedTo=${currentUserId}`, {
           signal: AbortSignal.timeout(10000) // 10 second timeout
         }),
         fetch(`/api/system-tasks?assignedTo=${currentUserId}&limit=200`, { 
