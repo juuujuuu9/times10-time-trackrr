@@ -295,6 +295,16 @@ const allClients = await db
                   </svg>
                   Edit
                 </button>
+                <button
+                  class="inline-flex items-center px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-blue-200"
+                  onclick={`changeCreatedBy(${client.id}, '${client.name}', '${client.createdByName}')`}
+                  title="Change who created this client"
+                >
+                  <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                  </svg>
+                  Change Creator
+                </button>
               </div>
               <div class="flex space-x-2">
                 <button
@@ -469,6 +479,57 @@ const allClients = await db
     </div>
   </div>
 
+  <!-- Change Created By Modal -->
+  <div id="changeCreatedByModal" class="fixed inset-0 bg-black/50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] border border-gray-200 flex flex-col">
+        <div class="px-6 py-4 border-b border-gray-200 flex-shrink-0">
+          <h3 class="text-lg font-medium text-gray-900">Change Client Creator</h3>
+        </div>
+        <div class="flex-1 overflow-y-auto">
+          <form id="changeCreatedByForm" class="p-6">
+            <input type="hidden" id="changeCreatedByClientId" />
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Client: <span id="changeCreatedByClientName" class="font-semibold"></span>
+              </label>
+              <p class="text-sm text-gray-600 mb-4">
+                Current creator: <span id="changeCreatedByCurrentCreator" class="font-medium"></span>
+              </p>
+            </div>
+            <div class="mb-4">
+              <label for="newCreatedBy" class="block text-sm font-medium text-gray-700 mb-1">
+                New Creator
+              </label>
+              <select
+                id="newCreatedBy"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#415058] focus:border-[#415058] bg-white text-gray-900"
+              >
+                <option value="">Select a user...</option>
+              </select>
+            </div>
+            <div class="flex justify-end space-x-3">
+              <button
+                type="button"
+                onclick="closeChangeCreatedByModal()"
+                class="px-4 py-2 text-gray-700 bg-white hover:bg-gray-50 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="px-4 py-2 bg-[#415058] hover:bg-[#1F292E] text-white font-medium rounded-md transition-colors"
+              >
+                Change Creator
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     // Client management JavaScript
     const createClientBtn = document.getElementById('createClientBtn');
@@ -522,6 +583,45 @@ const allClients = await db
             const errorMessage = errorData.error || 'Error saving client';
             console.error('Server error:', errorData);
             alert(`Error saving client: ${errorMessage}`);
+          }
+        } catch (error) {
+          console.error('Network error:', error);
+          alert('Network error: Unable to connect to server. Please check your connection and try again.');
+        }
+      });
+    }
+
+    // Change Created By form handler
+    const changeCreatedByForm = document.getElementById('changeCreatedByForm');
+    if (changeCreatedByForm) {
+      changeCreatedByForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const clientId = (document.getElementById('changeCreatedByClientId') as HTMLInputElement)?.value;
+        const newCreatedBy = (document.getElementById('newCreatedBy') as HTMLSelectElement)?.value;
+        
+        if (!newCreatedBy) {
+          alert('Please select a new creator');
+          return;
+        }
+        
+        try {
+          const response = await fetch('/api/admin/clients/change-created-by', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              clientId: parseInt(clientId), 
+              newCreatedBy: parseInt(newCreatedBy) 
+            }),
+          });
+          
+          if (response.ok) {
+            (window as any).closeChangeCreatedByModal();
+            window.location.reload();
+          } else {
+            const errorData = await response.json();
+            const errorMessage = errorData.error || 'Error changing creator';
+            console.error('Server error:', errorData);
+            alert(`Error changing creator: ${errorMessage}`);
           }
         } catch (error) {
           console.error('Network error:', error);
@@ -626,6 +726,51 @@ const allClients = await db
           alert('Network error: Unable to connect to server. Please check your connection and try again.');
         }
       }
+    };
+
+    // Change Created By functionality
+    (window as any).changeCreatedBy = async function(clientId: number, clientName: string, currentCreator: string) {
+      try {
+        // Load all users for the dropdown
+        const usersResponse = await fetch('/api/admin/users');
+        if (!usersResponse.ok) {
+          throw new Error('Failed to fetch users');
+        }
+        
+        const users = await usersResponse.json();
+        
+        // Populate the modal
+        const modal = document.getElementById('changeCreatedByModal');
+        const clientIdInput = document.getElementById('changeCreatedByClientId') as HTMLInputElement;
+        const clientNameSpan = document.getElementById('changeCreatedByClientName');
+        const currentCreatorSpan = document.getElementById('changeCreatedByCurrentCreator');
+        const newCreatedBySelect = document.getElementById('newCreatedBy') as HTMLSelectElement;
+        
+        if (clientIdInput) clientIdInput.value = clientId.toString();
+        if (clientNameSpan) clientNameSpan.textContent = clientName;
+        if (currentCreatorSpan) currentCreatorSpan.textContent = currentCreator;
+        
+        // Populate user dropdown
+        if (newCreatedBySelect) {
+          newCreatedBySelect.innerHTML = '<option value="">Select a user...</option>';
+          users.forEach((user: any) => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = user.name;
+            newCreatedBySelect.appendChild(option);
+          });
+        }
+        
+        if (modal) modal.classList.remove('hidden');
+      } catch (error) {
+        console.error('Error loading users:', error);
+        alert('Error loading users');
+      }
+    };
+
+    (window as any).closeChangeCreatedByModal = function() {
+      const modal = document.getElementById('changeCreatedByModal');
+      if (modal) modal.classList.add('hidden');
     };
 
     // Add event listener for delete client buttons
