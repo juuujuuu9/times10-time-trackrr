@@ -226,6 +226,8 @@ export default function Timer() {
         const tasksData = await regularTasksResponse.value.json();
         regularTasks = tasksData.data || [];
         console.log('loadTasks: Loaded', regularTasks.length, 'regular tasks');
+        console.log('loadTasks: Regular tasks data:', tasksData);
+        console.log('loadTasks: Regular tasks meta:', tasksData.meta);
       } else {
         console.error('Failed to load regular tasks:', regularTasksResponse.status === 'rejected' ? regularTasksResponse.reason : regularTasksResponse.value?.status);
       }
@@ -235,6 +237,8 @@ export default function Timer() {
         const systemTasksData = await systemTasksResponse.value.json();
         systemTasks = systemTasksData.data || [];
         console.log('loadTasks: Loaded', systemTasks.length, 'system tasks');
+        console.log('loadTasks: System tasks data:', systemTasksData);
+        console.log('loadTasks: System tasks sample:', systemTasks.slice(0, 3));
       } else {
         console.error('Failed to load system tasks:', systemTasksResponse.status === 'rejected' ? systemTasksResponse.reason : systemTasksResponse.value?.status);
       }
