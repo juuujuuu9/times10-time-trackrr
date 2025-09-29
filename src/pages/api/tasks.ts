@@ -42,7 +42,7 @@ export const GET: APIRoute = async ({ url }) => {
       .where(and(
         eq(taskAssignments.userId, parseInt(assignedTo)),
         eq(tasks.archived, false),
-        eq(tasks.isSystem, false)
+        sql`COALESCE(${tasks.isSystem}, false) = false`
       ))
       .orderBy(tasks.createdAt)
       .limit(limit) : [];
@@ -74,7 +74,7 @@ export const GET: APIRoute = async ({ url }) => {
       .where(and(
         eq(timeEntries.userId, parseInt(assignedTo)),
         eq(tasks.archived, false),
-        eq(tasks.isSystem, false)
+        sql`COALESCE(${tasks.isSystem}, false) = false`
       ))
       .orderBy(tasks.createdAt)
       .limit(limit) : [];
@@ -99,7 +99,7 @@ export const GET: APIRoute = async ({ url }) => {
       .innerJoin(clients, eq(projects.clientId, clients.id))
       .where(and(
         eq(tasks.archived, false),
-        eq(tasks.isSystem, false),
+        sql`COALESCE(${tasks.isSystem}, false) = false`,
         eq(clients.archived, false)
       ))
       .orderBy(tasks.createdAt)
