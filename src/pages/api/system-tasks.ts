@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../db';
-import { tasks, taskAssignments, projects, users, clients } from '../../db/schema';
+import { tasks, taskAssignments, projects, users, clients, timeEntries } from '../../db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { getSessionUser } from '../../utils/session';
 
@@ -22,7 +22,8 @@ export const GET: APIRoute = async ({ url, cookies }) => {
     // If assignedTo is provided, use that; otherwise use the authenticated user
     const userId = assignedTo ? parseInt(assignedTo) : user.id;
 
-    const systemTasks = await db
+    // 1) System tasks explicitly assigned to the user
+    const assignedSystemTasks = await db
       .select({
         id: tasks.id,
         name: tasks.name,
@@ -51,8 +52,47 @@ export const GET: APIRoute = async ({ url, cookies }) => {
       .orderBy(tasks.createdAt)
       .limit(limit);
 
+    // 2) Additionally include any system tasks the user has time entries for in last 180 days
+    const sinceDate = new Date();
+    sinceDate.setDate(sinceDate.getDate() - 180);
+
+    const systemTasksWithEntries = await db
+      .select({
+        id: tasks.id,
+        name: tasks.name,
+        description: tasks.description,
+        status: tasks.status,
+        archived: tasks.archived,
+        createdAt: tasks.createdAt,
+        updatedAt: tasks.updatedAt,
+        projectName: projects.name,
+        projectId: projects.id,
+        clientName: clients.name,
+        clientId: clients.id,
+        displayName: sql<string>`CONCAT(${projects.name}, ' - ', ${tasks.name})`.as('display_name')
+      })
+      .from(timeEntries)
+      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(clients, eq(projects.clientId, clients.id))
+      .where(and(
+        eq(timeEntries.userId, userId),
+        eq(tasks.archived, false),
+        eq(tasks.isSystem, true),
+        eq(projects.isSystem, true),
+        eq(clients.archived, false)
+      ))
+      .orderBy(tasks.createdAt)
+      .limit(limit);
+
+    // Merge and dedupe by id
+    const map = new Map<number, any>();
+    for (const t of assignedSystemTasks) map.set(t.id, t);
+    for (const t of systemTasksWithEntries) map.set(t.id, t);
+    const merged = Array.from(map.values()).slice(0, limit);
+
     return new Response(JSON.stringify({
-      data: systemTasks
+      data: merged
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
