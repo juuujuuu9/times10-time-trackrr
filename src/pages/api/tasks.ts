@@ -125,9 +125,18 @@ export const GET: APIRoute = async ({ url }) => {
           archived: tasks.archived,
           createdAt: tasks.createdAt,
           updatedAt: tasks.updatedAt,
+          projectName: projects.name,
+          projectId: projects.id,
+          clientName: clients.name,
+          clientId: clients.id
         })
         .from(tasks)
-        .where(eq(tasks.archived, false))
+        .leftJoin(projects, eq(tasks.projectId, projects.id))
+        .leftJoin(clients, eq(projects.clientId, clients.id))
+        .where(and(
+          eq(tasks.archived, false),
+          sql`COALESCE(${tasks.isSystem}, false) = false`
+        ))
         .orderBy(tasks.createdAt)
         .limit(limit);
     }
