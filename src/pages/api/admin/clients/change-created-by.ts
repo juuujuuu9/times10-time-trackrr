@@ -8,6 +8,7 @@ export const PATCH: APIRoute = async ({ request, cookies }) => {
   try {
     // Get the authenticated user
     const user = await getSessionUser({ cookies } as any);
+    console.log('Change created by - User:', user);
     if (!user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
@@ -15,9 +16,10 @@ export const PATCH: APIRoute = async ({ request, cookies }) => {
       });
     }
 
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Forbidden - Admin access required' }), {
+    // Check if user is admin or developer
+    console.log('User role:', user.role);
+    if (user.role !== 'admin' && user.role !== 'developer') {
+      return new Response(JSON.stringify({ error: 'Forbidden - Admin or Developer access required' }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' }
       });
