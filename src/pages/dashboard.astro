@@ -1515,10 +1515,10 @@ const user = await requireAuth('/')(Astro) as any;
 
       // Fetch both regular tasks and system tasks in parallel with timeout
       const [regularTasksResponse, systemTasksResponse] = await Promise.allSettled([
-        fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=20`, { 
+        fetch(`/api/tasks?assignedOnly=false&limit=500&assignedTo=${encodeURIComponent(userId)}`, { 
           signal: AbortSignal.timeout(10000) // 10 second timeout
         }),
-        fetch(`/api/system-tasks?assignedTo=${encodeURIComponent(userId)}&limit=100`, { 
+        fetch(`/api/system-tasks?assignedTo=${encodeURIComponent(userId)}&limit=200`, { 
           signal: AbortSignal.timeout(10000) // 10 second timeout
         })
       ]);
@@ -1562,10 +1562,10 @@ const user = await requireAuth('/')(Astro) as any;
 
       // Fetch both regular tasks and system tasks in parallel with timeout
       const [regularTasksResponse, systemTasksResponse] = await Promise.allSettled([
-        fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=20`, { 
+        fetch(`/api/tasks?assignedOnly=false&limit=500&assignedTo=${encodeURIComponent(userId)}`, { 
           signal: AbortSignal.timeout(10000) // 10 second timeout
         }),
-        fetch(`/api/system-tasks?assignedTo=${encodeURIComponent(userId)}&limit=100`, { 
+        fetch(`/api/system-tasks?assignedTo=${encodeURIComponent(userId)}&limit=200`, { 
           signal: AbortSignal.timeout(10000) // 10 second timeout
         })
       ]);
@@ -1651,8 +1651,8 @@ const user = await requireAuth('/')(Astro) as any;
 
       // Fetch both regular tasks and system tasks
       const [regularTasksResponse, systemTasksResponse] = await Promise.all([
-        fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=20`),
-        fetch(`/api/system-tasks?assignedTo=${encodeURIComponent(userId)}&limit=100`)
+        fetch(`/api/tasks?assignedOnly=false&limit=500&assignedTo=${encodeURIComponent(userId)}`),
+        fetch(`/api/system-tasks?assignedTo=${encodeURIComponent(userId)}&limit=200`)
       ]);
 
       let allTasks: any[] = [];
@@ -1694,10 +1694,10 @@ const user = await requireAuth('/')(Astro) as any;
 
       // Fetch both regular tasks and system tasks in parallel with timeout
       const [regularTasksResponse, systemTasksResponse] = await Promise.allSettled([
-        fetch(`/api/tasks?assignedTo=${encodeURIComponent(userId)}&limit=20`, { 
+        fetch(`/api/tasks?assignedOnly=false&limit=500&assignedTo=${encodeURIComponent(userId)}`, { 
           signal: AbortSignal.timeout(10000) // 10 second timeout
         }),
-        fetch(`/api/system-tasks?assignedTo=${encodeURIComponent(userId)}&limit=100`, { 
+        fetch(`/api/system-tasks?assignedTo=${encodeURIComponent(userId)}&limit=200`, { 
           signal: AbortSignal.timeout(10000) // 10 second timeout
         })
       ]);

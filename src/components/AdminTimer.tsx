@@ -56,7 +56,7 @@ export default function AdminTimer() {
 
     try {
       // Load regular tasks
-      const response = await fetch(`/api/tasks?assignedTo=${currentUserId}`);
+      const response = await fetch(`/api/tasks?assignedOnly=false&limit=500${currentUserId ? `&assignedTo=${currentUserId}` : ''}`);
       let regularTasks = [];
       if (response.ok) {
         const tasksData = await response.json();
@@ -108,7 +108,7 @@ export default function AdminTimer() {
             setCurrentUserId(userId);
             
             // Load user's regular tasks
-            const tasksResponse = await fetch(`/api/tasks?assignedTo=${userId}`);
+            const tasksResponse = await fetch(`/api/tasks?assignedOnly=false&limit=500&assignedTo=${userId}`);
             let regularTasks = [];
             if (tasksResponse.ok) {
               const tasksData = await tasksResponse.json();
