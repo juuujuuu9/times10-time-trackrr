@@ -24,7 +24,7 @@ export class TimeEntryService {
     // Prepare time entry data
     const timeEntryData: any = {
       userId: request.userId,
-      taskId: request.taskId,
+      projectId: request.taskId, // Map taskId to projectId for database
       notes: request.notes || null,
     };
 
@@ -202,7 +202,7 @@ export class TimeEntryService {
 
     // Handle other fields
     if (request.taskId !== undefined) {
-      updateData.taskId = request.taskId;
+      updateData.projectId = request.taskId; // Map taskId to projectId for database
     }
     if (request.notes !== undefined) {
       updateData.notes = request.notes;

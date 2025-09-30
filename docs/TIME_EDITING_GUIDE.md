@@ -304,3 +304,33 @@ When building time editing components:
 10. **Update duration display** from server response
 
 Following these patterns will create robust, timezone-safe time editing components that work reliably across all user scenarios.
+
+## Field Mapping Rules (Tasks → Projects)
+
+Our schema stores time entry ownership on `time_entries.project_id`, while much of the UI refers to a selected item as a `taskId`. To keep behavior consistent:
+
+- UI sends `taskId` (the selected project in the current model)
+- Server maps `taskId` → `projectId` when persisting
+
+Recommended server-side mappings:
+
+```ts
+// Create
+const timeEntryData: any = {
+  userId: request.userId,
+  projectId: request.taskId, // Map taskId (UI) to projectId (DB)
+  notes: request.notes || null,
+};
+
+// Update
+if (request.taskId !== undefined) {
+  updateData.projectId = request.taskId; // Map taskId (UI) to projectId (DB)
+}
+```
+
+Rationale:
+- Prevents silent failures when trying to update non-existent `taskId` column on `time_entries`
+- Keeps UI vocabulary stable while respecting the current DB schema
+- Avoids breaking existing queries that join on `project_id`
+
+When in doubt, search the schema for the authoritative column names and add a clear mapping in the service layer.
