@@ -31,6 +31,8 @@ export default function Timer() {
   const [addTaskSearchTerm, setAddTaskSearchTerm] = useState('');
   const [contextMenuOpen, setContextMenuOpen] = useState<number | null>(null);
   const [weekDropdownOpen, setWeekDropdownOpen] = useState(false);
+  const [tasksLoading, setTasksLoading] = useState(false);
+  const [hasLoadedTasks, setHasLoadedTasks] = useState(false);
   const [dailyDurationTotals, setDailyDurationTotals] = useState<Array<{
     dayOfWeek: number;
     totalSeconds: number;
@@ -208,6 +210,7 @@ export default function Timer() {
 
     console.log('loadProjects: Loading projects for userId:', currentUserId, 'retry:', retryCount);
     try {
+      setTasksLoading(true);
       // Load projects for the user
       const projectsResponse = await fetch(`/api/projects?userId=${currentUserId}&limit=500`, {
         signal: AbortSignal.timeout(10000) // 10 second timeout
@@ -247,6 +250,9 @@ export default function Timer() {
         console.log('loadProjects: Error occurred, retrying in 2 seconds...');
         setTimeout(() => loadTasks(1), 2000);
       }
+    } finally {
+      setTasksLoading(false);
+      setHasLoadedTasks(true);
     }
   };
 
@@ -272,15 +278,39 @@ export default function Timer() {
             const userId = userData.user.id;
             setCurrentUserId(userId);
             
-            // Load curated task list from server, fallback to localStorage
-            try {
-              const taskListResponse = await fetch('/api/user-task-lists');
-              if (taskListResponse.ok) {
-                const taskListData = await taskListResponse.json();
-                if (taskListData.success) {
-                  setCuratedTaskList(taskListData.data || []);
-                } else {
-                  // Fallback to localStorage if API fails
+            // Load curated task list and tasks in parallel to reduce latency
+            await Promise.allSettled([
+              (async () => {
+                try {
+                  const taskListResponse = await fetch('/api/user-task-lists');
+                  if (taskListResponse.ok) {
+                    const taskListData = await taskListResponse.json();
+                    if (taskListData.success) {
+                      setCuratedTaskList(taskListData.data || []);
+                    } else {
+                      const savedCuratedList = localStorage.getItem(`curatedTaskList_${userId}`);
+                      if (savedCuratedList) {
+                        try {
+                          const parsedList = JSON.parse(savedCuratedList);
+                          setCuratedTaskList(parsedList);
+                        } catch (error) {
+                          console.error('Error parsing curated task list from localStorage:', error);
+                        }
+                      }
+                    }
+                  } else {
+                    const savedCuratedList = localStorage.getItem(`curatedTaskList_${userId}`);
+                    if (savedCuratedList) {
+                      try {
+                        const parsedList = JSON.parse(savedCuratedList);
+                        setCuratedTaskList(parsedList);
+                      } catch (error) {
+                        console.error('Error parsing curated task list from localStorage:', error);
+                      }
+                    }
+                  }
+                } catch (error) {
+                  console.error('Error loading curated task list from server:', error);
                   const savedCuratedList = localStorage.getItem(`curatedTaskList_${userId}`);
                   if (savedCuratedList) {
                     try {
@@ -291,34 +321,9 @@ export default function Timer() {
                     }
                   }
                 }
-              } else {
-                // Fallback to localStorage if API fails
-                const savedCuratedList = localStorage.getItem(`curatedTaskList_${userId}`);
-                if (savedCuratedList) {
-                  try {
-                    const parsedList = JSON.parse(savedCuratedList);
-                    setCuratedTaskList(parsedList);
-                  } catch (error) {
-                    console.error('Error parsing curated task list from localStorage:', error);
-                  }
-                }
-              }
-            } catch (error) {
-              console.error('Error loading curated task list from server:', error);
-              // Fallback to localStorage
-              const savedCuratedList = localStorage.getItem(`curatedTaskList_${userId}`);
-              if (savedCuratedList) {
-                try {
-                  const parsedList = JSON.parse(savedCuratedList);
-                  setCuratedTaskList(parsedList);
-                } catch (error) {
-                  console.error('Error parsing curated task list from localStorage:', error);
-                }
-              }
-            }
-            
-            // Load tasks using the reusable function
-            await loadTasks();
+              })(),
+              loadTasks()
+            ]);
             
             // Load daily duration totals (will be called again when currentUserId is set)
             // await loadDailyDurationTotals();
@@ -352,12 +357,12 @@ export default function Timer() {
 
   // Update selected task when timer data changes
   useEffect(() => {
-    if (timerData && timerData.task) {
-      setSelectedTask(timerData.taskId);
-      // Update search term to show the selected task
-      const task = tasks.find(t => t.id === timerData.taskId);
-      if (task) {
-        setTaskSearchTerm(task.displayName || `${task.projectName} - ${task.name}`);
+    if (timerData && timerData.project) {
+      setSelectedTask(timerData.projectId);
+      // Update search term to show the selected project
+      const project = tasks.find(t => t.id === timerData.projectId);
+      if (project) {
+        setTaskSearchTerm(`${project.name} (${project.clientName})`);
       }
     }
   }, [timerData, tasks]);
@@ -505,15 +510,15 @@ export default function Timer() {
       }
     }
 
-    console.log('🚀 [TIMER COMPONENT DEBUG] Starting timer for task:', selectedTask);
+    console.log('🚀 [TIMER COMPONENT DEBUG] Starting timer for project:', selectedTask);
     const success = await startTimer(selectedTask);
     console.log('📊 [TIMER COMPONENT DEBUG] startTimer result:', success);
     
     if (success) {
       console.log('✅ [TIMER COMPONENT DEBUG] Timer started successfully');
-      // Automatically add the task to the curated list if it's not already there
+      // Automatically add the project to the curated list if it's not already there
       if (!curatedTaskList.includes(selectedTask)) {
-        console.log('📝 [TIMER COMPONENT DEBUG] Adding task to curated list');
+        console.log('📝 [TIMER COMPONENT DEBUG] Adding project to curated list');
         await addToCuratedList(selectedTask);
       }
       
@@ -735,10 +740,10 @@ export default function Timer() {
     return tasksWithEntries;
   };
 
-  // Get real-time daily totals for a task (including running timer)
-  const getRealTimeDailyTotals = (taskId: number) => {
+  // Get real-time daily totals for a project (including running timer)
+  const getRealTimeDailyTotals = (projectId: number) => {
     // Get the base daily totals from taskDailyTotals
-    const baseTaskData = taskDailyTotals.find(t => t.taskId === taskId);
+    const baseTaskData = taskDailyTotals.find(t => t.taskId === projectId);
     const dayTotals = baseTaskData ? [...baseTaskData.dayTotals] : [];
     
     // If no base data exists, create empty day totals
@@ -754,8 +759,8 @@ export default function Timer() {
       }
     }
     
-    // If viewing current week and this task has a running timer, add live time to today's total
-    if (weekOffset === 0 && isRunning && selectedTask === taskId && timerData) {
+    // If viewing current week and this project has a running timer, add live time to today's total
+    if (weekOffset === 0 && isRunning && selectedTask === projectId && timerData) {
       const now = new Date();
       const today = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
       
@@ -813,8 +818,8 @@ export default function Timer() {
     return { clientGroups, sortedClients };
   };
 
-  // Handle start timer for specific task (used in list view)
-  const handleStartTimerForTask = async (taskId: number) => {
+  // Handle start timer for specific project (used in list view)
+  const handleStartTimerForTask = async (projectId: number) => {
     if (!currentUserId) {
       return;
     }
@@ -829,12 +834,12 @@ export default function Timer() {
       }
     }
 
-    setSelectedTask(taskId);
-    const success = await startTimer(taskId);
+    setSelectedTask(projectId);
+    const success = await startTimer(projectId);
     if (success) {
-      // Automatically add the task to the curated list if it's not already there
-      if (!curatedTaskList.includes(taskId)) {
-        await addToCuratedList(taskId);
+      // Automatically add the project to the curated list if it's not already there
+      if (!curatedTaskList.includes(projectId)) {
+        await addToCuratedList(projectId);
       }
       
       // Trigger a custom event to notify the dashboard to refresh
@@ -909,12 +914,18 @@ export default function Timer() {
     }
     
     const searchLower = currentSearchTerm.toLowerCase();
-    const filteredTasks = tasks.filter(task => 
-      task.clientName.toLowerCase().includes(searchLower) ||
-      task.projectName.toLowerCase().includes(searchLower) ||
-      task.name.toLowerCase().includes(searchLower) ||
-      (task.displayName && task.displayName.toLowerCase().includes(searchLower))
-    );
+    const filteredTasks = tasks.filter(task => {
+      const clientName = (task.clientName || '').toLowerCase();
+      const projectName = (task.projectName || '').toLowerCase();
+      const name = (task.name || '').toLowerCase();
+      const displayName = (task.displayName || '').toLowerCase();
+      return (
+        clientName.includes(searchLower) ||
+        projectName.includes(searchLower) ||
+        name.includes(searchLower) ||
+        displayName.includes(searchLower)
+      );
+    });
     
     const clientGroups: { [clientName: string]: Task[] } = {};
     filteredTasks.forEach(task => {
@@ -945,7 +956,7 @@ export default function Timer() {
     if (sortedClients.length === 0) {
       return (
         <div className="px-4 py-2 text-gray-500 text-sm">
-          {taskSearchTerm.trim() ? 'No projects found' : 'No projects assigned'}
+          {tasksLoading || !hasLoadedTasks ? 'Finding your tasks..' : (taskSearchTerm.trim() ? 'No tasks found' : 'No tasks assigned')}
         </div>
       );
     }
@@ -966,7 +977,7 @@ export default function Timer() {
                 className="pl-8 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
                 onClick={() => {
                   setSelectedTask(project.id);
-                  setTaskSearchTerm(project.displayName || project.name);
+                  setTaskSearchTerm(`${project.name} (${project.clientName})`);
                   setTaskDropdownOpen(false);
                 }}
               >
@@ -988,7 +999,7 @@ export default function Timer() {
     if (sortedClients.length === 0) {
       return (
         <div className="px-4 py-2 text-gray-500 text-sm">
-          {addTaskSearchTerm.trim() ? 'No projects found' : 'No projects assigned'}
+          {tasksLoading || !hasLoadedTasks ? 'Finding your tasks..' : (addTaskSearchTerm.trim() ? 'No tasks found' : 'No tasks assigned')}
         </div>
       );
     }
@@ -1020,7 +1031,7 @@ export default function Timer() {
                   }}
                 >
                   <div className="font-medium text-gray-900 flex items-center justify-between">
-                    <span>
+                  <span>
                       {project.displayName || project.name}
                     </span>
                     {isAlreadyAdded && (
@@ -1592,7 +1603,7 @@ export default function Timer() {
           )}
           
           {tasks.length === 0 && (
-            <p className="text-sm text-gray-500 mt-1">No tasks assigned. Contact your manager.</p>
+            <p className="text-sm text-gray-500 mt-1">{tasksLoading || !hasLoadedTasks ? 'Finding your tasks..' : 'No tasks assigned. Contact your manager.'}</p>
           )}
         </div>
       )}

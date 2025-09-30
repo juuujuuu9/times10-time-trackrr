@@ -29,7 +29,8 @@ export const GET: APIRoute = async (context) => {
         id: projects.id,
         name: projects.name,
         clientId: projects.clientId,
-        status: projects.status
+        archived: projects.archived,
+        isSystem: projects.isSystem
       }
     })
     .from(timeEntries)

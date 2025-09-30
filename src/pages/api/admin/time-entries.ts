@@ -74,8 +74,16 @@ export const POST: APIRoute = async ({ request }) => {
       if (typeof startHours === 'number' && typeof startMinutes === 'number' && typeof endHours === 'number' && typeof endMinutes === 'number' && taskDate) {
         const dateObj = new Date(taskDate);
         const offsetHours = (typeof tzOffsetMinutes === 'number' ? tzOffsetMinutes : new Date().getTimezoneOffset()) / 60;
-        timeEntryData.startTime = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), startHours + offsetHours, startMinutes, 0, 0));
-        timeEntryData.endTime = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), endHours + offsetHours, endMinutes, 0, 0));
+        
+        // Check if end time is earlier than start time (crosses midnight)
+        const startTimeMinutes = startHours * 60 + startMinutes;
+        const endTimeMinutes = endHours * 60 + endMinutes;
+        const endDate = endTimeMinutes < startTimeMinutes 
+          ? new Date(dateObj.getTime() + 24 * 60 * 60 * 1000) // Add 24 hours
+          : dateObj;
+        
+        timeEntryData.startTime = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), startHours - offsetHours, startMinutes, 0, 0));
+        timeEntryData.endTime = new Date(Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), endHours - offsetHours, endMinutes, 0, 0));
       } else {
         const { fromUserISOString } = await import('../../../utils/timezoneUtils');
         timeEntryData.startTime = fromUserISOString(startTime);

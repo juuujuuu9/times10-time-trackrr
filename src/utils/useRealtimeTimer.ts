@@ -2,14 +2,14 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface TimerData {
   id: number;
-  taskId: number;
+  projectId: number;
   startTime: string;
   elapsedSeconds: number;
   notes?: string;
-  task?: {
+  project?: {
     id: number;
     name: string;
-    projectId: number;
+    clientId: number;
     status: string;
   };
 }
@@ -18,7 +18,7 @@ interface UseRealtimeTimerReturn {
   timerData: TimerData | null;
   isLoading: boolean;
   error: string | null;
-  startTimer: (taskId: number, notes?: string) => Promise<boolean>;
+  startTimer: (projectId: number, notes?: string) => Promise<boolean>;
   stopTimer: (timerId: number, notes?: string) => Promise<boolean>;
   forceStopTimer: (timerId: number) => Promise<boolean>;
   refreshTimer: () => Promise<void>;
@@ -108,14 +108,14 @@ export function useRealtimeTimer(pollInterval: number = 2000): UseRealtimeTimerR
   }, [timerData, startPolling]);
 
   // Start a new timer
-  const startTimer = useCallback(async (taskId: number, notes?: string): Promise<boolean> => {
-    console.log('🔍 [REALTIME TIMER DEBUG] startTimer called with taskId:', taskId, 'notes:', notes);
+  const startTimer = useCallback(async (projectId: number, notes?: string): Promise<boolean> => {
+    console.log('🔍 [REALTIME TIMER DEBUG] startTimer called with projectId:', projectId, 'notes:', notes);
     setIsLoading(true);
     setError(null);
     
     try {
       const requestBody = { 
-        taskId, 
+        projectId, 
         notes, 
         clientTime: new Date().getTime() // Send client's current time as timestamp to preserve timezone
       };

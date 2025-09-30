@@ -29,7 +29,8 @@ export class TimezoneService {
   ): Date {
     const dateObj = new Date(dateString);
     const offsetHours = (tzOffsetMinutes ?? this.getTimezoneInfo().offsetMinutes) / 60;
-    const utcHours = hours + offsetHours;
+    // Subtract the offset to convert from local time to UTC
+    const utcHours = hours - offsetHours;
     
     return new Date(Date.UTC(
       dateObj.getFullYear(),
@@ -95,6 +96,18 @@ export class TimezoneService {
     const year = today.getFullYear();
     const month = today.getMonth() + 1;
     const day = today.getDate();
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  }
+
+  /**
+   * Get the next day's date as YYYY-MM-DD string
+   */
+  static getNextDay(dateString: string): string {
+    const date = new Date(dateString);
+    date.setDate(date.getDate() + 1);
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
     return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   }
 }

@@ -316,7 +316,7 @@ export const POST: APIRoute = async () => {
     for (const entry of timeEntriesData) {
       const existingEntry = await db.query.timeEntries.findFirst({
         where: (timeEntries, { eq, and }) => 
-          and(eq(timeEntries.taskId, entry.taskId), eq(timeEntries.userId, entry.userId), eq(timeEntries.startTime, entry.startTime))
+          and(eq(timeEntries.projectId, entry.taskId), eq(timeEntries.userId, entry.userId), eq(timeEntries.startTime, entry.startTime))
       });
 
       if (!existingEntry) {

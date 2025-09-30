@@ -90,7 +90,7 @@ export const GET: APIRoute = async ({ url }) => {
 
     const timeEntriesData = await db
       .select({
-        taskId: timeEntries.taskId,
+        projectId: timeEntries.projectId,
         startTime: timeEntries.startTime,
         endTime: timeEntries.endTime,
         durationManual: timeEntries.durationManual,

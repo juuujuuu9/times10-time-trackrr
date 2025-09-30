@@ -99,8 +99,7 @@ switch (period) {
 // Build filter conditions - use startTime for date filtering (when work was done)
 let filterConditions = [
   eq(clients.archived, false),
-  eq(projects.archived, false),
-  eq(tasks.archived, false)
+  eq(projects.archived, false)
 ];
 
 // Add date filter only if not "all time"
@@ -158,8 +157,7 @@ const totalHoursResult = await db
     ), 0)`.as('total_seconds')
   })
   .from(timeEntries)
-  .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-  .innerJoin(projects, eq(tasks.projectId, projects.id))
+  .innerJoin(projects, eq(timeEntries.projectId, projects.id))
   .innerJoin(clients, eq(projects.clientId, clients.id))
   .where(and(
     dateFilter,
@@ -182,8 +180,7 @@ if (canViewFinancialData) {
     })
     .from(timeEntries)
     .innerJoin(users, sql`${timeEntries.userId} = ${users.id}`)
-    .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-    .innerJoin(projects, eq(tasks.projectId, projects.id))
+    .innerJoin(projects, eq(timeEntries.projectId, projects.id))
     .innerJoin(clients, eq(projects.clientId, clients.id))
     .where(and(
       dateFilter,
@@ -198,8 +195,7 @@ const activeTeamMembersResult = await db
     count: count(sql`DISTINCT ${timeEntries.userId}`)
   })
   .from(timeEntries)
-  .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-  .innerJoin(projects, eq(tasks.projectId, projects.id))
+  .innerJoin(projects, eq(timeEntries.projectId, projects.id))
   .innerJoin(clients, eq(projects.clientId, clients.id))
   .where(and(
     dateFilter,

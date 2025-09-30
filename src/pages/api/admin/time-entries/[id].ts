@@ -27,16 +27,14 @@ export const GET: APIRoute = async ({ params }) => {
         notes: timeEntries.notes,
         createdAt: timeEntries.createdAt,
         userId: timeEntries.userId,
-        taskId: timeEntries.taskId,
+        projectId: timeEntries.projectId,
         userName: users.name,
-        taskName: tasks.name,
         projectName: projects.name,
         clientName: clients.name,
       })
       .from(timeEntries)
       .innerJoin(users, sql`${timeEntries.userId} = ${users.id}`)
-      .innerJoin(tasks, sql`${timeEntries.taskId} = ${tasks.id}`)
-      .innerJoin(projects, sql`${tasks.projectId} = ${projects.id}`)
+      .innerJoin(projects, sql`${timeEntries.projectId} = ${projects.id}`)
       .innerJoin(clients, sql`${projects.clientId} = ${clients.id}`)
       .where(eq(timeEntries.id, parseInt(id)))
       .limit(1);

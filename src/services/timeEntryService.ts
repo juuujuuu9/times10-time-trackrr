@@ -6,7 +6,7 @@
 import { db } from '../db';
 import { timeEntries, tasks } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
-import { TimeEntry, TimeEntryWithDetails, CreateTimeEntryRequest, UpdateTimeEntryRequest } from './types';
+import type { TimeEntry, TimeEntryWithDetails, CreateTimeEntryRequest, UpdateTimeEntryRequest } from './types';
 import { TimezoneService } from './timezoneService';
 import { ValidationService } from './validationService';
 
@@ -46,8 +46,16 @@ export class TimeEntryService {
         request.startMinutes,
         request.tzOffsetMinutes
       );
+      
+      // Check if end time is earlier than start time (crosses midnight)
+      const startTimeMinutes = request.startHours * 60 + request.startMinutes;
+      const endTimeMinutes = request.endHours * 60 + request.endMinutes;
+      const endDate = endTimeMinutes < startTimeMinutes 
+        ? TimezoneService.getNextDay(request.taskDate!)
+        : request.taskDate!;
+      
       timeEntryData.endTime = TimezoneService.localToUTC(
-        request.taskDate!,
+        endDate,
         request.endHours,
         request.endMinutes,
         request.tzOffsetMinutes
@@ -83,7 +91,11 @@ export class TimeEntryService {
         )
       );
 
-    return newEntry;
+    // Map projectId to taskId for backward compatibility
+    return {
+      ...newEntry,
+      taskId: newEntry.projectId
+    } as TimeEntry;
   }
 
   /**
@@ -132,8 +144,16 @@ export class TimeEntryService {
         request.startMinutes,
         request.tzOffsetMinutes
       );
+      
+      // Check if end time is earlier than start time (crosses midnight)
+      const startTimeMinutes = request.startHours * 60 + request.startMinutes;
+      const endTimeMinutes = request.endHours * 60 + request.endMinutes;
+      const endDate = endTimeMinutes < startTimeMinutes 
+        ? TimezoneService.getNextDay(request.taskDate!)
+        : request.taskDate!;
+      
       updateData.endTime = TimezoneService.localToUTC(
-        request.taskDate!,
+        endDate,
         request.endHours,
         request.endMinutes,
         request.tzOffsetMinutes
@@ -195,7 +215,11 @@ export class TimeEntryService {
       .where(eq(timeEntries.id, entryId))
       .returning();
 
-    return updatedEntry;
+    // Map projectId to taskId for backward compatibility
+    return {
+      ...updatedEntry,
+      taskId: updatedEntry.projectId
+    } as TimeEntry;
   }
 
   /**
@@ -222,7 +246,10 @@ export class TimeEntryService {
       .where(eq(timeEntries.id, entryId))
       .limit(1);
 
-    return result.length > 0 ? result[0] : null;
+    return result.length > 0 ? {
+      ...result[0],
+      taskId: result[0].projectId
+    } as TimeEntry : null;
   }
 
   /**

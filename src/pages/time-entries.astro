@@ -958,10 +958,55 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             // Build a local datetime for validation
             const newDateTime = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), hours, minutes, 0, 0);
             
+            // Smart time validation for day-to-day usage
+            function validateTimeEntry(newTime: Date, existingTime: Date, timeType: 'start' | 'end'): boolean {
+              const newHours = newTime.getHours();
+              const existingHours = existingTime.getHours();
+              
+              // Calculate time difference in hours
+              const timeDiff = Math.abs(newTime.getTime() - existingTime.getTime());
+              const hoursDiff = timeDiff / (1000 * 60 * 60);
+              
+              // For typical business hours (8am-10pm), assume same-day entries
+              const isBusinessHours = (newHours >= 8 && newHours <= 22) && (existingHours >= 8 && existingHours <= 22);
+              
+              // For late night/early morning hours (10pm-8am), be more careful about day boundaries
+              const isLateNight = (newHours >= 22 || newHours <= 8) || (existingHours >= 22 || existingHours <= 8);
+              
+              if (isBusinessHours) {
+                // For business hours, be strict about time order but allow reasonable edits
+                if (timeType === 'end' && newTime <= existingTime) {
+                  // Only allow if the time difference is very small (likely same day, minor edit)
+                  return hoursDiff <= 0.5; // Allow up to 30 minutes difference for business hours
+                } else if (timeType === 'start' && newTime >= existingTime) {
+                  // Only allow if the time difference is very small (likely same day, minor edit)
+                  return hoursDiff <= 0.5; // Allow up to 30 minutes difference for business hours
+                }
+                return true; // Allow the change for business hours
+              } else if (isLateNight) {
+                // For late night entries, be more permissive but still validate obvious errors
+                if (timeType === 'end' && newTime <= existingTime) {
+                  return hoursDiff <= 1; // Allow up to 1 hour difference for late night
+                } else if (timeType === 'start' && newTime >= existingTime) {
+                  return hoursDiff <= 1; // Allow up to 1 hour difference for late night
+                }
+                return true; // Allow late night entries
+              }
+              
+              // For other cases, use standard validation
+              if (timeType === 'end' && newTime <= existingTime) {
+                return false;
+              } else if (timeType === 'start' && newTime >= existingTime) {
+                return false;
+              }
+              
+              return true;
+            }
+            
             // Validate that end time is after start time if both times are being set
             if (timeType === 'end' && currentEntry?.startTime) {
               const existingStartTime = new Date(currentEntry.startTime);
-              if (newDateTime <= existingStartTime) {
+              if (!validateTimeEntry(newDateTime, existingStartTime, 'end')) {
                 // Show error state
                 this.style.borderColor = '#EF4444';
                 this.style.backgroundColor = '#FEF2F2';
@@ -975,7 +1020,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
               }
             } else if (timeType === 'start' && currentEntry?.endTime) {
               const existingEndTime = new Date(currentEntry.endTime);
-              if (newDateTime >= existingEndTime) {
+              if (!validateTimeEntry(newDateTime, existingEndTime, 'start')) {
                 // Show error state
                 this.style.borderColor = '#EF4444';
                 this.style.backgroundColor = '#FEF2F2';
@@ -1751,8 +1796,42 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
           const startDateTime = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), startParsedTime.hours, startParsedTime.minutes, 0, 0);
           const endDateTime = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), endParsedTime.hours, endParsedTime.minutes, 0, 0);
           
+          // Smart time validation for day-to-day usage
+          function validateModalTimeEntry(startTime: Date, endTime: Date): boolean {
+            const startHours = startTime.getHours();
+            const endHours = endTime.getHours();
+            
+            // Calculate time difference in hours
+            const timeDiff = Math.abs(endTime.getTime() - startTime.getTime());
+            const hoursDiff = timeDiff / (1000 * 60 * 60);
+            
+            // For typical business hours (8am-10pm), assume same-day entries
+            const isBusinessHours = (startHours >= 8 && startHours <= 22) && (endHours >= 8 && endHours <= 22);
+            
+            // For late night/early morning hours (10pm-8am), be more careful about day boundaries
+            const isLateNight = (startHours >= 22 || startHours <= 8) || (endHours >= 22 || endHours <= 8);
+            
+            if (isBusinessHours) {
+              // For business hours, be strict about time order but allow reasonable edits
+              if (endTime <= startTime) {
+                // Only allow if the time difference is very small (likely same day, minor edit)
+                return hoursDiff <= 0.5; // Allow up to 30 minutes difference for business hours
+              }
+              return true; // Allow the change for business hours
+            } else if (isLateNight) {
+              // For late night entries, be more permissive but still validate obvious errors
+              if (endTime <= startTime) {
+                return hoursDiff <= 1; // Allow up to 1 hour difference for late night
+              }
+              return true; // Allow late night entries
+            }
+            
+            // For other cases, use standard validation
+            return endTime > startTime;
+          }
+          
           // Validate that end time is after start time
-          if (endDateTime <= startDateTime) {
+          if (!validateModalTimeEntry(startDateTime, endDateTime)) {
             alert('End time must be after start time');
             submitButton.disabled = false;
             saveButtonText.textContent = originalText;

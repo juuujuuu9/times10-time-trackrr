@@ -225,10 +225,10 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
     if ((startTime || endTime || typeof startHours === 'number' || typeof endHours === 'number') && taskDate) {
       const taskDateObj = new Date(taskDate);
       if (typeof startHours === 'number' && typeof startMinutes === 'number') {
-        // Convert client local wall time to UTC by adding the client's offset hours
+        // Convert client local wall time to UTC by subtracting the client's offset hours
         // getTimezoneOffset returns minutes to add to local to reach UTC (positive in US)
         const offsetHours = (typeof tzOffsetMinutes === 'number' ? tzOffsetMinutes : new Date().getTimezoneOffset()) / 60;
-        const utcHours = startHours + offsetHours;
+        const utcHours = startHours - offsetHours;
         updateData.startTime = new Date(Date.UTC(taskDateObj.getFullYear(), taskDateObj.getMonth(), taskDateObj.getDate(), utcHours, startMinutes, 0, 0));
       } else if (newStartTime) {
         const timeOnly = new Date(newStartTime);
@@ -236,7 +236,7 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
       }
       if (typeof endHours === 'number' && typeof endMinutes === 'number') {
         const offsetHours = (typeof tzOffsetMinutes === 'number' ? tzOffsetMinutes : new Date().getTimezoneOffset()) / 60;
-        const utcHours = endHours + offsetHours;
+        const utcHours = endHours - offsetHours;
         updateData.endTime = new Date(Date.UTC(taskDateObj.getFullYear(), taskDateObj.getMonth(), taskDateObj.getDate(), utcHours, endMinutes, 0, 0));
       } else if (newEndTime) {
         const timeOnly = new Date(newEndTime);

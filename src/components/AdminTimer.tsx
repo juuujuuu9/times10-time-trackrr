@@ -18,6 +18,8 @@ export default function AdminTimer() {
   const [localTime, setLocalTime] = useState(0);
   const [taskSearchTerm, setTaskSearchTerm] = useState('');
   const [taskDropdownOpen, setTaskDropdownOpen] = useState(false);
+  const [tasksLoading, setTasksLoading] = useState(false);
+  const [hasLoadedTasks, setHasLoadedTasks] = useState(false);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -107,8 +109,13 @@ export default function AdminTimer() {
             const userId = userData.user.id;
             setCurrentUserId(userId);
             
-            // Load user's regular tasks
-            const tasksResponse = await fetch(`/api/tasks?assignedOnly=false&limit=500&assignedTo=${userId}`);
+            // Load user's regular tasks and system tasks in parallel
+            setTasksLoading(true);
+            const [tasksResponse, systemTasksResponse] = await Promise.all([
+              fetch(`/api/tasks?assignedOnly=false&limit=500&assignedTo=${userId}`),
+              fetch(`/api/system-tasks?limit=500`)
+            ]);
+
             let regularTasks = [];
             if (tasksResponse.ok) {
               const tasksData = await tasksResponse.json();
@@ -117,8 +124,6 @@ export default function AdminTimer() {
               console.error('Failed to load regular tasks:', tasksResponse.status);
             }
 
-            // Load user's system-generated tasks (General tasks)
-            const systemTasksResponse = await fetch(`/api/system-tasks?limit=500`);
             let systemTasks = [];
             if (systemTasksResponse.ok) {
               const systemTasksData = await systemTasksResponse.json();
@@ -127,14 +132,15 @@ export default function AdminTimer() {
               console.error('Failed to load system tasks:', systemTasksResponse.status);
             }
 
-            // Combine regular tasks and system tasks
             const allTasks = [...regularTasks, ...systemTasks];
             setTasks(allTasks);
+            setHasLoadedTasks(true);
           }
         }
       } catch (error) {
         console.error('Error initializing timer data:', error);
       } finally {
+        setTasksLoading(false);
         setDataLoading(false);
       }
     };
@@ -149,7 +155,7 @@ export default function AdminTimer() {
       // Update search term to show the selected task
       const task = tasks.find(t => t.id === timerData.taskId);
       if (task) {
-        setTaskSearchTerm(task.displayName || `${task.clientName} - ${task.projectName} - ${task.name}`);
+        setTaskSearchTerm(`${task.projectName} (${task.clientName})`);
       }
     }
   }, [timerData, tasks]);
@@ -359,7 +365,7 @@ export default function AdminTimer() {
     if (sortedClients.length === 0) {
       return (
         <div className="px-3 py-2 text-gray-500 text-xs">
-          {taskSearchTerm.trim() ? 'No tasks found' : 'No tasks assigned'}
+          {tasksLoading || !hasLoadedTasks ? 'Finding your tasks..' : (taskSearchTerm.trim() ? 'No tasks found' : 'No tasks assigned')}
         </div>
       );
     }
@@ -380,7 +386,7 @@ export default function AdminTimer() {
                 className="pl-3 py-1 hover:bg-gray-100 cursor-pointer text-xs border-b border-gray-100 last:border-b-0"
                 onClick={() => {
                   setSelectedTask(task.id);
-                  setTaskSearchTerm(task.displayName || `${task.clientName} - ${task.projectName} - ${task.name}`);
+                  setTaskSearchTerm(`${task.projectName} (${task.clientName})`);
                   setTaskDropdownOpen(false);
                 }}
               >

@@ -22,19 +22,17 @@ export const GET: APIRoute = async (context) => {
     // Exclude manual duration entries (entries with durationManual but no endTime)
     const ongoingTimers = await db.select({
       id: timeEntries.id,
-      taskId: timeEntries.taskId,
+      projectId: timeEntries.projectId,
       startTime: timeEntries.startTime,
       notes: timeEntries.notes,
       userId: timeEntries.userId,
       userName: users.name,
-      taskName: tasks.name,
       projectName: projects.name,
       clientName: clients.name,
     })
     .from(timeEntries)
     .innerJoin(users, eq(timeEntries.userId, users.id))
-    .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-    .innerJoin(projects, eq(tasks.projectId, projects.id))
+    .innerJoin(projects, eq(timeEntries.projectId, projects.id))
     .innerJoin(clients, eq(projects.clientId, clients.id))
     .where(
       and(
@@ -42,8 +40,7 @@ export const GET: APIRoute = async (context) => {
         isNull(timeEntries.durationManual), // Exclude manual duration entries
         sql`${timeEntries.startTime} IS NOT NULL`, // Only include entries with actual start times
         eq(clients.archived, false),
-        eq(projects.archived, false),
-        eq(tasks.archived, false)
+        eq(projects.archived, false)
       )
     )
     .orderBy(timeEntries.startTime);
