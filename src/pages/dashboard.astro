@@ -1912,6 +1912,7 @@ const user = await requireAuth('/')(Astro) as any;
         let requestBody: any = {
           userId: parseInt(userId),
           projectId: parseInt(projectId),
+          taskId: parseInt(projectId), // Map UI project selection to taskId expected by service
           notes: notes || null
         };
 
@@ -1964,9 +1965,10 @@ const user = await requireAuth('/')(Astro) as any;
             return;
           }
           
-          const taskDateObj = new Date(taskDate);
-          const startDateTime = new Date(taskDateObj.getFullYear(), taskDateObj.getMonth(), taskDateObj.getDate(), startParsedTime.hours, startParsedTime.minutes, 0, 0);
-          const endDateTime = new Date(taskDateObj.getFullYear(), taskDateObj.getMonth(), taskDateObj.getDate(), endParsedTime.hours, endParsedTime.minutes, 0, 0);
+          // Parse date components to avoid timezone shifts
+          const [year, month, day] = taskDate.split('-').map(Number);
+          const startDateTime = new Date(year, month - 1, day, startParsedTime.hours, startParsedTime.minutes, 0, 0);
+          const endDateTime = new Date(year, month - 1, day, endParsedTime.hours, endParsedTime.minutes, 0, 0);
           
           // Validate that end time is after start time
           if (endDateTime <= startDateTime) {
@@ -1977,12 +1979,9 @@ const user = await requireAuth('/')(Astro) as any;
             return;
           }
           
-          requestBody.startHours = startParsedTime.hours;
-          requestBody.startMinutes = startParsedTime.minutes;
-          requestBody.endHours = endParsedTime.hours;
-          requestBody.endMinutes = endParsedTime.minutes;
-          requestBody.taskDate = taskDate;
-          requestBody.tzOffsetMinutes = new Date().getTimezoneOffset();
+          // Use ISO strings like the inline editing approach
+          requestBody.startTime = startDateTime.toISOString();
+          requestBody.endTime = endDateTime.toISOString();
         }
 
         const response = await fetch('/api/time-entries-unified', {
