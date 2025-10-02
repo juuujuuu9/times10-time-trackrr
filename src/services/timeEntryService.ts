@@ -129,8 +129,21 @@ export class TimeEntryService {
     // Handle start/end times - support partial updates
     if (request.startTime && request.endTime) {
       // Both ISO strings provided
-      updateData.startTime = TimezoneService.fromUserISOString(request.startTime);
-      updateData.endTime = TimezoneService.fromUserISOString(request.endTime);
+      let startTime = TimezoneService.fromUserISOString(request.startTime);
+      let endTime = TimezoneService.fromUserISOString(request.endTime);
+      
+      // If taskDate is provided, update the date part while preserving the time
+      if (request.taskDate) {
+        const [year, month, day] = request.taskDate.split('-').map(Number);
+        const startDate = new Date(startTime);
+        const endDate = new Date(endTime);
+        
+        startTime = new Date(year, month - 1, day, startDate.getHours(), startDate.getMinutes(), startDate.getSeconds(), startDate.getMilliseconds());
+        endTime = new Date(year, month - 1, day, endDate.getHours(), endDate.getMinutes(), endDate.getSeconds(), endDate.getMilliseconds());
+      }
+      
+      updateData.startTime = startTime;
+      updateData.endTime = endTime;
       updateData.durationManual = TimezoneService.calculateDuration(
         updateData.startTime,
         updateData.endTime
@@ -184,6 +197,42 @@ export class TimeEntryService {
         request.endMinutes,
         request.tzOffsetMinutes
       );
+      if (entry.startTime) {
+        updateData.durationManual = TimezoneService.calculateDuration(
+          entry.startTime,
+          updateData.endTime
+        );
+      }
+    } else if (request.startTime && !request.endTime) {
+      // Only start time ISO string provided
+      let startTime = TimezoneService.fromUserISOString(request.startTime);
+      
+      // If taskDate is provided, update the date part while preserving the time
+      if (request.taskDate) {
+        const [year, month, day] = request.taskDate.split('-').map(Number);
+        const startDate = new Date(startTime);
+        startTime = new Date(year, month - 1, day, startDate.getHours(), startDate.getMinutes(), startDate.getSeconds(), startDate.getMilliseconds());
+      }
+      
+      updateData.startTime = startTime;
+      if (entry.endTime) {
+        updateData.durationManual = TimezoneService.calculateDuration(
+          updateData.startTime,
+          entry.endTime
+        );
+      }
+    } else if (request.endTime && !request.startTime) {
+      // Only end time ISO string provided
+      let endTime = TimezoneService.fromUserISOString(request.endTime);
+      
+      // If taskDate is provided, update the date part while preserving the time
+      if (request.taskDate) {
+        const [year, month, day] = request.taskDate.split('-').map(Number);
+        const endDate = new Date(endTime);
+        endTime = new Date(year, month - 1, day, endDate.getHours(), endDate.getMinutes(), endDate.getSeconds(), endDate.getMilliseconds());
+      }
+      
+      updateData.endTime = endTime;
       if (entry.startTime) {
         updateData.durationManual = TimezoneService.calculateDuration(
           entry.startTime,
