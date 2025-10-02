@@ -901,8 +901,15 @@ const user = await requireAuth('/')(Astro) as any;
                     title="Click to edit duration"
                   />
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-500 max-w-xs truncate" title="${entry.notes || ''}">
-                  ${entry.notes || '-'}
+                <td class="px-4 py-3 text-sm text-gray-500 max-w-xs">
+                  <input
+                    type="text"
+                    class="notes-input w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    data-entry-id="${entry.id}"
+                    placeholder="Add Note"
+                    value="${entry.notes || ''}"
+                    title="Click to add or edit notes"
+                  />
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                   <button
@@ -2992,6 +2999,111 @@ const user = await requireAuth('/')(Astro) as any;
       });
     }
 
+    // Function to handle notes input changes
+    function handleNotesInputChange() {
+      const notesInputs = document.querySelectorAll('.notes-input');
+      
+      notesInputs.forEach((input: Element) => {
+        const notesInput = input as HTMLInputElement;
+        
+        // Skip if already has event listeners attached
+        if (notesInput.hasAttribute('data-listeners-attached')) {
+          return;
+        }
+        
+        // Store the original value when the input is focused
+        notesInput.addEventListener('focus', function() {
+          this.setAttribute('data-original-value', this.value);
+        });
+        
+        // Handle Enter key press
+        notesInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            this.blur(); // Trigger the blur event to save
+          }
+        });
+        
+        notesInput.addEventListener('blur', async function() {
+          const entryId = this.getAttribute('data-entry-id');
+          const notesValue = this.value.trim();
+          
+          // Skip if the value hasn't changed
+          const originalValue = this.getAttribute('data-original-value');
+          if (notesValue === originalValue) return;
+          
+          try {
+            // Show loading state
+            this.style.borderColor = '#3B82F6';
+            this.style.backgroundColor = '#F0F9FF';
+            
+            const response = await fetch(`/api/time-entries-unified/${entryId}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                notes: notesValue || null
+              })
+            });
+            
+            if (response.ok) {
+              const result = await response.json();
+              
+              // Show success state
+              this.style.borderColor = '#10B981';
+              this.style.backgroundColor = '#F0FDF4';
+              setTimeout(() => {
+                this.style.borderColor = '';
+                this.style.backgroundColor = '';
+              }, 1500);
+              
+              // Update the row's data-entry payload so subsequent edits use fresh values
+              const row = this.closest('tr');
+              const editBtn = row?.querySelector('.edit-time-entry-btn') as HTMLElement | null;
+              if (editBtn && result.data) {
+                editBtn.setAttribute('data-entry', JSON.stringify(result.data));
+              }
+              
+              // Reload dashboard data to refresh recent entries table and stats
+              console.log('Notes input updated, refreshing dashboard...');
+              loadDashboardData();
+              
+            } else {
+              const error = await response.json();
+              
+              if (response.status === 401) {
+                // Authentication error - redirect to login
+                alert('Your session has expired. Please log in again.');
+                window.location.href = '/login';
+                return;
+              }
+              
+              // Show error state
+              this.style.borderColor = '#EF4444';
+              this.style.backgroundColor = '#FEF2F2';
+              alert(`Error: ${error.error}`);
+              setTimeout(() => {
+                this.style.borderColor = '';
+                this.style.backgroundColor = '';
+              }, 2000);
+              this.focus();
+            }
+          } catch (error) {
+            console.error('Error updating notes:', error);
+            // Reset styling on error
+            this.style.borderColor = '';
+            this.style.backgroundColor = '';
+            alert('Error updating notes. Please try again.');
+            this.focus();
+          }
+        });
+        
+        // Mark as having listeners attached
+        notesInput.setAttribute('data-listeners-attached', 'true');
+      });
+    }
+
     // Function to handle date input validation and changes
     function handleDateInputChange() {
       const dateInputs = document.querySelectorAll('.date-input');
@@ -3262,6 +3374,7 @@ const user = await requireAuth('/')(Astro) as any;
     handleTimeInputChange();
     handleDurationInputChange();
     handleDateInputChange();
+    handleNotesInputChange();
     initializeFlatpickr();
 
       // Re-setup after data reload using a MutationObserver
@@ -3287,6 +3400,12 @@ const user = await requireAuth('/')(Astro) as any;
           console.log('MutationObserver: Re-attaching date input handlers');
           handleDateInputChange();
           initializeFlatpickr();
+        }
+        // Check if notes inputs were added
+        const notesInputs = document.querySelectorAll('.notes-input');
+        if (notesInputs.length > 0) {
+          console.log('MutationObserver: Re-attaching notes input handlers');
+          handleNotesInputChange();
         }
       }
     });
