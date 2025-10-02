@@ -329,19 +329,44 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             </div>
           </div>
           <div class="overflow-x-auto">
+            <style>
+              .table-column-separator {
+                position: relative;
+              }
+              .table-column-separator:not(:last-child)::after {
+                content: '';
+                position: absolute;
+                right: 0;
+                top: 20%;
+                bottom: 20%;
+                width: 1px;
+                background-color: #e5e7eb;
+                opacity: 0.6;
+              }
+              .table-column-separator-header:not(:last-child)::after {
+                content: '';
+                position: absolute;
+                right: 0;
+                top: 15%;
+                bottom: 15%;
+                width: 1px;
+                background-color: #d1d5db;
+                opacity: 0.8;
+              }
+            </style>
             <table class="min-w-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
                 <tr>
-                  <th class="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="table-column-separator-header px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Client
                   </th>
-                  <th class="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="table-column-separator-header px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Project
                   </th>
-                  <th class="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="table-column-separator-header px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Task
                   </th>
-                  <th class="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="table-column-separator-header px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <div class="flex items-center justify-between">
                       <span>Date</span>
                       <div class="flex flex-col ml-2">
@@ -358,19 +383,19 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                       </div>
                     </div>
                   </th>
-                  <th class="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="table-column-separator-header px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Start
                   </th>
-                  <th class="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="table-column-separator-header px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Stop
                   </th>
-                  <th class="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="table-column-separator-header px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Duration
                   </th>
-                  <th class="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="table-column-separator-header px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Notes
                   </th>
-                  <th class="px-2 sm:px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="table-column-separator-header px-2 sm:px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -397,19 +422,19 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                   
                   return (
                     <tr class="hover:bg-gray-50" data-entry-id={entry.id}>
-                      <td class="px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td class="table-column-separator px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {entry.clientName}
                       </td>
-                      <td class="px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td class="table-column-separator px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {entry.projectName}
                       </td>
-                      <td class="px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td class="table-column-separator px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {entry.taskName}
                       </td>
-                      <td class="px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td class="table-column-separator px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {taskDate.toLocaleDateString()}
                       </td>
-                      <td class="px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td class="table-column-separator px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <input
                           type="text"
                           class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer"
@@ -421,7 +446,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                           title="Click to edit start time"
                         />
                       </td>
-                      <td class="px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td class="table-column-separator px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <input
                           type="text"
                           class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer"
@@ -433,13 +458,13 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                           title="Click to edit end time"
                         />
                       </td>
-                      <td class="px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td class="table-column-separator px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {formatDuration(entry.duration || 0)}
                       </td>
-                      <td class="px-2 sm:px-4 lg:px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title={entry.notes || ''}>
+                      <td class="table-column-separator px-2 sm:px-4 lg:px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title={entry.notes || ''}>
                         {entry.notes || '-'}
                       </td>
-                      <td class="px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <td class="table-column-separator px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
                           class="edit-time-entry-btn p-2 text-gray-400 hover:text-[#415058] hover:bg-gray-50 rounded-md transition-colors"
                           data-entry-id={entry.id}

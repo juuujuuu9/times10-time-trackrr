@@ -736,31 +736,56 @@ const user = await requireAuth('/')(Astro) as any;
     const filteredEntries = displayEntries.filter(entry => !ongoingTimerIds.has(entry.id));
     
     container.innerHTML = `
+      <style>
+        .table-column-separator {
+          position: relative;
+        }
+        .table-column-separator:not(:last-child)::after {
+          content: '';
+          position: absolute;
+          right: 0;
+          top: 20%;
+          bottom: 20%;
+          width: 1px;
+          background-color: #e5e7eb;
+          opacity: 0.6;
+        }
+        .table-column-separator-header:not(:last-child)::after {
+          content: '';
+          position: absolute;
+          right: 0;
+          top: 15%;
+          bottom: 15%;
+          width: 1px;
+          background-color: #d1d5db;
+          opacity: 0.8;
+        }
+      </style>
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
           <tr>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th class="table-column-separator-header px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Client
             </th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th class="table-column-separator-header px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Project
             </th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th class="table-column-separator-header px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Date
             </th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th class="table-column-separator-header px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Start
             </th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th class="table-column-separator-header px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Stop
             </th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th class="table-column-separator-header px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Duration
             </th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th class="table-column-separator-header px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Notes
             </th>
-            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th class="table-column-separator-header px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
               Actions
             </th>
           </tr>
@@ -774,19 +799,19 @@ const user = await requireAuth('/')(Astro) as any;
             
             return `
               <tr class="hover:bg-gray-50 bg-green-50 border-l-4 border-green-400" data-timer-id="${timer.id}">
-                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                <td class="table-column-separator px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                   ${timer.clientName || 'Unknown Client'}
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                <td class="table-column-separator px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                   ${timer.projectName || 'Unknown Project'}
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                <td class="table-column-separator px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                   ${taskDate.toLocaleDateString()}
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                <td class="table-column-separator px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                   ${startTimeDisplay}
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                <td class="table-column-separator px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                   <button
                     class="stop-timer-btn px-2 py-1 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded transition-colors"
                     data-timer-id="${timer.id}"
@@ -796,7 +821,7 @@ const user = await requireAuth('/')(Astro) as any;
                     Stop
                   </button>
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900" data-role="timer-duration" data-timer-id="${timer.id}">
+                <td class="table-column-separator px-4 py-3 whitespace-nowrap text-sm text-gray-900" data-role="timer-duration" data-timer-id="${timer.id}">
                   <span class="timer-duration" data-timer-id="${timer.id}">${(() => {
                     const seconds = timer.elapsedSeconds;
                     const hours = Math.floor(seconds / 3600);
@@ -804,10 +829,10 @@ const user = await requireAuth('/')(Astro) as any;
                     return `${hours}h ${minutes}m`;
                   })()}</span>
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-500 max-w-xs truncate" title="${timer.notes || ''}">
+                <td class="table-column-separator px-4 py-3 text-sm text-gray-500 max-w-xs truncate" title="${timer.notes || ''}">
                   ${timer.notes || '-'}
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                <td class="table-column-separator px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                   <div class="flex items-center justify-end">
                     <div class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
                     <span class="text-xs text-green-600 font-medium">Running</span>
@@ -844,13 +869,13 @@ const user = await requireAuth('/')(Astro) as any;
             return `
               <tr class="hover:bg-gray-50" data-entry-id="${entry.id}">
 
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                <td class="table-column-separator px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                   ${entry.clientName || 'Unknown Client'}
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                <td class="table-column-separator px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                   ${entry.projectName || 'Unknown Project'}
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                <td class="table-column-separator px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                   <input
                     type="text"
                     class="date-input w-24 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
@@ -861,7 +886,7 @@ const user = await requireAuth('/')(Astro) as any;
                     title="Click to open date picker"
                   />
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                <td class="table-column-separator px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                   <input
                     type="text"
                     class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer ${isManualDurationEntry ? 'bg-gray-100 cursor-not-allowed' : ''}"
@@ -873,7 +898,7 @@ const user = await requireAuth('/')(Astro) as any;
                     ${isManualDurationEntry ? 'readonly' : ''}
                   />
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                <td class="table-column-separator px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                   <input
                     type="text"
                     class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer ${isManualDurationEntry ? 'bg-gray-100 cursor-not-allowed' : ''}"
@@ -885,7 +910,7 @@ const user = await requireAuth('/')(Astro) as any;
                     ${isManualDurationEntry ? 'readonly' : ''}
                   />
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900" data-role="duration">
+                <td class="table-column-separator px-4 py-3 whitespace-nowrap text-sm text-gray-900" data-role="duration">
                   <input
                     type="text"
                     class="duration-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer"
@@ -901,7 +926,7 @@ const user = await requireAuth('/')(Astro) as any;
                     title="Click to edit duration"
                   />
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-500 max-w-xs">
+                <td class="table-column-separator px-4 py-3 text-sm text-gray-500 max-w-xs">
                   <input
                     type="text"
                     class="notes-input w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
@@ -911,7 +936,7 @@ const user = await requireAuth('/')(Astro) as any;
                     title="Click to add or edit notes"
                   />
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                <td class="table-column-separator px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                   <button
                     class="edit-time-entry-btn p-2 text-gray-400 hover:text-[#415058] hover:bg-gray-50 rounded-md transition-colors"
                     data-entry-id="${entry.id}"

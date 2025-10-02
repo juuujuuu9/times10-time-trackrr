@@ -1,6 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { useRealtimeTimer } from '../utils/useRealtimeTimer';
 
+// CSS for column separators
+const columnSeparatorStyles = `
+  .table-column-separator {
+    position: relative;
+  }
+  .table-column-separator:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 20%;
+    bottom: 20%;
+    width: 1px;
+    background-color: #e5e7eb;
+    opacity: 0.6;
+  }
+  .table-column-separator-header:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 15%;
+    bottom: 15%;
+    width: 1px;
+    background-color: #d1d5db;
+    opacity: 0.8;
+  }
+`;
+
 interface Task {
   id: number;
   name: string;
@@ -40,6 +67,17 @@ export default function Timer() {
     minutes: number;
     formatted: string;
   }>>([]);
+
+  // Inject column separator styles
+  useEffect(() => {
+    const styleElement = document.createElement('style');
+    styleElement.textContent = columnSeparatorStyles;
+    document.head.appendChild(styleElement);
+    
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
 
   const [taskDailyTotals, setTaskDailyTotals] = useState<Array<{
     taskId: number;
@@ -1072,7 +1110,13 @@ export default function Timer() {
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setAddTaskDropdownOpen(!addTaskDropdownOpen)}
-                className="flex items-center space-x-1 px-3 py-1 text-sm bg-black text-white rounded hover:bg-gray-800 transition-colors"
+                disabled={isRunning}
+                className={`flex items-center space-x-1 px-3 py-1 text-sm rounded transition-colors ${
+                  isRunning 
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50' 
+                    : 'bg-black text-white hover:bg-gray-800'
+                }`}
+                title={isRunning ? 'Please stop the current timer before adding tasks' : 'Add new task'}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -1088,7 +1132,13 @@ export default function Timer() {
                     addTimeEntryBtn.click();
                   }
                 }}
-                className="flex items-center space-x-1 px-3 py-1 text-sm bg-black text-white rounded hover:bg-gray-800 transition-colors"
+                disabled={isRunning}
+                className={`flex items-center space-x-1 px-3 py-1 text-sm rounded transition-colors ${
+                  isRunning 
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50' 
+                    : 'bg-black text-white hover:bg-gray-800'
+                }`}
+                title={isRunning ? 'Please stop the current timer before adding manual entries' : 'Add manual time entry'}
               >
                 <svg fill="currentColor" viewBox="0 0 24 24" id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" className="w-4 h-4">
                   <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
@@ -1271,19 +1321,19 @@ export default function Timer() {
               {/* Table Header */}
               <div className="bg-gray-50 border-b border-gray-200">
                 <div className="flex px-4 py-3 text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  <div className="w-80 flex-shrink-0">Task</div>
-                  <div className="flex-1 text-center">Sun</div>
-                  <div className="flex-1 text-center">Mon</div>
-                  <div className="flex-1 text-center">Tues</div>
-                  <div className="flex-1 text-center">Wed</div>
-                  <div className="flex-1 text-center">Thurs</div>
-                  <div className="flex-1 text-center">Fri</div>
-                  <div className="flex-1 text-center">Sat</div>
-                  <div className="flex-1 text-center font-semibold">Total</div>
+                  <div className="table-column-separator-header w-80 flex-shrink-0">Task</div>
+                  <div className="table-column-separator-header flex-1 text-center">Sun</div>
+                  <div className="table-column-separator-header flex-1 text-center">Mon</div>
+                  <div className="table-column-separator-header flex-1 text-center">Tues</div>
+                  <div className="table-column-separator-header flex-1 text-center">Wed</div>
+                  <div className="table-column-separator-header flex-1 text-center">Thurs</div>
+                  <div className="table-column-separator-header flex-1 text-center">Fri</div>
+                  <div className="table-column-separator-header flex-1 text-center">Sat</div>
+                  <div className="table-column-separator-header flex-1 text-center font-semibold">Total</div>
                 </div>
                 {/* Daily Duration Totals */}
                 <div className="flex px-4 pb-3 text-xs text-gray-500">
-                  <div className="w-80 flex-shrink-0"></div>
+                  <div className="table-column-separator w-80 flex-shrink-0"></div>
                   {(() => {
                     console.log('dailyDurationTotals state:', dailyDurationTotals);
                     console.log('dailyDurationTotals.length:', dailyDurationTotals.length);
@@ -1293,20 +1343,20 @@ export default function Timer() {
                       console.log('Rendering day total:', index, dayTotal);
                       totalSeconds += dayTotal.totalSeconds;
                       return (
-                        <div key={index} className="flex-1 text-center">
+                        <div key={index} className="table-column-separator flex-1 text-center">
                           {dayTotal.totalSeconds > 0 ? dayTotal.formatted : '-'}
                         </div>
                       );
                     }) : (
                       // Show placeholder when no data is loaded yet
                       <>
-                        <div className="flex-1 text-center">-</div>
-                        <div className="flex-1 text-center">-</div>
-                        <div className="flex-1 text-center">-</div>
-                        <div className="flex-1 text-center">-</div>
-                        <div className="flex-1 text-center">-</div>
-                        <div className="flex-1 text-center">-</div>
-                        <div className="flex-1 text-center">-</div>
+                        <div className="table-column-separator flex-1 text-center">-</div>
+                        <div className="table-column-separator flex-1 text-center">-</div>
+                        <div className="table-column-separator flex-1 text-center">-</div>
+                        <div className="table-column-separator flex-1 text-center">-</div>
+                        <div className="table-column-separator flex-1 text-center">-</div>
+                        <div className="table-column-separator flex-1 text-center">-</div>
+                        <div className="table-column-separator flex-1 text-center">-</div>
                       </>
                     );
                     
@@ -1318,7 +1368,7 @@ export default function Timer() {
                     return (
                       <>
                         {dayElements}
-                        <div className="flex-1 text-center font-semibold text-gray-700">
+                        <div className="table-column-separator flex-1 text-center font-semibold text-gray-700">
                           {totalFormatted}
                         </div>
                       </>
@@ -1350,7 +1400,7 @@ export default function Timer() {
                     >
                       <div className="flex items-center">
                         {/* Task Column */}
-                        <div className="w-80 flex-shrink-0">
+                        <div className="table-column-separator w-80 flex-shrink-0">
                           <div className="flex items-center space-x-3">
                             {/* Start/Stop Button */}
                             <div className="flex-shrink-0">
@@ -1436,7 +1486,7 @@ export default function Timer() {
                             return (
                               <div 
                                 key={dayIndex} 
-                                className={`flex-1 text-center text-sm ${
+                                className={`table-column-separator flex-1 text-center text-sm ${
                                   isRunningToday 
                                     ? 'text-green-600 font-semibold' 
                                     : dayTotal.totalSeconds > 0 
@@ -1458,7 +1508,7 @@ export default function Timer() {
                           return (
                             <>
                               {dayElements}
-                              <div className={`flex-1 text-center text-sm font-semibold ${
+                              <div className={`table-column-separator flex-1 text-center text-sm font-semibold ${
                                 isRunningTask ? 'text-green-600' : 'text-gray-700'
                               }`}>
                                 {totalFormatted}
