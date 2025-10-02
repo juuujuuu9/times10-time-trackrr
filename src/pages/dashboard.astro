@@ -874,12 +874,20 @@ const user = await requireAuth('/')(Astro) as any;
                   />
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900" data-role="duration">
-                  ${(() => {
-                    const seconds = entry.duration || 0;
-                    const hours = Math.floor(seconds / 3600);
-                    const minutes = Math.floor((seconds % 3600) / 60);
-                    return `${hours}h ${minutes}m`;
-                  })()}
+                  <input
+                    type="text"
+                    class="duration-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer"
+                    value="${(() => {
+                      const seconds = entry.duration || 0;
+                      const hours = Math.floor(seconds / 3600);
+                      const minutes = Math.floor((seconds % 3600) / 60);
+                      return `${hours}h ${minutes}m`;
+                    })()}"
+                    data-entry-id="${entry.id}"
+                    data-time-type="duration"
+                    placeholder="2h 30m"
+                    title="Click to edit duration"
+                  />
                 </td>
                 <td class="px-4 py-3 text-sm text-gray-500 max-w-xs truncate" title="${entry.notes || ''}">
                   ${entry.notes || '-'}
@@ -1502,6 +1510,65 @@ const user = await requireAuth('/')(Astro) as any;
       const minutes = parseInt(match[1]);
       if (minutes >= 0 && minutes <= 59) {
         return { hours: 0, minutes }; // 12 AM = 0:00
+      }
+    }
+    
+    return null; // No pattern matched
+  }
+
+  // Flexible duration parser for natural human formats
+  function parseFlexibleDuration(durationString: string): number | null {
+    if (!durationString) return null;
+    
+    const trimmed = durationString.trim().toLowerCase();
+    
+    // Remove any extra spaces and normalize
+    const normalized = trimmed.replace(/\s+/g, ' ');
+    
+    // Pattern 1: "2h 30m", "2h 30min", "2 hours 30 minutes"
+    let match = normalized.match(/^(\d+(?:\.\d+)?)\s*(h|hr|hours?)\s+(\d+)\s*(m|min|minutes?)$/);
+    if (match) {
+      const hours = parseFloat(match[1]);
+      const minutes = parseInt(match[3]);
+      if (hours >= 0 && minutes >= 0 && minutes <= 59) {
+        return Math.floor(hours * 3600 + minutes * 60);
+      }
+    }
+    
+    // Pattern 2: "2h", "2hr", "2 hours"
+    match = normalized.match(/^(\d+(?:\.\d+)?)\s*(h|hr|hours?)$/);
+    if (match) {
+      const hours = parseFloat(match[1]);
+      if (hours >= 0) {
+        return Math.floor(hours * 3600);
+      }
+    }
+    
+    // Pattern 3: "150m", "150min", "150 minutes"
+    match = normalized.match(/^(\d+(?:\.\d+)?)\s*(m|min|minutes?)$/);
+    if (match) {
+      const minutes = parseFloat(match[1]);
+      if (minutes >= 0) {
+        return Math.floor(minutes * 60);
+      }
+    }
+    
+    // Pattern 4: "2:30" (hours:minutes)
+    match = normalized.match(/^(\d+):(\d{2})$/);
+    if (match) {
+      const hours = parseInt(match[1]);
+      const minutes = parseInt(match[2]);
+      if (hours >= 0 && minutes >= 0 && minutes <= 59) {
+        return hours * 3600 + minutes * 60;
+      }
+    }
+    
+    // Pattern 5: "5400s", "5400sec", "5400 seconds"
+    match = normalized.match(/^(\d+)\s*(s|sec|seconds?)$/);
+    if (match) {
+      const seconds = parseInt(match[1]);
+      if (seconds >= 0) {
+        return seconds;
       }
     }
     
@@ -2359,7 +2426,35 @@ const user = await requireAuth('/')(Astro) as any;
           saveButtonSpinner.classList.add('hidden');
           return;
         }
-        updateData.duration = durationInput.value;
+        
+        // Parse the duration input and convert to server format
+        const parsedDuration = parseFlexibleDuration(durationInput.value);
+        if (!parsedDuration) {
+          alert('Please enter a valid duration format (e.g., 2h 30m, 2.5h, 150m, 2:30)');
+          submitButton.disabled = false;
+          saveButtonText.textContent = originalText;
+          saveButtonSpinner.classList.add('hidden');
+          return;
+        }
+        
+        // Convert the parsed duration to a format the server understands
+        let serverDurationFormat: string;
+        const hours = Math.floor(parsedDuration / 3600);
+        const minutes = Math.floor((parsedDuration % 3600) / 60);
+        
+        if (hours > 0 && minutes > 0) {
+          // For combined hours and minutes, use decimal hours format
+          const totalHours = hours + (minutes / 60);
+          serverDurationFormat = `${totalHours}h`;
+        } else if (hours > 0) {
+          // Just hours
+          serverDurationFormat = `${hours}h`;
+        } else {
+          // Just minutes
+          serverDurationFormat = `${minutes}m`;
+        }
+        
+        updateData.duration = serverDurationFormat;
         updateData.taskDate = editDurationDateInput.value;
         // Clear start and end times for manual duration entries
         updateData.startTime = null;
@@ -2614,11 +2709,13 @@ const user = await requireAuth('/')(Astro) as any;
               }, 1500);
               
               // Update the duration cell
-              const durationCell = row?.querySelector('td[data-role="duration"]');
+              const durationCell = row?.querySelector('td[data-role="duration"] input') as HTMLInputElement;
               if (durationCell && result.data) {
                 // Use the calculated duration from server response
                 const duration = result.data.duration || 0;
-                durationCell.textContent = formatDuration(duration);
+                const hours = Math.floor(duration / 3600);
+                const minutes = Math.floor((duration % 3600) / 60);
+                durationCell.value = `${hours}h ${minutes}m`;
               }
               
               // Update the time input values to reflect the new data
@@ -2709,8 +2806,196 @@ const user = await requireAuth('/')(Astro) as any;
       });
     }
 
+    // Function to handle duration input changes
+    function handleDurationInputChange() {
+      const durationInputs = document.querySelectorAll('.duration-input');
+      
+      durationInputs.forEach((input: Element) => {
+        const durationInput = input as HTMLInputElement;
+        
+        // Store the original value when the input is focused
+        durationInput.addEventListener('focus', function() {
+          this.setAttribute('data-original-value', this.value);
+        });
+        
+        // Handle Enter key press
+        durationInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            this.blur(); // Trigger the blur event to save
+          }
+        });
+        
+        durationInput.addEventListener('blur', async function() {
+          const entryId = this.getAttribute('data-entry-id');
+          const durationValue = this.value.trim();
+          
+          // Skip if empty
+          if (!durationValue) return;
+          
+          // Skip if the value hasn't changed
+          const originalValue = this.getAttribute('data-original-value');
+          if (durationValue === originalValue) return;
+          
+          // Parse duration using flexible parser
+          const parsedDuration = parseFlexibleDuration(durationValue);
+          if (!parsedDuration) {
+            // Show error state
+            this.style.borderColor = '#EF4444';
+            this.style.backgroundColor = '#FEF2F2';
+            alert('Please enter a valid duration format (e.g., 2h 30m, 2.5h, 150m, 2:30)');
+            setTimeout(() => {
+              this.style.borderColor = '';
+              this.style.backgroundColor = '';
+            }, 2000);
+            this.focus();
+            return;
+          }
+          
+          try {
+            // Get the current entry data
+            const row = this.closest('tr');
+            const editBtn = row?.querySelector('.edit-time-entry-btn') as HTMLElement;
+            const entryData = editBtn?.getAttribute('data-entry');
+            let currentEntry = null;
+            
+            if (entryData) {
+              try {
+                currentEntry = JSON.parse(entryData);
+              } catch (e) {
+                console.error('Error parsing entry data:', e);
+              }
+            }
+            
+            // Get the task date from the current entry
+            const taskDate = currentEntry?.startTime ? new Date(currentEntry.startTime) : new Date(currentEntry?.createdAt);
+            
+            // Create update data with manual duration
+            // Convert the parsed duration to a format the server understands
+            let serverDurationFormat: string;
+            const hours = Math.floor(parsedDuration / 3600);
+            const minutes = Math.floor((parsedDuration % 3600) / 60);
+            
+            if (hours > 0 && minutes > 0) {
+              // For combined hours and minutes, use decimal hours format
+              const totalHours = hours + (minutes / 60);
+              serverDurationFormat = `${totalHours}h`;
+            } else if (hours > 0) {
+              // Just hours
+              serverDurationFormat = `${hours}h`;
+            } else {
+              // Just minutes
+              serverDurationFormat = `${minutes}m`;
+            }
+            
+            const updateData = {
+              duration: serverDurationFormat
+            };
+            
+            // Send update to API
+            const response = await fetch(`/api/time-entries-unified/${entryId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(updateData)
+            });
+            
+            if (response.ok) {
+              const result = await response.json();
+              
+              // Update duration display
+              const durationCell = row?.querySelector('td[data-role="duration"] input') as HTMLInputElement;
+              if (durationCell && result.data) {
+                const hours = Math.floor(result.data.durationManual / 3600);
+                const minutes = Math.floor((result.data.durationManual % 3600) / 60);
+                durationCell.value = `${hours}h ${minutes}m`;
+              }
+              
+              // Disable start/stop inputs (make them readonly and grayed out)
+              const startInput = row?.querySelector('input[data-time-type="start"]') as HTMLInputElement;
+              const endInput = row?.querySelector('input[data-time-type="end"]') as HTMLInputElement;
+              
+              if (startInput) {
+                startInput.readOnly = true;
+                startInput.classList.add('bg-gray-100', 'cursor-not-allowed');
+                startInput.title = 'Manual duration entry - use edit button to modify';
+                startInput.value = '--:-- --';
+              }
+              
+              if (endInput) {
+                endInput.readOnly = true;
+                endInput.classList.add('bg-gray-100', 'cursor-not-allowed');
+                endInput.title = 'Manual duration entry - use edit button to modify';
+                endInput.value = '--:-- --';
+              }
+              
+              // Refresh the row's data-entry payload so subsequent edits use fresh values
+              if (editBtn) {
+                editBtn.setAttribute('data-entry', JSON.stringify(result.data));
+              }
+              
+              // Reload today and weekly stats to update hours
+              const userId = await getCurrentUserId();
+              if (userId) {
+                // Reload today's stats
+                const todayStatsResponse = await fetch('/api/reports/today-stats?userId=' + encodeURIComponent(userId));
+                if (todayStatsResponse.ok) {
+                  const todayStatsData = await todayStatsResponse.json();
+                  updateTodayStats(todayStatsData);
+                }
+                const statsResponse = await fetch('/api/reports/weekly-stats?userId=' + encodeURIComponent(userId));
+                if (statsResponse.ok) {
+                  const statsData = await statsResponse.json();
+                  updateWeeklyStats(statsData);
+                }
+              }
+              
+              // Show success feedback
+              this.style.borderColor = '#10B981';
+              this.style.backgroundColor = '';
+              setTimeout(() => {
+                this.style.borderColor = '';
+              }, 2000);
+            } else {
+              const error = await response.json();
+              
+              if (response.status === 401) {
+                // Authentication error - redirect to login
+                alert('Your session has expired. Please log in again.');
+                window.location.href = '/login';
+                return;
+              }
+              
+              // Show error state
+              this.style.borderColor = '#EF4444';
+              this.style.backgroundColor = '#FEF2F2';
+              alert(`Error: ${error.error}`);
+              setTimeout(() => {
+                this.style.borderColor = '';
+                this.style.backgroundColor = '';
+              }, 2000);
+              this.focus();
+            }
+          } catch (error) {
+            console.error('Error updating duration:', error);
+            this.style.borderColor = '';
+            this.style.backgroundColor = '';
+            alert('Error updating duration. Please check your input and try again.');
+            this.focus();
+          }
+        });
+        
+        // Handle Enter key
+        durationInput.addEventListener('keypress', function(e: KeyboardEvent) {
+          if (e.key === 'Enter') {
+            this.blur();
+          }
+        });
+      });
+    }
+
     // Initial setup
     handleTimeInputChange();
+    handleDurationInputChange();
 
       // Re-setup after data reload using a MutationObserver
   const observer = new MutationObserver(function(mutations) {
@@ -2720,6 +3005,11 @@ const user = await requireAuth('/')(Astro) as any;
         const timeInputs = document.querySelectorAll('.time-input');
         if (timeInputs.length > 0) {
           handleTimeInputChange();
+        }
+        // Check if duration inputs were added
+        const durationInputs = document.querySelectorAll('.duration-input');
+        if (durationInputs.length > 0) {
+          handleDurationInputChange();
         }
       }
     });

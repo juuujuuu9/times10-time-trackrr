@@ -334,3 +334,16 @@ Rationale:
 - Avoids breaking existing queries that join on `project_id`
 
 When in doubt, search the schema for the authoritative column names and add a clear mapping in the service layer.
+
+## Duration Editing Patterns
+
+For implementing editable duration fields, see `/docs/DURATION_EDITING_PATTERNS.md` for comprehensive patterns covering:
+
+- Client-side flexible duration parsing
+- Server format conversion requirements  
+- UI state management for manual duration entries
+- Table update patterns to preserve input functionality
+- Modal integration consistency
+- Common pitfalls and testing checklist
+
+**Key Rule**: Always convert user input (e.g., "2h 30m") to server format (e.g., "2.5h") before API calls, as the server's ValidationService only supports single-unit formats.
