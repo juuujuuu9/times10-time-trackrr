@@ -341,7 +341,7 @@ export class TimeEntryService {
         eq(clients.archived, false),
         eq(projects.archived, false)
       ))
-      .orderBy(sql`${timeEntries.createdAt} DESC`)
+      .orderBy(sql`COALESCE(${timeEntries.startTime}, ${timeEntries.createdAt}) DESC`)
       .limit(limit);
 
     return entries;
@@ -385,7 +385,7 @@ export class TimeEntryService {
         eq(clients.archived, false),
         eq(projects.archived, false)
       ))
-      .orderBy(sql`${timeEntries.createdAt} DESC`);
+      .orderBy(sql`COALESCE(${timeEntries.startTime}, ${timeEntries.createdAt}) DESC`);
 
     return entries;
   }

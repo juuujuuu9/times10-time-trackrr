@@ -695,6 +695,7 @@ const user = await requireAuth('/')(Astro) as any;
   }
 
   function updateRecentEntries(entries: any[], ongoingTimers: any[] = []) {
+    console.log('updateRecentEntries called with', entries.length, 'entries and', ongoingTimers.length, 'timers');
     const container = document.getElementById('recentEntries');
     if (!container) return;
 
@@ -2755,21 +2756,9 @@ const user = await requireAuth('/')(Astro) as any;
                 }
               }
               
-              // Reload today and weekly stats to update hours
-              const userId = await getCurrentUserId();
-              if (userId) {
-                // Reload today's stats
-                const todayStatsResponse = await fetch('/api/reports/today-stats?userId=' + encodeURIComponent(userId));
-                if (todayStatsResponse.ok) {
-                  const todayStatsData = await todayStatsResponse.json();
-                  updateTodayStats(todayStatsData);
-                }
-                const statsResponse = await fetch('/api/reports/weekly-stats?userId=' + encodeURIComponent(userId));
-                if (statsResponse.ok) {
-                  const statsData = await statsResponse.json();
-                  updateWeeklyStats(statsData);
-                }
-              }
+              // Reload dashboard data to refresh recent entries table and stats
+              console.log('Time input updated, refreshing dashboard...');
+              loadDashboardData();
               
               // Show success feedback
               this.style.borderColor = '#10B981';
@@ -2814,6 +2803,9 @@ const user = await requireAuth('/')(Astro) as any;
             this.blur();
           }
         });
+        
+        // Mark as having listeners attached
+        timeInput.setAttribute('data-listeners-attached', 'true');
       });
     }
 
@@ -2823,6 +2815,11 @@ const user = await requireAuth('/')(Astro) as any;
       
       durationInputs.forEach((input: Element) => {
         const durationInput = input as HTMLInputElement;
+        
+        // Skip if already has event listeners attached
+        if (durationInput.hasAttribute('data-listeners-attached')) {
+          return;
+        }
         
         // Store the original value when the input is focused
         durationInput.addEventListener('focus', function() {
@@ -2944,21 +2941,9 @@ const user = await requireAuth('/')(Astro) as any;
                 editBtn.setAttribute('data-entry', JSON.stringify(result.data));
               }
               
-              // Reload today and weekly stats to update hours
-              const userId = await getCurrentUserId();
-              if (userId) {
-                // Reload today's stats
-                const todayStatsResponse = await fetch('/api/reports/today-stats?userId=' + encodeURIComponent(userId));
-                if (todayStatsResponse.ok) {
-                  const todayStatsData = await todayStatsResponse.json();
-                  updateTodayStats(todayStatsData);
-                }
-                const statsResponse = await fetch('/api/reports/weekly-stats?userId=' + encodeURIComponent(userId));
-                if (statsResponse.ok) {
-                  const statsData = await statsResponse.json();
-                  updateWeeklyStats(statsData);
-                }
-              }
+              // Reload dashboard data to refresh recent entries table and stats
+              console.log('Duration input updated, refreshing dashboard...');
+              loadDashboardData();
               
               // Show success feedback
               this.style.borderColor = '#10B981';
@@ -3001,6 +2986,9 @@ const user = await requireAuth('/')(Astro) as any;
             this.blur();
           }
         });
+        
+        // Mark as having listeners attached
+        durationInput.setAttribute('data-listeners-attached', 'true');
       });
     }
 
@@ -3114,6 +3102,10 @@ const user = await requireAuth('/')(Astro) as any;
                 editBtn.setAttribute('data-entry', JSON.stringify(result.data));
               }
               
+              // Reload dashboard data to refresh recent entries table and stats
+              console.log('Date input updated, refreshing dashboard...');
+              loadDashboardData();
+              
               // Show success feedback
               this.style.backgroundColor = '#D1FAE5';
               this.style.borderColor = '#10B981';
@@ -3192,6 +3184,10 @@ const user = await requireAuth('/')(Astro) as any;
         });
         
         if (response.ok) {
+          // Reload dashboard data to refresh recent entries table and stats
+          console.log('Date picker updated, refreshing dashboard...');
+          loadDashboardData();
+          
           // Show success feedback
           dateInput.style.backgroundColor = '#d4edda';
           dateInput.style.borderColor = '#28a745';
@@ -3272,19 +3268,23 @@ const user = await requireAuth('/')(Astro) as any;
   const observer = new MutationObserver(function(mutations) {
     mutations.forEach(function(mutation) {
       if (mutation.type === 'childList') {
+        console.log('MutationObserver: DOM changed, re-attaching event listeners');
         // Check if time inputs were added
         const timeInputs = document.querySelectorAll('.time-input');
         if (timeInputs.length > 0) {
+          console.log('MutationObserver: Re-attaching time input handlers');
           handleTimeInputChange();
         }
         // Check if duration inputs were added
         const durationInputs = document.querySelectorAll('.duration-input');
         if (durationInputs.length > 0) {
+          console.log('MutationObserver: Re-attaching duration input handlers');
           handleDurationInputChange();
         }
         // Check if date inputs were added
         const dateInputs = document.querySelectorAll('.date-input');
         if (dateInputs.length > 0) {
+          console.log('MutationObserver: Re-attaching date input handlers');
           handleDateInputChange();
           initializeFlatpickr();
         }

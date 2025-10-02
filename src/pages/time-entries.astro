@@ -60,8 +60,7 @@ const userTimeEntries = await db
     sql`(${timeEntries.endTime} IS NOT NULL OR ${timeEntries.durationManual} IS NOT NULL)`,
     eq(clients.archived, false),
     eq(projects.archived, false)
-  ))
-  .orderBy(sql`${timeEntries.createdAt} DESC`);
+  ));
 
 // Get all clients for filtering (only those the user has worked on - non-archived activities)
 const userClients = await db
@@ -342,12 +341,21 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                   <th class="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Task
                   </th>
-                  <th id="dateSortBtn" class="cursor-pointer px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors">
-                    <div class="flex items-center">
+                  <th class="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div class="flex items-center justify-between">
                       <span>Date</span>
-                      <svg id="dateSortIcon" class="w-3 h-3 text-gray-400 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
-                      </svg>
+                      <div class="flex flex-col ml-2">
+                        <button id="dateSortUp" class="text-gray-400 hover:text-gray-600 transition-colors p-1" title="Sort by date (newest first)">
+                          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                          </svg>
+                        </button>
+                        <button id="dateSortDown" class="text-gray-400 hover:text-gray-600 transition-colors p-1" title="Sort by date (oldest first)">
+                          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   </th>
                   <th class="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1336,27 +1344,48 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
 
 
     // Date sorting functionality
-    const dateSortBtn = document.getElementById('dateSortBtn');
-    const dateSortIcon = document.getElementById('dateSortIcon');
-    let dateSortDirection = 'desc';
+    const dateSortUp = document.getElementById('dateSortUp');
+    const dateSortDown = document.getElementById('dateSortDown');
+    let currentSortDirection: 'asc' | 'desc' | null = null; // null = no sort, 'desc' = newest first, 'asc' = oldest first
     
-    if (dateSortBtn) {
-      dateSortBtn.addEventListener('click', () => {
-        dateSortDirection = dateSortDirection === 'desc' ? 'asc' : 'desc';
-        
-        if (dateSortIcon) {
-          if (dateSortDirection === 'desc') {
-            dateSortIcon.style.transform = 'rotate(0deg)';
-          } else {
-            dateSortIcon.style.transform = 'rotate(180deg)';
-          }
-        }
-        
-        sortTableByDate();
+    if (dateSortUp) {
+      dateSortUp.addEventListener('click', () => {
+        currentSortDirection = 'desc';
+        updateSortButtonStates();
+        sortTableByDate('desc');
       });
     }
     
-    function sortTableByDate() {
+    if (dateSortDown) {
+      dateSortDown.addEventListener('click', () => {
+        currentSortDirection = 'asc';
+        updateSortButtonStates();
+        sortTableByDate('asc');
+      });
+    }
+    
+    function updateSortButtonStates() {
+      if (dateSortUp && dateSortDown) {
+        if (currentSortDirection === 'desc') {
+          dateSortUp.classList.remove('text-gray-400');
+          dateSortUp.classList.add('text-blue-600');
+          dateSortDown.classList.remove('text-blue-600');
+          dateSortDown.classList.add('text-gray-400');
+        } else if (currentSortDirection === 'asc') {
+          dateSortDown.classList.remove('text-gray-400');
+          dateSortDown.classList.add('text-blue-600');
+          dateSortUp.classList.remove('text-blue-600');
+          dateSortUp.classList.add('text-gray-400');
+        } else {
+          dateSortUp.classList.remove('text-blue-600');
+          dateSortUp.classList.add('text-gray-400');
+          dateSortDown.classList.remove('text-blue-600');
+          dateSortDown.classList.add('text-gray-400');
+        }
+      }
+    }
+    
+    function sortTableByDate(direction: 'asc' | 'desc') {
       const tbody = document.querySelector('tbody') as HTMLElement;
       if (!tbody) return;
       
@@ -1375,7 +1404,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
           return 0;
         }
         
-        if (dateSortDirection === 'desc') {
+        if (direction === 'desc') {
           return dateB.getTime() - dateA.getTime();
         } else {
           return dateA.getTime() - dateB.getTime();

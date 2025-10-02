@@ -5,3 +5,11 @@
 - If you add or change patterns, update /docs/TIME_EDITING_GUIDE.md in the same PR.
 - Map UI taskId to DB projectId in service layer for create/update.
 - Avoid timezone offset math unless explicitly required; prefer ISO strings.
+
+# Dashboard Auto-Refresh Patterns
+
+- When adding inline editing to dashboard tables, ALWAYS add loadDashboardData() calls after successful updates.
+- Use data-listeners-attached attributes to prevent duplicate event listener attachment in MutationObserver patterns.
+- For sortable tables that auto-refresh, ensure ALL update paths (modal, inline, date picker) trigger the same refresh mechanism.
+- When debugging auto-refresh issues, add console.log statements to track: update trigger → loadDashboardData() → updateRecentEntries() → MutationObserver re-attachment.
+- Dashboard tables with dynamic content need MutationObserver to re-attach event listeners after DOM replacement.
