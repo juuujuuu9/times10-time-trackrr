@@ -678,7 +678,8 @@ const user = await requireAuth('/')(Astro) as any;
         updateWeeklyStats(statsData);
       }
 
-
+      // Start real-time updates for ongoing timers
+      startRealTimeUpdates(userId);
 
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -977,7 +978,56 @@ const user = await requireAuth('/')(Astro) as any;
     return `${h.toString().padStart(2, '0')} hr., ${m.toString().padStart(2, '0')} min`;
   }
 
+  // Real-time updates for ongoing timers
+  let realTimeUpdateInterval: ReturnType<typeof setInterval> | null = null;
 
+  function startRealTimeUpdates(userId: string) {
+    // Clear any existing interval
+    if (realTimeUpdateInterval) {
+      clearInterval(realTimeUpdateInterval);
+    }
+
+    // Update stats every 30 seconds to reflect ongoing timer progress
+    realTimeUpdateInterval = setInterval(async () => {
+      try {
+        // Update today's stats
+        const todayStatsResponse = await fetch('/api/reports/today-stats?userId=' + encodeURIComponent(userId));
+        if (todayStatsResponse.ok) {
+          const todayStatsData = await todayStatsResponse.json();
+          updateTodayStats(todayStatsData);
+        }
+
+        // Update weekly stats
+        const statsResponse = await fetch('/api/reports/weekly-stats?userId=' + encodeURIComponent(userId));
+        if (statsResponse.ok) {
+          const statsData = await statsResponse.json();
+          updateWeeklyStats(statsData);
+        }
+      } catch (error) {
+        console.error('Error updating real-time stats:', error);
+      }
+    }, 30000); // Update every 30 seconds
+  }
+
+  function stopRealTimeUpdates() {
+    if (realTimeUpdateInterval) {
+      clearInterval(realTimeUpdateInterval);
+      realTimeUpdateInterval = null;
+    }
+  }
+
+  // Stop real-time updates when page is hidden or user navigates away
+  document.addEventListener('visibilitychange', async () => {
+    if (document.hidden) {
+      stopRealTimeUpdates();
+    } else {
+      // Restart updates when page becomes visible again
+      const userId = await getCurrentUserId();
+      if (userId) {
+        startRealTimeUpdates(userId);
+      }
+    }
+  });
 
   // Mobile Menu Functionality
   const mobileMenuButton = document.getElementById('mobileMenuButton');

@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db';
-import { timeEntries, users, projects, tasks, clients } from '../../../db/schema';
+import { timeEntries, users, projects, clients } from '../../../db/schema';
 import { sql, eq, and, gte, lte } from 'drizzle-orm';
 
 export const GET: APIRoute = async ({ url }) => {
@@ -31,18 +31,17 @@ export const GET: APIRoute = async ({ url }) => {
       endDate: endDate.toISOString()
     });
 
-    // Build filter conditions using the same approach as weekly-stats
+    // Build filter conditions to include both completed entries and ongoing timers
     let filterConditions = [
       sql`(
-        (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate})
+        (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate} AND ${timeEntries.endTime} IS NOT NULL)
         OR 
         (${timeEntries.startTime} IS NULL AND ${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${startDate} AND ${timeEntries.createdAt} <= ${endDate})
+        OR
+        (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate} AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)
       )`,
       eq(clients.archived, false),
-      eq(projects.archived, false),
-      eq(tasks.archived, false),
-      // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
-      sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
+      eq(projects.archived, false)
     ];
     
     if (userId) {
@@ -51,24 +50,27 @@ export const GET: APIRoute = async ({ url }) => {
 
     const dateFilter = and(...filterConditions);
 
-    // Get total hours for today using the same SQL approach as weekly-stats
+    // Get total hours for today including ongoing timers
     const totalHoursResult = await db
       .select({
         totalSeconds: sql<number>`COALESCE(SUM(
           CASE 
             WHEN ${timeEntries.endTime} IS NOT NULL 
             THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))
-            ELSE COALESCE(${timeEntries.durationManual}, 0)
+            WHEN ${timeEntries.durationManual} IS NOT NULL
+            THEN ${timeEntries.durationManual}
+            WHEN ${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL
+            THEN EXTRACT(EPOCH FROM (NOW() - ${timeEntries.startTime}))
+            ELSE 0
           END
         ), 0)`.as('total_seconds')
       })
       .from(timeEntries)
-      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(projects, eq(timeEntries.projectId, projects.id))
       .innerJoin(clients, eq(projects.clientId, clients.id))
       .where(dateFilter);
 
-    // Debug: Get individual time entries for today
+    // Debug: Get individual time entries for today including ongoing timers
     const debugEntries = await db
       .select({
         id: timeEntries.id,
@@ -79,15 +81,18 @@ export const GET: APIRoute = async ({ url }) => {
         calculatedDuration: sql<number>`CASE 
           WHEN ${timeEntries.endTime} IS NOT NULL 
           THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))
-          ELSE COALESCE(${timeEntries.durationManual}, 0)
+          WHEN ${timeEntries.durationManual} IS NOT NULL
+          THEN ${timeEntries.durationManual}
+          WHEN ${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL
+          THEN EXTRACT(EPOCH FROM (NOW() - ${timeEntries.startTime}))
+          ELSE 0
         END`.as('calculated_duration'),
-        taskName: tasks.name,
+        taskName: sql<string>`'General'`.as('taskName'),
         projectName: projects.name,
         clientName: clients.name
       })
       .from(timeEntries)
-      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(projects, eq(timeEntries.projectId, projects.id))
       .innerJoin(clients, eq(projects.clientId, clients.id))
       .where(dateFilter)
       .orderBy(timeEntries.startTime);

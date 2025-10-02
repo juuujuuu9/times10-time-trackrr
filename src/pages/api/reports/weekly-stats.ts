@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db';
-import { timeEntries, users, projects, tasks, clients } from '../../../db/schema';
+import { timeEntries, users, projects, clients } from '../../../db/schema';
 import { sql, count, gte, lte, and, eq } from 'drizzle-orm';
 
 export const GET: APIRoute = async ({ url }) => {
@@ -21,17 +21,17 @@ export const GET: APIRoute = async ({ url }) => {
     endDate.setDate(startDate.getDate() + 6);
     endDate.setHours(23, 59, 59, 999);
 
-    // Build filter conditions for non-archived activities - include both startTime-based entries and manual entries
+    // Build filter conditions to include both completed entries and ongoing timers
     let filterConditions = [
       sql`(
-        (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate})
+        (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate} AND ${timeEntries.endTime} IS NOT NULL)
         OR 
         (${timeEntries.startTime} IS NULL AND ${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${startDate} AND ${timeEntries.createdAt} <= ${endDate})
+        OR
+        (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate} AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)
       )`,
       eq(clients.archived, false),
-      eq(projects.archived, false),
-      // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
-      sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
+      eq(projects.archived, false)
     ];
     
     if (userId) {
@@ -40,14 +40,18 @@ export const GET: APIRoute = async ({ url }) => {
 
     const dateFilter = and(...filterConditions);
 
-    // Get total hours for the week (only non-archived activities)
+    // Get total hours for the week including ongoing timers
     const totalHoursResult = await db
       .select({
         totalSeconds: sql<number>`COALESCE(SUM(
           CASE 
             WHEN ${timeEntries.endTime} IS NOT NULL 
             THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))
-            ELSE COALESCE(${timeEntries.durationManual}, 0)
+            WHEN ${timeEntries.durationManual} IS NOT NULL
+            THEN ${timeEntries.durationManual}
+            WHEN ${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL
+            THEN EXTRACT(EPOCH FROM (NOW() - ${timeEntries.startTime}))
+            ELSE 0
           END
         ), 0)`.as('total_seconds')
       })
@@ -56,7 +60,7 @@ export const GET: APIRoute = async ({ url }) => {
       .innerJoin(clients, eq(projects.clientId, clients.id))
       .where(dateFilter);
 
-    // Debug: Get individual time entries for this week
+    // Debug: Get individual time entries for this week including ongoing timers
     const debugEntries = await db
       .select({
         id: timeEntries.id,
@@ -66,7 +70,11 @@ export const GET: APIRoute = async ({ url }) => {
         calculatedDuration: sql<number>`CASE 
           WHEN ${timeEntries.endTime} IS NOT NULL 
           THEN EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))
-          ELSE COALESCE(${timeEntries.durationManual}, 0)
+          WHEN ${timeEntries.durationManual} IS NOT NULL
+          THEN ${timeEntries.durationManual}
+          WHEN ${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL
+          THEN EXTRACT(EPOCH FROM (NOW() - ${timeEntries.startTime}))
+          ELSE 0
         END`.as('calculated_duration'),
         taskName: sql<string>`'General'`.as('taskName'),
         projectName: projects.name,
@@ -101,50 +109,7 @@ export const GET: APIRoute = async ({ url }) => {
       totalHours: (totalHoursResult[0]?.totalSeconds || 0) / 3600
     });
 
-    // Get completed tasks count (only non-archived activities)
-    const completedTasksResult = await db
-      .select({
-        count: count(sql`DISTINCT ${tasks.id}`)
-      })
-      .from(timeEntries)
-      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-      .innerJoin(projects, eq(tasks.projectId, projects.id))
-      .innerJoin(clients, eq(projects.clientId, clients.id))
-      .where(and(
-        sql`(
-          (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate})
-          OR 
-          (${timeEntries.startTime} IS NULL AND ${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${startDate} AND ${timeEntries.createdAt} <= ${endDate})
-        )`,
-        eq(clients.archived, false),
-        eq(projects.archived, false),
-        eq(tasks.archived, false),
-        sql`${tasks.status} = 'completed'`
-      ));
-
-    // Get active projects count (only non-archived activities)
-    const activeProjectsResult = await db
-      .select({
-        count: count(sql`DISTINCT ${projects.id}`)
-      })
-      .from(timeEntries)
-      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-      .innerJoin(projects, eq(tasks.projectId, projects.id))
-      .innerJoin(clients, eq(projects.clientId, clients.id))
-      .where(and(
-        sql`(
-          (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate})
-          OR 
-          (${timeEntries.startTime} IS NULL AND ${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${startDate} AND ${timeEntries.createdAt} <= ${endDate})
-        )`,
-        eq(clients.archived, false),
-        eq(projects.archived, false),
-        eq(tasks.archived, false)
-      ));
-
     const totalHours = totalHoursResult[0]?.totalSeconds || 0;
-    const completedTasks = completedTasksResult[0]?.count || 0;
-    const activeProjects = activeProjectsResult[0]?.count || 0;
 
     // Format date range for display (e.g., "9/14-9/20")
     const formatDateForDisplay = (date: Date) => {
@@ -157,8 +122,6 @@ export const GET: APIRoute = async ({ url }) => {
 
     return new Response(JSON.stringify({
       totalHours,
-      completedTasks,
-      activeProjects,
       period: 'This Week',
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
