@@ -847,7 +847,14 @@ const user = await requireAuth('/')(Astro) as any;
                   ${entry.projectName || 'Unknown Project'}
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                  ${taskDate.toLocaleDateString()}
+                  <span 
+                    class="date-display cursor-pointer underline hover:text-blue-600 transition-colors"
+                    data-entry-id="${entry.id}"
+                    data-current-date="${taskDate.toISOString().split('T')[0]}"
+                    title="Click to change date"
+                  >
+                    ${taskDate.toLocaleDateString()}
+                  </span>
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                   <input
@@ -2993,9 +3000,167 @@ const user = await requireAuth('/')(Astro) as any;
       });
     }
 
+    // Function to handle date display clicks
+    function handleDateDisplayClick() {
+      const dateDisplays = document.querySelectorAll('.date-display');
+      
+      dateDisplays.forEach((display: Element) => {
+        const dateDisplay = display as HTMLElement;
+        
+        dateDisplay.addEventListener('click', function() {
+          const entryId = this.getAttribute('data-entry-id');
+          const currentDate = this.getAttribute('data-current-date');
+          
+          // Create completely hidden date input to trigger native calendar
+          const dateInput = document.createElement('input');
+          dateInput.type = 'date';
+          dateInput.value = currentDate || '';
+          dateInput.style.position = 'absolute';
+          dateInput.style.left = '-9999px';
+          dateInput.style.top = '-9999px';
+          dateInput.style.opacity = '0';
+          dateInput.style.pointerEvents = 'none';
+          dateInput.style.visibility = 'hidden';
+          
+          // Add to body temporarily
+          document.body.appendChild(dateInput);
+          
+          // Trigger the native calendar picker
+          dateInput.showPicker();
+          
+          // Handle the date change
+          dateInput.addEventListener('change', async function() {
+            const newDate = this.value;
+            if (!newDate || newDate === currentDate) {
+              // No change - just clean up
+              document.body.removeChild(this);
+              return;
+            }
+            
+            try {
+              // Parse the new date and get current times from the entry
+              const [year, month, day] = newDate.split('-').map(Number);
+              const newDateObj = new Date(year, month - 1, day, 0, 0, 0, 0);
+              
+              // Get current entry data to preserve times
+              const row = dateDisplay.closest('tr');
+              const editBtn = row?.querySelector('.edit-time-entry-btn') as HTMLElement;
+              const entryData = editBtn?.getAttribute('data-entry');
+              let currentEntry = null;
+              
+              if (entryData) {
+                try {
+                  currentEntry = JSON.parse(entryData);
+                } catch (e) {
+                  console.error('Error parsing entry data:', e);
+                }
+              }
+              
+              // Build update data with new date but preserve existing times
+              const updateData: any = {};
+              
+              if (currentEntry?.startTime) {
+                const startTime = new Date(currentEntry.startTime);
+                const newStartTime = new Date(year, month - 1, day, startTime.getHours(), startTime.getMinutes(), 0, 0);
+                updateData.startTime = newStartTime.toISOString();
+              }
+              
+              if (currentEntry?.endTime) {
+                const endTime = new Date(currentEntry.endTime);
+                const newEndTime = new Date(year, month - 1, day, endTime.getHours(), endTime.getMinutes(), 0, 0);
+                updateData.endTime = newEndTime.toISOString();
+              }
+              
+              // Send update
+              const response = await fetch(`/api/time-entries-unified/${entryId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updateData)
+              });
+              
+              if (response.ok) {
+                const result = await response.json();
+                
+                // Update the display with new date
+                dateDisplay.textContent = newDateObj.toLocaleDateString();
+                dateDisplay.setAttribute('data-current-date', newDate);
+                
+                // Update row data for subsequent edits
+                if (editBtn && result.data) {
+                  editBtn.setAttribute('data-entry', JSON.stringify(result.data));
+                }
+                
+                // Update duration display if available
+                const durationCell = row?.querySelector('td[data-role="duration"]');
+                if (durationCell && result.data) {
+                  const durationInput = durationCell.querySelector('.duration-input') as HTMLInputElement;
+                  if (durationInput) {
+                    const seconds = result.data.duration || 0;
+                    const hours = Math.floor(seconds / 3600);
+                    const minutes = Math.floor((seconds % 3600) / 60);
+                    durationInput.value = `${hours}h ${minutes}m`;
+                  }
+                }
+                
+                // Update time inputs if they exist
+                const startInput = row?.querySelector('input[data-time-type="start"]') as HTMLInputElement;
+                const endInput = row?.querySelector('input[data-time-type="end"]') as HTMLInputElement;
+                
+                if (startInput && result.data.startTime) {
+                  const startDate = new Date(result.data.startTime);
+                  startInput.value = new Intl.DateTimeFormat(undefined, { 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    hour12: true 
+                  }).format(startDate);
+                }
+                
+                if (endInput && result.data.endTime) {
+                  const endDate = new Date(result.data.endTime);
+                  endInput.value = new Intl.DateTimeFormat(undefined, { 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    hour12: true 
+                  }).format(endDate);
+                }
+              } else {
+                throw new Error('Failed to update date');
+              }
+            } catch (error) {
+              console.error('Error updating date:', error);
+              alert('Error updating date. Please try again.');
+            } finally {
+              // Clean up the hidden input
+              document.body.removeChild(this);
+            }
+          });
+          
+          // Handle cancel (click outside or escape)
+          const handleCancel = () => {
+            document.body.removeChild(dateInput);
+            document.removeEventListener('click', handleCancel);
+            document.removeEventListener('keydown', handleEscape);
+          };
+          
+          const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+              handleCancel();
+            }
+          };
+          
+          // Add event listeners for cancel
+          setTimeout(() => {
+            document.addEventListener('click', handleCancel);
+            document.addEventListener('keydown', handleEscape);
+          }, 100);
+        });
+      });
+    }
+
     // Initial setup
     handleTimeInputChange();
     handleDurationInputChange();
+    handleDateDisplayClick();
 
       // Re-setup after data reload using a MutationObserver
   const observer = new MutationObserver(function(mutations) {
@@ -3010,6 +3175,11 @@ const user = await requireAuth('/')(Astro) as any;
         const durationInputs = document.querySelectorAll('.duration-input');
         if (durationInputs.length > 0) {
           handleDurationInputChange();
+        }
+        // Check if date displays were added
+        const dateDisplays = document.querySelectorAll('.date-display');
+        if (dateDisplays.length > 0) {
+          handleDateDisplayClick();
         }
       }
     });
