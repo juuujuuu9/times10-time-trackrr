@@ -30,6 +30,7 @@ weekEnd.setDate(weekStart.getDate() + 6);
 weekEnd.setHours(23, 59, 59, 999);
 
 // Get current user's time entries with related data (only non-archived activities)
+// Filter by the current week range (Sunday to Saturday)
 const userTimeEntries = await db
   .select({
     id: timeEntries.id,
@@ -60,7 +61,8 @@ const userTimeEntries = await db
     sql`(${timeEntries.endTime} IS NOT NULL OR ${timeEntries.durationManual} IS NOT NULL)`,
     eq(clients.archived, false),
     eq(projects.archived, false)
-  ));
+  ))
+  .orderBy(sql`${timeEntries.startTime} DESC`);
 
 // Get all clients for filtering (only those the user has worked on - non-archived activities)
 const userClients = await db
@@ -75,23 +77,6 @@ const userClients = await db
   ))
   .orderBy(clients.name);
 
-// Get all projects for filtering (only those the user has worked on - non-archived activities)
-const userTasks = await db
-  .selectDistinct({
-    id: projects.id,
-    name: sql<string>`'General'`.as('name'),
-    projectName: projects.name,
-    clientName: clients.name,
-  })
-  .from(timeEntries)
-  .innerJoin(projects, eq(timeEntries.projectId, projects.id))
-  .innerJoin(clients, eq(projects.clientId, clients.id))
-  .where(and(
-    eq(timeEntries.userId, user.id),
-    eq(clients.archived, false),
-    eq(projects.archived, false)
-  ))
-  .orderBy(clients.name, projects.name);
 
 // Format date range for display (matching dashboard format: M/D-M/D)
 const formatDateRange = (start: Date, end: Date) => {
@@ -252,7 +237,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
 
         <!-- Filters -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-2 sm:p-4 lg:p-6">
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
               <input
@@ -271,18 +256,6 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                 <option value="">All Clients</option>
                 {userClients.map((client) => (
                   <option value={client.name}>{client.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label for="taskFilter" class="block text-sm font-medium text-gray-700 mb-1">Task</label>
-              <select
-                id="taskFilter"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#415058] focus:border-[#415058]"
-              >
-                <option value="">All Tasks</option>
-                {userTasks.map((task) => (
-                  <option value={task.name}>{task.projectName} - {task.name}</option>
                 ))}
               </select>
             </div>
@@ -364,9 +337,6 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                     Project
                   </th>
                   <th class="table-column-separator-header px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Task
-                  </th>
-                  <th class="table-column-separator-header px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <div class="flex items-center justify-between">
                       <span>Date</span>
                       <div class="flex flex-col ml-2">
@@ -428,41 +398,66 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                       <td class="table-column-separator px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {entry.projectName}
                       </td>
-                      <td class="table-column-separator px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {entry.taskName}
-                      </td>
                       <td class="table-column-separator px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {taskDate.toLocaleDateString()}
+                        <input
+                          type="text"
+                          class="date-input w-24 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                          value={taskDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
+                          data-entry-id={entry.id}
+                          data-current-date={taskDate.toISOString().split('T')[0]}
+                          placeholder="mm/dd/yyyy"
+                          title="Click to open date picker"
+                        />
                       </td>
                       <td class="table-column-separator px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <input
                           type="text"
-                          class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer"
-                          value={startTime ? '--:-- --' : '--:-- --'}
-                          data-iso={startTime ? new Date(startTime).toISOString() : ''}
+                          class={`time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer ${isManualDurationEntry ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                          value={startTime ? new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(startTime) : '--:-- --'}
                           data-entry-id={entry.id}
                           data-time-type="start"
                           placeholder="9:30 AM"
-                          title="Click to edit start time"
+                          title={isManualDurationEntry ? 'Manual duration entry - use edit button to modify' : 'Click to edit start time'}
+                          {...(isManualDurationEntry ? { readonly: true } : {})}
                         />
                       </td>
                       <td class="table-column-separator px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <input
                           type="text"
-                          class="time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer"
-                          value={endTime ? '--:-- --' : '--:-- --'}
-                          data-iso={endTime ? new Date(endTime).toISOString() : ''}
+                          class={`time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer ${isManualDurationEntry ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                          value={endTime ? new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(endTime) : '--:-- --'}
                           data-entry-id={entry.id}
                           data-time-type="end"
                           placeholder="9:30 AM"
-                          title="Click to edit end time"
+                          title={isManualDurationEntry ? 'Manual duration entry - use edit button to modify' : 'Click to edit end time'}
+                          {...(isManualDurationEntry ? { readonly: true } : {})}
                         />
                       </td>
-                      <td class="table-column-separator px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatDuration(entry.duration || 0)}
+                      <td class="table-column-separator px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900" data-role="duration">
+                        <input
+                          type="text"
+                          class="duration-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer"
+                          value={(() => {
+                            const seconds = entry.duration || 0;
+                            const hours = Math.floor(seconds / 3600);
+                            const minutes = Math.floor((seconds % 3600) / 60);
+                            return `${hours}h ${minutes}m`;
+                          })()}
+                          data-entry-id={entry.id}
+                          data-time-type="duration"
+                          placeholder="2h 30m"
+                          title="Click to edit duration"
+                        />
                       </td>
-                      <td class="table-column-separator px-2 sm:px-4 lg:px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title={entry.notes || ''}>
-                        {entry.notes || '-'}
+                      <td class="table-column-separator px-2 sm:px-4 lg:px-6 py-4 text-sm text-gray-500 max-w-xs">
+                        <input
+                          type="text"
+                          class="notes-input w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                          data-entry-id={entry.id}
+                          placeholder="Add Note"
+                          value={entry.notes || ''}
+                          title="Click to add or edit notes"
+                        />
                       </td>
                       <td class="table-column-separator px-2 sm:px-4 lg:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
@@ -673,6 +668,10 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
     </div>
   </div>
 
+  <!-- Flatpickr CSS and JS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
   <script>
     // Note: timezone utilities will be handled server-side
     
@@ -798,6 +797,52 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
       return `${hours}h ${minutes}m`;
     }
 
+    // Parse flexible duration formats (2h 30m, 2.5h, 150m, 2:30, etc.)
+    function parseFlexibleDuration(durationString: string): number | null {
+      if (!durationString) return null;
+      
+      const trimmed = durationString.trim().toLowerCase();
+      
+      // Pattern 1: "2h 30m" or "2h30m"
+      let match = trimmed.match(/^(\d+(?:\.\d+)?)h\s*(\d+)m?$/);
+      if (match) {
+        const hours = parseFloat(match[1]);
+        const minutes = parseInt(match[2]);
+        return (hours * 3600) + (minutes * 60);
+      }
+      
+      // Pattern 2: "2.5h" or "2h"
+      match = trimmed.match(/^(\d+(?:\.\d+)?)h$/);
+      if (match) {
+        const hours = parseFloat(match[1]);
+        return hours * 3600;
+      }
+      
+      // Pattern 3: "150m" or "150 min"
+      match = trimmed.match(/^(\d+(?:\.\d+)?)m(?:in)?$/);
+      if (match) {
+        const minutes = parseFloat(match[1]);
+        return minutes * 60;
+      }
+      
+      // Pattern 4: "2:30" (hours:minutes)
+      match = trimmed.match(/^(\d+):(\d{2})$/);
+      if (match) {
+        const hours = parseInt(match[1]);
+        const minutes = parseInt(match[2]);
+        return (hours * 3600) + (minutes * 60);
+      }
+      
+      // Pattern 5: Just seconds "3600s" or "3600"
+      match = trimmed.match(/^(\d+)s?$/);
+      if (match) {
+        const seconds = parseInt(match[1]);
+        return seconds;
+      }
+      
+      return null;
+    }
+
     // Week navigation and filtering
   document.addEventListener('DOMContentLoaded', function() {
     // Populate time inputs using local timezone formatting (initial render)
@@ -817,8 +862,8 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
     currentWeekStart.setHours(0, 0, 0, 0);
 
       // Format date range for display (matching dashboard format: M/D-M/D)
-      function formatDateRange(start, end) {
-        const formatDateForDisplay = (date) => {
+      function formatDateRange(start: Date, end: Date): string {
+        const formatDateForDisplay = (date: Date): string => {
           const month = date.getMonth() + 1; // getMonth() returns 0-11
           const day = date.getDate();
           return `${month}/${day}`;
@@ -850,20 +895,23 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
         const rows = document.querySelectorAll('tbody tr');
         
         rows.forEach(row => {
-          const dateCell = row.querySelector('td:nth-child(4)');
-          const dateText = dateCell?.textContent?.trim() || '';
+          const htmlRow = row as HTMLElement;
+          const dateCell = htmlRow.querySelector('td:nth-child(3)'); // Updated to match new column structure
+          const dateInput = dateCell?.querySelector('.date-input') as HTMLInputElement;
+          const dateText = dateInput?.value || '';
           const entryDate = new Date(dateText);
+          
           
           // Check if entry is within the current week (Sunday-Saturday)
           const isInWeek = entryDate >= currentWeekStart && entryDate <= weekEnd;
           
           // Only hide if not already hidden by other filters
-          if (!isInWeek && row.style.display !== 'none') {
-            row.style.display = 'none';
-          } else if (isInWeek && row.style.display === 'none') {
+          if (!isInWeek && htmlRow.style.display !== 'none') {
+            htmlRow.style.display = 'none';
+          } else if (isInWeek && htmlRow.style.display === 'none') {
             // Check if it should be visible based on other filters
-            const shouldShow = checkOtherFilters(row);
-            row.style.display = shouldShow ? '' : 'none';
+            const shouldShow = checkOtherFilters(htmlRow);
+            htmlRow.style.display = shouldShow ? '' : 'none';
           }
         });
         
@@ -871,22 +919,18 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
       }
 
       // Check if row should be visible based on other filters
-      function checkOtherFilters(row) {
-        const searchTerm = document.getElementById('search')?.value?.toLowerCase() || '';
-        const selectedClient = document.getElementById('clientFilter')?.value || '';
-        const selectedTask = document.getElementById('taskFilter')?.value || '';
+      function checkOtherFilters(row: HTMLElement) {
+        const searchTerm = (document.getElementById('search') as HTMLInputElement)?.value?.toLowerCase() || '';
+        const selectedClient = (document.getElementById('clientFilter') as HTMLSelectElement)?.value || '';
         
         const rowText = row.textContent?.toLowerCase() || '';
         const clientCell = row.querySelector('td:nth-child(1)');
         const clientName = clientCell?.textContent?.trim() || '';
-        const taskCell = row.querySelector('td:nth-child(3)');
-        const taskName = taskCell?.textContent?.trim() || '';
         
         const matchesSearch = !searchTerm || rowText.includes(searchTerm);
         const matchesClient = !selectedClient || clientName === selectedClient;
-        const matchesTask = !selectedTask || taskName === selectedTask;
         
-        return matchesSearch && matchesClient && matchesTask;
+        return matchesSearch && matchesClient;
       }
 
       // Previous week button
@@ -910,19 +954,20 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
       
       timeInputs.forEach(input => {
         // Store the original value when the input is focused
-        input.addEventListener('focus', function() {
+        input.addEventListener('focus', function(this: HTMLInputElement) {
           this.setAttribute('data-original-value', this.value);
         });
         
         // Handle Enter key press
-        input.addEventListener('keydown', function(e) {
-          if (e.key === 'Enter') {
-            e.preventDefault();
+        input.addEventListener('keydown', function(this: HTMLInputElement, e: Event) {
+          const keyEvent = e as KeyboardEvent;
+          if (keyEvent.key === 'Enter') {
+            keyEvent.preventDefault();
             this.blur(); // Trigger the blur event to save
           }
         });
         
-        input.addEventListener('blur', async function() {
+        input.addEventListener('blur', async function(this: HTMLInputElement) {
           const entryId = this.getAttribute('data-entry-id');
           const timeType = this.getAttribute('data-time-type');
           const timeValue = this.value.trim();
@@ -951,7 +996,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
           
           try {
             // Get the current entry data to determine if this is a manual duration entry
-            const row = this.closest('tr');
+            const row = this.closest('tr') as HTMLElement | null;
             const editBtn = row?.querySelector('.edit-time-entry-btn') as HTMLElement;
             const entryData = editBtn?.getAttribute('data-entry');
             let currentEntry = null;
@@ -971,101 +1016,56 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             const hours = parsedTime.hours;
             const minutes = parsedTime.minutes;
             
-            // Use the unified API format with component hours/minutes
-            const updateData: { startHours?: number; startMinutes?: number; endHours?: number; endMinutes?: number; taskDate?: string; tzOffsetMinutes?: number; durationManual?: number | null } = {};
+            // Create new datetime using local date construction
+            const newDateTime = new Date(
+              taskDate.getFullYear(), 
+              taskDate.getMonth(), 
+              taskDate.getDate(), 
+              hours, 
+              minutes, 
+              0, 
+              0
+            );
+            
+            // Build update data with both times (following TIME_EDITING_GUIDE pattern)
+            const updateData: { startTime?: string; endTime?: string; durationManual?: number | null } = {};
             if (timeType === 'start') {
-              updateData.startHours = hours;
-              updateData.startMinutes = minutes;
+              updateData.startTime = newDateTime.toISOString();
+              // Include current end time from input
+              const endInput = row?.querySelector('input[data-time-type="end"]') as HTMLInputElement | null;
+              if (endInput?.value && endInput.value !== '--:-- --') {
+                const endParsed = parseFlexibleTime(endInput.value);
+                if (endParsed) {
+                  const endDateTime = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), endParsed.hours, endParsed.minutes, 0, 0);
+                  updateData.endTime = endDateTime.toISOString();
+                } else if (currentEntry?.endTime) {
+                  updateData.endTime = new Date(currentEntry.endTime).toISOString();
+                }
+              } else if (currentEntry?.endTime) {
+                updateData.endTime = new Date(currentEntry.endTime).toISOString();
+              }
             } else if (timeType === 'end') {
-              updateData.endHours = hours;
-              updateData.endMinutes = minutes;
+              updateData.endTime = newDateTime.toISOString();
+              // Include current start time from input
+              const startInput = row?.querySelector('input[data-time-type="start"]') as HTMLInputElement | null;
+              if (startInput?.value && startInput.value !== '--:-- --') {
+                const startParsed = parseFlexibleTime(startInput.value);
+                if (startParsed) {
+                  const startDateTime = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), startParsed.hours, startParsed.minutes, 0, 0);
+                  updateData.startTime = startDateTime.toISOString();
+                } else if (currentEntry?.startTime) {
+                  updateData.startTime = new Date(currentEntry.startTime).toISOString();
+                }
+              } else if (currentEntry?.startTime) {
+                updateData.startTime = new Date(currentEntry.startTime).toISOString();
+              }
             }
-            updateData.taskDate = `${taskDate.getFullYear()}-${String(taskDate.getMonth()+1).padStart(2,'0')}-${String(taskDate.getDate()).padStart(2,'0')}`;
-            updateData.tzOffsetMinutes = new Date().getTimezoneOffset();
             
             // If this was a manual duration entry and we're adding times, clear the manual duration
             if (currentEntry?.durationManual && !currentEntry?.endTime) {
               updateData.durationManual = null;
             }
             
-            // Build a local datetime for validation
-            const newDateTime = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), hours, minutes, 0, 0);
-            
-            // Smart time validation for day-to-day usage
-            function validateTimeEntry(newTime: Date, existingTime: Date, timeType: 'start' | 'end'): boolean {
-              const newHours = newTime.getHours();
-              const existingHours = existingTime.getHours();
-              
-              // Calculate time difference in hours
-              const timeDiff = Math.abs(newTime.getTime() - existingTime.getTime());
-              const hoursDiff = timeDiff / (1000 * 60 * 60);
-              
-              // For typical business hours (8am-10pm), assume same-day entries
-              const isBusinessHours = (newHours >= 8 && newHours <= 22) && (existingHours >= 8 && existingHours <= 22);
-              
-              // For late night/early morning hours (10pm-8am), be more careful about day boundaries
-              const isLateNight = (newHours >= 22 || newHours <= 8) || (existingHours >= 22 || existingHours <= 8);
-              
-              if (isBusinessHours) {
-                // For business hours, be strict about time order but allow reasonable edits
-                if (timeType === 'end' && newTime <= existingTime) {
-                  // Only allow if the time difference is very small (likely same day, minor edit)
-                  return hoursDiff <= 0.5; // Allow up to 30 minutes difference for business hours
-                } else if (timeType === 'start' && newTime >= existingTime) {
-                  // Only allow if the time difference is very small (likely same day, minor edit)
-                  return hoursDiff <= 0.5; // Allow up to 30 minutes difference for business hours
-                }
-                return true; // Allow the change for business hours
-              } else if (isLateNight) {
-                // For late night entries, be more permissive but still validate obvious errors
-                if (timeType === 'end' && newTime <= existingTime) {
-                  return hoursDiff <= 1; // Allow up to 1 hour difference for late night
-                } else if (timeType === 'start' && newTime >= existingTime) {
-                  return hoursDiff <= 1; // Allow up to 1 hour difference for late night
-                }
-                return true; // Allow late night entries
-              }
-              
-              // For other cases, use standard validation
-              if (timeType === 'end' && newTime <= existingTime) {
-                return false;
-              } else if (timeType === 'start' && newTime >= existingTime) {
-                return false;
-              }
-              
-              return true;
-            }
-            
-            // Validate that end time is after start time if both times are being set
-            if (timeType === 'end' && currentEntry?.startTime) {
-              const existingStartTime = new Date(currentEntry.startTime);
-              if (!validateTimeEntry(newDateTime, existingStartTime, 'end')) {
-                // Show error state
-                this.style.borderColor = '#EF4444';
-                this.style.backgroundColor = '#FEF2F2';
-                alert('End time must be after start time');
-                setTimeout(() => {
-                  this.style.borderColor = '';
-                  this.style.backgroundColor = '';
-                }, 2000);
-                this.focus();
-                return;
-              }
-            } else if (timeType === 'start' && currentEntry?.endTime) {
-              const existingEndTime = new Date(currentEntry.endTime);
-              if (!validateTimeEntry(newDateTime, existingEndTime, 'start')) {
-                // Show error state
-                this.style.borderColor = '#EF4444';
-                this.style.backgroundColor = '#FEF2F2';
-                alert('Start time must be before end time');
-                setTimeout(() => {
-                  this.style.borderColor = '';
-                  this.style.backgroundColor = '';
-                }, 2000);
-                this.focus();
-                return;
-              }
-            }
             
             // Show loading state
             this.style.borderColor = '#3B82F6';
@@ -1081,13 +1081,18 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             
             if (response.ok) {
               const result = await response.json();
-              const row = this.closest('tr');
+              const row = this.closest('tr') as HTMLElement;
               
-              // Update the duration cell
-              const durationCell = row.querySelector('td:nth-child(8)'); // Duration column
+              // Update the duration cell using data attribute selector
+              const durationCell = row?.querySelector('td[data-role="duration"]');
               if (durationCell && result.data) {
                 const duration = result.data.durationManual || result.data.duration || 0;
-                durationCell.textContent = formatDuration(duration);
+                const durationInput = durationCell.querySelector('.duration-input') as HTMLInputElement;
+                if (durationInput) {
+                  const hours = Math.floor(duration / 3600);
+                  const minutes = Math.floor((duration % 3600) / 60);
+                  durationInput.value = `${hours}h ${minutes}m`;
+                }
               }
               
               // Update the time input values to reflect the new data
@@ -1098,6 +1103,10 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                 if (startTimeInput && result.data.startTime) {
                   const startDate = new Date(result.data.startTime);
                   startTimeInput.value = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(startDate);
+                  // Re-enable start time input since we now have a start time
+                  startTimeInput.readOnly = false;
+                  startTimeInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
+                  startTimeInput.title = 'Click to edit start time';
                 } else if (startTimeInput && !result.data.startTime) {
                   startTimeInput.value = '--:-- --';
                 }
@@ -1105,10 +1114,17 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                 if (endTimeInput && result.data.endTime) {
                   const endDate = new Date(result.data.endTime);
                   endTimeInput.value = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(endDate);
+                  // Re-enable end time input since we now have an end time
+                  endTimeInput.readOnly = false;
+                  endTimeInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
+                  endTimeInput.title = 'Click to edit end time';
                 } else if (endTimeInput && !result.data.endTime) {
                   endTimeInput.value = '--:-- --';
                 }
               }
+              
+              // Re-sort the table after time changes
+              sortTableByDate('desc');
               
               // Show success feedback
               this.style.borderColor = '#10B981';
@@ -1149,12 +1165,809 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
         });
         
         // Handle Enter key
-        input.addEventListener('keypress', function(e) {
-          if (e.key === 'Enter') {
-            this.blur();
+        input.addEventListener('keydown', (e: Event) => {
+          const keyEvent = e as KeyboardEvent;
+          if (keyEvent.key === 'Enter') {
+            (e.target as HTMLInputElement).blur();
           }
         });
       });
+
+      // Function to handle duration input changes
+      function handleDurationInputChange() {
+        const durationInputs = document.querySelectorAll('.duration-input');
+        
+        durationInputs.forEach((input: Element) => {
+          const durationInput = input as HTMLInputElement;
+          
+          // Skip if already has event listeners attached
+          if (durationInput.hasAttribute('data-listeners-attached')) {
+            return;
+          }
+          
+          // Store the original value when the input is focused
+          durationInput.addEventListener('focus', function(this: HTMLInputElement) {
+            this.setAttribute('data-original-value', this.value);
+          });
+          
+          // Handle Enter key press
+          durationInput.addEventListener('keydown', function(e: KeyboardEvent) {
+          if (e.key === 'Enter') {
+              e.preventDefault();
+              (this as HTMLInputElement).blur(); // Trigger the blur event to save
+            }
+          });
+          
+          durationInput.addEventListener('blur', async function(this: HTMLInputElement) {
+            const entryId = this.getAttribute('data-entry-id');
+            const durationValue = this.value.trim();
+            
+            // Skip if empty or if it's the placeholder value
+            if (!durationValue) return;
+            
+            // Skip if the value hasn't changed
+            const originalValue = this.getAttribute('data-original-value');
+            if (durationValue === originalValue) return;
+            
+            // Parse duration using flexible parser
+            const parsedDuration = parseFlexibleDuration(durationValue);
+            if (!parsedDuration) {
+              // Show error state
+              this.style.borderColor = '#EF4444';
+              this.style.backgroundColor = '#FEF2F2';
+              alert('Please enter a valid duration format (e.g., 2h 30m, 2.5h, 150m, 2:30)');
+              setTimeout(() => {
+                this.style.borderColor = '';
+                this.style.backgroundColor = '';
+              }, 2000);
+              this.focus();
+              return;
+            }
+            
+            try {
+              // Show loading state
+              this.style.borderColor = '#3B82F6';
+              this.style.backgroundColor = '#F0F9FF';
+              
+              const response = await fetch(`/api/time-entries-unified/${entryId}`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  durationManual: parsedDuration
+                })
+              });
+              
+              if (response.ok) {
+                const result = await response.json();
+                const row = this.closest('tr');
+                
+                // Clear and disable start/stop time fields since we're now using manual duration
+                const startTimeInput = row?.querySelector('input[data-time-type="start"]') as HTMLInputElement;
+                const endTimeInput = row?.querySelector('input[data-time-type="end"]') as HTMLInputElement;
+                
+                if (startTimeInput) {
+                  startTimeInput.value = '--:-- --';
+                  startTimeInput.readOnly = true;
+                  startTimeInput.classList.add('bg-gray-100', 'cursor-not-allowed');
+                  startTimeInput.title = 'Manual duration entry - use edit button to modify';
+                }
+                
+                if (endTimeInput) {
+                  endTimeInput.value = '--:-- --';
+                  endTimeInput.readOnly = true;
+                  endTimeInput.classList.add('bg-gray-100', 'cursor-not-allowed');
+                  endTimeInput.title = 'Manual duration entry - use edit button to modify';
+                }
+                
+                // Update the edit button's data-entry payload so subsequent edits use fresh values
+                const editBtn = row?.querySelector('.edit-time-entry-btn') as HTMLElement | null;
+                if (editBtn && result.data) {
+                  editBtn.setAttribute('data-entry', JSON.stringify(result.data));
+                }
+                
+                // Re-sort the table after duration changes
+                sortTableByDate('desc');
+                
+                // Show success feedback
+                this.style.borderColor = '#10B981';
+                this.style.backgroundColor = '#F0FDF4';
+                setTimeout(() => {
+                  this.style.borderColor = '';
+                  this.style.backgroundColor = '';
+                }, 1500);
+              } else {
+                const error = await response.json();
+                
+                if (response.status === 401) {
+                  // Authentication error - redirect to login
+                  alert('Your session has expired. Please log in again.');
+                  window.location.href = '/login';
+                  return;
+                }
+                
+                // Show error state
+                this.style.borderColor = '#EF4444';
+                this.style.backgroundColor = '#FEF2F2';
+                alert(`Error: ${error.error}`);
+                setTimeout(() => {
+                  this.style.borderColor = '';
+                  this.style.backgroundColor = '';
+                }, 2000);
+                this.focus();
+              }
+            } catch (error) {
+              console.error('Error updating duration:', error);
+              // Reset styling on error
+              this.style.borderColor = '';
+              this.style.backgroundColor = '';
+              alert('Error updating duration. Please check your input and try again.');
+              this.focus();
+            }
+          });
+          
+          // Mark as having listeners attached
+          durationInput.setAttribute('data-listeners-attached', 'true');
+        });
+      }
+
+      // Function to handle notes input changes
+      function handleNotesInputChange() {
+        const notesInputs = document.querySelectorAll('.notes-input');
+        
+        notesInputs.forEach((input: Element) => {
+          const notesInput = input as HTMLInputElement;
+          
+          // Skip if already has event listeners attached
+          if (notesInput.hasAttribute('data-listeners-attached')) {
+            return;
+          }
+          
+          // Store the original value when the input is focused
+          notesInput.addEventListener('focus', function(this: HTMLInputElement) {
+            this.setAttribute('data-original-value', this.value);
+          });
+          
+          // Handle Enter key press
+          notesInput.addEventListener('keydown', function(e: KeyboardEvent) {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              (this as HTMLInputElement).blur(); // Trigger the blur event to save
+            }
+          });
+          
+          notesInput.addEventListener('blur', async function(this: HTMLInputElement) {
+            const entryId = this.getAttribute('data-entry-id');
+            const notesValue = this.value.trim();
+            
+            // Skip if the value hasn't changed
+            const originalValue = this.getAttribute('data-original-value');
+            if (notesValue === originalValue) return;
+            
+            try {
+              // Show loading state
+              this.style.borderColor = '#3B82F6';
+              this.style.backgroundColor = '#F0F9FF';
+              
+              const response = await fetch(`/api/time-entries-unified/${entryId}`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  notes: notesValue || null
+                })
+              });
+              
+              if (response.ok) {
+                const result = await response.json();
+                const row = this.closest('tr');
+                
+                // Update the edit button's data-entry payload so subsequent edits use fresh values
+                const editBtn = row?.querySelector('.edit-time-entry-btn') as HTMLElement | null;
+                if (editBtn && result.data) {
+                  editBtn.setAttribute('data-entry', JSON.stringify(result.data));
+                }
+                
+                // Show success feedback
+                this.style.borderColor = '#10B981';
+                this.style.backgroundColor = '#F0FDF4';
+                setTimeout(() => {
+                  this.style.borderColor = '';
+                  this.style.backgroundColor = '';
+                }, 1500);
+              } else {
+                const error = await response.json();
+                
+                if (response.status === 401) {
+                  // Authentication error - redirect to login
+                  alert('Your session has expired. Please log in again.');
+                  window.location.href = '/login';
+                  return;
+                }
+                
+                // Show error state
+                this.style.borderColor = '#EF4444';
+                this.style.backgroundColor = '#FEF2F2';
+                alert(`Error: ${error.error}`);
+                setTimeout(() => {
+                  this.style.borderColor = '';
+                  this.style.backgroundColor = '';
+                }, 2000);
+                this.focus();
+              }
+            } catch (error) {
+              console.error('Error updating notes:', error);
+              // Reset styling on error
+              this.style.borderColor = '';
+              this.style.backgroundColor = '';
+              alert('Error updating notes. Please try again.');
+              this.focus();
+            }
+          });
+          
+          // Mark as having listeners attached
+          notesInput.setAttribute('data-listeners-attached', 'true');
+        });
+      }
+
+      // Function to handle date input validation and changes
+      function handleDateInputChange() {
+        const dateInputs = document.querySelectorAll('.date-input');
+        
+        dateInputs.forEach((input: Element) => {
+          const dateInput = input as HTMLInputElement;
+          
+          // Skip if already has event listeners attached
+          if (dateInput.hasAttribute('data-listeners-attached')) {
+            return;
+          }
+          
+          // Format validation function
+          function validateDateFormat(value: string): boolean {
+            const mmddyyyyRegex = /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/;
+            return mmddyyyyRegex.test(value);
+          }
+          
+          // Convert mm/dd/yyyy to yyyy-mm-dd for API
+          function convertToISODate(dateStr: string): string {
+            const [month, day, year] = dateStr.split('/');
+            return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+          }
+          
+          // Convert yyyy-mm-dd to mm/dd/yyyy for display
+          function convertToDisplayDate(isoDate: string): string {
+            const [year, month, day] = isoDate.split('-');
+            return `${month}/${day}/${year}`;
+          }
+          
+          // Handle Enter key press
+          dateInput.addEventListener('keydown', function(e: KeyboardEvent) {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              (this as HTMLInputElement).blur(); // Trigger the blur event to save
+            }
+          });
+          
+          // Handle input changes
+          dateInput.addEventListener('blur', async function(this: HTMLInputElement) {
+            const entryId = this.getAttribute('data-entry-id');
+            const currentDate = this.getAttribute('data-current-date');
+            const newValue = this.value.trim();
+            
+            if (!newValue) {
+              // Reset to original if empty
+              this.value = convertToDisplayDate(currentDate || '');
+              return;
+            }
+            
+            if (!validateDateFormat(newValue)) {
+              // Show format error dialog
+              alert('Please enter the date in mm/dd/yyyy format (e.g., 12/25/2023)');
+              this.value = convertToDisplayDate(currentDate || '');
+              this.focus();
+              return;
+            }
+            
+            const newISODate = convertToISODate(newValue);
+            if (newISODate === currentDate) {
+              // No change, just return
+              return;
+            }
+            
+            try {
+              // Show loading state
+              this.style.borderColor = '#3B82F6';
+              this.style.backgroundColor = '#F0F9FF';
+              
+              // Parse the new date and get current times from the entry
+              const [year, month, day] = newISODate.split('-').map(Number);
+              const newDateObj = new Date(year, month - 1, day, 0, 0, 0, 0);
+              
+              // Get current entry data to preserve times
+              const row = dateInput.closest('tr');
+              const editBtn = row?.querySelector('.edit-time-entry-btn') as HTMLElement;
+              const entryData = editBtn?.getAttribute('data-entry');
+              let currentEntry = null;
+              
+              if (entryData) {
+                try {
+                  currentEntry = JSON.parse(entryData);
+                } catch (e) {
+                  console.error('Error parsing entry data:', e);
+                }
+              }
+              
+              const updateData: any = {
+                taskDate: newISODate
+              };
+              
+              if (currentEntry?.startTime) {
+                const startTime = new Date(currentEntry.startTime);
+                const newStartTime = new Date(year, month - 1, day, startTime.getHours(), startTime.getMinutes(), 0, 0);
+                updateData.startTime = newStartTime.toISOString();
+              }
+              
+              if (currentEntry?.endTime) {
+                const endTime = new Date(currentEntry.endTime);
+                const newEndTime = new Date(year, month - 1, day, endTime.getHours(), endTime.getMinutes(), 0, 0);
+                updateData.endTime = newEndTime.toISOString();
+              }
+              
+              const response = await fetch(`/api/time-entries-unified/${entryId}`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updateData)
+              });
+              
+              if (response.ok) {
+                const result = await response.json();
+                
+                // Update the edit button's data-entry payload so subsequent edits use fresh values
+                if (editBtn && result.data) {
+                  editBtn.setAttribute('data-entry', JSON.stringify(result.data));
+                }
+                
+                // Update the data-current-date attribute
+                this.setAttribute('data-current-date', newISODate);
+                
+                // Re-filter entries by week and re-sort the table
+                filterEntriesByWeek();
+                sortTableByDate('desc');
+                
+                // Show success feedback
+                this.style.backgroundColor = '#D1FAE5';
+                this.style.borderColor = '#10B981';
+                setTimeout(() => {
+                  this.style.backgroundColor = '';
+                  this.style.borderColor = '';
+                }, 1500);
+              } else {
+                console.error('Failed to update date, status:', response.status);
+                // Revert the input value
+                this.value = convertToDisplayDate(currentDate || '');
+                this.setAttribute('data-current-date', currentDate || '');
+              }
+            } catch (error) {
+              console.error('Error updating date:', error);
+              // Revert the input value
+              this.value = convertToDisplayDate(currentDate || '');
+              this.setAttribute('data-current-date', currentDate || '');
+            }
+          });
+          
+          // Mark as having listeners attached
+          dateInput.setAttribute('data-listeners-attached', 'true');
+        });
+      }
+
+      // Function to initialize Flatpickr date pickers
+      function initializeFlatpickr() {
+        const dateInputs = document.querySelectorAll('.date-input');
+        
+        dateInputs.forEach((input: Element) => {
+          const dateInput = input as HTMLInputElement;
+          const entryId = dateInput.getAttribute('data-entry-id');
+          const currentDate = dateInput.getAttribute('data-current-date');
+          
+          if (!dateInput || dateInput.hasAttribute('data-flatpickr-initialized')) {
+            return;
+          }
+          
+          // Initialize Flatpickr
+          const flatpickrInstance = (window as any).flatpickr(dateInput, {
+            dateFormat: 'm/d/Y',
+            defaultDate: currentDate ? new Date(currentDate + 'T00:00:00') : new Date(),
+            allowInput: true,
+            clickOpens: true,
+            static: true,
+            monthSelectorType: 'static',
+            onChange: function(selectedDates: any, dateStr: any, instance: any) {
+              if (selectedDates.length > 0) {
+                const selectedDate = selectedDates[0];
+                const isoDate = selectedDate.toISOString().split('T')[0];
+                saveDateChange(dateInput, entryId || '', isoDate);
+              }
+            }
+          });
+          
+          // Mark as initialized
+          dateInput.setAttribute('data-flatpickr-initialized', 'true');
+        });
+      }
+
+      // Function to save date changes from Flatpickr
+      async function saveDateChange(dateInput: HTMLInputElement, entryId: string, newISODate: string) {
+        try {
+          // Get the current entry data
+          const row = dateInput.closest('tr');
+          const editBtn = row?.querySelector('.edit-time-entry-btn') as HTMLElement;
+          const entryData = editBtn?.getAttribute('data-entry');
+          let currentEntry = null;
+          
+          if (entryData) {
+            try {
+              currentEntry = JSON.parse(entryData);
+            } catch (e) {
+              console.error('Error parsing entry data:', e);
+            }
+          }
+          
+          if (!currentEntry) {
+            console.error('Could not find entry data for date change');
+            return;
+          }
+          
+          // Parse the new date
+          const [year, month, day] = newISODate.split('-').map(Number);
+          
+          const updateData: any = {
+            taskDate: newISODate
+          };
+          
+          if (currentEntry.startTime) {
+            const startTime = new Date(currentEntry.startTime);
+            const newStartTime = new Date(year, month - 1, day, startTime.getHours(), startTime.getMinutes(), 0, 0);
+            updateData.startTime = newStartTime.toISOString();
+          }
+          
+          if (currentEntry.endTime) {
+            const endTime = new Date(currentEntry.endTime);
+            const newEndTime = new Date(year, month - 1, day, endTime.getHours(), endTime.getMinutes(), 0, 0);
+            updateData.endTime = newEndTime.toISOString();
+          }
+          
+          const response = await fetch(`/api/time-entries-unified/${entryId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updateData)
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            
+            // Update the edit button's data-entry payload so subsequent edits use fresh values
+            if (editBtn && result.data) {
+              editBtn.setAttribute('data-entry', JSON.stringify(result.data));
+            }
+            
+            // Update the data-current-date attribute
+            dateInput.setAttribute('data-current-date', newISODate);
+            
+            // Re-filter entries by week and re-sort the table
+            filterEntriesByWeek();
+            sortTableByDate('desc');
+            
+            // Show success feedback
+            dateInput.style.backgroundColor = '#d4edda';
+            dateInput.style.borderColor = '#28a745';
+            setTimeout(() => {
+              dateInput.style.backgroundColor = '';
+              dateInput.style.borderColor = '';
+            }, 1500);
+          } else {
+            console.error('Failed to update date, status:', response.status);
+            // Revert the input value
+            const originalDate = dateInput.getAttribute('data-current-date');
+            if (originalDate) {
+              const [origYear, origMonth, origDay] = originalDate.split('-').map(Number);
+              dateInput.value = `${String(origMonth).padStart(2, '0')}/${String(origDay).padStart(2, '0')}/${origYear}`;
+              dateInput.setAttribute('data-current-date', originalDate);
+            }
+          }
+        } catch (error) {
+          console.error('Error updating date:', error);
+          // Revert the input value
+          const originalDate = dateInput.getAttribute('data-current-date');
+          if (originalDate) {
+            const [origYear, origMonth, origDay] = originalDate.split('-').map(Number);
+            dateInput.value = `${String(origMonth).padStart(2, '0')}/${String(origDay).padStart(2, '0')}/${origYear}`;
+            dateInput.setAttribute('data-current-date', originalDate);
+          }
+        }
+      }
+
+      // Initialize all input handlers
+      handleDurationInputChange();
+      handleNotesInputChange();
+      handleDateInputChange();
+      initializeFlatpickr();
+
+      // MutationObserver to handle dynamic content updates
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'childList') {
+            // Check if time inputs were added
+            const timeInputs = document.querySelectorAll('.time-input');
+            if (timeInputs.length > 0) {
+              console.log('MutationObserver: Re-attaching time input handlers');
+              // Re-attach time input handlers for new elements
+              timeInputs.forEach((input: Element) => {
+                const timeInput = input as HTMLInputElement;
+                if (!timeInput.hasAttribute('data-listeners-attached')) {
+                  // Store the original value when the input is focused
+                  timeInput.addEventListener('focus', function(this: HTMLInputElement) {
+                    this.setAttribute('data-original-value', this.value);
+                  });
+                  
+                  // Handle Enter key press
+                  timeInput.addEventListener('keydown', function(e: KeyboardEvent) {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      (this as HTMLInputElement).blur(); // Trigger the blur event to save
+                    }
+                  });
+                  
+                  timeInput.addEventListener('blur', async function(this: HTMLInputElement) {
+                    const entryId = this.getAttribute('data-entry-id');
+                    const timeType = this.getAttribute('data-time-type');
+                    const timeValue = this.value.trim();
+                    
+                    // Skip if empty or if it's the placeholder value
+                    if (!timeValue || timeValue === '--:-- --') return;
+                    
+                    // Skip if the value hasn't changed
+                    const originalValue = this.getAttribute('data-original-value');
+                    if (timeValue === originalValue) return;
+                    
+                    // Parse time using flexible parser
+                    const parsedTime = parseFlexibleTime(timeValue);
+                    if (!parsedTime) {
+                      // Show error state
+                      this.style.borderColor = '#EF4444';
+                      this.style.backgroundColor = '#FEF2F2';
+                      alert('Please enter a valid time format (e.g., 3p, 3:30pm, 12am, 300pm, etc.)');
+                      setTimeout(() => {
+                        this.style.borderColor = '';
+                        this.style.backgroundColor = '';
+                      }, 2000);
+                      this.focus();
+                      return;
+                    }
+                    
+                    try {
+                      // Get the current entry data to determine if this is a manual duration entry
+                      const row = this.closest('tr') as HTMLElement | null;
+                      const editBtn = row?.querySelector('.edit-time-entry-btn') as HTMLElement;
+                      const entryData = editBtn?.getAttribute('data-entry');
+                      let currentEntry = null;
+                      
+                      if (entryData) {
+                        try {
+                          currentEntry = JSON.parse(entryData);
+                        } catch (e) {
+                          console.error('Error parsing entry data:', e);
+                        }
+                      }
+                      
+                      // Get the task date from the current entry
+                      const taskDate = currentEntry?.startTime ? new Date(currentEntry.startTime) : new Date(currentEntry?.createdAt);
+                      
+                      // Use the parsed time (already in 24-hour format)
+                      const hours = parsedTime.hours;
+                      const minutes = parsedTime.minutes;
+                      
+                      // Create new datetime using local date construction
+                      const newDateTime = new Date(
+                        taskDate.getFullYear(), 
+                        taskDate.getMonth(), 
+                        taskDate.getDate(), 
+                        hours, 
+                        minutes, 
+                        0, 
+                        0
+                      );
+                      
+                      // Build update data with both times (following TIME_EDITING_GUIDE pattern)
+                      const updateData: { startTime?: string; endTime?: string; durationManual?: number | null } = {};
+                      if (timeType === 'start') {
+                        updateData.startTime = newDateTime.toISOString();
+                        // Include current end time from input
+                        const endInput = row?.querySelector('input[data-time-type="end"]') as HTMLInputElement | null;
+                        if (endInput?.value && endInput.value !== '--:-- --') {
+                          const endParsed = parseFlexibleTime(endInput.value);
+                          if (endParsed) {
+                            const endDateTime = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), endParsed.hours, endParsed.minutes, 0, 0);
+                            updateData.endTime = endDateTime.toISOString();
+                          } else if (currentEntry?.endTime) {
+                            updateData.endTime = new Date(currentEntry.endTime).toISOString();
+                          }
+                        } else if (currentEntry?.endTime) {
+                          updateData.endTime = new Date(currentEntry.endTime).toISOString();
+                        }
+                      } else if (timeType === 'end') {
+                        updateData.endTime = newDateTime.toISOString();
+                        // Include current start time from input
+                        const startInput = row?.querySelector('input[data-time-type="start"]') as HTMLInputElement | null;
+                        if (startInput?.value && startInput.value !== '--:-- --') {
+                          const startParsed = parseFlexibleTime(startInput.value);
+                          if (startParsed) {
+                            const startDateTime = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), startParsed.hours, startParsed.minutes, 0, 0);
+                            updateData.startTime = startDateTime.toISOString();
+                          } else if (currentEntry?.startTime) {
+                            updateData.startTime = new Date(currentEntry.startTime).toISOString();
+                          }
+                        } else if (currentEntry?.startTime) {
+                          updateData.startTime = new Date(currentEntry.startTime).toISOString();
+                        }
+                      }
+                      
+                      // If this was a manual duration entry and we're adding times, clear the manual duration
+                      if (currentEntry?.durationManual && !currentEntry?.endTime) {
+                        updateData.durationManual = null;
+                      }
+                      
+                      
+                      // Show loading state
+                      this.style.borderColor = '#3B82F6';
+                      this.style.backgroundColor = '#F0F9FF';
+                      
+                      const response = await fetch(`/api/time-entries-unified/${entryId}`, {
+                        method: 'PUT',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(updateData)
+                      });
+                      
+                      if (response.ok) {
+                        const result = await response.json();
+                        const row = this.closest('tr') as HTMLElement | null;
+                        
+                        // Update the duration cell using data attribute selector
+                        const durationCell = row?.querySelector('td[data-role="duration"]');
+                        if (durationCell && result.data) {
+                          const duration = result.data.durationManual || result.data.duration || 0;
+                          const durationInput = durationCell.querySelector('.duration-input') as HTMLInputElement;
+                          if (durationInput) {
+                            const hours = Math.floor(duration / 3600);
+                            const minutes = Math.floor((duration % 3600) / 60);
+                            durationInput.value = `${hours}h ${minutes}m`;
+                          }
+                        }
+                        
+                        // Update the time input values to reflect the new data
+                        if (result.data && row) {
+                          const startTimeInput = row.querySelector('input[data-time-type="start"]') as HTMLInputElement;
+                          const endTimeInput = row.querySelector('input[data-time-type="end"]') as HTMLInputElement;
+                          
+                          if (startTimeInput && result.data.startTime) {
+                            const startDate = new Date(result.data.startTime);
+                            startTimeInput.value = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(startDate);
+                            // Re-enable start time input since we now have a start time
+                            startTimeInput.readOnly = false;
+                            startTimeInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
+                            startTimeInput.title = 'Click to edit start time';
+                          } else if (startTimeInput && !result.data.startTime) {
+                            startTimeInput.value = '--:-- --';
+                          }
+                          
+                          if (endTimeInput && result.data.endTime) {
+                            const endDate = new Date(result.data.endTime);
+                            endTimeInput.value = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(endDate);
+                            // Re-enable end time input since we now have an end time
+                            endTimeInput.readOnly = false;
+                            endTimeInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
+                            endTimeInput.title = 'Click to edit end time';
+                          } else if (endTimeInput && !result.data.endTime) {
+                            endTimeInput.value = '--:-- --';
+                          }
+                        }
+                        
+                        // Update the edit button's data-entry payload so subsequent edits use fresh values
+                        if (editBtn && result.data) {
+                          editBtn.setAttribute('data-entry', JSON.stringify(result.data));
+                        }
+                        
+                        // Show success feedback
+                        this.style.borderColor = '#10B981';
+                        this.style.backgroundColor = '#F0FDF4';
+                        setTimeout(() => {
+                          this.style.borderColor = '';
+                          this.style.backgroundColor = '';
+                        }, 1500);
+                      } else {
+                        const error = await response.json();
+                        
+                        if (response.status === 401) {
+                          // Authentication error - redirect to login
+                          alert('Your session has expired. Please log in again.');
+                          window.location.href = '/login';
+                          return;
+                        }
+                        
+                        // Show error state
+                        this.style.borderColor = '#EF4444';
+                        this.style.backgroundColor = '#FEF2F2';
+                        alert(`Error: ${error.error}`);
+                        setTimeout(() => {
+                          this.style.borderColor = '';
+                          this.style.backgroundColor = '';
+                        }, 2000);
+                        // Reset to original value on error
+                        this.focus();
+                      }
+                    } catch (error) {
+                      console.error('Error updating time:', error);
+                      // Reset styling on error
+                      this.style.borderColor = '';
+                      this.style.backgroundColor = '';
+                      console.error('Error updating time. Please check your input and try again.');
+                      this.focus();
+                    }
+                  });
+                  
+                  // Handle Enter key
+                  timeInput.addEventListener('keydown', function(e: KeyboardEvent) {
+                    if (e.key === 'Enter') {
+                      (e.target as HTMLInputElement).blur();
+                    }
+                  });
+                  
+                  // Mark as having listeners attached
+                  timeInput.setAttribute('data-listeners-attached', 'true');
+                }
+              });
+            }
+            
+            // Check if duration inputs were added
+            const durationInputs = document.querySelectorAll('.duration-input');
+            if (durationInputs.length > 0) {
+              console.log('MutationObserver: Re-attaching duration input handlers');
+              handleDurationInputChange();
+            }
+            
+            // Check if notes inputs were added
+            const notesInputs = document.querySelectorAll('.notes-input');
+            if (notesInputs.length > 0) {
+              console.log('MutationObserver: Re-attaching notes input handlers');
+              handleNotesInputChange();
+            }
+            
+            // Check if date inputs were added
+            const dateInputs = document.querySelectorAll('.date-input');
+            if (dateInputs.length > 0) {
+              console.log('MutationObserver: Re-attaching date input handlers');
+              handleDateInputChange();
+              initializeFlatpickr();
+            }
+          }
+        });
+      });
+
+      // Start observing the table for changes
+      const tableContainer = document.querySelector('tbody');
+      if (tableContainer) {
+        observer.observe(tableContainer, {
+          childList: true,
+          subtree: true
+        });
+      }
 
       // Helper functions for filters
       function checkSearchFilter(row: HTMLElement): boolean {
@@ -1165,8 +1978,9 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
       }
 
       function checkWeekFilter(row: HTMLElement): boolean {
-        const dateCell = row.querySelector('td:nth-child(4)');
-        const dateText = dateCell?.textContent?.trim() || '';
+        const dateCell = row.querySelector('td:nth-child(3)'); // Updated to match new column structure
+        const dateInput = dateCell?.querySelector('.date-input') as HTMLInputElement;
+        const dateText = dateInput?.value || '';
         const entryDate = new Date(dateText);
         
         const weekEnd = new Date(currentWeekStart);
@@ -1184,17 +1998,10 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
         return !selectedClient || clientName === selectedClient;
       }
 
-      function checkTaskFilter(row: HTMLElement): boolean {
-        const taskFilter = document.getElementById('taskFilter') as HTMLSelectElement;
-        const selectedTask = taskFilter?.value || '';
-        const taskName = row.querySelector('td:nth-child(3)')?.textContent?.trim() || '';
-        return !selectedTask || taskName === selectedTask;
-      }
 
       // Search functionality
       const searchInput = document.getElementById('search');
       const clientFilter = document.getElementById('clientFilter');
-      const taskFilter = document.getElementById('taskFilter');
 
       if (searchInput) {
         searchInput.addEventListener('input', (e) => {
@@ -1207,9 +2014,8 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             const matchesSearch = text.includes(searchTerm);
             const matchesWeek = checkWeekFilter(row as HTMLElement);
             const matchesClient = checkClientFilter(row as HTMLElement);
-            const matchesTask = checkTaskFilter(row as HTMLElement);
             
-            (row as HTMLElement).style.display = (matchesSearch && matchesWeek && matchesClient && matchesTask) ? '' : 'none';
+            (row as HTMLElement).style.display = (matchesSearch && matchesWeek && matchesClient) ? '' : 'none';
           });
           
           updateResultsCounter();
@@ -1227,34 +2033,14 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             const matchesSearch = checkSearchFilter(row as HTMLElement);
             const matchesWeek = checkWeekFilter(row as HTMLElement);
             const matchesClient = !selectedClient || row.querySelector('td:nth-child(1)')?.textContent?.trim() === selectedClient;
-            const matchesTask = checkTaskFilter(row as HTMLElement);
             
-            (row as HTMLElement).style.display = (matchesSearch && matchesWeek && matchesClient && matchesTask) ? '' : 'none';
+            (row as HTMLElement).style.display = (matchesSearch && matchesWeek && matchesClient) ? '' : 'none';
           });
           
           updateResultsCounter();
         });
       }
 
-      // Task filter functionality
-      if (taskFilter) {
-        taskFilter.addEventListener('change', (e) => {
-          const target = e.target as HTMLSelectElement;
-          const selectedTask = target.value;
-          const rows = document.querySelectorAll('tbody tr');
-          
-          rows.forEach(row => {
-            const matchesSearch = checkSearchFilter(row as HTMLElement);
-            const matchesWeek = checkWeekFilter(row as HTMLElement);
-            const matchesClient = checkClientFilter(row as HTMLElement);
-            const matchesTask = !selectedTask || row.querySelector('td:nth-child(3)')?.textContent?.trim() === selectedTask;
-            
-            (row as HTMLElement).style.display = (matchesSearch && matchesWeek && matchesClient && matchesTask) ? '' : 'none';
-          });
-          
-          updateResultsCounter();
-        });
-      }
     });
 
     // Export CSV functionality
@@ -1417,10 +2203,12 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
       const rows = Array.from(tbody.querySelectorAll('tr'));
       
       rows.sort((a, b) => {
-        const dateCellA = a.querySelector('td:nth-child(4)') as HTMLElement;
-        const dateCellB = b.querySelector('td:nth-child(4)') as HTMLElement;
-        const dateTextA = dateCellA?.textContent?.trim() || '';
-        const dateTextB = dateCellB?.textContent?.trim() || '';
+        const dateCellA = a.querySelector('td:nth-child(3)') as HTMLElement; // Updated to match new column structure
+        const dateCellB = b.querySelector('td:nth-child(3)') as HTMLElement; // Updated to match new column structure
+        const dateInputA = dateCellA?.querySelector('.date-input') as HTMLInputElement;
+        const dateInputB = dateCellB?.querySelector('.date-input') as HTMLInputElement;
+        const dateTextA = dateInputA?.value || '';
+        const dateTextB = dateInputB?.value || '';
         
         const dateA = new Date(dateTextA);
         const dateB = new Date(dateTextB);
@@ -1845,61 +2633,15 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             return;
           }
           
-          // Create datetime objects using the selected date (local) for validation
-          const taskDate = new Date(editTimesDateInput.value);
-          const startDateTime = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), startParsedTime.hours, startParsedTime.minutes, 0, 0);
-          const endDateTime = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate(), endParsedTime.hours, endParsedTime.minutes, 0, 0);
           
-          // Smart time validation for day-to-day usage
-          function validateModalTimeEntry(startTime: Date, endTime: Date): boolean {
-            const startHours = startTime.getHours();
-            const endHours = endTime.getHours();
-            
-            // Calculate time difference in hours
-            const timeDiff = Math.abs(endTime.getTime() - startTime.getTime());
-            const hoursDiff = timeDiff / (1000 * 60 * 60);
-            
-            // For typical business hours (8am-10pm), assume same-day entries
-            const isBusinessHours = (startHours >= 8 && startHours <= 22) && (endHours >= 8 && endHours <= 22);
-            
-            // For late night/early morning hours (10pm-8am), be more careful about day boundaries
-            const isLateNight = (startHours >= 22 || startHours <= 8) || (endHours >= 22 || endHours <= 8);
-            
-            if (isBusinessHours) {
-              // For business hours, be strict about time order but allow reasonable edits
-              if (endTime <= startTime) {
-                // Only allow if the time difference is very small (likely same day, minor edit)
-                return hoursDiff <= 0.5; // Allow up to 30 minutes difference for business hours
-              }
-              return true; // Allow the change for business hours
-            } else if (isLateNight) {
-              // For late night entries, be more permissive but still validate obvious errors
-              if (endTime <= startTime) {
-                return hoursDiff <= 1; // Allow up to 1 hour difference for late night
-              }
-              return true; // Allow late night entries
-            }
-            
-            // For other cases, use standard validation
-            return endTime > startTime;
-          }
+          // Create datetime objects using local date construction
+          const [year, month, day] = editTimesDateInput.value.split('-').map(Number);
+          const startDateTime = new Date(year, month - 1, day, startParsedTime.hours, startParsedTime.minutes, 0, 0);
+          const endDateTime = new Date(year, month - 1, day, endParsedTime.hours, endParsedTime.minutes, 0, 0);
           
-          // Validate that end time is after start time
-          if (!validateModalTimeEntry(startDateTime, endDateTime)) {
-            alert('End time must be after start time');
-            submitButton.disabled = false;
-            saveButtonText.textContent = originalText;
-            saveButtonSpinner.classList.add('hidden');
-            return;
-          }
-          
-          // Send components and client timezone offset to avoid timezone shifts on server
-          updateData.startHours = startParsedTime.hours;
-          updateData.startMinutes = startParsedTime.minutes;
-          updateData.endHours = endParsedTime.hours;
-          updateData.endMinutes = endParsedTime.minutes;
+          updateData.startTime = startDateTime.toISOString();
+          updateData.endTime = endDateTime.toISOString();
           updateData.taskDate = editTimesDateInput.value;
-          updateData.tzOffsetMinutes = new Date().getTimezoneOffset();
           // Clear manual duration since we're now using start/end times
           updateData.durationManual = null;
         } else {
@@ -1910,7 +2652,17 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             saveButtonSpinner.classList.add('hidden');
             return;
           }
-          updateData.duration = durationInput.value;
+          // Parse the duration input and convert to server format
+          const parsedDuration = parseFlexibleDuration(durationInput.value);
+          if (!parsedDuration) {
+            alert('Please enter a valid duration format (e.g., 2h 30m, 2.5h, 150m, 2:30)');
+            submitButton.disabled = false;
+            saveButtonText.textContent = originalText;
+            saveButtonSpinner.classList.add('hidden');
+            return;
+          }
+          
+          updateData.durationManual = parsedDuration;
           updateData.taskDate = editDurationDateInput.value;
           // Clear start and end times for manual duration entries
           updateData.startTime = null;
