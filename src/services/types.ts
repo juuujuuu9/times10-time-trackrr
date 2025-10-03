@@ -47,6 +47,7 @@ export interface UpdateTimeEntryRequest {
   taskDate?: string;
   tzOffsetMinutes?: number;
   duration?: string;
+  durationManual?: number;
   taskId?: number;
   notes?: string;
 }

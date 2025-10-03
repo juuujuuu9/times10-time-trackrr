@@ -667,15 +667,31 @@ const user = await requireAuth('/')(Astro) as any;
         updateRecentEntries([], []);
       }
 
-      // Load today's stats
-      const todayStatsResponse = await fetch('/api/reports/today-stats?userId=' + encodeURIComponent(userId));
+      // Load today's stats using the same API as Timer component
+      const today = new Date();
+      const startOfToday = new Date(today);
+      startOfToday.setHours(0, 0, 0, 0);
+      const endOfToday = new Date(today);
+      endOfToday.setHours(23, 59, 59, 999);
+      
+      const todayStatsResponse = await fetch(`/api/reports/daily-duration-totals?userId=${encodeURIComponent(userId)}&startDate=${encodeURIComponent(startOfToday.toISOString())}&endDate=${encodeURIComponent(endOfToday.toISOString())}`);
       if (todayStatsResponse.ok) {
         const todayStatsData = await todayStatsResponse.json();
         updateTodayStats(todayStatsData);
       }
 
-      // Load weekly stats
-      const statsResponse = await fetch('/api/reports/weekly-stats?userId=' + encodeURIComponent(userId));
+      // Load weekly stats using the same API as Timer component
+      const now = new Date();
+      const dayOfWeek = now.getDay();
+      const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek;
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - daysToSubtract);
+      weekStart.setHours(0, 0, 0, 0);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
+      
+      const statsResponse = await fetch(`/api/reports/daily-duration-totals?userId=${encodeURIComponent(userId)}&startDate=${encodeURIComponent(weekStart.toISOString())}&endDate=${encodeURIComponent(weekEnd.toISOString())}`);
       if (statsResponse.ok) {
         const statsData = await statsResponse.json();
         updateWeeklyStats(statsData);
@@ -992,9 +1008,14 @@ const user = await requireAuth('/')(Astro) as any;
   function updateTodayStats(stats: any) {
     const todayHours = document.getElementById('todayHours');
 
-    if (todayHours && stats.success) {
+    if (todayHours && stats.weekTotals) {
+      // Get today's total from the weekTotals array
+      const today = new Date();
+      const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      const todayTotal = stats.weekTotals[dayOfWeek]?.totalSeconds || 0;
+      
       // Convert seconds to hours for display
-      const hoursFromSeconds = (stats.data.totalHours || 0) / 3600;
+      const hoursFromSeconds = todayTotal / 3600;
       todayHours.textContent = formatHours(hoursFromSeconds);
     }
   }
@@ -1003,15 +1024,27 @@ const user = await requireAuth('/')(Astro) as any;
     const weeklyHours = document.getElementById('weeklyHours');
     const weeklyTitle = document.getElementById('weeklyTitle');
 
-    if (weeklyHours) {
+    if (weeklyHours && stats.weekTotals) {
+      // Sum up all days in the week
+      const totalSeconds = stats.weekTotals.reduce((sum: number, day: any) => sum + (day.totalSeconds || 0), 0);
+      
       // Convert seconds to hours for display
-      const hoursFromSeconds = (stats.totalHours || 0) / 3600;
+      const hoursFromSeconds = totalSeconds / 3600;
       weeklyHours.textContent = formatHours(hoursFromSeconds);
     }
 
-    if (weeklyTitle && stats.dateRangeDisplay) {
-      // Update the title to show the date range
-      weeklyTitle.textContent = `This Week (${stats.dateRangeDisplay})`;
+    if (weeklyTitle && stats.startDate && stats.endDate) {
+      // Format date range for display (e.g., "9/14-9/20")
+      const formatDateForDisplay = (date: Date) => {
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        return `${month}/${day}`;
+      };
+      
+      const startDate = new Date(stats.startDate);
+      const endDate = new Date(stats.endDate);
+      const dateRangeDisplay = `${formatDateForDisplay(startDate)}-${formatDateForDisplay(endDate)}`;
+      weeklyTitle.textContent = `This Week (${dateRangeDisplay})`;
     }
   }
 
@@ -1042,15 +1075,31 @@ const user = await requireAuth('/')(Astro) as any;
     // Update stats every 30 seconds to reflect ongoing timer progress
     realTimeUpdateInterval = setInterval(async () => {
       try {
-        // Update today's stats
-        const todayStatsResponse = await fetch('/api/reports/today-stats?userId=' + encodeURIComponent(userId));
+        // Update today's stats using the same API as Timer component
+        const today = new Date();
+        const startOfToday = new Date(today);
+        startOfToday.setHours(0, 0, 0, 0);
+        const endOfToday = new Date(today);
+        endOfToday.setHours(23, 59, 59, 999);
+        
+        const todayStatsResponse = await fetch(`/api/reports/daily-duration-totals?userId=${encodeURIComponent(userId)}&startDate=${encodeURIComponent(startOfToday.toISOString())}&endDate=${encodeURIComponent(endOfToday.toISOString())}`);
         if (todayStatsResponse.ok) {
           const todayStatsData = await todayStatsResponse.json();
           updateTodayStats(todayStatsData);
         }
 
-        // Update weekly stats
-        const statsResponse = await fetch('/api/reports/weekly-stats?userId=' + encodeURIComponent(userId));
+        // Update weekly stats using the same API as Timer component
+        const now = new Date();
+        const dayOfWeek = now.getDay();
+        const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek;
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - daysToSubtract);
+        weekStart.setHours(0, 0, 0, 0);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        weekEnd.setHours(23, 59, 59, 999);
+        
+        const statsResponse = await fetch(`/api/reports/daily-duration-totals?userId=${encodeURIComponent(userId)}&startDate=${encodeURIComponent(weekStart.toISOString())}&endDate=${encodeURIComponent(weekEnd.toISOString())}`);
         if (statsResponse.ok) {
           const statsData = await statsResponse.json();
           updateWeeklyStats(statsData);

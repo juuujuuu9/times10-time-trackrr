@@ -247,6 +247,13 @@ export class TimeEntryService {
         ? TimezoneService.createUserDate(request.taskDate, 12, 0)
         : entry.startTime;
       updateData.endTime = null;
+    } else if (typeof request.durationManual === 'number') {
+      // Direct duration manual entry
+      updateData.durationManual = request.durationManual;
+      updateData.startTime = request.taskDate 
+        ? TimezoneService.createUserDate(request.taskDate, 12, 0)
+        : entry.startTime;
+      updateData.endTime = null;
     }
 
     // Handle other fields

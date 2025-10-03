@@ -13,3 +13,37 @@
 - For sortable tables that auto-refresh, ensure ALL update paths (modal, inline, date picker) trigger the same refresh mechanism.
 - When debugging auto-refresh issues, add console.log statements to track: update trigger → loadDashboardData() → updateRecentEntries() → MutationObserver re-attachment.
 - Dashboard tables with dynamic content need MutationObserver to re-attach event listeners after DOM replacement.
+
+# Development Efficiency Rules
+
+## Avoid Overcomplication
+- Start with simple solutions and add complexity only when needed
+- Don't add server-side filtering unless there's a clear performance need (e.g., thousands of entries)
+- Keep parsing logic focused on common use cases (80/20 rule)
+- Don't add features "just in case" - wait for actual user needs
+
+## UI Structure Changes
+- When changing from text to input fields, search for ALL references to the old structure
+- Update filtering, sorting, and validation logic to work with new structure
+- Test all related functionality after structural changes
+- Always check if filtering logic reads from the correct DOM properties (`value` vs `textContent`)
+
+## Event Handlers and Data Flow
+- When adding new event handlers, ensure they trigger all related updates (filtering, sorting, validation)
+- When adding new features, trace the complete data flow from UI to API to database
+- Ensure all related functions (filtering, sorting, validation) are updated together
+- Test the complete user journey, not just individual components
+
+## Debugging and Development
+- Remove debugging code immediately after fixing issues
+- Use proper debugging tools instead of console.log in production
+- Fix TypeScript linting errors immediately - they often reveal logical issues
+- When using dynamic content, ensure all event handlers are re-attached properly
+
+## API Consistency and Data Accuracy
+- When multiple components display the same data (e.g., dashboard sidebar vs timer list), use the SAME API endpoints
+- If one component shows accurate data and another doesn't, align the inaccurate one with the accurate one's API calls
+- Avoid creating separate API endpoints for similar data - prefer reusing existing endpoints with parameters
+- When debugging data discrepancies, check which API endpoints each component uses first
+- If API endpoints have different filtering logic (e.g., including/excluding ongoing timers), document this clearly
+- Prefer the simpler, more consistent API approach over creating new endpoints

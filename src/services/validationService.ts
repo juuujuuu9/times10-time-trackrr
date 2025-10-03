@@ -152,8 +152,9 @@ export class ValidationService {
     const hasStartTime = request.startTime || (typeof request.startHours === 'number' && typeof request.startMinutes === 'number');
     const hasEndTime = request.endTime || (typeof request.endHours === 'number' && typeof request.endMinutes === 'number');
     const hasDuration = !!request.duration;
+    const hasDurationManual = typeof request.durationManual === 'number';
 
-    if (!hasStartTime && !hasEndTime && !hasDuration && !request.taskId && request.notes === undefined) {
+    if (!hasStartTime && !hasEndTime && !hasDuration && !hasDurationManual && !request.taskId && request.notes === undefined) {
       return { isValid: false, error: 'At least one field must be provided for update' };
     }
 
