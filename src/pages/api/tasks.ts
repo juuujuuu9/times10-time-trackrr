@@ -55,28 +55,27 @@ export const GET: APIRoute = async ({ url }) => {
 
     const tasksWithEntries = assignedTo ? await db
       .select({
-        id: tasks.id,
-        name: tasks.name,
-        description: tasks.description,
-        status: tasks.status,
-        archived: tasks.archived,
-        createdAt: tasks.createdAt,
-        updatedAt: tasks.updatedAt,
+        id: projects.id,
+        name: projects.name,
+        description: sql<string>`''`.as('description'),
+        status: sql<string>`'active'`.as('status'),
+        archived: projects.archived,
+        createdAt: projects.createdAt,
+        updatedAt: projects.updatedAt,
         projectName: projects.name,
         projectId: projects.id,
         clientName: clients.name,
         clientId: clients.id
       })
       .from(timeEntries)
-      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(projects, eq(timeEntries.projectId, projects.id))
       .innerJoin(clients, eq(projects.clientId, clients.id))
       .where(and(
         eq(timeEntries.userId, parseInt(assignedTo)),
-        eq(tasks.archived, false),
-        sql`COALESCE(${tasks.isSystem}, false) = false`
+        eq(projects.archived, false)
       ))
-      .orderBy(tasks.createdAt)
+      .groupBy(projects.id, projects.name, projects.archived, projects.createdAt, projects.updatedAt, clients.name, clients.id)
+      .orderBy(projects.createdAt)
       .limit(limit) : [];
 
     // 3) If not assignedOnly, include ALL non-archived, non-system tasks regardless of assignment

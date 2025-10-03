@@ -158,7 +158,7 @@ if (selectedProject || selectedClient) {
       ), 0)`.as('total_seconds')
     })
     .from(timeEntries)
-    .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+    .innerJoin(projects, eq(timeEntries.projectId, projects.id))
     .innerJoin(projects, eq(tasks.projectId, projects.id))
     .innerJoin(clients, eq(projects.clientId, clients.id))
     .where(dateFilter);
@@ -192,7 +192,7 @@ if (selectedProject || selectedClient) {
     })
     .from(timeEntries)
     .innerJoin(users, sql`${timeEntries.userId} = ${users.id}`)
-    .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+    .innerJoin(projects, eq(timeEntries.projectId, projects.id))
     .innerJoin(projects, eq(tasks.projectId, projects.id))
     .innerJoin(clients, eq(projects.clientId, clients.id))
     .where(dateFilter);
@@ -220,7 +220,7 @@ if (selectedProject || selectedClient) {
       count: count(sql`DISTINCT ${timeEntries.userId}`)
     })
     .from(timeEntries)
-    .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+    .innerJoin(projects, eq(timeEntries.projectId, projects.id))
     .innerJoin(projects, eq(tasks.projectId, projects.id))
     .innerJoin(clients, eq(projects.clientId, clients.id))
     .where(dateFilter);

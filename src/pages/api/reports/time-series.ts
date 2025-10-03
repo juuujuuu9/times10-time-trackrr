@@ -117,17 +117,11 @@ export const GET: APIRoute = async ({ url, request }) => {
     }
 
     if (projectId) {
-      filterConditions.push(sql`${timeEntries.taskId} IN (
-        SELECT id FROM tasks WHERE project_id = ${parseInt(projectId)} AND archived = false
-      )`);
+      filterConditions.push(sql`${timeEntries.projectId} = ${parseInt(projectId)}`);
     }
 
     if (clientId) {
-      filterConditions.push(sql`${timeEntries.taskId} IN (
-        SELECT t.id FROM tasks t 
-        INNER JOIN projects p ON t.project_id = p.id 
-        WHERE p.client_id = ${parseInt(clientId)} AND p.archived = false AND t.archived = false
-      )`);
+      filterConditions.push(sql`${projects.clientId} = ${parseInt(clientId)}`);
     }
 
     const dateFilter = and(...filterConditions);
@@ -155,8 +149,7 @@ export const GET: APIRoute = async ({ url, request }) => {
       })
       .from(timeEntries)
       .innerJoin(users, eq(timeEntries.userId, users.id))
-      .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-      .innerJoin(projects, eq(tasks.projectId, projects.id))
+      .innerJoin(projects, eq(timeEntries.projectId, projects.id))
       .innerJoin(clients, eq(projects.clientId, clients.id))
       .where(dateFilter)
       .groupBy(sql`DATE(${timeEntries.startTime})`)

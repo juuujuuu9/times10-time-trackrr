@@ -32,16 +32,14 @@ export async function getWeeklyTimeEntries() {
       durationManual: timeEntries.durationManual,
       notes: timeEntries.notes,
       userId: timeEntries.userId,
-      taskId: timeEntries.taskId,
+      projectId: timeEntries.projectId,
       userName: users.name,
       userPayRate: users.payRate,
-      taskName: tasks.name,
       projectName: projects.name,
     })
     .from(timeEntries)
     .innerJoin(users, eq(timeEntries.userId, users.id))
-    .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-    .innerJoin(projects, eq(tasks.projectId, projects.id))
+    .innerJoin(projects, eq(timeEntries.projectId, projects.id))
     .innerJoin(clients, eq(projects.clientId, clients.id))
     .where(
       and(
@@ -52,7 +50,6 @@ export async function getWeeklyTimeEntries() {
         )`,
         eq(clients.archived, false),
         eq(projects.archived, false),
-        eq(tasks.archived, false),
         // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
         sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
       )
@@ -77,8 +74,7 @@ export async function getWeeklyTotals() {
       ), 0)`.as('total_seconds')
     })
     .from(timeEntries)
-    .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-    .innerJoin(projects, eq(tasks.projectId, projects.id))
+    .innerJoin(projects, eq(timeEntries.projectId, projects.id))
     .innerJoin(clients, eq(projects.clientId, clients.id))
     .where(
       and(
@@ -89,7 +85,6 @@ export async function getWeeklyTotals() {
         )`,
         eq(clients.archived, false),
         eq(projects.archived, false),
-        eq(tasks.archived, false),
         // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
         sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
       )
@@ -108,8 +103,7 @@ export async function getWeeklyTotals() {
     })
     .from(timeEntries)
     .innerJoin(users, eq(timeEntries.userId, users.id))
-    .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-    .innerJoin(projects, eq(tasks.projectId, projects.id))
+    .innerJoin(projects, eq(timeEntries.projectId, projects.id))
     .innerJoin(clients, eq(projects.clientId, clients.id))
     .where(
       and(
@@ -120,7 +114,6 @@ export async function getWeeklyTotals() {
         )`,
         eq(clients.archived, false),
         eq(projects.archived, false),
-        eq(tasks.archived, false),
         // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
         sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
       )
@@ -132,8 +125,7 @@ export async function getWeeklyTotals() {
       count: count(sql`DISTINCT ${timeEntries.userId}`)
     })
     .from(timeEntries)
-    .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-    .innerJoin(projects, eq(tasks.projectId, projects.id))
+    .innerJoin(projects, eq(timeEntries.projectId, projects.id))
     .innerJoin(clients, eq(projects.clientId, clients.id))
     .where(
       and(
@@ -144,7 +136,6 @@ export async function getWeeklyTotals() {
         )`,
         eq(clients.archived, false),
         eq(projects.archived, false),
-        eq(tasks.archived, false),
         // Exclude ongoing timers (entries with startTime but no endTime)
         sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL)`
       )
@@ -165,7 +156,6 @@ export async function getProjectCosts(startDate: Date, endDate: Date, teamMember
       clientId: clients.id,
       projectName: projects.name,
       clientName: clients.name,
-      taskName: tasks.name,
       totalCost: canViewFinancialData 
         ? sql<number>`COALESCE(SUM(
             CASE 
@@ -185,8 +175,7 @@ export async function getProjectCosts(startDate: Date, endDate: Date, teamMember
     })
     .from(timeEntries)
     .innerJoin(users, eq(timeEntries.userId, users.id))
-    .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-    .innerJoin(projects, eq(tasks.projectId, projects.id))
+    .innerJoin(projects, eq(timeEntries.projectId, projects.id))
     .innerJoin(clients, eq(projects.clientId, clients.id))
     .where(
       teamMemberId 
@@ -199,7 +188,6 @@ export async function getProjectCosts(startDate: Date, endDate: Date, teamMember
             eq(timeEntries.userId, teamMemberId),
             eq(clients.archived, false),
             eq(projects.archived, false),
-            eq(tasks.archived, false),
             // Exclude ongoing timers (entries with startTime but no endTime)
             sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL)`
           )
@@ -211,12 +199,11 @@ export async function getProjectCosts(startDate: Date, endDate: Date, teamMember
             )`,
             eq(clients.archived, false),
             eq(projects.archived, false),
-            eq(tasks.archived, false),
             // Exclude ongoing timers (entries with startTime but no endTime)
             sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL)`
           )
     )
-    .groupBy(projects.id, projects.name, clients.id, clients.name, tasks.id, tasks.name)
+    .groupBy(projects.id, projects.name, clients.id, clients.name)
     .having(sql`COALESCE(SUM(
       CASE 
         WHEN ${timeEntries.endTime} IS NOT NULL 
@@ -224,7 +211,7 @@ export async function getProjectCosts(startDate: Date, endDate: Date, teamMember
         ELSE ROUND((COALESCE(${timeEntries.durationManual}, 0) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
       END
     ), 0) > 0`)
-    .orderBy(clients.name, projects.name, tasks.name);
+    .orderBy(clients.name, projects.name);
 }
 
 // Get client costs for a specific time period
@@ -253,8 +240,7 @@ export async function getClientCosts(startDate: Date, endDate: Date, teamMemberI
     })
     .from(timeEntries)
     .innerJoin(users, eq(timeEntries.userId, users.id))
-    .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
-    .innerJoin(projects, eq(tasks.projectId, projects.id))
+    .innerJoin(projects, eq(timeEntries.projectId, projects.id))
     .innerJoin(clients, eq(projects.clientId, clients.id))
     .where(
       teamMemberId 
@@ -267,7 +253,6 @@ export async function getClientCosts(startDate: Date, endDate: Date, teamMemberI
             eq(timeEntries.userId, teamMemberId),
             eq(clients.archived, false),
             eq(projects.archived, false),
-            eq(tasks.archived, false),
             // Exclude ongoing timers (entries with startTime but no endTime)
             sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL)`
           )
@@ -279,7 +264,6 @@ export async function getClientCosts(startDate: Date, endDate: Date, teamMemberI
             )`,
             eq(clients.archived, false),
             eq(projects.archived, false),
-            eq(tasks.archived, false),
             // Exclude ongoing timers (entries with startTime but no endTime)
             sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL)`
           )

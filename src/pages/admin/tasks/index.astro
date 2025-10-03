@@ -23,7 +23,7 @@ const allTasks = await db
   .leftJoin(clients, sql`${projects.clientId} = ${clients.id}`)
   .leftJoin(taskAssignments, sql`${tasks.id} = ${taskAssignments.taskId}`)
   .leftJoin(users, sql`${taskAssignments.userId} = ${users.id}`)
-  .leftJoin(timeEntries, sql`${tasks.id} = ${timeEntries.taskId}`)
+  .leftJoin(timeEntries, sql`${projects.id} = ${timeEntries.projectId}`)
   .groupBy(tasks.id, projects.name, clients.name)
   .orderBy(clients.name, projects.name, tasks.name);
 

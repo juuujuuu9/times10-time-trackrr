@@ -47,3 +47,40 @@
 - When debugging data discrepancies, check which API endpoints each component uses first
 - If API endpoints have different filtering logic (e.g., including/excluding ongoing timers), document this clearly
 - Prefer the simpler, more consistent API approach over creating new endpoints
+
+# Database Schema Changes & Migration Rules
+
+## Critical Database Migration Workflow
+- When renaming database columns, ALWAYS run the migration immediately after code changes
+- Use `grep -r "oldColumnName" src/` to find ALL references before making changes
+- Search for both camelCase (taskId) and snake_case (task_id) versions
+- Test ALL admin pages after database migrations: /admin/clients, /admin/time-entries, /admin/reports, /admin/tasks
+
+## SQL Query Validation
+- After modifying joins, validate SQL syntax - check for incomplete join conditions
+- Remove unnecessary table joins when schema changes eliminate the need for them
+- Test queries with actual database connections, not just code changes
+- Watch for "syntax error at or near 'group'" - usually indicates incomplete JOIN conditions
+
+## Environment & Configuration Issues
+- Always verify DATABASE_URL is properly formatted (no concatenated URLs)
+- Check for malformed .env files that can cause connection issues
+- Restart development server after environment variable changes
+
+## Error Pattern Recognition
+- "column does not exist" errors = schema mismatch between code and database
+- "syntax error at or near 'group'" = incomplete JOIN conditions
+- 500 errors on admin pages = usually database query issues
+- Port conflicts = kill existing processes before restarting
+
+## Code Update Patterns
+- When renaming database fields, update both the schema references AND the query logic
+- Remove references to tables that are no longer needed after schema changes
+- Update both the database queries AND the UI components that display the data
+- Check for duplicate joins that can cause SQL syntax errors
+
+## Testing & Validation
+- After database changes, test ALL affected endpoints
+- Use `curl -I` to quickly test HTTP status codes
+- Check server logs for detailed error information
+- Verify both the database schema AND the application code are in sync

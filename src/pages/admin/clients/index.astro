@@ -39,8 +39,7 @@ const allClients = await db
   .from(clients)
   .leftJoin(users, sql`${clients.createdBy} = ${users.id}`)
   .leftJoin(projects, sql`${clients.id} = ${projects.clientId}`)
-  .leftJoin(tasks, sql`${projects.id} = ${tasks.projectId}`)
-  .leftJoin(timeEntries, sql`${tasks.id} = ${timeEntries.taskId}`)
+  .leftJoin(timeEntries, sql`${projects.id} = ${timeEntries.projectId}`)
   .groupBy(clients.id, users.name, clients.archived)
   .orderBy(clients.name);
 ---
