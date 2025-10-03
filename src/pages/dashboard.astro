@@ -945,11 +945,12 @@ const user = await requireAuth('/')(Astro) as any;
                 <td class="table-column-separator px-4 py-3 text-sm text-gray-500 max-w-xs">
                   <input
                     type="text"
-                    class="notes-input w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    class="notes-input w-20 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ease-in-out"
                     data-entry-id="${entry.id}"
                     placeholder="Add Note"
                     value="${entry.notes || ''}"
                     title="Click to add or edit notes"
+                    style="width: 5rem;"
                   />
                 </td>
                 <td class="table-column-separator px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
@@ -3085,15 +3086,17 @@ const user = await requireAuth('/')(Astro) as any;
           return;
         }
         
-        // Store the original value when the input is focused
+        // Store the original value when the input is focused and expand width
         notesInput.addEventListener('focus', function() {
           this.setAttribute('data-original-value', this.value);
+          this.style.width = '12rem';
         });
         
         // Handle Enter key press
         notesInput.addEventListener('keydown', function(e) {
           if (e.key === 'Enter') {
             e.preventDefault();
+            this.style.width = '5rem'; // Shrink width immediately
             this.blur(); // Trigger the blur event to save
           }
         });
@@ -3101,6 +3104,9 @@ const user = await requireAuth('/')(Astro) as any;
         notesInput.addEventListener('blur', async function() {
           const entryId = this.getAttribute('data-entry-id');
           const notesValue = this.value.trim();
+          
+          // Shrink width back to 5rem
+          this.style.width = '5rem';
           
           // Skip if the value hasn't changed
           const originalValue = this.getAttribute('data-original-value');
