@@ -201,13 +201,17 @@ export default function Timer() {
 
     // Require selected week range
     if (!selectedWeekStart || !selectedWeekEnd) {
+      console.log('loadDailyDurationTotals: No selected week dates, skipping');
       return;
     }
+
+    console.log('loadDailyDurationTotals: Loading for week', selectedWeekStart.toISOString(), 'to', selectedWeekEnd.toISOString());
 
     try {
       const response = await fetch(`/api/reports/daily-duration-totals?userId=${currentUserId}&startDate=${encodeURIComponent(selectedWeekStart.toISOString())}&endDate=${encodeURIComponent(selectedWeekEnd.toISOString())}`);
       if (response.ok) {
         const data = await response.json();
+        console.log('loadDailyDurationTotals: Received data:', data.weekTotals);
         setDailyDurationTotals(data.weekTotals || []);
       } else {
         console.error('Failed to load daily duration totals:', response.status);
@@ -750,7 +754,7 @@ export default function Timer() {
         },
         body: JSON.stringify({
           userId: currentUserId,
-          taskId: taskId,
+          projectId: taskId, // taskId is actually projectId in this context
           date: targetDate.toISOString().split('T')[0],
           duration: serverDurationFormat
         }),
@@ -764,8 +768,10 @@ export default function Timer() {
         inputElement.style.borderStyle = 'solid';
         
         // Refresh the data to show updated durations
-        loadTaskDailyTotals();
-        loadDailyDurationTotals();
+        console.log('Duration edit successful, refreshing data...');
+        await loadTaskDailyTotals();
+        await loadDailyDurationTotals();
+        console.log('Data refresh completed');
         // Notify dashboard and other listeners to sync recent entries and totals
         window.dispatchEvent(new CustomEvent('timeEntryUpdated'));
         

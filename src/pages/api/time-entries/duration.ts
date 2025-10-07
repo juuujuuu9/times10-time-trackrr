@@ -71,12 +71,15 @@ export const GET: APIRoute = async ({ url }) => {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { userId, taskId, date, duration } = body;
+    const { userId, projectId, taskId, date, duration } = body;
 
-    if (!userId || !taskId || !date || !duration) {
+    // Use projectId if provided, otherwise fall back to taskId for backward compatibility
+    const finalProjectId = projectId || taskId;
+    
+    if (!userId || !finalProjectId || !date || !duration) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Missing required fields: userId, taskId, date, duration'
+        error: 'Missing required fields: userId, projectId (or taskId), date, duration'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -110,7 +113,7 @@ export const POST: APIRoute = async ({ request }) => {
       .where(
         and(
           eq(timeEntries.userId, userId),
-          eq(timeEntries.projectId, taskId),
+          eq(timeEntries.projectId, finalProjectId),
           // More precise date matching
           sql`(
             (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${targetDateStart} AND ${timeEntries.startTime} <= ${targetDateEnd})
@@ -159,7 +162,7 @@ export const POST: APIRoute = async ({ request }) => {
       // Create new time entry with manual duration
       const newEntry = {
         userId,
-        projectId: taskId,
+        projectId: finalProjectId,
         startTime,
         endTime,
         durationManual: parsedDuration,
