@@ -17,9 +17,9 @@ import {
   TimeEntriesResponse,
   TimeEntryResponse,
   ApiResponse,
-  TimeEntriesResponseSchema,
-  TimeEntryResponseSchema,
-  ApiResponseSchema,
+  TimeEntriesResponse as TimeEntriesResponseSchema,
+  TimeEntryResponse as TimeEntryResponseSchema,
+  ApiResponse as ApiResponseSchema,
 } from "./schemas";
 
 // HTTP client wrapper with auth and retry logic
