@@ -1,0 +1,576 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getSessionUser } from '../../utils/session';
+import { db } from '../../db';
+import { users, clients, projects, timeEntries } from '../../db/schema';
+import { eq, and, sql } from 'drizzle-orm';
+
+// Get the selected time period from query params, default to 'week'
+const period = Astro.url.searchParams.get('period') || 'week';
+
+// Get current user to check permissions
+const currentUser = await getSessionUser(Astro);
+const canViewFinancialData = currentUser ? currentUser.role === 'admin' : false;
+
+// Calculate date range based on period
+const now = new Date();
+let startDate: Date | null = null;
+let endDate: Date | null = null;
+
+switch (period) {
+  case 'all':
+    startDate = null;
+    endDate = null;
+    break;
+  case 'today':
+    startDate = new Date(now);
+    startDate.setHours(0, 0, 0, 0);
+    endDate = new Date(now);
+    endDate.setHours(23, 59, 59, 999);
+    break;
+  case 'week':
+    const dayOfWeek = now.getDay();
+    const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek;
+    startDate = new Date(now);
+    startDate.setDate(now.getDate() - daysToSubtract);
+    startDate.setHours(0, 0, 0, 0);
+    endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 6);
+    endDate.setHours(23, 59, 59, 999);
+    break;
+  case 'month':
+    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    break;
+  default:
+    startDate = new Date(now);
+    startDate.setDate(now.getDate() - 7);
+    startDate.setHours(0, 0, 0, 0);
+    endDate = new Date(now);
+    endDate.setHours(23, 59, 59, 999);
+}
+
+// Build filter conditions
+let filterConditions = [
+  eq(clients.archived, false),
+  eq(projects.archived, false)
+];
+
+// Add date filter
+if (startDate && endDate) {
+  filterConditions.push(sql`(
+    (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate})
+    OR 
+    (${timeEntries.startTime} IS NULL AND ${timeEntries.createdAt} >= ${startDate} AND ${timeEntries.createdAt} <= ${endDate})
+  )`);
+}
+
+const dateFilter = and(...filterConditions);
+
+// Get time entries with all details
+const timeEntriesWithDetails = await db
+  .select({
+    id: timeEntries.id,
+    userId: timeEntries.userId,
+    projectId: timeEntries.projectId,
+    startTime: timeEntries.startTime,
+    endTime: timeEntries.endTime,
+    durationManual: timeEntries.durationManual,
+    notes: timeEntries.notes,
+    createdAt: timeEntries.createdAt,
+    userName: users.name,
+    userEmail: users.email,
+    userPayRate: users.payRate,
+    projectName: projects.name,
+    clientName: clients.name
+  })
+  .from(timeEntries)
+  .innerJoin(users, eq(timeEntries.userId, users.id))
+  .innerJoin(projects, eq(timeEntries.projectId, projects.id))
+  .innerJoin(clients, eq(projects.clientId, clients.id))
+  .where(and(
+    dateFilter,
+    // Exclude ongoing timers
+    sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
+  ))
+  .orderBy(timeEntries.createdAt);
+
+// Calculate summary metrics
+const totalHours = timeEntriesWithDetails.reduce((sum, entry) => {
+  if (entry.durationManual) {
+    return sum + (entry.durationManual / 3600);
+  } else if (entry.startTime && entry.endTime) {
+    return sum + ((new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()) / (1000 * 60 * 60));
+  }
+  return sum;
+}, 0);
+
+const totalCost = timeEntriesWithDetails.reduce((sum, entry) => {
+  if (entry.userPayRate) {
+    const payRate = parseFloat(entry.userPayRate);
+    if (entry.durationManual) {
+      return sum + (entry.durationManual / 3600 * payRate);
+    } else if (entry.startTime && entry.endTime) {
+      const hours = (new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()) / (1000 * 60 * 60);
+      return sum + (hours * payRate);
+    }
+  }
+  return sum;
+}, 0);
+
+const manualEntries = timeEntriesWithDetails.filter(e => e.durationManual).length;
+const timerEntries = timeEntriesWithDetails.filter(e => e.startTime && e.endTime).length;
+
+// Calculate user metrics
+const userMetrics = timeEntriesWithDetails.reduce((acc, entry) => {
+  if (!acc[entry.userId]) {
+    acc[entry.userId] = {
+      id: entry.userId,
+      name: entry.userName,
+      email: entry.userEmail,
+      payRate: entry.userPayRate,
+      entries: 0,
+      hours: 0,
+      cost: 0,
+      manualEntries: 0,
+      timerEntries: 0
+    };
+  }
+
+  const stats = acc[entry.userId];
+  stats.entries++;
+
+  let hours = 0;
+  if (entry.durationManual) {
+    hours = entry.durationManual / 3600;
+    stats.manualEntries++;
+  } else if (entry.startTime && entry.endTime) {
+    hours = (new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()) / (1000 * 60 * 60);
+    stats.timerEntries++;
+  }
+
+  stats.hours += hours;
+
+  if (entry.userPayRate) {
+    const payRate = parseFloat(entry.userPayRate);
+    stats.cost += hours * payRate;
+  }
+
+  return acc;
+}, {} as Record<number, any>);
+
+// Calculate project metrics
+const projectMetrics = timeEntriesWithDetails.reduce((acc, entry) => {
+  if (!acc[entry.projectId]) {
+    acc[entry.projectId] = {
+      id: entry.projectId,
+      name: entry.projectName,
+      client: entry.clientName,
+      entries: 0,
+      hours: 0,
+      cost: 0
+    };
+  }
+
+  const stats = acc[entry.projectId];
+  stats.entries++;
+
+  let hours = 0;
+  if (entry.durationManual) {
+    hours = entry.durationManual / 3600;
+  } else if (entry.startTime && entry.endTime) {
+    hours = (new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()) / (1000 * 60 * 60);
+  }
+
+  stats.hours += hours;
+
+  if (entry.userPayRate) {
+    const payRate = parseFloat(entry.userPayRate);
+    stats.cost += hours * payRate;
+  }
+
+  return acc;
+}, {} as Record<number, any>);
+
+// Calculate client metrics
+const clientMetrics = timeEntriesWithDetails.reduce((acc, entry) => {
+  if (!acc[entry.clientName]) {
+    acc[entry.clientName] = {
+      name: entry.clientName,
+      entries: 0,
+      hours: 0,
+      cost: 0,
+      projects: new Set()
+    };
+  }
+
+  const stats = acc[entry.clientName];
+  stats.entries++;
+  stats.projects.add(entry.projectName);
+
+  let hours = 0;
+  if (entry.durationManual) {
+    hours = entry.durationManual / 3600;
+  } else if (entry.startTime && entry.endTime) {
+    hours = (new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()) / (1000 * 60 * 60);
+  }
+
+  stats.hours += hours;
+
+  if (entry.userPayRate) {
+    const payRate = parseFloat(entry.userPayRate);
+    stats.cost += hours * payRate;
+  }
+
+  return acc;
+}, {} as Record<string, any>);
+
+// Convert to arrays and sort
+const userMetricsArray = Object.values(userMetrics).sort((a: any, b: any) => b.hours - a.hours);
+const projectMetricsArray = Object.values(projectMetrics).sort((a: any, b: any) => b.hours - a.hours);
+const clientMetricsArray = Object.entries(clientMetrics).map(([name, data]: [string, any]) => ({
+  name,
+  ...data,
+  projectCount: data.projects.size
+})).sort((a: any, b: any) => b.hours - a.hours);
+
+// Get period display name
+const getPeriodDisplayName = (period: string) => {
+  switch (period) {
+    case 'all': return 'All Time';
+    case 'today': return 'Today';
+    case 'week': return 'This Week';
+    case 'month': return 'This Month';
+    case 'quarter': return 'This Quarter';
+    default: return 'This Week';
+  }
+};
+
+const periodDisplayName = getPeriodDisplayName(period);
+---
+
+<AdminLayout title="Enhanced Dashboard" currentPage="dashboard">
+  <div class="space-y-8">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-8 shadow-sm">
+      <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center space-y-4 lg:space-y-0">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900 mb-2">🚀 Enhanced Analytics Dashboard</h1>
+          <p class="text-gray-600 text-lg">Advanced insights and visualizations for your time tracking data</p>
+        </div>
+        
+        <!-- Period Info -->
+        <div class="bg-white rounded-lg border border-blue-200 p-4">
+          <div class="flex items-center space-x-3">
+            <div class="p-2 bg-blue-100 rounded-lg">
+              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+            </div>
+            <div>
+              <p class="text-xl font-medium text-gray-700">
+                {periodDisplayName}
+              </p>
+              <p class="text-sm text-gray-500">
+                {startDate && endDate 
+                  ? `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`
+                  : 'All Time'
+                }
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overview Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="bg-white rounded-lg border border-gray-300 p-6 shadow-sm">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-600">Total Hours</p>
+            <p class="text-2xl font-bold text-gray-900">{Math.round(totalHours)}</p>
+          </div>
+          <div class="p-3 bg-blue-100 rounded-lg">
+            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg border border-gray-300 p-6 shadow-sm">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-600">Total Cost</p>
+            <p class="text-2xl font-bold text-gray-900">
+              {canViewFinancialData ? `$${Math.round(totalCost).toLocaleString()}` : '***'}
+            </p>
+          </div>
+          <div class="p-3 bg-green-100 rounded-lg">
+            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg border border-gray-300 p-6 shadow-sm">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-600">Total Entries</p>
+            <p class="text-2xl font-bold text-gray-900">{timeEntriesWithDetails.length}</p>
+          </div>
+          <div class="p-3 bg-purple-100 rounded-lg">
+            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg border border-gray-300 p-6 shadow-sm">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-600">Entry Types</p>
+            <p class="text-lg font-bold text-gray-900">
+              {Math.round(manualEntries/timeEntriesWithDetails.length*100)}% Manual
+            </p>
+            <p class="text-sm text-gray-500">
+              {Math.round(timerEntries/timeEntriesWithDetails.length*100)}% Timer
+            </p>
+          </div>
+          <div class="p-3 bg-orange-100 rounded-lg">
+            <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Team Member Performance -->
+    <div class="bg-white rounded-lg border border-gray-300 shadow-sm">
+      <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-900">👥 Team Member Performance</h3>
+        <p class="text-sm text-gray-600">Sorted by total hours worked</p>
+      </div>
+      
+      <div class="divide-y divide-gray-200">
+        {userMetricsArray.slice(0, 10).map((user: any, index: number) => {
+          const maxHours = Math.max(...userMetricsArray.map((u: any) => u.hours));
+          const progressWidth = maxHours > 0 ? (user.hours / maxHours) * 100 : 0;
+          
+          return (
+            <div class="p-6 hover:bg-gray-50 transition-colors">
+              <div class="flex items-center justify-between">
+                <div class="flex-1">
+                  <h4 class="text-lg font-medium text-gray-900">{user.name}</h4>
+                  <p class="text-sm text-gray-600">{user.email}</p>
+                </div>
+                
+                <div class="flex space-x-6 text-sm">
+                  <div class="text-center">
+                    <p class="text-2xl font-bold text-gray-900">{Math.round(user.hours)}</p>
+                    <p class="text-xs text-gray-500">hours</p>
+                  </div>
+                  
+                  <div class="text-center">
+                    <p class="text-lg font-semibold text-gray-700">
+                      {Math.round(user.manualEntries)}/{Math.round(user.timerEntries)}
+                    </p>
+                    <p class="text-xs text-gray-500">manual/timer</p>
+                  </div>
+                  
+                  {canViewFinancialData && (
+                    <div class="text-center">
+                      <p class="text-lg font-bold text-gray-900">${Math.round(user.cost).toLocaleString()}</p>
+                      <p class="text-xs text-gray-500">cost</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <!-- Progress bar -->
+              <div class="mt-4">
+                <div class="flex justify-between text-xs text-gray-500 mb-1">
+                  <span>Hours: {Math.round(user.hours)}</span>
+                  {canViewFinancialData && <span>Cost: ${Math.round(user.cost).toLocaleString()}</span>}
+                  <span>Entries: {user.entries}</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    style={`width: ${Math.min(100, progressWidth)}%`}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+
+    <!-- Project Analysis -->
+    <div class="bg-white rounded-lg border border-gray-300 shadow-sm">
+      <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-900">📋 Project Analysis</h3>
+        <p class="text-sm text-gray-600">Sorted by total hours worked</p>
+      </div>
+      
+      <div class="divide-y divide-gray-200">
+        {projectMetricsArray.slice(0, 10).map((project: any, index: number) => {
+          const maxHours = Math.max(...projectMetricsArray.map((p: any) => p.hours));
+          const progressWidth = maxHours > 0 ? (project.hours / maxHours) * 100 : 0;
+          
+          return (
+            <div class="p-6 hover:bg-gray-50 transition-colors">
+              <div class="flex items-center justify-between">
+                <div class="flex-1">
+                  <h4 class="text-lg font-medium text-gray-900">{project.name}</h4>
+                  <p class="text-sm text-gray-600">Client: {project.client}</p>
+                </div>
+                
+                <div class="flex space-x-6 text-sm">
+                  <div class="text-center">
+                    <p class="text-2xl font-bold text-gray-900">{Math.round(project.hours)}</p>
+                    <p class="text-xs text-gray-500">hours</p>
+                  </div>
+                  
+                  {canViewFinancialData && (
+                    <div class="text-center">
+                      <p class="text-lg font-bold text-gray-900">${Math.round(project.cost).toLocaleString()}</p>
+                      <p class="text-xs text-gray-500">cost</p>
+                    </div>
+                  )}
+                  
+                  <div class="text-center">
+                    <p class="text-lg font-bold text-gray-900">{project.entries}</p>
+                    <p class="text-xs text-gray-500">entries</p>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Progress bar -->
+              <div class="mt-4">
+                <div class="flex justify-between text-xs text-gray-500 mb-1">
+                  <span>Hours: {Math.round(project.hours)}</span>
+                  {canViewFinancialData && <span>Cost: ${Math.round(project.cost).toLocaleString()}</span>}
+                  <span>Entries: {project.entries}</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    class="bg-green-600 h-2 rounded-full transition-all duration-300"
+                    style={`width: ${Math.min(100, progressWidth)}%`}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+
+    <!-- Client Analysis -->
+    <div class="bg-white rounded-lg border border-gray-300 shadow-sm">
+      <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-900">🏢 Client Analysis</h3>
+        <p class="text-sm text-gray-600">Sorted by total hours worked</p>
+      </div>
+      
+      <div class="divide-y divide-gray-200">
+        {clientMetricsArray.slice(0, 10).map((client: any, index: number) => {
+          const maxHours = Math.max(...clientMetricsArray.map((c: any) => c.hours));
+          const progressWidth = maxHours > 0 ? (client.hours / maxHours) * 100 : 0;
+          
+          return (
+            <div class="p-6 hover:bg-gray-50 transition-colors">
+              <div class="flex items-center justify-between">
+                <div class="flex-1">
+                  <h4 class="text-lg font-medium text-gray-900">{client.name}</h4>
+                  <p class="text-sm text-gray-600">{client.projectCount} projects</p>
+                </div>
+                
+                <div class="flex space-x-6 text-sm">
+                  <div class="text-center">
+                    <p class="text-2xl font-bold text-gray-900">{Math.round(client.hours)}</p>
+                    <p class="text-xs text-gray-500">hours</p>
+                  </div>
+                  
+                  {canViewFinancialData && (
+                    <div class="text-center">
+                      <p class="text-lg font-bold text-gray-900">${Math.round(client.cost).toLocaleString()}</p>
+                      <p class="text-xs text-gray-500">cost</p>
+                    </div>
+                  )}
+                  
+                  <div class="text-center">
+                    <p class="text-lg font-bold text-gray-900">{client.entries}</p>
+                    <p class="text-xs text-gray-500">entries</p>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Progress bar -->
+              <div class="mt-4">
+                <div class="flex justify-between text-xs text-gray-500 mb-1">
+                  <span>Hours: {Math.round(client.hours)}</span>
+                  {canViewFinancialData && <span>Cost: ${Math.round(client.cost).toLocaleString()}</span>}
+                  <span>Entries: {client.entries}</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    class="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                    style={`width: ${Math.min(100, progressWidth)}%`}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+
+    <!-- Navigation Links -->
+    <div class="bg-white rounded-lg border border-gray-300 p-6 shadow-sm">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">📊 Dashboard Options</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <a href="/admin" class="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+          <div class="p-2 bg-blue-100 rounded-lg">
+            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+          </div>
+          <div>
+            <p class="font-medium text-gray-900">Standard Dashboard</p>
+            <p class="text-sm text-gray-600">Basic charts and metrics</p>
+          </div>
+        </a>
+
+        <a href="/admin/enhanced-dashboard-simple" class="flex items-center space-x-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div class="p-2 bg-blue-100 rounded-lg">
+            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+            </svg>
+          </div>
+          <div>
+            <p class="font-medium text-gray-900">Enhanced Dashboard</p>
+            <p class="text-sm text-gray-600">Advanced analytics and insights</p>
+          </div>
+        </a>
+
+        <a href="/admin/time-entries" class="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+          <div class="p-2 bg-green-100 rounded-lg">
+            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <div>
+            <p class="font-medium text-gray-900">Time Entries</p>
+            <p class="text-sm text-gray-600">View and manage time entries</p>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
