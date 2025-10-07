@@ -100,18 +100,9 @@ export const POST: APIRoute = async ({ request }) => {
         });
       }
 
-      // For manual duration entries, set startTime to the task date to indicate when the work was done
-      // The endTime remains null since we only have duration, not start/end times
-      // Use timezone-safe date creation to preserve the intended date
-      const { createUserDate, getTodayString } = await import('../../../utils/timezoneUtils');
-      
-      // Use provided taskDate or default to today's date
-      const effectiveTaskDate = taskDate || getTodayString();
-      
-      // Use 12:00 UTC to preserve the intended calendar date across timezones
-      const taskStartTime = createUserDate(effectiveTaskDate, 12, 0);
-
-      timeEntryData.startTime = taskStartTime;
+      // For manual duration entries, set startTime and endTime to null
+      // Manual duration entries should not have start/end times
+      timeEntryData.startTime = null;
       timeEntryData.endTime = null;
       timeEntryData.durationManual = durationSeconds;
     } else {

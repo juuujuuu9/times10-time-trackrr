@@ -193,7 +193,7 @@ export default function Timer() {
   };
 
   // Load daily duration totals for the current week
-  const loadDailyDurationTotals = async () => {
+  const loadDailyDurationTotals = useCallback(async () => {
     if (!currentUserId) {
       console.log('loadDailyDurationTotals: No currentUserId, skipping');
       return;
@@ -219,10 +219,10 @@ export default function Timer() {
     } catch (error) {
       console.error('Error loading daily duration totals:', error);
     }
-  };
+  }, [currentUserId, selectedWeekStart, selectedWeekEnd]);
 
   // Load task-specific daily duration totals for the current week
-  const loadTaskDailyTotals = async () => {
+  const loadTaskDailyTotals = useCallback(async () => {
     if (!currentUserId) {
       console.log('loadTaskDailyTotals: No currentUserId, skipping');
       return;
@@ -252,10 +252,10 @@ export default function Timer() {
       // Don't clear existing data on error - keep current state
       console.log('loadTaskDailyTotals: Keeping existing data due to error');
     }
-  };
+  }, [currentUserId, selectedWeekStart, selectedWeekEnd]);
 
   // Load all tasks (regular and system tasks) with retry logic
-  const loadTasks = async (retryCount = 0) => {
+  const loadTasks = useCallback(async (retryCount = 0) => {
     if (!currentUserId) {
       console.log('loadTasks: No currentUserId, skipping');
       return;
@@ -307,7 +307,7 @@ export default function Timer() {
       setTasksLoading(false);
       setHasLoadedTasks(true);
     }
-  };
+  }, [currentUserId]);
 
   // Initialize component and load user data
   useEffect(() => {
@@ -717,8 +717,21 @@ export default function Timer() {
 
     try {
       // Calculate the specific date for this day of week
+      // Use a more robust date calculation to avoid timezone issues
       const targetDate = new Date(selectedWeekStart);
       targetDate.setDate(selectedWeekStart.getDate() + dayOfWeek);
+      
+      // Ensure we're working with the local date, not UTC
+      const year = targetDate.getFullYear();
+      const month = targetDate.getMonth() + 1; // getMonth() returns 0-11
+      const day = targetDate.getDate();
+      const dateString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+      
+      // Debug logging for date calculation
+      console.log('Duration edit - selectedWeekStart:', selectedWeekStart);
+      console.log('Duration edit - dayOfWeek:', dayOfWeek);
+      console.log('Duration edit - targetDate:', targetDate);
+      console.log('Duration edit - dateString:', dateString);
       
       const response = await fetch('/api/time-entries/duration', {
         method: 'POST',
@@ -728,7 +741,7 @@ export default function Timer() {
         body: JSON.stringify({
           userId: currentUserId,
           projectId: taskId, // taskId is actually projectId in this context
-          date: targetDate.toISOString().split('T')[0],
+          date: dateString, // Use the manually constructed date string to avoid timezone issues
           duration: serverDurationFormat
         }),
       });
@@ -745,8 +758,12 @@ export default function Timer() {
         await loadTaskDailyTotals();
         await loadDailyDurationTotals();
         console.log('Data refresh completed');
-        // Notify dashboard and other listeners to sync recent entries and totals
-        window.dispatchEvent(new CustomEvent('timeEntryUpdated'));
+        
+        // Add a small delay to ensure the API has fully processed the update
+        setTimeout(() => {
+          // Notify dashboard and other listeners to sync recent entries and totals
+          window.dispatchEvent(new CustomEvent('timeEntryUpdated'));
+        }, 100);
         
         // Clear the input value so it shows the new data value
         const key = `${taskId}-${dayOfWeek}`;
