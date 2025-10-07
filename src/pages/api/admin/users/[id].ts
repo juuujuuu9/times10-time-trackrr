@@ -125,12 +125,7 @@ export const DELETE: APIRoute = async ({ params, cookies }) => {
         const taskIds = projectTasks.map(t => t.id);
 
         if (taskIds.length > 0) {
-          // Delete time entries for these tasks (if not already deleted above)
-          await db
-            .delete(timeEntries)
-            .where(inArray(timeEntries.taskId, taskIds));
-
-          // Delete task assignments for these tasks (if not already deleted above)
+          // Delete task assignments for these tasks
           await db
             .delete(taskAssignments)
             .where(inArray(taskAssignments.taskId, taskIds));
@@ -140,6 +135,11 @@ export const DELETE: APIRoute = async ({ params, cookies }) => {
             .delete(tasks)
             .where(inArray(tasks.projectId, projectIds));
         }
+
+        // Delete time entries for these projects (time entries are linked to projects, not tasks)
+        await db
+          .delete(timeEntries)
+          .where(inArray(timeEntries.projectId, projectIds));
 
         // Delete the projects
         await db
