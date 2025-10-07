@@ -1,86 +1,226 @@
-# Cursor Rules Addendum: Time Editing
+# Time Tracking App - Cursor Rules
 
-- When modifying any time editing or creation UI/logic, first read /docs/TIME_EDITING_GUIDE.md.
-- Apply the guide's rules: local date construction, ISO string payloads, always send both times, data attributes, refresh row data.
-- If you add or change patterns, update /docs/TIME_EDITING_GUIDE.md in the same PR.
-- Map UI taskId to DB projectId in service layer for create/update.
-- Avoid timezone offset math unless explicitly required; prefer ISO strings.
+## Manual Duration Entry Patterns
 
-# Dashboard Auto-Refresh Patterns
+### Critical Rule: Manual Duration Entries
+- **ALWAYS** set `startTime: null` and `endTime: null` for manual duration entries
+- **NEVER** set `startTime` and `endTime` to date ranges for manual entries
+- Manual entries should only have `durationManual` field populated
+- Use `createdAt` for date association, not `startTime`
 
-- When adding inline editing to dashboard tables, ALWAYS add loadDashboardData() calls after successful updates.
-- Use data-listeners-attached attributes to prevent duplicate event listener attachment in MutationObserver patterns.
-- For sortable tables that auto-refresh, ensure ALL update paths (modal, inline, date picker) trigger the same refresh mechanism.
-- When debugging auto-refresh issues, add console.log statements to track: update trigger → loadDashboardData() → updateRecentEntries() → MutationObserver re-attachment.
-- Dashboard tables with dynamic content need MutationObserver to re-attach event listeners after DOM replacement.
+### API Endpoint Patterns
+- When creating manual duration entries, use this pattern:
+  ```typescript
+  const newEntry = {
+    userId,
+    projectId,
+    startTime: null,        // ALWAYS null for manual entries
+    endTime: null,          // ALWAYS null for manual entries  
+    durationManual: parsedDuration,
+    notes: 'Manual duration entry',
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
+  ```
 
-# Development Efficiency Rules
+### Database Query Patterns
+- For manual duration entries, use `createdAt` for date filtering, not `startTime`
+- Always check for both timer entries AND manual entries:
+  ```sql
+  WHERE (startTime IS NOT NULL AND endTime IS NOT NULL) 
+     OR (durationManual IS NOT NULL)
+  ```
 
-## Avoid Overcomplication
-- Start with simple solutions and add complexity only when needed
-- Don't add server-side filtering unless there's a clear performance need (e.g., thousands of entries)
-- Keep parsing logic focused on common use cases (80/20 rule)
-- Don't add features "just in case" - wait for actual user needs
+## React Component Patterns
 
-## UI Structure Changes
-- When changing from text to input fields, search for ALL references to the old structure
-- Update filtering, sorting, and validation logic to work with new structure
-- Test all related functionality after structural changes
-- Always check if filtering logic reads from the correct DOM properties (`value` vs `textContent`)
+### Event Handler Dependencies
+- **ALWAYS** wrap data loading functions with `useCallback` and proper dependencies
+- **ALWAYS** memoize event handlers to prevent infinite re-renders
+- Pattern:
+  ```typescript
+  const loadData = useCallback(async () => {
+    // loading logic
+  }, [dependency1, dependency2]);
+  
+  const handleDataChange = useCallback(() => {
+    loadData();
+  }, [loadData]);
+  ```
 
-## Event Handlers and Data Flow
-- When adding new event handlers, ensure they trigger all related updates (filtering, sorting, validation)
-- When adding new features, trace the complete data flow from UI to API to database
-- Ensure all related functions (filtering, sorting, validation) are updated together
-- Test the complete user journey, not just individual components
+### Data Refresh Patterns
+- **ALWAYS** dispatch custom events after successful API calls
+- **ALWAYS** call both direct refresh AND event-based refresh
+- Pattern:
+  ```typescript
+  // Direct refresh (immediate)
+  await loadData();
+  
+  // Event-based refresh (backup)
+  setTimeout(() => {
+    window.dispatchEvent(new CustomEvent('dataUpdated'));
+  }, 100);
+  ```
 
-## Debugging and Development
-- Remove debugging code immediately after fixing issues
-- Use proper debugging tools instead of console.log in production
-- Fix TypeScript linting errors immediately - they often reveal logical issues
-- When using dynamic content, ensure all event handlers are re-attached properly
+### Date Handling Patterns
+- **ALWAYS** use local date components for date construction to avoid timezone issues
+- **NEVER** rely on `toISOString().split('T')[0]` for date strings
+- Pattern:
+  ```typescript
+  const year = targetDate.getFullYear();
+  const month = targetDate.getMonth() + 1;
+  const day = targetDate.getDate();
+  const dateString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+  ```
 
-## API Consistency and Data Accuracy
-- When multiple components display the same data (e.g., dashboard sidebar vs timer list), use the SAME API endpoints
-- If one component shows accurate data and another doesn't, align the inaccurate one with the accurate one's API calls
-- Avoid creating separate API endpoints for similar data - prefer reusing existing endpoints with parameters
-- When debugging data discrepancies, check which API endpoints each component uses first
-- If API endpoints have different filtering logic (e.g., including/excluding ongoing timers), document this clearly
-- Prefer the simpler, more consistent API approach over creating new endpoints
+## API Response Patterns
 
-# Database Schema Changes & Migration Rules
+### Consistent Error Handling
+- **ALWAYS** return consistent error response format
+- **ALWAYS** include success/error status in responses
+- Pattern:
+  ```typescript
+  return new Response(JSON.stringify({
+    success: true/false,
+    message: 'Description',
+    data: result,
+    error: errorMessage
+  }), {
+    status: 200/400/500,
+    headers: { 'Content-Type': 'application/json' }
+  });
+  ```
 
-## Critical Database Migration Workflow
-- When renaming database columns, ALWAYS run the migration immediately after code changes
-- Use `grep -r "oldColumnName" src/` to find ALL references before making changes
-- Search for both camelCase (taskId) and snake_case (task_id) versions
-- Test ALL admin pages after database migrations: /admin/clients, /admin/time-entries, /admin/reports, /admin/tasks
+### Validation Patterns
+- **ALWAYS** validate required fields at the start of API handlers
+- **ALWAYS** use consistent field names (projectId vs taskId)
+- **ALWAYS** support backward compatibility with legacy field names
 
-## SQL Query Validation
-- After modifying joins, validate SQL syntax - check for incomplete join conditions
-- Remove unnecessary table joins when schema changes eliminate the need for them
-- Test queries with actual database connections, not just code changes
-- Watch for "syntax error at or near 'group'" - usually indicates incomplete JOIN conditions
+## Database Migration Patterns
 
-## Environment & Configuration Issues
-- Always verify DATABASE_URL is properly formatted (no concatenated URLs)
-- Check for malformed .env files that can cause connection issues
-- Restart development server after environment variable changes
+### Schema Changes
+- **ALWAYS** create migration scripts for data fixes
+- **ALWAYS** verify fixes with count queries
+- **ALWAYS** test migrations on development data first
 
-## Error Pattern Recognition
-- "column does not exist" errors = schema mismatch between code and database
-- "syntax error at or near 'group'" = incomplete JOIN conditions
-- 500 errors on admin pages = usually database query issues
-- Port conflicts = kill existing processes before restarting
+### Data Consistency
+- **ALWAYS** check for data inconsistencies after schema changes
+- **ALWAYS** provide both SQL and API-based fix options
+- **ALWAYS** include verification steps in migration scripts
 
-## Code Update Patterns
-- When renaming database fields, update both the schema references AND the query logic
-- Remove references to tables that are no longer needed after schema changes
-- Update both the database queries AND the UI components that display the data
-- Check for duplicate joins that can cause SQL syntax errors
+## Testing Patterns
 
-## Testing & Validation
-- After database changes, test ALL affected endpoints
-- Use `curl -I` to quickly test HTTP status codes
-- Check server logs for detailed error information
-- Verify both the database schema AND the application code are in sync
+### Manual Testing Checklist
+- [ ] Test manual duration entries save with correct date
+- [ ] Test manual entries display as `--:-- --:--` for start/stop times
+- [ ] Test daily totals update immediately after manual entry
+- [ ] Test week navigation preserves correct dates
+- [ ] Test both create and update operations for manual entries
+
+### Debug Patterns
+- **ALWAYS** add console logs for date calculations
+- **ALWAYS** log API request/response data for debugging
+- **ALWAYS** verify database state after operations
+
+## Common Anti-Patterns to Avoid
+
+### ❌ DON'T
+- Set `startTime` and `endTime` for manual duration entries
+- Use `toISOString()` for date string construction
+- Forget to memoize functions used in `useCallback` dependencies
+- Create manual entries without proper date association
+- Mix timer-based and manual entry logic
+
+### ✅ DO
+- Use `null` for start/end times on manual entries
+- Use local date components for date strings
+- Memoize all functions used in event handlers
+- Associate manual entries with correct dates via `createdAt`
+- Keep timer and manual entry logic separate
+
+## Time Entry Types
+
+### Timer-Based Entries
+- Have `startTime` and `endTime` populated
+- Have `durationManual: null`
+- Duration calculated from `endTime - startTime`
+
+### Manual Duration Entries  
+- Have `startTime: null` and `endTime: null`
+- Have `durationManual` populated
+- Use `createdAt` for date association
+
+### Ongoing Timer Entries
+- Have `startTime` populated, `endTime: null`
+- Have `durationManual: null`
+- Duration calculated from `NOW() - startTime`
+
+## Event System Patterns
+
+### Custom Events
+- `timerStarted` - When a timer begins
+- `timerStopped` - When a timer ends
+- `timeEntryAdded` - When a new entry is created
+- `timeEntryUpdated` - When an entry is modified
+- `timeEntryDeleted` - When an entry is removed
+
+### Event Handling
+- Always add event listeners in `useEffect` with cleanup
+- Always remove event listeners in cleanup function
+- Use consistent event names across components
+- Dispatch events after successful API operations
+
+## Date Calculation Patterns
+
+### Week Navigation
+- Use `computeWeekRange(offset)` for week calculations
+- Sunday = 0, Monday = 1, ..., Saturday = 6
+- Always use local timezone for date calculations
+- Store week start/end dates in component state
+
+### Day of Week Mapping
+- Map dayOfWeek (0-6) to actual dates using selectedWeekStart
+- Use `selectedWeekStart.getDate() + dayOfWeek` for target date
+- Always construct date strings manually to avoid timezone issues
+
+## Component State Management
+
+### Loading States
+- Use separate loading states for different operations
+- Show loading indicators during API calls
+- Disable inputs during loading states
+- Provide user feedback for all operations
+
+### Error Handling
+- Show user-friendly error messages
+- Log detailed errors to console
+- Provide retry mechanisms where appropriate
+- Handle network errors gracefully
+
+## API Design Patterns
+
+### Consistent Field Names
+- Use `projectId` as primary field name
+- Support `taskId` for backward compatibility
+- Always validate required fields
+- Use consistent parameter naming
+
+### Response Format
+- Always include `success` boolean
+- Include descriptive `message` field
+- Return `data` object with results
+- Include `error` field for failures
+- Use appropriate HTTP status codes
+
+## Database Query Patterns
+
+### Time Entry Queries
+- Always join with users, projects, and clients tables
+- Filter out archived records
+- Use proper date filtering for manual vs timer entries
+- Include calculated duration fields
+
+### Duration Calculations
+- Use SQL CASE statements for duration logic
+- Handle both manual and timer-based entries
+- Exclude ongoing timers from completed entry queries
+- Use proper timezone handling in queries
