@@ -68,6 +68,9 @@ export default function Timer() {
     formatted: string;
   }>>([]);
 
+  // State for managing input values for duration editing
+  const [durationInputValues, setDurationInputValues] = useState<{[key: string]: string}>({});
+
   // Inject column separator styles
   useEffect(() => {
     const styleElement = document.createElement('style');
@@ -400,6 +403,43 @@ export default function Timer() {
     }
   }, [currentUserId, selectedWeekStart?.getTime(), selectedWeekEnd?.getTime()]);
 
+  // Check for multiple entries and show warning indicators
+  useEffect(() => {
+    const checkAndShowWarnings = async () => {
+      if (!currentUserId || !selectedWeekStart || !selectedWeekEnd) return;
+
+      // Check each task's day cells for multiple entries
+      for (const taskData of taskDailyTotals) {
+        for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+          const dayTotal = taskData.dayTotals[dayOfWeek];
+          if (dayTotal && dayTotal.totalSeconds > 0) {
+            try {
+              const multipleCheck = await checkMultipleEntries(taskData.taskId, dayOfWeek);
+              if (multipleCheck.hasMultiple) {
+                const warningElement = document.getElementById(`warning-${taskData.taskId}-${dayOfWeek}`);
+                if (warningElement) {
+                  warningElement.style.opacity = '1';
+                }
+              }
+            } catch (error) {
+              console.error('Error checking multiple entries:', error);
+            }
+          }
+        }
+      }
+    };
+
+    // Run the check after a short delay to ensure DOM is ready
+    const timeoutId = setTimeout(checkAndShowWarnings, 500);
+    return () => clearTimeout(timeoutId);
+  }, [taskDailyTotals, currentUserId, selectedWeekStart, selectedWeekEnd]);
+
+  // Clear input values only when week changes or initial load, not after successful edits
+  useEffect(() => {
+    // Only clear if we're changing weeks or this is the initial load
+    setDurationInputValues({});
+  }, [selectedWeekStart?.getTime(), selectedWeekEnd?.getTime()]);
+
   // Update selected task when timer data changes
   useEffect(() => {
     if (timerData && timerData.project) {
@@ -531,6 +571,275 @@ export default function Timer() {
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
     return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Flexible duration parsing function
+  const parseFlexibleDuration = (durationString: string): number | null => {
+    if (!durationString) return null;
+    
+    const trimmed = durationString.trim().toLowerCase();
+    const normalized = trimmed.replace(/\s+/g, ' ');
+    
+    // Pattern 1: "2h 30m", "2h 30min", "2 hours 30 minutes"
+    let match = normalized.match(/^(\d+(?:\.\d+)?)\s*(h|hr|hours?)\s+(\d+)\s*(m|min|minutes?)$/);
+    if (match) {
+      const hours = parseFloat(match[1]);
+      const minutes = parseInt(match[3]);
+      if (hours >= 0 && minutes >= 0 && minutes <= 59) {
+        return Math.floor(hours * 3600 + minutes * 60);
+      }
+    }
+    
+    // Pattern 2: "2h", "2hr", "2 hours"
+    match = normalized.match(/^(\d+(?:\.\d+)?)\s*(h|hr|hours?)$/);
+    if (match) {
+      const hours = parseFloat(match[1]);
+      if (hours >= 0) {
+        return Math.floor(hours * 3600);
+      }
+    }
+    
+    // Pattern 3: "150m", "150min", "150 minutes"
+    match = normalized.match(/^(\d+)\s*(m|min|minutes?)$/);
+    if (match) {
+      const minutes = parseInt(match[1]);
+      if (minutes >= 0) {
+        return minutes * 60;
+      }
+    }
+    
+    // Pattern 4: "2:30" (hours:minutes format)
+    match = normalized.match(/^(\d+):(\d{2})$/);
+    if (match) {
+      const hours = parseInt(match[1]);
+      const minutes = parseInt(match[2]);
+      if (hours >= 0 && minutes >= 0 && minutes <= 59) {
+        return hours * 3600 + minutes * 60;
+      }
+    }
+    
+    // Pattern 5: "5400s", "5400sec", "5400 seconds"
+    match = normalized.match(/^(\d+)\s*(s|sec|seconds?)$/);
+    if (match) {
+      const seconds = parseInt(match[1]);
+      if (seconds >= 0) {
+        return seconds;
+      }
+    }
+    
+    return null;
+  };
+
+  // Format duration for display
+  const formatDuration = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    
+    if (hours > 0 && minutes > 0) {
+      return `${hours}h ${minutes}m`;
+    } else if (hours > 0) {
+      return `${hours}h`;
+    } else if (minutes > 0) {
+      return `${minutes}m`;
+    } else {
+      return '0m';
+    }
+  };
+
+  // Get input value for a specific task and day
+  const getInputValue = (taskId: number, dayOfWeek: number, defaultValue: string): string => {
+    const key = `${taskId}-${dayOfWeek}`;
+    // Only use stored value if it exists and is different from default (user is actively editing)
+    if (durationInputValues[key] !== undefined && durationInputValues[key] !== defaultValue) {
+      return durationInputValues[key];
+    }
+    return defaultValue;
+  };
+
+  // Update input value for a specific task and day
+  const updateInputValue = (taskId: number, dayOfWeek: number, value: string) => {
+    const key = `${taskId}-${dayOfWeek}`;
+    setDurationInputValues(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  // Check for multiple entries for a specific day
+  const checkMultipleEntries = async (taskId: number, dayOfWeek: number): Promise<{ hasMultiple: boolean; entryCount: number }> => {
+    if (!currentUserId || !selectedWeekStart || !selectedWeekEnd) {
+      return { hasMultiple: false, entryCount: 0 };
+    }
+
+    try {
+      const targetDate = new Date(selectedWeekStart);
+      targetDate.setDate(selectedWeekStart.getDate() + dayOfWeek);
+      
+      const response = await fetch(`/api/time-entries/duration?userId=${currentUserId}&taskId=${taskId}&date=${targetDate.toISOString().split('T')[0]}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          hasMultiple: data.hasMultipleEntries,
+          entryCount: data.entryCount
+        };
+      }
+    } catch (error) {
+      console.error('Error checking multiple entries:', error);
+    }
+    
+    return { hasMultiple: false, entryCount: 0 };
+  };
+
+  // Handle duration editing for individual day tasks
+  const handleDurationEdit = async (taskId: number, dayOfWeek: number, newDuration: string, inputElement: HTMLInputElement) => {
+    if (!currentUserId || !selectedWeekStart || !selectedWeekEnd) {
+      console.error('Missing required data for duration edit');
+      return;
+    }
+
+    // Parse the duration input
+    const parsedDuration = parseFlexibleDuration(newDuration);
+    if (!parsedDuration) {
+      // Show error feedback
+      inputElement.style.backgroundColor = '#FEE2E2';
+      inputElement.style.borderColor = '#EF4444';
+      inputElement.style.borderWidth = '1px';
+      inputElement.style.borderStyle = 'solid';
+      
+      setTimeout(() => {
+        inputElement.style.backgroundColor = '';
+        inputElement.style.borderColor = '';
+        inputElement.style.borderWidth = '';
+        inputElement.style.borderStyle = '';
+      }, 2000);
+      
+      alert('Please enter a valid duration format (e.g., 2h 30m, 2.5h, 150m, 2:30)');
+      return;
+    }
+
+    // Convert to server format
+    let serverDurationFormat: string;
+    const hours = Math.floor(parsedDuration / 3600);
+    const minutes = Math.floor((parsedDuration % 3600) / 60);
+
+    if (hours > 0 && minutes > 0) {
+      const totalHours = hours + (minutes / 60);
+      serverDurationFormat = `${totalHours}h`;
+    } else if (hours > 0) {
+      serverDurationFormat = `${hours}h`;
+    } else {
+      serverDurationFormat = `${minutes}m`;
+    }
+
+    // Show loading state
+    inputElement.style.backgroundColor = '#FEF3C7';
+    inputElement.style.borderColor = '#F59E0B';
+    inputElement.style.borderWidth = '1px';
+    inputElement.style.borderStyle = 'solid';
+
+    try {
+      // Calculate the specific date for this day of week
+      const targetDate = new Date(selectedWeekStart);
+      targetDate.setDate(selectedWeekStart.getDate() + dayOfWeek);
+      
+      const response = await fetch('/api/time-entries/duration', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: currentUserId,
+          taskId: taskId,
+          date: targetDate.toISOString().split('T')[0],
+          duration: serverDurationFormat
+        }),
+      });
+
+      if (response.ok) {
+        // Show success feedback
+        inputElement.style.backgroundColor = '#D1FAE5';
+        inputElement.style.borderColor = '#10B981';
+        inputElement.style.borderWidth = '1px';
+        inputElement.style.borderStyle = 'solid';
+        
+        // Refresh the data to show updated durations
+        loadTaskDailyTotals();
+        loadDailyDurationTotals();
+        // Notify dashboard and other listeners to sync recent entries and totals
+        window.dispatchEvent(new CustomEvent('timeEntryUpdated'));
+        
+        // Clear the input value so it shows the new data value
+        const key = `${taskId}-${dayOfWeek}`;
+        setDurationInputValues(prev => {
+          const newValues = { ...prev };
+          delete newValues[key];
+          return newValues;
+        });
+        
+        // Reset styling after success
+        setTimeout(() => {
+          inputElement.style.backgroundColor = '';
+          inputElement.style.borderColor = '';
+          inputElement.style.borderWidth = '';
+          inputElement.style.borderStyle = '';
+        }, 1500);
+        
+        console.log('Duration updated successfully');
+      } else {
+        const errorData = await response.json();
+        
+        // Check if it's a multiple entries error
+        if (errorData.multipleEntries) {
+          // Show warning feedback for multiple entries
+          inputElement.style.backgroundColor = '#FEF3C7';
+          inputElement.style.borderColor = '#F59E0B';
+          inputElement.style.borderWidth = '1px';
+          inputElement.style.borderStyle = 'solid';
+          
+          setTimeout(() => {
+            inputElement.style.backgroundColor = '';
+            inputElement.style.borderColor = '';
+            inputElement.style.borderWidth = '';
+            inputElement.style.borderStyle = '';
+          }, 3000);
+          
+          alert(`Multiple time entries detected (${errorData.entryCount} entries). Please edit individual time entries instead of using duration editing.`);
+        } else {
+          // Show error feedback for other errors
+          inputElement.style.backgroundColor = '#FEE2E2';
+          inputElement.style.borderColor = '#EF4444';
+          inputElement.style.borderWidth = '1px';
+          inputElement.style.borderStyle = 'solid';
+          
+          setTimeout(() => {
+            inputElement.style.backgroundColor = '';
+            inputElement.style.borderColor = '';
+            inputElement.style.borderWidth = '';
+            inputElement.style.borderStyle = '';
+          }, 2000);
+          
+          console.error('Failed to update duration:', response.status);
+          alert('Failed to update duration. Please try again.');
+        }
+      }
+    } catch (error) {
+      // Show error feedback
+      inputElement.style.backgroundColor = '#FEE2E2';
+      inputElement.style.borderColor = '#EF4444';
+      inputElement.style.borderWidth = '1px';
+      inputElement.style.borderStyle = 'solid';
+      
+      setTimeout(() => {
+        inputElement.style.backgroundColor = '';
+        inputElement.style.borderColor = '';
+        inputElement.style.borderWidth = '';
+        inputElement.style.borderStyle = '';
+      }, 2000);
+      
+      console.error('Error updating duration:', error);
+      alert('Error updating duration. Please try again.');
+    }
   };
 
   const handleStartTimer = async () => {
@@ -1491,7 +1800,7 @@ export default function Timer() {
                           </div>
                         </div>
 
-                        {/* Day Columns - Real-Time Daily Totals */}
+                        {/* Day Columns - Real-Time Daily Totals with Duration Editing */}
                         {(() => {
                           const realTimeDayTotals = getRealTimeDailyTotals(task.id);
                           let totalSeconds = 0;
@@ -1511,7 +1820,68 @@ export default function Timer() {
                                       : 'text-gray-400'
                                 }`}
                               >
-                                {dayTotal.totalSeconds > 0 ? dayTotal.formatted : '-'}
+                                <div className="relative">
+                                  <input
+                                    type="text"
+                                    value={getInputValue(task.id, dayTotal.dayOfWeek, dayTotal.totalSeconds > 0 ? dayTotal.formatted : '')}
+                                    placeholder="-"
+                                    className={`w-full text-center bg-transparent border-none outline-none ${
+                                      isRunningToday 
+                                        ? 'text-green-600 font-semibold' 
+                                        : dayTotal.totalSeconds > 0 
+                                          ? 'text-gray-600' 
+                                          : 'text-gray-400'
+                                    }`}
+                                    onChange={(e) => {
+                                      updateInputValue(task.id, dayTotal.dayOfWeek, e.target.value);
+                                    }}
+                                    onBlur={async (e) => {
+                                      const newValue = e.target.value.trim();
+                                      const originalValue = dayTotal.totalSeconds > 0 ? dayTotal.formatted : '';
+                                      
+                                      if (newValue && newValue !== originalValue) {
+                                        // Check for multiple entries first
+                                        const multipleCheck = await checkMultipleEntries(task.id, dayTotal.dayOfWeek);
+                                        if (multipleCheck.hasMultiple) {
+                                          // Show warning and don't allow editing
+                                          e.target.style.backgroundColor = '#FEF3C7';
+                                          e.target.style.borderColor = '#F59E0B';
+                                          e.target.style.borderWidth = '1px';
+                                          e.target.style.borderStyle = 'solid';
+                                          
+                                          setTimeout(() => {
+                                            e.target.style.backgroundColor = '';
+                                            e.target.style.borderColor = '';
+                                            e.target.style.borderWidth = '';
+                                            e.target.style.borderStyle = '';
+                                          }, 3000);
+                                          
+                                          alert(`Multiple time entries detected (${multipleCheck.entryCount} entries). Please edit individual time entries instead of using duration editing.`);
+                                          // Reset the input value
+                                          updateInputValue(task.id, dayTotal.dayOfWeek, originalValue);
+                                          return;
+                                        }
+                                        
+                                        handleDurationEdit(task.id, dayTotal.dayOfWeek, newValue, e.target);
+                                      } else if (!newValue) {
+                                        // Reset to original value if empty
+                                        updateInputValue(task.id, dayTotal.dayOfWeek, originalValue);
+                                      }
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.currentTarget.blur();
+                                      }
+                                    }}
+                                    title="Click to edit duration (e.g., 2h 30m, 1.5h, 90m)"
+                                  />
+                                  {/* Warning icon for multiple entries - will be populated by useEffect */}
+                                  <div 
+                                    className="absolute top-[5px] left-[10px] w-2 h-2 bg-amber-500 rounded-full opacity-0 transition-opacity duration-200"
+                                    id={`warning-${task.id}-${dayTotal.dayOfWeek}`}
+                                    title="Multiple time entries - edit individually"
+                                  ></div>
+                                </div>
                               </div>
                             );
                           });

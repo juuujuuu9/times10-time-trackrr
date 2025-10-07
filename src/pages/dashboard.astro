@@ -1282,6 +1282,24 @@ const user = await requireAuth('/')(Astro) as any;
     loadDashboardData();
   });
 
+  // Attach listeners for time entry changes (add/update/delete) once
+  (function attachTimeEntryChangeListeners() {
+    const root = document.documentElement;
+    const attrName = 'data-listeners-attached';
+    if (root.getAttribute(attrName) === 'true') return;
+
+    const refreshOnChange = () => {
+      // Keep dashboard recent entries and totals in sync
+      loadDashboardData();
+    };
+
+    window.addEventListener('timeEntryAdded', refreshOnChange);
+    window.addEventListener('timeEntryUpdated', refreshOnChange);
+    window.addEventListener('timeEntryDeleted', refreshOnChange);
+
+    root.setAttribute(attrName, 'true');
+  })();
+
   // Listen for timer layout mode changes to adjust dashboard layout
   window.addEventListener('timerLayoutModeChanged', (event: Event) => {
     const customEvent = event as CustomEvent;
