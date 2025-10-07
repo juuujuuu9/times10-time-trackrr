@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRealtimeTimer } from '../utils/useRealtimeTimer';
 
 // CSS for column separators
@@ -239,7 +239,8 @@ export default function Timer() {
       const response = await fetch(`/api/reports/task-daily-totals?userId=${currentUserId}&startDate=${encodeURIComponent(selectedWeekStart.toISOString())}&endDate=${encodeURIComponent(selectedWeekEnd.toISOString())}`);
       if (response.ok) {
         const data = await response.json();
-        console.log('loadTaskDailyTotals: Received data:', data.taskDailyData?.length || 0, 'tasks');
+        console.log('🔄 [TIMER DEBUG] loadTaskDailyTotals: Received data:', data.taskDailyData?.length || 0, 'tasks');
+        console.log('🔄 [TIMER DEBUG] loadTaskDailyTotals: Data details:', data.taskDailyData);
         setTaskDailyTotals(data.taskDailyData || []);
       } else {
         console.error('Failed to load task daily totals:', response.status);
@@ -407,36 +408,6 @@ export default function Timer() {
     }
   }, [currentUserId, selectedWeekStart?.getTime(), selectedWeekEnd?.getTime()]);
 
-  // Check for multiple entries and show warning indicators
-  useEffect(() => {
-    const checkAndShowWarnings = async () => {
-      if (!currentUserId || !selectedWeekStart || !selectedWeekEnd) return;
-
-      // Check each task's day cells for multiple entries
-      for (const taskData of taskDailyTotals) {
-        for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
-          const dayTotal = taskData.dayTotals[dayOfWeek];
-          if (dayTotal && dayTotal.totalSeconds > 0) {
-            try {
-              const multipleCheck = await checkMultipleEntries(taskData.taskId, dayOfWeek);
-              if (multipleCheck.hasMultiple) {
-                const warningElement = document.getElementById(`warning-${taskData.taskId}-${dayOfWeek}`);
-                if (warningElement) {
-                  warningElement.style.opacity = '1';
-                }
-              }
-            } catch (error) {
-              console.error('Error checking multiple entries:', error);
-            }
-          }
-        }
-      }
-    };
-
-    // Run the check after a short delay to ensure DOM is ready
-    const timeoutId = setTimeout(checkAndShowWarnings, 500);
-    return () => clearTimeout(timeoutId);
-  }, [taskDailyTotals, currentUserId, selectedWeekStart, selectedWeekEnd]);
 
   // Clear input values only when week changes or initial load, not after successful edits
   useEffect(() => {
@@ -513,6 +484,15 @@ export default function Timer() {
     }
   }, [isRunning]);
 
+  // Memoized handler for time entry changes
+  const handleTimeEntryChanged = useCallback(() => {
+    console.log('🔄 [TIMER DEBUG] handleTimeEntryChanged called - refreshing timer data');
+    // Refresh tasks, daily duration totals, and task daily totals when time entries are added/updated/deleted
+    loadTasks();
+    loadDailyDurationTotals();
+    loadTaskDailyTotals();
+  }, [loadTasks, loadDailyDurationTotals, loadTaskDailyTotals]);
+
   // Listen for timer events to refresh timer state and daily totals
   useEffect(() => {
     const handleTimerStopped = () => {
@@ -533,13 +513,6 @@ export default function Timer() {
       loadTaskDailyTotals();
     };
 
-    const handleTimeEntryChanged = () => {
-      // Refresh tasks, daily duration totals, and task daily totals when time entries are added/updated/deleted
-      loadTasks();
-      loadDailyDurationTotals();
-      loadTaskDailyTotals();
-    };
-
     window.addEventListener('timerStopped', handleTimerStopped);
     window.addEventListener('timerStarted', handleTimerStarted);
     window.addEventListener('timeEntryAdded', handleTimeEntryChanged);
@@ -553,7 +526,7 @@ export default function Timer() {
       window.removeEventListener('timeEntryUpdated', handleTimeEntryChanged);
       window.removeEventListener('timeEntryDeleted', handleTimeEntryChanged);
     };
-  }, [refreshTimer]);
+  }, [refreshTimer, handleTimeEntryChanged]);
 
   // Periodic refresh of tasks and daily totals to ensure they stay up-to-date
   // Only refresh for current week (weekOffset === 0) to avoid interfering with historical data
@@ -1881,12 +1854,6 @@ export default function Timer() {
                                     }}
                                     title="Click to edit duration (e.g., 2h 30m, 1.5h, 90m)"
                                   />
-                                  {/* Warning icon for multiple entries - will be populated by useEffect */}
-                                  <div 
-                                    className="absolute top-[5px] left-[10px] w-2 h-2 bg-amber-500 rounded-full opacity-0 transition-opacity duration-200"
-                                    id={`warning-${task.id}-${dayTotal.dayOfWeek}`}
-                                    title="Multiple time entries - edit individually"
-                                  ></div>
                                 </div>
                               </div>
                             );
