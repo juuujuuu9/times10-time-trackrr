@@ -194,3 +194,53 @@ find src -name "*.ts" -o -name "*.astro" | xargs grep -l "from '\.\./\.\./\.\./d
 - **Check import paths in new files**: Match directory depth
 - **Use consistent patterns**: Follow existing working examples
 - **Fix systematically**: Don't fix one file at a time for bulk issues
+
+## Documentation Organization Rules
+
+### Cursor Rules Documentation
+**ALWAYS add new cursor-related documentation to the `cursor-guides/` folder.**
+
+#### Documentation Placement Rules:
+- **Cursor rules and patterns**: `/cursor-guides/`
+- **API extension templates**: `/cursor-guides/`
+- **Development patterns**: `/cursor-guides/`
+- **Build/deployment guides**: `/cursor-guides/`
+- **Field mapping patterns**: `/cursor-guides/`
+
+#### When Creating New Documentation:
+1. **Check if it's cursor-related**: Does it help with development patterns, rules, or workflows?
+2. **If YES**: Add to `cursor-guides/` folder
+3. **If NO**: Add to `docs/` folder or root as appropriate
+4. **Update references**: Update any references in `cursor-task-prompts.md`
+5. **Update README**: Update `cursor-guides/README.md` if needed
+
+#### Documentation Types for `cursor-guides/`:
+- ✅ Cursor rules and task prompts
+- ✅ API extension templates
+- ✅ Development patterns and workflows
+- ✅ Build/deployment troubleshooting
+- ✅ Field mapping patterns
+- ✅ Code organization rules
+- ✅ Testing patterns
+- ✅ Import path rules
+
+#### Documentation Types for `docs/` or root:
+- ❌ General project documentation
+- ❌ User guides and setup instructions
+- ❌ API documentation
+- ❌ Deployment guides
+- ❌ Feature documentation
+
+### File Organization Pattern:
+```
+cursor-guides/           # Cursor rules and development patterns
+├── README.md            # Organization guide
+├── cursor-task-prompts.md  # Main cursor rules
+└── [pattern-name].md    # Specific development patterns
+
+docs/                    # General project documentation
+├── api/                 # API documentation
+└── [feature].md         # Feature-specific docs
+
+README.md               # Main project README (root level)
+```

@@ -1,7 +1,7 @@
 /**
  * IMPORTANT: This file MUST call the API only via src/lib/api/client.ts.
  * Changing endpoints, paths, or schemas is forbidden. If impossible, add a
- * TODO(api-extension) and stop. See /docs/api/extension-proposal.md.
+ * TODO(api-extension) and stop. See /cursor-guides/extension-proposal.md.
  */
 
 import { z } from "zod";
