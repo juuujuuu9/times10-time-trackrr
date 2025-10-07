@@ -361,6 +361,19 @@ const allClients = await db
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#415058] focus:border-[#415058] bg-white text-gray-900 placeholder-gray-500"
               />
             </div>
+            <div class="mb-4">
+              <label for="projectName" class="block text-sm font-medium text-gray-700 mb-1">
+                First Project Name
+              </label>
+              <input
+                type="text"
+                id="projectName"
+                required
+                placeholder="e.g., Website Development, Marketing Campaign"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#415058] focus:border-[#415058] bg-white text-gray-900 placeholder-gray-500"
+              />
+              <p class="text-xs text-gray-500 mt-1">This will be the first project for this client</p>
+            </div>
             <div class="flex justify-end space-x-3">
               <button
                 type="button"
@@ -530,11 +543,16 @@ const allClients = await db
         const modalTitle = document.getElementById('modalTitle');
         const clientId = document.getElementById('clientId') as HTMLInputElement;
         const clientName = document.getElementById('clientName') as HTMLInputElement;
+        const projectName = document.getElementById('projectName') as HTMLInputElement;
+        const projectNameField = document.getElementById('projectName')?.parentElement;
         const clientModal = document.getElementById('clientModal');
         
         if (modalTitle) modalTitle.textContent = 'Add New Client';
         if (clientId) clientId.value = '';
         if (clientName) clientName.value = '';
+        if (projectName) projectName.value = '';
+        // Show project name field for new clients
+        if (projectNameField) projectNameField.style.display = 'block';
         if (clientModal) clientModal.classList.remove('hidden');
       });
     }
@@ -544,11 +562,12 @@ const allClients = await db
         e.preventDefault();
         const clientId = (document.getElementById('clientId') as HTMLInputElement)?.value;
         const clientName = (document.getElementById('clientName') as HTMLInputElement)?.value;
+        const projectName = (document.getElementById('projectName') as HTMLInputElement)?.value;
         
-        console.log('Form submission:', { clientId, clientName });
+        console.log('Form submission:', { clientId, clientName, projectName });
         
         try {
-          const requestBody = { id: clientId, name: clientName };
+          const requestBody = { id: clientId, name: clientName, projectName: projectName };
           console.log('Request body:', requestBody);
           
           const response = await fetch('/api/admin/clients', {
@@ -637,11 +656,16 @@ const allClients = await db
         const modalTitle = document.getElementById('modalTitle');
         const clientId = document.getElementById('clientId') as HTMLInputElement;
         const clientName = document.getElementById('clientName') as HTMLInputElement;
+        const projectName = document.getElementById('projectName') as HTMLInputElement;
+        const projectNameField = document.getElementById('projectName')?.parentElement;
         const clientModal = document.getElementById('clientModal');
         
         if (modalTitle) modalTitle.textContent = 'Edit Client';
         if (clientId) clientId.value = client.id.toString();
         if (clientName) clientName.value = client.name;
+        if (projectName) projectName.value = '';
+        // Hide project name field for editing existing clients
+        if (projectNameField) projectNameField.style.display = 'none';
         if (clientModal) clientModal.classList.remove('hidden');
       } catch (error) {
         console.error('Error fetching client:', error);

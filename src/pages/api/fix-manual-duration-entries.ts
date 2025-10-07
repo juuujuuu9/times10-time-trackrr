@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
-import { db } from '../../../db';
-import { timeEntries } from '../../../db/schema';
+import { db } from '../../db';
+import { timeEntries } from '../../db/schema';
 import { and, isNotNull, sql } from 'drizzle-orm';
 
 export const POST: APIRoute = async ({ request }) => {

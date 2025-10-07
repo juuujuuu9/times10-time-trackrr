@@ -33,7 +33,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     const body = await request.json();
-    const { name } = body;
+    const { name, projectName } = body;
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
       return new Response(JSON.stringify({ error: 'Client name is required and must be a non-empty string' }), {
@@ -42,8 +42,16 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       });
     }
 
-    // Trim the name to remove leading/trailing whitespace
+    if (!projectName || typeof projectName !== 'string' || projectName.trim().length === 0) {
+      return new Response(JSON.stringify({ error: 'Project name is required and must be a non-empty string' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Trim the names to remove leading/trailing whitespace
     const trimmedName = name.trim();
+    const trimmedProjectName = projectName.trim();
 
     // Create the client
     const newClient = await db.insert(clients).values({
@@ -53,48 +61,24 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     console.log('Client created successfully:', newClient[0]);
 
-    // Create the "Time Tracking" project for this client
-    const timeTrackingProject = await db.insert(projects).values({
-      name: 'Time Tracking',
+    // Create the project for this client with the provided name
+    const newProject = await db.insert(projects).values({
+      name: trimmedProjectName,
       clientId: newClient[0].id,
-      isSystem: true, // Mark as system-generated
+      isSystem: false, // User-provided project, not system-generated
     }).returning();
 
-    console.log('Time Tracking project created:', timeTrackingProject[0]);
+    console.log('Project created:', newProject[0]);
 
-    // Get all active users to assign the General task to everyone
-    const allUsers = await db.select().from(users).where(eq(users.status, 'active'));
-    console.log(`Found ${allUsers.length} active users to assign General task to`);
-
-    // Create the "General" task for the Time Tracking project
+    // Create a "General" task for database purposes (not visible to users)
     const generalTask = await db.insert(tasks).values({
       name: 'General',
-      projectId: timeTrackingProject[0].id,
+      projectId: newProject[0].id,
       description: `General time tracking for ${trimmedName}`,
       isSystem: true, // Mark as system-generated
     }).returning();
 
-    console.log('General task created:', generalTask[0]);
-
-    // Assign the General task to all active users
-    if (allUsers.length > 0) {
-      const assignmentData = allUsers.map(user => ({
-        taskId: generalTask[0].id,
-        userId: user.id,
-      }));
-
-      console.log('Creating task assignments:', assignmentData);
-      try {
-        const assignments = await db.insert(taskAssignments).values(assignmentData).returning();
-        console.log(`Successfully assigned General task to ${assignments.length} users:`, assignments);
-      } catch (assignmentError) {
-        console.error('Error creating task assignments:', assignmentError);
-        // Don't fail the entire operation if assignments fail - the client and task are still created
-        // The user can manually assign tasks if needed
-      }
-    } else {
-      console.warn('No active users found to assign General task to');
-    }
+    console.log('General task created for database purposes:', generalTask[0]);
 
     const result = newClient[0];
 
