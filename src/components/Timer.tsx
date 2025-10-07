@@ -226,16 +226,23 @@ export default function Timer() {
       return;
     }
 
+    console.log('loadTaskDailyTotals: Loading for week', selectedWeekStart.toISOString(), 'to', selectedWeekEnd.toISOString());
+
     try {
       const response = await fetch(`/api/reports/task-daily-totals?userId=${currentUserId}&startDate=${encodeURIComponent(selectedWeekStart.toISOString())}&endDate=${encodeURIComponent(selectedWeekEnd.toISOString())}`);
       if (response.ok) {
         const data = await response.json();
+        console.log('loadTaskDailyTotals: Received data:', data.taskDailyData?.length || 0, 'tasks');
         setTaskDailyTotals(data.taskDailyData || []);
       } else {
         console.error('Failed to load task daily totals:', response.status);
+        // Don't clear existing data on API failure - keep current state
+        console.log('loadTaskDailyTotals: Keeping existing data due to API failure');
       }
     } catch (error) {
       console.error('Error loading task daily totals:', error);
+      // Don't clear existing data on error - keep current state
+      console.log('loadTaskDailyTotals: Keeping existing data due to error');
     }
   };
 
@@ -266,7 +273,7 @@ export default function Timer() {
       }
 
       // Transform projects to include display names and ensure proper structure
-      const transformedProjects = allProjects.map(project => ({
+      const transformedProjects = allProjects.map((project: any) => ({
         ...project,
         displayName: project.name,
         // Ensure clientName is available
@@ -505,9 +512,11 @@ export default function Timer() {
   }, [refreshTimer]);
 
   // Periodic refresh of tasks and daily totals to ensure they stay up-to-date
+  // Only refresh for current week (weekOffset === 0) to avoid interfering with historical data
   useEffect(() => {
     const interval = setInterval(() => {
-      if (currentUserId) {
+      if (currentUserId && weekOffset === 0) {
+        console.log('Periodic refresh: Loading data for current week only');
         loadTasks();
         loadDailyDurationTotals();
         loadTaskDailyTotals();
@@ -515,7 +524,7 @@ export default function Timer() {
     }, 30000); // Refresh every 30 seconds
 
     return () => clearInterval(interval);
-  }, [currentUserId]);
+  }, [currentUserId, weekOffset]);
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -728,10 +737,15 @@ export default function Timer() {
 
   // Get tasks with entries in the current week (including running timers and curated tasks)
   const getTasksWithCurrentWeekEntries = () => {
+    console.log('getTasksWithCurrentWeekEntries: taskDailyTotals length:', taskDailyTotals.length);
+    console.log('getTasksWithCurrentWeekEntries: weekOffset:', weekOffset);
+    
     const tasksWithEntries = taskDailyTotals
       .filter(taskData => {
         // Check if any day has time entries (totalSeconds > 0)
-        return taskData.dayTotals.some(day => day.totalSeconds > 0);
+        const hasEntries = taskData.dayTotals.some(day => day.totalSeconds > 0);
+        console.log('getTasksWithCurrentWeekEntries: Task', taskData.taskId, 'has entries:', hasEntries);
+        return hasEntries;
       })
       .map(taskData => {
         // Find the corresponding task from the tasks array, or create a task object from taskDailyTotals data
@@ -756,6 +770,8 @@ export default function Timer() {
       })
       .filter(task => task !== undefined); // Remove undefined entries
 
+    console.log('getTasksWithCurrentWeekEntries: Found', tasksWithEntries.length, 'tasks with entries');
+
     // For current week, include extras; for other weeks, show only tasks with entries
     if (weekOffset === 0) {
       // Add running timer task if it's not already in the list
@@ -775,6 +791,7 @@ export default function Timer() {
       });
     }
 
+    console.log('getTasksWithCurrentWeekEntries: Final result:', tasksWithEntries.length, 'tasks');
     return tasksWithEntries;
   };
 
