@@ -17,9 +17,9 @@ import {
   TimeEntriesResponse,
   TimeEntryResponse,
   ApiResponse,
-  TimeEntriesResponse as TimeEntriesResponseSchema,
-  TimeEntryResponse as TimeEntryResponseSchema,
-  ApiResponse as ApiResponseSchema,
+  TimeEntriesResponse,
+  TimeEntryResponse,
+  ApiResponse,
 } from "./schemas";
 
 // HTTP client wrapper with auth and retry logic
@@ -89,29 +89,29 @@ export const api = {
   listEntries: async (query?: TimeEntriesQuery) => {
     const validatedQuery = query ? TimeEntriesQuery.parse(query) : undefined;
     const response = await http.get<TimeEntriesResponse>('/api/time-entries-unified', validatedQuery);
-    return TimeEntriesResponseSchema.parse(response);
+    return TimeEntriesResponse.parse(response);
   },
 
   createEntry: async (input: CreateTimeEntryRequest) => {
     const body = CreateTimeEntryRequest.parse(input);
     const response = await http.post<TimeEntryResponse>('/api/time-entries-unified', body);
-    return TimeEntryResponseSchema.parse(response);
+    return TimeEntryResponse.parse(response);
   },
 
   getEntry: async (id: number) => {
     const response = await http.get<TimeEntryResponse>(`/api/time-entries-unified/${id}`);
-    return TimeEntryResponseSchema.parse(response);
+    return TimeEntryResponse.parse(response);
   },
 
   updateEntry: async (id: number, input: UpdateTimeEntryRequest) => {
     const body = UpdateTimeEntryRequest.parse(input);
     const response = await http.patch<TimeEntryResponse>(`/api/time-entries-unified/${id}`, body);
-    return TimeEntryResponseSchema.parse(response);
+    return TimeEntryResponse.parse(response);
   },
 
   deleteEntry: async (id: number) => {
     const response = await http.delete<ApiResponse>(`/api/time-entries-unified/${id}`);
-    return ApiResponseSchema.parse(response);
+    return ApiResponse.parse(response);
   },
 
   // Timer operations
@@ -123,7 +123,7 @@ export const api = {
 
   stopTimer: async (timerId: number) => {
     const response = await http.post<ApiResponse>(`/api/timers/ongoing/stop`, { timerId });
-    return ApiResponseSchema.parse(response);
+    return ApiResponse.parse(response);
   },
 
   getOngoingTimer: async (userId?: number) => {
@@ -136,13 +136,13 @@ export const api = {
   listEntriesLegacy: async (query?: TimeEntriesQuery) => {
     const validatedQuery = query ? TimeEntriesQuery.parse(query) : undefined;
     const response = await http.get<TimeEntriesResponse>('/api/time-entries', validatedQuery);
-    return TimeEntriesResponseSchema.parse(response);
+    return TimeEntriesResponse.parse(response);
   },
 
   createEntryLegacy: async (input: CreateTimeEntryRequest) => {
     const body = CreateTimeEntryRequest.parse(input);
     const response = await http.post<TimeEntryResponse>('/api/time-entries', body);
-    return TimeEntryResponseSchema.parse(response);
+    return TimeEntryResponse.parse(response);
   },
 } as const;
 
