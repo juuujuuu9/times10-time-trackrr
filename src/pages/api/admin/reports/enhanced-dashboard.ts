@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro';
-import { db } from '../../../db';
-import { users, clients, projects, timeEntries } from '../../../db/schema';
+import { db } from '../../../../db';
+import { users, clients, projects, timeEntries } from '../../../../db/schema';
 import { eq, and, sql, gte, lte } from 'drizzle-orm';
-import { getSessionUser } from '../../../utils/session';
+import { getSessionUser } from '../../../../utils/session';
 
 export const GET: APIRoute = async ({ request, url }) => {
   try {
