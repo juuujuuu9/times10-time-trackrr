@@ -510,6 +510,59 @@ const allProjects = await db
           dateInput.value = today;
         }
         
+        // Check for ongoing timers and disable form fields if needed
+        try {
+          const timerResponse = await fetch('/api/timers/ongoing');
+          if (timerResponse.ok) {
+            const timerResult = await timerResponse.json();
+            const isTimerRunning = timerResult.success && timerResult.data;
+            
+            // Disable all form fields if timer is running
+            const formFields = [
+              'timeEntryUser',
+              'timeEntryProject', 
+              'timeEntryTask',
+              'timeEntryStartTime',
+              'timeEntryEndTime',
+              'timeEntryDuration',
+              'timeEntryNotes'
+            ];
+            
+            formFields.forEach(fieldId => {
+              const field = document.getElementById(fieldId);
+              if (field) {
+                if (isTimerRunning) {
+                  field.disabled = true;
+                  field.classList.add('opacity-50', 'cursor-not-allowed', 'bg-gray-100');
+                  field.placeholder = 'Timer is running - please stop timer first';
+                } else {
+                  field.disabled = false;
+                  field.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-100');
+                  // Reset placeholder to original values
+                  if (fieldId === 'timeEntryDuration') field.placeholder = 'e.g., 2h, 3.5hr, 4:15, 90m';
+                  else if (fieldId === 'timeEntryStartTime') field.placeholder = '9:30 AM';
+                  else if (fieldId === 'timeEntryEndTime') field.placeholder = '5:30 PM';
+                  else if (fieldId === 'timeEntryNotes') field.placeholder = 'Optional notes about this time entry...';
+                }
+              }
+            });
+            
+            // Disable radio buttons for entry method
+            const entryMethodRadios = document.querySelectorAll('input[name="entryMethod"]');
+            entryMethodRadios.forEach(radio => {
+              if (isTimerRunning) {
+                radio.disabled = true;
+                radio.classList.add('opacity-50', 'cursor-not-allowed');
+              } else {
+                radio.disabled = false;
+                radio.classList.remove('opacity-50', 'cursor-not-allowed');
+              }
+            });
+          }
+        } catch (error) {
+          console.error('Error checking timer state for form fields:', error);
+        }
+        
         if (timeEntryModal) {
           timeEntryModal.classList.remove('hidden');
           console.log('Modal should be visible now');
