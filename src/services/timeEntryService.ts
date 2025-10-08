@@ -68,10 +68,8 @@ export class TimeEntryService {
       // Manual duration entry
       const durationSeconds = ValidationService.parseDuration(request.duration);
       timeEntryData.durationManual = durationSeconds;
-      timeEntryData.startTime = request.taskDate 
-        ? TimezoneService.createUserDate(request.taskDate, 12, 0)
-        : TimezoneService.createUserDate(TimezoneService.getTodayString(), 12, 0);
-      timeEntryData.endTime = null;
+      timeEntryData.startTime = null;        // Manual entries should have null startTime
+      timeEntryData.endTime = null;          // Manual entries should have null endTime
     }
 
     // Create the time entry

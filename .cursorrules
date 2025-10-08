@@ -224,3 +224,101 @@
 - Handle both manual and timer-based entries
 - Exclude ongoing timers from completed entry queries
 - Use proper timezone handling in queries
+
+## Timezone Issue Prevention Patterns
+
+### Manual Duration Entry Timezone Issues
+- **CRITICAL**: Manual duration entries MUST have `startTime: null` and `endTime: null`
+- **NEVER** set `startTime` to a date for manual duration entries - this causes timezone conversion issues
+- Use `createdAt` field for date association with manual entries, not `startTime`
+- When displaying manual entries, check `if (entry.startTime)` to determine date source
+
+### Date Display Logic
+- For timer entries: Use `entry.startTime` for date calculation
+- For manual entries: Use `entry.createdAt` for date calculation
+- Pattern:
+  ```typescript
+  const taskDate = entry.startTime ? 
+    (() => {
+      const date = new Date(entry.startTime);
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+      const day = date.getDate();
+      return new Date(year, month - 1, day, 0, 0, 0, 0);
+    })() : 
+    new Date(entry.createdAt);
+  ```
+
+### Timezone-Safe Date Construction
+- **ALWAYS** construct dates using local date components to avoid timezone issues
+- **NEVER** use `new Date(dateString)` for date construction in production
+- Pattern:
+  ```typescript
+  const [year, month, day] = dateString.split('-').map(Number);
+  const targetDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+  ```
+
+## Data Migration Patterns
+
+### Fixing Existing Data Issues
+- **ALWAYS** create API endpoints to fix existing data issues
+- **ALWAYS** provide both detection and fix functionality
+- **ALWAYS** include verification steps in fix scripts
+- Pattern for manual duration entry fixes:
+  ```typescript
+  // Find problematic entries
+  const problematicEntries = await db
+    .select()
+    .from(timeEntries)
+    .where(
+      and(
+        isNotNull(timeEntries.durationManual),
+        isNotNull(timeEntries.startTime)  // This is the problem
+      )
+    );
+  
+  // Fix them
+  await db
+    .update(timeEntries)
+    .set({
+      startTime: null,
+      endTime: null,
+      updatedAt: new Date()
+    })
+    .where(/* same condition */);
+  ```
+
+## Service Layer Patterns
+
+### Time Entry Service Consistency
+- **ALWAYS** ensure service layer follows the same patterns as API endpoints
+- **ALWAYS** check service layer when fixing API endpoint issues
+- **ALWAYS** maintain consistency between different creation paths (API vs Service)
+
+### Multiple Creation Paths
+- Manual duration entries can be created via:
+  - `/api/time-entries/duration` (duration editing)
+  - `/api/admin/time-entries` (admin creation)
+  - `TimeEntryService.createTimeEntry()` (service layer)
+- **ALWAYS** ensure all paths follow the same manual entry patterns
+- **ALWAYS** test all creation paths when fixing manual entry issues
+
+## Debugging and Investigation Patterns
+
+### Timezone Issue Investigation
+- **ALWAYS** check both creation logic AND display logic when investigating date issues
+- **ALWAYS** examine all code paths that create manual duration entries
+- **ALWAYS** verify that manual entries use `createdAt` for date association, not `startTime`
+- **ALWAYS** check service layer consistency when fixing API issues
+
+### Production Issue Debugging
+- **ALWAYS** create migration scripts for data fixes
+- **ALWAYS** provide API endpoints for fixing existing data
+- **ALWAYS** include verification steps in fix operations
+- **ALWAYS** test fixes on development data before production
+
+### Code Search Patterns
+- Use `grep` to find all instances of problematic patterns
+- Search for `durationManual` to find all manual entry logic
+- Search for `startTime.*targetDate` to find timezone issues
+- Check both API endpoints and service layers for consistency

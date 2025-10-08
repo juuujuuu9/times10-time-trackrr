@@ -1,32 +1,47 @@
 import { db } from '../db';
 import { timeEntries } from '../db/schema';
-import { and, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, isNotNull, isNull } from 'drizzle-orm';
 
+/**
+ * Fix manual duration entries that have incorrect startTime values
+ * Manual duration entries should have startTime: null and endTime: null
+ */
 async function fixManualDurationEntries() {
-  console.log('🔧 Starting fix for manual duration entries...');
-  
   try {
-    // Find all entries that have durationManual but also have startTime and endTime
-    // These are the problematic entries that were created with the old logic
-    const problematicEntries = await db
+    console.log('🔍 Finding manual duration entries with incorrect startTime values...');
+    
+    // Find entries that have durationManual but also have startTime (incorrect)
+    const incorrectEntries = await db
       .select()
       .from(timeEntries)
       .where(
         and(
           isNotNull(timeEntries.durationManual),
-          isNotNull(timeEntries.startTime),
-          isNotNull(timeEntries.endTime)
+          isNotNull(timeEntries.startTime)
         )
       );
 
-    console.log(`Found ${problematicEntries.length} problematic manual duration entries`);
+    console.log(`📊 Found ${incorrectEntries.length} manual duration entries with incorrect startTime values`);
 
-    if (problematicEntries.length === 0) {
-      console.log('✅ No problematic entries found. All manual duration entries are already correct.');
+    if (incorrectEntries.length === 0) {
+      console.log('✅ No manual duration entries need fixing');
       return;
     }
 
-    // Update these entries to have null startTime and endTime
+    // Show details of entries that will be fixed
+    console.log('\n📋 Entries to be fixed:');
+    incorrectEntries.forEach((entry, index) => {
+      console.log(`  ${index + 1}. ID: ${entry.id}, User: ${entry.userId}, Project: ${entry.projectId}`);
+      console.log(`     Duration: ${entry.durationManual}s (${Math.round(entry.durationManual! / 3600 * 100) / 100}h)`);
+      console.log(`     Current startTime: ${entry.startTime}`);
+      console.log(`     Current endTime: ${entry.endTime}`);
+      console.log(`     Created: ${entry.createdAt}`);
+      console.log('');
+    });
+
+    // Fix the entries by setting startTime and endTime to null
+    console.log('🔧 Fixing manual duration entries...');
+    
     const updateResult = await db
       .update(timeEntries)
       .set({
@@ -37,44 +52,70 @@ async function fixManualDurationEntries() {
       .where(
         and(
           isNotNull(timeEntries.durationManual),
-          isNotNull(timeEntries.startTime),
-          isNotNull(timeEntries.endTime)
+          isNotNull(timeEntries.startTime)
         )
-      );
+      )
+      .returning();
 
-    console.log(`✅ Fixed ${problematicEntries.length} manual duration entries`);
-    console.log('Manual duration entries now have startTime: null and endTime: null');
-
+    console.log(`✅ Fixed ${updateResult.length} manual duration entries`);
+    
     // Verify the fix
-    const remainingProblematic = await db
+    console.log('\n🔍 Verifying fix...');
+    const remainingIncorrect = await db
       .select()
       .from(timeEntries)
       .where(
         and(
           isNotNull(timeEntries.durationManual),
-          isNotNull(timeEntries.startTime),
-          isNotNull(timeEntries.endTime)
+          isNotNull(timeEntries.startTime)
         )
       );
 
-    if (remainingProblematic.length === 0) {
-      console.log('✅ Verification successful: No more problematic entries found');
+    if (remainingIncorrect.length === 0) {
+      console.log('✅ All manual duration entries have been fixed successfully');
     } else {
-      console.log(`❌ Warning: ${remainingProblematic.length} problematic entries still remain`);
+      console.log(`❌ ${remainingIncorrect.length} entries still need fixing`);
     }
+
+    // Show final statistics
+    const allManualEntries = await db
+      .select()
+      .from(timeEntries)
+      .where(isNotNull(timeEntries.durationManual));
+
+    const correctManualEntries = await db
+      .select()
+      .from(timeEntries)
+      .where(
+        and(
+          isNotNull(timeEntries.durationManual),
+          isNull(timeEntries.startTime),
+          isNull(timeEntries.endTime)
+        )
+      );
+
+    console.log(`\n📊 Final Statistics:`);
+    console.log(`   Total manual duration entries: ${allManualEntries.length}`);
+    console.log(`   Correctly formatted entries: ${correctManualEntries.length}`);
+    console.log(`   Entries fixed: ${updateResult.length}`);
 
   } catch (error) {
     console.error('❌ Error fixing manual duration entries:', error);
+    throw error;
   }
 }
 
-// Run the fix
-fixManualDurationEntries()
-  .then(() => {
-    console.log('🎉 Manual duration entries fix completed');
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error('💥 Script failed:', error);
-    process.exit(1);
-  });
+// Run the fix if this script is executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  fixManualDurationEntries()
+    .then(() => {
+      console.log('🎉 Manual duration entries fix completed');
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error('💥 Fix failed:', error);
+      process.exit(1);
+    });
+}
+
+export { fixManualDurationEntries };

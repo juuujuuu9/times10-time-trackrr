@@ -140,12 +140,11 @@ export const POST: APIRoute = async ({ request }) => {
 
       // Single entry exists - update it
       const entry = existingEntries[0];
-      const targetDateStart = new Date(year, month - 1, day, 0, 0, 0, 0);
       
       const updateData = {
         durationManual: parsedDuration,
-        startTime: targetDateStart, // Set to target date for proper day association
-        endTime: null,   // Ensure manual entries have null endTime
+        startTime: null,        // Manual entries should have null startTime
+        endTime: null,          // Manual entries should have null endTime
         updatedAt: new Date()
       };
 
@@ -164,14 +163,13 @@ export const POST: APIRoute = async ({ request }) => {
       });
     } else {
       // Create new time entry with manual duration
-      // Set startTime to the target date to ensure the entry is associated with the correct day
-      const targetDateStart = new Date(year, month - 1, day, 0, 0, 0, 0);
-      
+      // For manual duration entries, set startTime and endTime to null
+      // Use createdAt for date association to avoid timezone issues
       const newEntry = {
         userId,
         projectId: finalProjectId,
-        startTime: targetDateStart, // Set to target date for proper day association
-        endTime: null,   // Manual entries have null endTime
+        startTime: null,        // Manual entries should have null startTime
+        endTime: null,          // Manual entries should have null endTime
         durationManual: parsedDuration,
         notes: 'Manual duration entry',
         createdAt: new Date(),
