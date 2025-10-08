@@ -288,6 +288,7 @@ export class TimeEntryService {
       console.log('🔧 Service layer: Updating createdAt:', request.createdAt);
       updateData.createdAt = new Date(request.createdAt);
       console.log('🔧 Service layer: CreatedAt set to:', updateData.createdAt);
+      console.log('🔧 Service layer: CreatedAt ISO string:', updateData.createdAt.toISOString());
     }
 
     // Handle other fields
@@ -313,6 +314,8 @@ export class TimeEntryService {
         .returning();
         
       console.log('🔧 Service layer: Updated entry:', updatedEntry);
+      console.log('🔧 Service layer: Updated entry createdAt:', updatedEntry.createdAt);
+      console.log('🔧 Service layer: Updated entry createdAt ISO:', updatedEntry.createdAt.toISOString());
     } catch (dbError) {
       console.error('🔧 Service layer: Database update error:', dbError);
       throw dbError;

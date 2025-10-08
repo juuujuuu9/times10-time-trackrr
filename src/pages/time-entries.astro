@@ -62,7 +62,7 @@ const userTimeEntries = await db
     eq(clients.archived, false),
     eq(projects.archived, false)
   ))
-  .orderBy(sql`${timeEntries.startTime} DESC`);
+  .orderBy(sql`COALESCE(${timeEntries.startTime}, ${timeEntries.createdAt}) DESC`);
 
 // Get all clients for filtering (only those the user has worked on - non-archived activities)
 const userClients = await db
@@ -373,6 +373,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
               <tbody class="bg-white divide-y divide-gray-200">
                 {userTimeEntries.map((entry) => {
                   // Display using the user's local date so late-night entries show on the intended day
+                  // For manual duration entries, use createdAt; for timer entries, use startTime
                   const taskDate = entry.startTime ? 
                     (() => {
                       const date = new Date(entry.startTime);
@@ -381,7 +382,13 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                       const day = date.getDate();
                       return new Date(year, month - 1, day, 0, 0, 0, 0);
                     })() : 
-                    new Date(entry.createdAt);
+                    (() => {
+                      const date = new Date(entry.createdAt);
+                      const year = date.getFullYear();
+                      const month = date.getMonth() + 1;
+                      const day = date.getDate();
+                      return new Date(year, month - 1, day, 0, 0, 0, 0);
+                    })();
                   const duration = entry.duration ? entry.duration / 3600 : 0;
                   
                   // Check if this is a manual duration entry (no meaningful start/end times)
@@ -668,11 +675,13 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
     </div>
   </div>
 
-  <!-- Flatpickr CSS and JS -->
+  <!-- Flatpickr CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
   <script>
+    // Import Flatpickr
+    import flatpickr from 'flatpickr';
+    
     // Note: timezone utilities will be handled server-side
     
     // Flexible time parser for natural human shorthand formats
@@ -1010,7 +1019,11 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             }
             
             // Get the task date from the current entry
-            const taskDate = currentEntry?.startTime ? new Date(currentEntry.startTime) : new Date(currentEntry?.createdAt);
+            // For manual duration entries, use createdAt; for timer entries, use startTime
+            const isManualDurationEntry = currentEntry?.durationManual && !currentEntry?.endTime;
+            const taskDate = (!isManualDurationEntry && currentEntry?.startTime) ? 
+              new Date(currentEntry.startTime) : 
+              new Date(currentEntry?.createdAt);
             
             // Use the parsed time (already in 24-hour format)
             const hours = parsedTime.hours;
@@ -1578,7 +1591,8 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
           }
           
           // Initialize Flatpickr
-          const flatpickrInstance = (window as any).flatpickr(dateInput, {
+          console.log('🔧 Initializing Flatpickr for entry:', entryId, 'currentDate:', currentDate);
+          const flatpickrInstance = flatpickr(dateInput, {
             dateFormat: 'm/d/Y',
             defaultDate: currentDate ? new Date(currentDate + 'T00:00:00') : new Date(),
             allowInput: true,
@@ -1586,9 +1600,11 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             static: true,
             monthSelectorType: 'static',
             onChange: function(selectedDates: any, dateStr: any, instance: any) {
+              console.log('🔧 Flatpickr onChange triggered:', { selectedDates, dateStr, entryId });
               if (selectedDates.length > 0) {
                 const selectedDate = selectedDates[0];
                 const isoDate = selectedDate.toISOString().split('T')[0];
+                console.log('🔧 Calling saveDateChange with:', { isoDate, entryId });
                 saveDateChange(dateInput, entryId || '', isoDate);
               }
             }
@@ -1601,6 +1617,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
 
       // Function to save date changes from Flatpickr
       async function saveDateChange(dateInput: HTMLInputElement, entryId: string, newISODate: string) {
+        console.log('🔧 saveDateChange called with:', { entryId, newISODate });
         try {
           // Get the current entry data
           const row = dateInput.closest('tr');
@@ -1666,6 +1683,8 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             }
           }
           
+          console.log('🔧 Making API call to update entry:', { entryId, updateData });
+          console.log('🔧 Full updateData object:', JSON.stringify(updateData, null, 2));
           const response = await fetch(`/api/time-entries-unified/${entryId}`, {
             method: 'PUT',
             headers: {
@@ -1674,6 +1693,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
             body: JSON.stringify(updateData)
           });
           
+          console.log('🔧 API response status:', response.status);
           if (response.ok) {
             const result = await response.json();
             
@@ -1697,7 +1717,8 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
               dateInput.style.borderColor = '';
             }, 1500);
           } else {
-            console.error('Failed to update date, status:', response.status);
+            const errorData = await response.json();
+            console.error('🔧 Failed to update date, status:', response.status, 'error:', errorData);
             // Revert the input value
             const originalDate = dateInput.getAttribute('data-current-date');
             if (originalDate) {
@@ -1792,7 +1813,11 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                       }
                       
                       // Get the task date from the current entry
-                      const taskDate = currentEntry?.startTime ? new Date(currentEntry.startTime) : new Date(currentEntry?.createdAt);
+                      // For manual duration entries, use createdAt; for timer entries, use startTime
+                      const isManualDurationEntry = currentEntry?.durationManual && !currentEntry?.endTime;
+                      const taskDate = (!isManualDurationEntry && currentEntry?.startTime) ? 
+                        new Date(currentEntry.startTime) : 
+                        new Date(currentEntry?.createdAt);
                       
                       // Use the parsed time (already in 24-hour format)
                       const hours = parsedTime.hours;

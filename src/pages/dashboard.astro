@@ -632,7 +632,7 @@ const user = await requireAuth('/')(Astro) as any;
 
   // Load dashboard data
   async function loadDashboardData() {
-    console.log('Loading dashboard data...');
+    console.log('🔧 DASHBOARD: Loading dashboard data...');
     try {
       const userId = await getCurrentUserId();
       if (!userId) {
@@ -647,7 +647,8 @@ const user = await requireAuth('/')(Astro) as any;
       if (entriesResponse.ok) {
         const entriesData = await entriesResponse.json();
         const recentEntries = entriesData.data || [];
-        console.log('Loaded recent entries:', recentEntries.length);
+        console.log('🔧 DASHBOARD: Loaded recent entries:', recentEntries.length);
+        console.log('🔧 DASHBOARD: Manual duration entries in data:', recentEntries.filter((entry: any) => entry.durationManual && !entry.startTime && !entry.endTime));
         
         // Load ongoing timers - use user-specific endpoint for team members
         const ongoingResponse = await fetch('/api/timers/user-ongoing');
@@ -913,7 +914,14 @@ const user = await requireAuth('/')(Astro) as any;
                 const day = date.getDate();
                 return new Date(year, month - 1, day, 0, 0, 0, 0);
               })() : 
-              new Date(entry.createdAt);
+              (() => {
+                const date = new Date(entry.createdAt);
+                // Use local components so the date matches the times shown
+                const year = date.getFullYear();
+                const month = date.getMonth() + 1;
+                const day = date.getDate();
+                return new Date(year, month - 1, day, 0, 0, 0, 0);
+              })();
             const durationHours = entry.duration ? (entry.duration / 3600).toFixed(1) : '0';
             
             // Check if this is a manual duration entry (has durationManual but no startTime/endTime)
@@ -2900,16 +2908,21 @@ const user = await requireAuth('/')(Astro) as any;
             this.style.borderColor = '#3B82F6';
             this.style.backgroundColor = '#F0F9FF';
             
-            const response = await fetch(`/api/time-entries-unified/${entryId}`, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(updateData)
-            });
-            
-            if (response.ok) {
+        console.log('🔧 DASHBOARD: Making API call to update entry:', { entryId, updateData });
+        console.log('🔧 DASHBOARD: Full updateData object:', JSON.stringify(updateData, null, 2));
+        
+        const response = await fetch(`/api/time-entries-unified/${entryId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updateData)
+        });
+        
+        console.log('🔧 DASHBOARD: API response status:', response.status);
+        if (response.ok) {
               const result = await response.json();
+              console.log('🔧 DASHBOARD: API response data:', result);
               const row = this.closest('tr');
               
               // Show success state
@@ -3456,6 +3469,7 @@ const user = await requireAuth('/')(Astro) as any;
     
     // Function to save date changes from Flatpickr
     async function saveDateChange(dateInput: HTMLInputElement, entryId: string, newISODate: string) {
+      console.log('🔧 DASHBOARD: saveDateChange called with:', { entryId, newISODate });
       try {
         // Get the current entry data
         const row = dateInput.closest('tr');
@@ -3479,13 +3493,12 @@ const user = await requireAuth('/')(Astro) as any;
         // Parse the new date
         const [year, month, day] = newISODate.split('-').map(Number);
         
-        const updateData: { startTime?: string; endTime?: string; taskDate?: string; createdAt?: string } = {};
-        updateData.taskDate = newISODate;
+        const updateData: { startTime?: string; endTime?: string; createdAt?: string } = {};
         
         // Check if this is a manual duration entry (has durationManual but no startTime/endTime)
         const isManualDurationEntry = currentEntry.durationManual && !currentEntry.startTime && !currentEntry.endTime;
         
-        console.log('🔍 Date change debug:', {
+        console.log('🔧 DASHBOARD: Date change debug:', {
           entryId,
           currentEntry: {
             durationManual: currentEntry.durationManual,
@@ -3498,13 +3511,14 @@ const user = await requireAuth('/')(Astro) as any;
           updateData
         });
         
-        console.log('🔍 Full currentEntry object:', currentEntry);
+        console.log('🔧 DASHBOARD: Full currentEntry object:', currentEntry);
+        console.log('🔧 DASHBOARD: updateData before processing:', updateData);
         
         if (isManualDurationEntry) {
           // For manual duration entries, update createdAt to the new date
           const newCreatedAt = new Date(year, month - 1, day, 12, 0, 0, 0); // Use noon to avoid timezone issues
           updateData.createdAt = newCreatedAt.toISOString();
-          console.log('📝 Updating manual duration entry createdAt:', updateData.createdAt);
+          console.log('🔧 DASHBOARD: Updating manual duration entry createdAt:', updateData.createdAt);
         } else {
           // For timer-based entries, update startTime and endTime
           if (currentEntry.startTime) {
@@ -3520,6 +3534,7 @@ const user = await requireAuth('/')(Astro) as any;
           }
         }
         
+        console.log('🔧 DASHBOARD: Final updateData object:', updateData);
         const response = await fetch(`/api/time-entries-unified/${entryId}`, {
           method: 'PUT',
           headers: {
@@ -3543,7 +3558,8 @@ const user = await requireAuth('/')(Astro) as any;
             dateInput.style.borderColor = '';
           }, 1500);
         } else {
-          console.error('Failed to update date, status:', response.status);
+          const errorData = await response.json();
+          console.error('🔧 DASHBOARD: Failed to update date, status:', response.status, 'error:', errorData);
           // Revert the input value
           const originalDate = dateInput.getAttribute('data-current-date');
           if (originalDate) {
@@ -3578,6 +3594,7 @@ const user = await requireAuth('/')(Astro) as any;
         }
         
         // Initialize Flatpickr
+        console.log('🔧 DASHBOARD: Initializing Flatpickr for entry:', entryId, 'currentDate:', currentDate);
         const flatpickrInstance = flatpickr(dateInput, {
           dateFormat: 'm/d/Y',
           defaultDate: currentDate ? new Date(currentDate + 'T00:00:00') : new Date(),
@@ -3586,9 +3603,11 @@ const user = await requireAuth('/')(Astro) as any;
           static: true,
           monthSelectorType: 'static',
           onChange: function(selectedDates, dateStr, instance) {
+            console.log('🔧 DASHBOARD: Flatpickr onChange triggered:', { selectedDates, dateStr, entryId });
             if (selectedDates.length > 0) {
               const selectedDate = selectedDates[0];
               const isoDate = selectedDate.toISOString().split('T')[0];
+              console.log('🔧 DASHBOARD: Calling saveDateChange with:', { isoDate, entryId });
               dateInput.setAttribute('data-current-date', isoDate);
               
               // Manually trigger the save logic instead of blur event
