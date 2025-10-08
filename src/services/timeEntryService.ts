@@ -21,6 +21,28 @@ export class TimeEntryService {
       throw new Error(validation.error);
     }
 
+    // Check if there's an ongoing timer for this user (only for manual duration entries)
+    if (request.duration) {
+      const { timeEntries } = await import('../db/schema');
+      const { eq, and, isNull } = await import('drizzle-orm');
+      
+      const ongoingTimer = await db
+        .select()
+        .from(timeEntries)
+        .where(
+          and(
+            eq(timeEntries.userId, request.userId),
+            isNull(timeEntries.endTime),
+            isNull(timeEntries.durationManual)
+          )
+        )
+        .limit(1);
+
+      if (ongoingTimer.length > 0) {
+        throw new Error('Cannot create manual duration entry while timer is running. Please stop the timer first.');
+      }
+    }
+
     // Prepare time entry data
     const timeEntryData: any = {
       userId: request.userId,

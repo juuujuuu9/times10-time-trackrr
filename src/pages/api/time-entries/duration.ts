@@ -86,6 +86,32 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
+    // Check if there's an ongoing timer for this user
+    const { timeEntries } = await import('../../../db/schema');
+    const { eq, and, isNull } = await import('drizzle-orm');
+    
+    const ongoingTimer = await db
+      .select()
+      .from(timeEntries)
+      .where(
+        and(
+          eq(timeEntries.userId, parseInt(userId)),
+          isNull(timeEntries.endTime),
+          isNull(timeEntries.durationManual)
+        )
+      )
+      .limit(1);
+
+    if (ongoingTimer.length > 0) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Cannot create manual duration entry while timer is running. Please stop the timer first.'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // Parse the duration using ValidationService
     const parsedDuration = ValidationService.parseDuration(duration);
     if (!parsedDuration) {

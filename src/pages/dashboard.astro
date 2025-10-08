@@ -1282,6 +1282,12 @@ const user = await requireAuth('/')(Astro) as any;
     loadDashboardData();
   });
 
+  // Listen for timer stopped events to refresh the dashboard
+  window.addEventListener('timerStopped', () => {
+    // Reload dashboard data when a timer is stopped
+    loadDashboardData();
+  });
+
   // Attach listeners for time entry changes (add/update/delete) once
   (function attachTimeEntryChangeListeners() {
     const root = document.documentElement;

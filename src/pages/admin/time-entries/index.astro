@@ -449,8 +449,23 @@ const allProjects = await db
     const dateRange = document.getElementById('dateRange');
 
     if (addTimeEntryBtn) {
-      addTimeEntryBtn.addEventListener('click', () => {
+      addTimeEntryBtn.addEventListener('click', async () => {
         console.log('Add Time Entry button clicked');
+        
+        // Check if there are any ongoing timers before allowing manual entry creation
+        try {
+          const response = await fetch('/api/timers/ongoing');
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data) {
+              alert('Please stop the current timer before adding manual entries.');
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('Error checking timer state:', error);
+        }
+        
         const modalTitle = document.getElementById('timeEntryModalTitle');
         const timeEntryId = document.getElementById('timeEntryId');
         const timeEntryModal = document.getElementById('timeEntryModal');
