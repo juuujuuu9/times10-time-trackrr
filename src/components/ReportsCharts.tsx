@@ -61,19 +61,42 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
   const maxCost = Math.max(...sortedData.map(item => item.totalCost));
   const suggestedMax = maxCost < 100 ? Math.ceil(maxCost * 1.2) : Math.ceil(maxCost * 1.1);
 
+  // Toast state
+  const [toast, setToast] = React.useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
+    show: false,
+    message: '',
+    type: 'success'
+  });
+
   // Function to copy value to clipboard
   const copyToClipboard = (value: number, label: string) => {
-    const text = `$${value.toLocaleString()}`;
+    const text = canViewFinancialData ? `$${value.toLocaleString()}` : `${value.toFixed(1)}h`;
     navigator.clipboard.writeText(text).then(() => {
-      // You could add a toast notification here
-      console.log(`Copied ${text} for ${label}`);
+      setToast({
+        show: true,
+        message: `Copied ${text} for ${label}`,
+        type: 'success'
+      });
+      // Auto-hide toast after 3 seconds
+      setTimeout(() => {
+        setToast({ show: false, message: '', type: 'success' });
+      }, 3000);
+    }).catch(() => {
+      setToast({
+        show: true,
+        message: 'Failed to copy to clipboard',
+        type: 'error'
+      });
+      setTimeout(() => {
+        setToast({ show: false, message: '', type: 'success' });
+      }, 3000);
     });
   };
 
   const chartData = {
     labels: sortedData.map(item => {
       const parts = [];
-      if (item.clientName) parts.push(item.clientName);
+      if (item.clientName) parts.push(item.clientName.toUpperCase());
       if (item.projectName) parts.push(item.projectName);
       if (item.taskName) parts.push(item.taskName);
       return parts.length > 0 ? parts.join(' - ') : 'Unknown';
@@ -223,17 +246,17 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
           color: '#6B7280',
           maxRotation: 0,
           font: {
-            size: 12,
+            size: 10, // Smaller font size for both project and client names
           },
           callback: function(value: any, index: number) {
             const item = sortedData[index];
             if (item.projectName && item.clientName) {
               return [
                 item.projectName,
-                item.clientName
+                item.clientName.toUpperCase()
               ];
             }
-            return item.projectName || item.clientName || 'Unknown';
+            return item.projectName || item.clientName?.toUpperCase() || 'Unknown';
           }
         },
         grid: {
@@ -253,13 +276,33 @@ export const HorizontalBarChart: React.FC<{ data: ChartData[]; title: string; pe
   const calculatedHeight = Math.max(minHeight, sortedData.length * itemHeight + 100);
 
   return (
-    <div className="bg-white rounded-lg border border-gray-300 p-6 shadow-sm">
+    <div className="bg-white rounded-lg border border-gray-300 p-6 shadow-sm relative">
       <div className="mb-4 text-sm text-gray-600">
-        💡 Click on any bar to copy the cost value to your clipboard
+        💡 Click on any bar to copy the {canViewFinancialData ? 'cost' : 'hours'} value to your clipboard
       </div>
       <div style={{ height: `${calculatedHeight}px` }}>
         <Bar data={chartData} options={options} />
       </div>
+      
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg transition-all duration-300 ${
+          toast.type === 'success' 
+            ? 'bg-green-500 text-white' 
+            : 'bg-red-500 text-white'
+        }`}>
+          <div className="flex items-center space-x-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {toast.type === 'success' ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              )}
+            </svg>
+            <span className="text-sm font-medium">{toast.message}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -396,6 +439,38 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
     'rgba(14, 165, 233, 0.8)',   // Sky Blue
     'rgba(34, 197, 94, 0.8)',    // Emerald
   ];
+
+  // Toast state
+  const [toast, setToast] = React.useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
+    show: false,
+    message: '',
+    type: 'success'
+  });
+
+  // Function to copy value to clipboard
+  const copyToClipboard = (value: number, label: string) => {
+    const text = canViewFinancialData ? `$${value.toLocaleString()}` : `${value.toFixed(1)}h`;
+    navigator.clipboard.writeText(text).then(() => {
+      setToast({
+        show: true,
+        message: `Copied ${text} for ${label}`,
+        type: 'success'
+      });
+      // Auto-hide toast after 3 seconds
+      setTimeout(() => {
+        setToast({ show: false, message: '', type: 'success' });
+      }, 3000);
+    }).catch(() => {
+      setToast({
+        show: true,
+        message: 'Failed to copy to clipboard',
+        type: 'error'
+      });
+      setTimeout(() => {
+        setToast({ show: false, message: '', type: 'success' });
+      }, 3000);
+    });
+  };
 
   // Group data by client for hierarchical legend
   const groupedData = data.reduce((acc, item, index) => {
@@ -762,15 +837,26 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
         },
       },
     },
+    onClick: (event: any, elements: any) => {
+      if (elements.length > 0) {
+        const elementIndex = elements[0].index;
+        const item = data[elementIndex];
+        const value = canViewFinancialData 
+          ? item.totalCost 
+          : item.totalHours / 3600;
+        const label = item.projectName || item.clientName || 'Unknown';
+        copyToClipboard(value, label);
+      }
+    },
   };
 
   const [chartRef, setChartRef] = React.useState<any>(null);
   const [selectedProject, setSelectedProject] = React.useState<ChartData | null>(null);
 
   return (
-    <div className="bg-white rounded-lg border border-gray-300 p-6 shadow-sm">
+    <div className="bg-white rounded-lg border border-gray-300 p-6 shadow-sm relative">
       <div className="mb-4 text-sm text-gray-600">
-        💡 Click on legend items to view project details. Projects are grouped by client.
+        💡 Click on legend items to view project details, or click on chart slices to copy values. Projects are grouped by client.
       </div>
       <div className="flex gap-6">
         {/* Chart or Project Details - Left Side */}
@@ -800,6 +886,26 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
           </div>
         </div>
       </div>
+      
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg transition-all duration-300 ${
+          toast.type === 'success' 
+            ? 'bg-green-500 text-white' 
+            : 'bg-red-500 text-white'
+        }`}>
+          <div className="flex items-center space-x-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {toast.type === 'success' ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              )}
+            </svg>
+            <span className="text-sm font-medium">{toast.message}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

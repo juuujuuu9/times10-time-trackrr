@@ -168,6 +168,14 @@ Only introduce abstractions when:
 - **Ask: "Can I write this in 20 lines instead of importing a package?"**
 **Severity:** Warning
 
+### RULE-013: No Mock Data for Missing APIs
+- **NEVER** create mock data, placeholder data, or generated fake data when API endpoints are missing
+- **ALWAYS** ask the user if they want to create the missing API endpoint instead
+- **ALWAYS** identify what data should come from the database and suggest the proper API structure
+- **ALWAYS** show loading states or "Feature not implemented" messages rather than fake data
+- **ALWAYS** provide clear guidance on what API endpoint needs to be created
+**Severity:** Error
+
 ## Cursor Behavior Instructions
 
 ### Code Completion
@@ -176,6 +184,7 @@ Only introduce abstractions when:
 - Prefer rule-compliant alternatives over raw suggestions
 - **Default to the simplest approach that satisfies requirements**
 - **Avoid suggesting abstractions, helpers, or utilities for single-use code**
+- **RULE-013: Never suggest mock data; always ask about creating missing API endpoints**
 
 ### Refactoring
 - Verify refactor maintains rule compliance
@@ -454,6 +463,14 @@ Cursor will flag and suggest alternatives for:
 - Return `data` object with results
 - Include `error` field for failures
 - Use appropriate HTTP status codes
+
+### Missing API Endpoint Protocol (RULE-013)
+- **NEVER** create mock data when API endpoints are missing
+- **ALWAYS** ask: "Would you like me to create the missing API endpoint for [specific functionality]?"
+- **ALWAYS** identify the required data structure and database relationships
+- **ALWAYS** suggest the proper API endpoint path and implementation
+- **ALWAYS** show loading states or "Feature not implemented" instead of fake data
+- **ALWAYS** provide clear guidance on what needs to be built
 
 ## Database Query Patterns
 
