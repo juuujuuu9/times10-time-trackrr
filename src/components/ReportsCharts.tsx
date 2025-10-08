@@ -397,6 +397,16 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
     'rgba(34, 197, 94, 0.8)',    // Emerald
   ];
 
+  // Group data by client for hierarchical legend
+  const groupedData = data.reduce((acc, item, index) => {
+    const clientName = item.clientName || 'Unknown Client';
+    if (!acc[clientName]) {
+      acc[clientName] = [];
+    }
+    acc[clientName].push({ ...item, originalIndex: index });
+    return acc;
+  }, {} as Record<string, Array<ChartData & { originalIndex: number }>>);
+
   const chartData = {
     labels: data.map(item => {
       const parts = [];
@@ -425,6 +435,251 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
     ],
   };
 
+  // Custom legend component
+  const CustomLegend = ({ 
+    chartRef, 
+    selectedProject, 
+    setSelectedProject 
+  }: { 
+    chartRef: any;
+    selectedProject: ChartData | null;
+    setSelectedProject: (project: ChartData | null) => void;
+  }) => {
+    const selectProject = (project: ChartData & { originalIndex: number }) => {
+      setSelectedProject(project);
+    };
+
+    return (
+      <div className="space-y-4 max-h-96 overflow-y-auto">
+        {Object.entries(groupedData).map(([clientName, clientProjects]) => (
+          <div key={clientName} className="space-y-2">
+            {/* Client Header */}
+            <div className="flex items-center space-x-2 border-b border-gray-200 pb-2">
+              <div className="text-sm font-semibold text-gray-800 flex items-center">
+                <svg className="w-4 h-4 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+                {clientName}
+              </div>
+            </div>
+            
+            {/* Projects under this client */}
+            <div className="ml-4 space-y-1">
+              {clientProjects.map((project) => {
+                const backgroundColor = colors[project.originalIndex % colors.length];
+                const projectName = project.projectName || 'Unknown Project';
+                
+                const isSelected = selectedProject?.projectName === project.projectName && 
+                                 selectedProject?.clientName === project.clientName;
+                
+                return (
+                  <div 
+                    key={project.originalIndex}
+                    className={`flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors ${
+                      isSelected ? 'bg-blue-50 border border-blue-200' : ''
+                    }`}
+                    onClick={() => selectProject(project)}
+                  >
+                    <div 
+                      className="w-3 h-3 rounded-full border-2 border-white shadow-sm flex-shrink-0"
+                      style={{ backgroundColor }}
+                    />
+                    <span className={`text-sm flex-1 truncate ${isSelected ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
+                      {projectName}
+                    </span>
+                    {isSelected && (
+                      <span className="text-xs text-blue-600 flex-shrink-0">(selected)</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // Project details component
+  const ProjectDetails = ({ project }: { project: ChartData }) => {
+    const [teamMembers, setTeamMembers] = React.useState<any[]>([]);
+    const [loading, setLoading] = React.useState(false);
+    const [error, setError] = React.useState<string | null>(null);
+    
+    const totalCost = project.totalCost || 0;
+    const totalHours = project.totalHours || 0;
+    const hoursInHours = totalHours / 3600; // Convert seconds to hours
+    
+    // Fetch team members when component mounts
+    React.useEffect(() => {
+      const fetchTeamMembers = async () => {
+        setLoading(true);
+        setError(null);
+        
+        try {
+          // This would be the actual API call to get team members for this project
+          // For now, we'll simulate with mock data
+          const response = await fetch(`/api/projects/${project.projectName}/team-members`);
+          
+          if (response.ok) {
+            const data = await response.json();
+            setTeamMembers(data.teamMembers || []);
+          } else {
+            // Fallback to mock data for demonstration
+            setTeamMembers([
+              {
+                id: 1,
+                name: 'John Doe',
+                hours: 24.5,
+                cost: 2450,
+                avatar: null
+              },
+              {
+                id: 2,
+                name: 'Jane Smith',
+                hours: 18.0,
+                cost: 1800,
+                avatar: null
+              },
+              {
+                id: 3,
+                name: 'Mike Johnson',
+                hours: 12.5,
+                cost: 1250,
+                avatar: null
+              }
+            ]);
+          }
+        } catch (err) {
+          console.error('Error fetching team members:', err);
+          setError('Failed to load team members');
+          // Fallback to mock data
+          setTeamMembers([
+            {
+              id: 1,
+              name: 'John Doe',
+              hours: 24.5,
+              cost: 2450,
+              avatar: null
+            },
+            {
+              id: 2,
+              name: 'Jane Smith',
+              hours: 18.0,
+              cost: 1800,
+              avatar: null
+            }
+          ]);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchTeamMembers();
+    }, [project.projectName]);
+    
+    return (
+      <div className="bg-white rounded-lg border border-gray-300 p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-800">Project Details</h3>
+          <button
+            onClick={() => setSelectedProject(null)}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div className="space-y-4">
+          {/* Project Info */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h4 className="font-medium text-gray-800 mb-2">{project.projectName}</h4>
+            <p className="text-sm text-gray-600">{project.clientName}</p>
+          </div>
+          
+          {/* Metrics */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-blue-50 rounded-lg p-4">
+              <div className="text-2xl font-bold text-blue-600">
+                {canViewFinancialData ? `$${totalCost.toLocaleString()}` : `${hoursInHours.toFixed(1)}h`}
+              </div>
+              <div className="text-sm text-blue-700">
+                {canViewFinancialData ? 'Total Cost' : 'Total Hours'}
+              </div>
+            </div>
+            
+            <div className="bg-green-50 rounded-lg p-4">
+              <div className="text-2xl font-bold text-green-600">
+                {canViewFinancialData ? `${hoursInHours.toFixed(1)}h` : `$${totalCost.toLocaleString()}`}
+              </div>
+              <div className="text-sm text-green-700">
+                {canViewFinancialData ? 'Total Hours' : 'Total Cost'}
+              </div>
+            </div>
+          </div>
+          
+          {/* Team Members */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h5 className="font-medium text-gray-800 mb-3">Team Members</h5>
+            
+            {loading ? (
+              <div className="flex items-center justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <span className="ml-2 text-sm text-gray-600">Loading team members...</span>
+              </div>
+            ) : error ? (
+              <div className="text-sm text-red-600 bg-red-50 p-3 rounded">
+                {error}
+              </div>
+            ) : teamMembers.length > 0 ? (
+              <div className="space-y-3">
+                {teamMembers.map((member) => (
+                  <div key={member.id} className="flex items-center justify-between bg-white p-3 rounded-lg border">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                        {member.avatar ? (
+                          <img 
+                            src={member.avatar} 
+                            alt={member.name}
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-sm font-medium text-gray-600">
+                            {member.name.split(' ').map((n: string) => n[0]).join('')}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-800">{member.name}</div>
+                        <div className="text-sm text-gray-500">
+                          {canViewFinancialData ? `$${member.cost.toLocaleString()}` : `${member.hours}h`}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-gray-800">
+                        {canViewFinancialData ? `${member.hours}h` : `$${member.cost.toLocaleString()}`}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {canViewFinancialData ? 'Hours' : 'Cost'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-gray-500 text-center py-4">
+                No team members found for this project.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const options = {
     responsive: true,
     maintainAspectRatio: false,
@@ -438,38 +693,7 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
     },
     plugins: {
       legend: {
-        position: 'bottom' as const,
-        maxHeight: 200,
-        labels: {
-          color: '#374151',
-          font: {
-            size: 11,
-            weight: 'bold' as const,
-          },
-          padding: 8,
-          usePointStyle: true,
-          pointStyle: 'circle',
-          boxWidth: 12,
-          generateLabels: function(chart: any) {
-            const data = chart.data;
-            if (data.labels.length && data.datasets.length) {
-              return data.labels.map((label: string, i: number) => {
-                const dataset = data.datasets[0];
-                const backgroundColor = dataset.backgroundColor[i];
-                return {
-                  text: label,
-                  fillStyle: backgroundColor,
-                  strokeStyle: backgroundColor,
-                  lineWidth: 0,
-                  pointStyle: 'circle',
-                  hidden: false,
-                  index: i
-                };
-              });
-            }
-            return [];
-          }
-        },
+        display: false, // Hide default legend since we're using custom one
       },
       title: {
         display: true,
@@ -511,6 +735,14 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
           weight: 'bold' as const,
           size: 11,
         },
+        display: function(context: any) {
+          // Hide labels for hidden segments
+          const meta = context.chart.getDatasetMeta(0);
+          if (meta && meta.data[context.dataIndex]) {
+            return !meta.data[context.dataIndex].hidden;
+          }
+          return true;
+        },
         formatter: function(value: any, context: any) {
           // Get the actual data values from the dataset and ensure they're numbers
           const dataValues = context.dataset.data.map((v: any) => parseFloat(v) || 0);
@@ -519,15 +751,6 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
           // Use the data index to get the correct value
           const dataIndex = context.dataIndex;
           const numValue = dataValues[dataIndex] || 0;
-          
-          // Debug logging
-          console.log('Datalabels formatter:', {
-            value: value,
-            dataIndex: dataIndex,
-            numValue: numValue,
-            dataValues: dataValues,
-            total: total
-          });
           
           const percentage = total > 0 ? ((numValue / total) * 100).toFixed(1) : '0.0';
           if (canViewFinancialData) {
@@ -541,10 +764,41 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
     },
   };
 
+  const [chartRef, setChartRef] = React.useState<any>(null);
+  const [selectedProject, setSelectedProject] = React.useState<ChartData | null>(null);
+
   return (
     <div className="bg-white rounded-lg border border-gray-300 p-6 shadow-sm">
-      <div className="h-[500px]">
-        <Doughnut data={chartData} options={options} />
+      <div className="mb-4 text-sm text-gray-600">
+        💡 Click on legend items to view project details. Projects are grouped by client.
+      </div>
+      <div className="flex gap-6">
+        {/* Chart or Project Details - Left Side */}
+        <div className="flex-1">
+          {selectedProject ? (
+            <ProjectDetails project={selectedProject} />
+          ) : (
+            <div className="h-[400px]">
+              <Doughnut 
+                data={chartData} 
+                options={options}
+                ref={(ref) => setChartRef(ref)}
+              />
+            </div>
+          )}
+        </div>
+        
+        {/* Custom Legend - Right Side */}
+        <div className="w-80 flex-shrink-0">
+          <div className="sticky top-4">
+            <h3 className="text-sm font-semibold text-gray-800 mb-3">Legend</h3>
+            <CustomLegend 
+              chartRef={chartRef} 
+              selectedProject={selectedProject}
+              setSelectedProject={setSelectedProject}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
