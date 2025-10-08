@@ -4,10 +4,10 @@
  */
 
 import type { APIRoute } from 'astro';
-import { TimeEntryService } from '../../services/timeEntryService';
-import { isTokenExpired } from '../../utils/auth';
-import { db } from '../../db';
-import { sessions, timeEntries } from '../../db/schema';
+import { TimeEntryService } from '../services/timeEntryService';
+import { isTokenExpired } from '../utils/auth';
+import { db } from '../db';
+import { sessions, timeEntries } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
 export const GET: APIRoute = async ({ cookies }) => {
