@@ -8,6 +8,19 @@ import { eq, and, sql } from 'drizzle-orm';
 // Get the selected time period from query params, default to 'week'
 const period = Astro.url.searchParams.get('period') || 'week';
 
+// Get client filter parameters
+const teamClientFilter = Astro.url.searchParams.get('teamClient') || 'all';
+const projectClientFilter = Astro.url.searchParams.get('projectClient') || 'all';
+
+// Get all available clients (for dropdown options, not filtered by current selections)
+const allClients = await db
+  .select({
+    name: clients.name
+  })
+  .from(clients)
+  .where(eq(clients.archived, false))
+  .orderBy(clients.name);
+
 // Get current user to check permissions
 const currentUser = await getSessionUser(Astro);
 const canViewFinancialData = currentUser ? currentUser.role === 'admin' : false;
@@ -42,6 +55,13 @@ switch (period) {
     startDate = new Date(now.getFullYear(), now.getMonth(), 1);
     endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
     break;
+  case 'quarter':
+    // This quarter
+    const currentQuarter = Math.floor(now.getMonth() / 3);
+    const quarterStartMonth = currentQuarter * 3;
+    startDate = new Date(now.getFullYear(), quarterStartMonth, 1);
+    endDate = new Date(now.getFullYear(), quarterStartMonth + 3, 0, 23, 59, 59, 999);
+    break;
   default:
     startDate = new Date(now);
     startDate.setDate(now.getDate() - 7);
@@ -63,11 +83,21 @@ if (startDate && endDate) {
     OR 
     (${timeEntries.startTime} IS NULL AND ${timeEntries.createdAt} >= ${startDate} AND ${timeEntries.createdAt} <= ${endDate})
   )`);
+} else if (startDate) {
+  // Handle case where only startDate is provided (shouldn't happen with current logic)
+  filterConditions.push(sql`(
+    (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate})
+    OR 
+    (${timeEntries.startTime} IS NULL AND ${timeEntries.createdAt} >= ${startDate})
+  )`);
 }
 
-const dateFilter = and(...filterConditions);
+// Add client filter for team members (if not 'all')
+if (teamClientFilter !== 'all') {
+  filterConditions.push(eq(clients.name, teamClientFilter));
+}
 
-// Get time entries with all details
+// Get time entries with all details (for team members)
 const timeEntriesWithDetails = await db
   .select({
     id: timeEntries.id,
@@ -89,11 +119,115 @@ const timeEntriesWithDetails = await db
   .innerJoin(projects, eq(timeEntries.projectId, projects.id))
   .innerJoin(clients, eq(projects.clientId, clients.id))
   .where(and(
-    dateFilter,
+    ...filterConditions,
     // Exclude ongoing timers
     sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
   ))
   .orderBy(timeEntries.createdAt);
+
+// Get time entries for projects (with project client filter)
+let projectFilterConditions = [
+  eq(clients.archived, false),
+  eq(projects.archived, false)
+];
+
+// Add date filter for projects
+if (startDate && endDate) {
+  projectFilterConditions.push(sql`(
+    (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate})
+    OR 
+    (${timeEntries.startTime} IS NULL AND ${timeEntries.createdAt} >= ${startDate} AND ${timeEntries.createdAt} <= ${endDate})
+  )`);
+} else if (startDate) {
+  projectFilterConditions.push(sql`(
+    (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate})
+    OR 
+    (${timeEntries.startTime} IS NULL AND ${timeEntries.createdAt} >= ${startDate})
+  )`);
+}
+
+// Add client filter for projects (if not 'all')
+if (projectClientFilter !== 'all') {
+  projectFilterConditions.push(eq(clients.name, projectClientFilter));
+}
+
+const projectTimeEntries = await db
+  .select({
+    id: timeEntries.id,
+    userId: timeEntries.userId,
+    projectId: timeEntries.projectId,
+    startTime: timeEntries.startTime,
+    endTime: timeEntries.endTime,
+    durationManual: timeEntries.durationManual,
+    notes: timeEntries.notes,
+    createdAt: timeEntries.createdAt,
+    userName: users.name,
+    userEmail: users.email,
+    userPayRate: users.payRate,
+    projectName: projects.name,
+    clientName: clients.name
+  })
+  .from(timeEntries)
+  .innerJoin(users, eq(timeEntries.userId, users.id))
+  .innerJoin(projects, eq(timeEntries.projectId, projects.id))
+  .innerJoin(clients, eq(projects.clientId, clients.id))
+  .where(and(
+    ...projectFilterConditions,
+    // Exclude ongoing timers
+    sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
+  ))
+  .orderBy(timeEntries.createdAt);
+
+// Get time entries for client analysis (only filtered by time period, not by client)
+let clientFilterConditions = [
+  eq(clients.archived, false),
+  eq(projects.archived, false)
+];
+
+// Add date filter for client analysis
+if (startDate && endDate) {
+  clientFilterConditions.push(sql`(
+    (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate})
+    OR 
+    (${timeEntries.startTime} IS NULL AND ${timeEntries.createdAt} >= ${startDate} AND ${timeEntries.createdAt} <= ${endDate})
+  )`);
+} else if (startDate) {
+  clientFilterConditions.push(sql`(
+    (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate})
+    OR 
+    (${timeEntries.startTime} IS NULL AND ${timeEntries.createdAt} >= ${startDate})
+  )`);
+}
+
+const clientTimeEntries = await db
+  .select({
+    id: timeEntries.id,
+    userId: timeEntries.userId,
+    projectId: timeEntries.projectId,
+    startTime: timeEntries.startTime,
+    endTime: timeEntries.endTime,
+    durationManual: timeEntries.durationManual,
+    notes: timeEntries.notes,
+    createdAt: timeEntries.createdAt,
+    userName: users.name,
+    userEmail: users.email,
+    userPayRate: users.payRate,
+    projectName: projects.name,
+    clientName: clients.name
+  })
+  .from(timeEntries)
+  .innerJoin(users, eq(timeEntries.userId, users.id))
+  .innerJoin(projects, eq(timeEntries.projectId, projects.id))
+  .innerJoin(clients, eq(projects.clientId, clients.id))
+  .where(and(
+    ...clientFilterConditions,
+    // Exclude ongoing timers
+    sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
+  ))
+  .orderBy(timeEntries.createdAt);
+
+// Debug: Log the number of entries returned (remove in production)
+// console.log('Total entries returned:', timeEntriesWithDetails.length);
 
 // Calculate summary metrics
 const totalHours = timeEntriesWithDetails.reduce((sum, entry) => {
@@ -133,12 +267,16 @@ const userMetrics = timeEntriesWithDetails.reduce((acc, entry) => {
       hours: 0,
       cost: 0,
       manualEntries: 0,
-      timerEntries: 0
+      timerEntries: 0,
+      clients: new Set()
     };
   }
 
   const stats = acc[entry.userId];
   stats.entries++;
+  
+  // Add client to user's client set
+  stats.clients.add(entry.clientName);
 
   let hours = 0;
   if (entry.durationManual) {
@@ -159,8 +297,8 @@ const userMetrics = timeEntriesWithDetails.reduce((acc, entry) => {
   return acc;
 }, {} as Record<number, any>);
 
-// Calculate project metrics
-const projectMetrics = timeEntriesWithDetails.reduce((acc, entry) => {
+// Calculate project metrics (using project-specific data)
+const projectMetrics = projectTimeEntries.reduce((acc, entry) => {
   if (!acc[entry.projectId]) {
     acc[entry.projectId] = {
       id: entry.projectId,
@@ -192,8 +330,8 @@ const projectMetrics = timeEntriesWithDetails.reduce((acc, entry) => {
   return acc;
 }, {} as Record<number, any>);
 
-// Calculate client metrics
-const clientMetrics = timeEntriesWithDetails.reduce((acc, entry) => {
+// Calculate client metrics (using client-specific data that's not filtered by client)
+const clientMetrics = clientTimeEntries.reduce((acc, entry) => {
   if (!acc[entry.clientName]) {
     acc[entry.clientName] = {
       name: entry.clientName,
@@ -226,7 +364,10 @@ const clientMetrics = timeEntriesWithDetails.reduce((acc, entry) => {
 }, {} as Record<string, any>);
 
 // Convert to arrays and sort
-const userMetricsArray = Object.values(userMetrics).sort((a: any, b: any) => b.hours - a.hours);
+const userMetricsArray = Object.values(userMetrics).map((user: any) => ({
+  ...user,
+  clients: Array.from(user.clients)
+})).sort((a: any, b: any) => b.hours - a.hours);
 const projectMetricsArray = Object.values(projectMetrics).sort((a: any, b: any) => b.hours - a.hours);
 const clientMetricsArray = Object.entries(clientMetrics).map(([name, data]: [string, any]) => ({
   name,
@@ -247,6 +388,12 @@ const getPeriodDisplayName = (period: string) => {
 };
 
 const periodDisplayName = getPeriodDisplayName(period);
+
+// Debug logging (remove in production)
+// console.log('Period:', period);
+// console.log('Start Date:', startDate);
+// console.log('End Date:', endDate);
+// console.log('Filter Conditions:', filterConditions);
 ---
 
 <AdminLayout title="Enhanced Dashboard" currentPage="dashboard">
@@ -280,6 +427,48 @@ const periodDisplayName = getPeriodDisplayName(period);
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Dashboard Options -->
+    <div class="bg-white rounded-lg border border-gray-300 p-6 shadow-sm">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">📊 Dashboard Options</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <a href="/admin" class="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+          <div class="p-2 bg-blue-100 rounded-lg">
+            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+          </div>
+          <div>
+            <p class="font-medium text-gray-900">Standard Dashboard</p>
+            <p class="text-sm text-gray-600">Basic charts and metrics</p>
+          </div>
+        </a>
+
+        <a href="/admin/enhanced-dashboard-simple" class="flex items-center space-x-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div class="p-2 bg-blue-100 rounded-lg">
+            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+            </svg>
+          </div>
+          <div>
+            <p class="font-medium text-gray-900">Enhanced Dashboard</p>
+            <p class="text-sm text-gray-600">Advanced analytics and insights</p>
+          </div>
+        </a>
+
+        <a href="/admin/time-entries" class="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+          <div class="p-2 bg-green-100 rounded-lg">
+            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <div>
+            <p class="font-medium text-gray-900">Time Entries</p>
+            <p class="text-sm text-gray-600">View and manage time entries</p>
+          </div>
+        </a>
       </div>
     </div>
 
@@ -349,228 +538,411 @@ const periodDisplayName = getPeriodDisplayName(period);
       </div>
     </div>
 
-    <!-- Team Member Performance -->
+    <!-- Analytics Tabs -->
     <div class="bg-white rounded-lg border border-gray-300 shadow-sm">
-      <div class="p-6 border-b border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-900">👥 Team Member Performance</h3>
-        <p class="text-sm text-gray-600">Sorted by total hours worked</p>
-      </div>
-      
-      <div class="divide-y divide-gray-200">
-        {userMetricsArray.slice(0, 10).map((user: any, index: number) => {
-          const maxHours = Math.max(...userMetricsArray.map((u: any) => u.hours));
-          const progressWidth = maxHours > 0 ? (user.hours / maxHours) * 100 : 0;
+      <!-- Tab Navigation -->
+      <div class="border-b border-gray-200">
+        <div class="flex items-center justify-between px-6">
+          <nav class="flex space-x-8" aria-label="Tabs">
+            <button 
+              class="tab-button active py-4 px-1 border-b-2 border-blue-500 font-medium text-sm text-blue-600"
+              data-tab="team"
+            >
+              👥 Team Members
+            </button>
+            <button 
+              class="tab-button py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              data-tab="projects"
+            >
+              📋 Projects
+            </button>
+            <button 
+              class="tab-button py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              data-tab="clients"
+            >
+              🏢 Clients
+            </button>
+          </nav>
           
-          return (
-            <div class="p-6 hover:bg-gray-50 transition-colors">
-              <div class="flex items-center justify-between">
-                <div class="flex-1">
-                  <h4 class="text-lg font-medium text-gray-900">{user.name}</h4>
-                  <p class="text-sm text-gray-600">{user.email}</p>
-                </div>
-                
-                <div class="flex space-x-6 text-sm">
-                  <div class="text-center">
-                    <p class="text-2xl font-bold text-gray-900">{Math.round(user.hours)}</p>
-                    <p class="text-xs text-gray-500">hours</p>
-                  </div>
-                  
-                  <div class="text-center">
-                    <p class="text-lg font-semibold text-gray-700">
-                      {Math.round(user.manualEntries)}/{Math.round(user.timerEntries)}
-                    </p>
-                    <p class="text-xs text-gray-500">manual/timer</p>
-                  </div>
-                  
-                  {canViewFinancialData && (
-                    <div class="text-center">
-                      <p class="text-lg font-bold text-gray-900">${Math.round(user.cost).toLocaleString()}</p>
-                      <p class="text-xs text-gray-500">cost</p>
-                    </div>
-                  )}
-                </div>
+          <!-- Time Period Dropdown -->
+          <div class="relative">
+            <select 
+              id="periodSelect" 
+              class="appearance-none bg-white border border-gray-300 text-gray-900 px-4 py-2 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 hover:bg-gray-50 text-sm"
+            >
+              <option value="all" selected={period === 'all'}>📅 All Time</option>
+              <option value="today" selected={period === 'today'}>📅 Today</option>
+              <option value="week" selected={period === 'week'}>📅 This Week</option>
+              <option value="month" selected={period === 'month'}>📅 This Month</option>
+              <option value="quarter" selected={period === 'quarter'}>📅 This Quarter</option>
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+              <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content -->
+      <div class="tab-content">
+        <!-- Team Member Performance Tab -->
+        <div id="tab-team" class="tab-panel active">
+          <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-lg font-semibold text-gray-900">👥 Team Member Performance</h3>
+                <p class="text-sm text-gray-600">Sorted by total hours worked</p>
               </div>
               
-              <!-- Progress bar -->
-              <div class="mt-4">
-                <div class="flex justify-between text-xs text-gray-500 mb-1">
-                  <span>Hours: {Math.round(user.hours)}</span>
-                  {canViewFinancialData && <span>Cost: ${Math.round(user.cost).toLocaleString()}</span>}
-                  <span>Entries: {user.entries}</span>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    class="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                    style={`width: ${Math.min(100, progressWidth)}%`}
-                  ></div>
+              <!-- Client Filter Dropdown -->
+              <div class="relative">
+                <select 
+                  id="teamClientFilter" 
+                  class="appearance-none bg-white border border-gray-300 text-gray-900 px-3 py-2 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 hover:bg-gray-50 text-sm"
+                >
+                  <option value="all" selected={teamClientFilter === 'all'}>🏢 All Clients</option>
+                  {allClients.map((client: any) => (
+                    <option value={client.name} selected={teamClientFilter === client.name}>{client.name}</option>
+                  ))}
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                  <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                  </svg>
                 </div>
               </div>
             </div>
-          );
-        })}
-      </div>
-    </div>
-
-    <!-- Project Analysis -->
-    <div class="bg-white rounded-lg border border-gray-300 shadow-sm">
-      <div class="p-6 border-b border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-900">📋 Project Analysis</h3>
-        <p class="text-sm text-gray-600">Sorted by total hours worked</p>
-      </div>
-      
-      <div class="divide-y divide-gray-200">
-        {projectMetricsArray.slice(0, 10).map((project: any, index: number) => {
-          const maxHours = Math.max(...projectMetricsArray.map((p: any) => p.hours));
-          const progressWidth = maxHours > 0 ? (project.hours / maxHours) * 100 : 0;
+          </div>
           
-          return (
-            <div class="p-6 hover:bg-gray-50 transition-colors">
-              <div class="flex items-center justify-between">
-                <div class="flex-1">
-                  <h4 class="text-lg font-medium text-gray-900">{project.name}</h4>
-                  <p class="text-sm text-gray-600">Client: {project.client}</p>
-                </div>
-                
-                <div class="flex space-x-6 text-sm">
-                  <div class="text-center">
-                    <p class="text-2xl font-bold text-gray-900">{Math.round(project.hours)}</p>
-                    <p class="text-xs text-gray-500">hours</p>
-                  </div>
-                  
-                  {canViewFinancialData && (
-                    <div class="text-center">
-                      <p class="text-lg font-bold text-gray-900">${Math.round(project.cost).toLocaleString()}</p>
-                      <p class="text-xs text-gray-500">cost</p>
+          <div class="divide-y divide-gray-200">
+            {userMetricsArray.slice(0, 10).map((user: any, index: number) => {
+              const maxHours = Math.max(...userMetricsArray.map((u: any) => u.hours));
+              const progressWidth = maxHours > 0 ? (user.hours / maxHours) * 100 : 0;
+              
+              return (
+                <div class="p-6 hover:bg-gray-50 transition-colors" data-clients={user.clients.join(',')}>
+                  <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                      <h4 class="text-lg font-medium text-gray-900">{user.name}</h4>
+                      <p class="text-sm text-gray-600">{user.email}</p>
                     </div>
-                  )}
+                    
+                    <div class="flex space-x-6 text-sm">
+                      <div class="text-center">
+                        <p class="text-2xl font-bold text-gray-900">{Math.round(user.hours)}</p>
+                        <p class="text-xs text-gray-500">hours</p>
+                      </div>
+                      
+                      <div class="text-center">
+                        <p class="text-lg font-semibold text-gray-700">
+                          {Math.round(user.manualEntries)}/{Math.round(user.timerEntries)}
+                        </p>
+                        <p class="text-xs text-gray-500">manual/timer</p>
+                      </div>
+                      
+                      {canViewFinancialData && (
+                        <div class="text-center">
+                          <p class="text-lg font-bold text-gray-900">${Math.round(user.cost).toLocaleString()}</p>
+                          <p class="text-xs text-gray-500">cost</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                   
-                  <div class="text-center">
-                    <p class="text-lg font-bold text-gray-900">{project.entries}</p>
-                    <p class="text-xs text-gray-500">entries</p>
+                  <!-- Progress bar -->
+                  <div class="mt-4">
+                    <div class="flex justify-between text-xs text-gray-500 mb-1">
+                      <span>Hours: {Math.round(user.hours)}</span>
+                      {canViewFinancialData && <span>Cost: ${Math.round(user.cost).toLocaleString()}</span>}
+                      <span>Entries: {user.entries}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={`width: ${Math.min(100, progressWidth)}%`}
+                      ></div>
+                    </div>
                   </div>
                 </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <!-- Project Analysis Tab -->
+        <div id="tab-projects" class="tab-panel hidden">
+          <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-lg font-semibold text-gray-900">📋 Project Analysis</h3>
+                <p class="text-sm text-gray-600">Sorted by total hours worked</p>
               </div>
               
-              <!-- Progress bar -->
-              <div class="mt-4">
-                <div class="flex justify-between text-xs text-gray-500 mb-1">
-                  <span>Hours: {Math.round(project.hours)}</span>
-                  {canViewFinancialData && <span>Cost: ${Math.round(project.cost).toLocaleString()}</span>}
-                  <span>Entries: {project.entries}</span>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    class="bg-green-600 h-2 rounded-full transition-all duration-300"
-                    style={`width: ${Math.min(100, progressWidth)}%`}
-                  ></div>
+              <!-- Client Filter Dropdown -->
+              <div class="relative">
+                <select 
+                  id="clientFilter" 
+                  class="appearance-none bg-white border border-gray-300 text-gray-900 px-3 py-2 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 hover:bg-gray-50 text-sm"
+                >
+                  <option value="all" selected={projectClientFilter === 'all'}>🏢 All Clients</option>
+                  {allClients.map((client: any) => (
+                    <option value={client.name} selected={projectClientFilter === client.name}>{client.name}</option>
+                  ))}
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                  <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                  </svg>
                 </div>
               </div>
             </div>
-          );
-        })}
-      </div>
-    </div>
-
-    <!-- Client Analysis -->
-    <div class="bg-white rounded-lg border border-gray-300 shadow-sm">
-      <div class="p-6 border-b border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-900">🏢 Client Analysis</h3>
-        <p class="text-sm text-gray-600">Sorted by total hours worked</p>
-      </div>
-      
-      <div class="divide-y divide-gray-200">
-        {clientMetricsArray.slice(0, 10).map((client: any, index: number) => {
-          const maxHours = Math.max(...clientMetricsArray.map((c: any) => c.hours));
-          const progressWidth = maxHours > 0 ? (client.hours / maxHours) * 100 : 0;
+          </div>
           
-          return (
-            <div class="p-6 hover:bg-gray-50 transition-colors">
-              <div class="flex items-center justify-between">
-                <div class="flex-1">
-                  <h4 class="text-lg font-medium text-gray-900">{client.name}</h4>
-                  <p class="text-sm text-gray-600">{client.projectCount} projects</p>
-                </div>
-                
-                <div class="flex space-x-6 text-sm">
-                  <div class="text-center">
-                    <p class="text-2xl font-bold text-gray-900">{Math.round(client.hours)}</p>
-                    <p class="text-xs text-gray-500">hours</p>
-                  </div>
-                  
-                  {canViewFinancialData && (
-                    <div class="text-center">
-                      <p class="text-lg font-bold text-gray-900">${Math.round(client.cost).toLocaleString()}</p>
-                      <p class="text-xs text-gray-500">cost</p>
-                    </div>
-                  )}
-                  
-                  <div class="text-center">
-                    <p class="text-lg font-bold text-gray-900">{client.entries}</p>
-                    <p class="text-xs text-gray-500">entries</p>
-                  </div>
-                </div>
-              </div>
+          <div class="divide-y divide-gray-200">
+            {projectMetricsArray.slice(0, 10).map((project: any, index: number) => {
+              const maxHours = Math.max(...projectMetricsArray.map((p: any) => p.hours));
+              const progressWidth = maxHours > 0 ? (project.hours / maxHours) * 100 : 0;
               
-              <!-- Progress bar -->
-              <div class="mt-4">
-                <div class="flex justify-between text-xs text-gray-500 mb-1">
-                  <span>Hours: {Math.round(client.hours)}</span>
-                  {canViewFinancialData && <span>Cost: ${Math.round(client.cost).toLocaleString()}</span>}
-                  <span>Entries: {client.entries}</span>
+              return (
+                <div class="p-6 hover:bg-gray-50 transition-colors">
+                  <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                      <h4 class="text-lg font-medium text-gray-900">{project.name}</h4>
+                      <p class="text-sm text-gray-600">Client: {project.client}</p>
+                    </div>
+                    
+                    <div class="flex space-x-6 text-sm">
+                      <div class="text-center">
+                        <p class="text-2xl font-bold text-gray-900">{Math.round(project.hours)}</p>
+                        <p class="text-xs text-gray-500">hours</p>
+                      </div>
+                      
+                      {canViewFinancialData && (
+                        <div class="text-center">
+                          <p class="text-lg font-bold text-gray-900">${Math.round(project.cost).toLocaleString()}</p>
+                          <p class="text-xs text-gray-500">cost</p>
+                        </div>
+                      )}
+                      
+                      <div class="text-center">
+                        <p class="text-lg font-bold text-gray-900">{project.entries}</p>
+                        <p class="text-xs text-gray-500">entries</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Progress bar -->
+                  <div class="mt-4">
+                    <div class="flex justify-between text-xs text-gray-500 mb-1">
+                      <span>Hours: {Math.round(project.hours)}</span>
+                      {canViewFinancialData && <span>Cost: ${Math.round(project.cost).toLocaleString()}</span>}
+                      <span>Entries: {project.entries}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        class="bg-green-600 h-2 rounded-full transition-all duration-300"
+                        style={`width: ${Math.min(100, progressWidth)}%`}
+                      ></div>
+                    </div>
+                  </div>
                 </div>
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    class="bg-purple-600 h-2 rounded-full transition-all duration-300"
-                    style={`width: ${Math.min(100, progressWidth)}%`}
-                  ></div>
+              );
+            })}
+          </div>
+        </div>
+
+        <!-- Client Analysis Tab -->
+        <div id="tab-clients" class="tab-panel hidden">
+          <div class="p-6 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">🏢 Client Analysis</h3>
+            <p class="text-sm text-gray-600">Sorted by total hours worked</p>
+          </div>
+          
+          <div class="divide-y divide-gray-200">
+            {clientMetricsArray.slice(0, 10).map((client: any, index: number) => {
+              const maxHours = Math.max(...clientMetricsArray.map((c: any) => c.hours));
+              const progressWidth = maxHours > 0 ? (client.hours / maxHours) * 100 : 0;
+              
+              return (
+                <div class="p-6 hover:bg-gray-50 transition-colors">
+                  <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                      <h4 class="text-lg font-medium text-gray-900">{client.name}</h4>
+                      <p class="text-sm text-gray-600">{client.projectCount} projects</p>
+                    </div>
+                    
+                    <div class="flex space-x-6 text-sm">
+                      <div class="text-center">
+                        <p class="text-2xl font-bold text-gray-900">{Math.round(client.hours)}</p>
+                        <p class="text-xs text-gray-500">hours</p>
+                      </div>
+                      
+                      {canViewFinancialData && (
+                        <div class="text-center">
+                          <p class="text-lg font-bold text-gray-900">${Math.round(client.cost).toLocaleString()}</p>
+                          <p class="text-xs text-gray-500">cost</p>
+                        </div>
+                      )}
+                      
+                      <div class="text-center">
+                        <p class="text-lg font-bold text-gray-900">{client.entries}</p>
+                        <p class="text-xs text-gray-500">entries</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Progress bar -->
+                  <div class="mt-4">
+                    <div class="flex justify-between text-xs text-gray-500 mb-1">
+                      <span>Hours: {Math.round(client.hours)}</span>
+                      {canViewFinancialData && <span>Cost: ${Math.round(client.cost).toLocaleString()}</span>}
+                      <span>Entries: {client.entries}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        class="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                        style={`width: ${Math.min(100, progressWidth)}%`}
+                      ></div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          );
-        })}
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Navigation Links -->
-    <div class="bg-white rounded-lg border border-gray-300 p-6 shadow-sm">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4">📊 Dashboard Options</h3>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <a href="/admin" class="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-          <div class="p-2 bg-blue-100 rounded-lg">
-            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-            </svg>
-          </div>
-          <div>
-            <p class="font-medium text-gray-900">Standard Dashboard</p>
-            <p class="text-sm text-gray-600">Basic charts and metrics</p>
-          </div>
-        </a>
-
-        <a href="/admin/enhanced-dashboard-simple" class="flex items-center space-x-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <div class="p-2 bg-blue-100 rounded-lg">
-            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-            </svg>
-          </div>
-          <div>
-            <p class="font-medium text-gray-900">Enhanced Dashboard</p>
-            <p class="text-sm text-gray-600">Advanced analytics and insights</p>
-          </div>
-        </a>
-
-        <a href="/admin/time-entries" class="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-          <div class="p-2 bg-green-100 rounded-lg">
-            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-          <div>
-            <p class="font-medium text-gray-900">Time Entries</p>
-            <p class="text-sm text-gray-600">View and manage time entries</p>
-          </div>
-        </a>
-      </div>
-    </div>
   </div>
 </AdminLayout>
+
+<script>
+  // Tab functionality
+  document.addEventListener('DOMContentLoaded', function() {
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabPanels = document.querySelectorAll('.tab-panel');
+
+    tabButtons.forEach(button => {
+      button.addEventListener('click', function(this: HTMLElement) {
+        const targetTab = this.getAttribute('data-tab');
+        
+        // Remove active class from all buttons and panels
+        tabButtons.forEach((btn) => {
+          btn.classList.remove('active', 'border-blue-500', 'text-blue-600');
+          btn.classList.add('border-transparent', 'text-gray-500');
+        });
+        
+        tabPanels.forEach((panel) => {
+          panel.classList.add('hidden');
+          panel.classList.remove('active');
+        });
+        
+        // Add active class to clicked button
+        this.classList.add('active', 'border-blue-500', 'text-blue-600');
+        this.classList.remove('border-transparent', 'text-gray-500');
+        
+        // Show corresponding panel
+        const targetPanel = document.getElementById(`tab-${targetTab}`);
+        if (targetPanel) {
+          targetPanel.classList.remove('hidden');
+          targetPanel.classList.add('active');
+        }
+      });
+    });
+
+    // Period change functionality
+    const periodSelect = document.getElementById('periodSelect') as HTMLSelectElement;
+    if (periodSelect) {
+      console.log('Period select element found:', periodSelect);
+      periodSelect.addEventListener('change', function() {
+        const period = this.value;
+        console.log('Period changed to:', period);
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('period', period);
+        console.log('Redirecting to:', currentUrl.toString());
+        window.location.href = currentUrl.toString();
+      });
+    } else {
+      console.log('Period select element not found');
+    }
+
+    // Client filter functionality for Project Analysis tab
+    const clientFilter = document.getElementById('clientFilter') as HTMLSelectElement;
+    if (clientFilter) {
+      console.log('Client filter element found:', clientFilter);
+      clientFilter.addEventListener('change', function() {
+        const selectedClient = this.value;
+        console.log('Client filter changed to:', selectedClient);
+        updateProjectClientFilter(selectedClient);
+      });
+    } else {
+      console.log('Client filter element not found');
+    }
+
+    // Client filter functionality for Team Member Performance tab
+    const teamClientFilter = document.getElementById('teamClientFilter') as HTMLSelectElement;
+    if (teamClientFilter) {
+      console.log('Team client filter element found:', teamClientFilter);
+      teamClientFilter.addEventListener('change', function() {
+        const selectedClient = this.value;
+        console.log('Team client filter changed to:', selectedClient);
+        updateTeamClientFilter(selectedClient);
+      });
+    } else {
+      console.log('Team client filter element not found');
+    }
+  });
+
+  // Function to update project client filter via URL
+  function updateProjectClientFilter(selectedClient: string) {
+    const currentUrl = new URL(window.location.href);
+    if (selectedClient === 'all') {
+      currentUrl.searchParams.delete('projectClient');
+    } else {
+      currentUrl.searchParams.set('projectClient', selectedClient);
+    }
+    console.log('Redirecting to:', currentUrl.toString());
+    window.location.href = currentUrl.toString();
+  }
+
+  // Function to update team client filter via URL
+  function updateTeamClientFilter(selectedClient: string) {
+    const currentUrl = new URL(window.location.href);
+    if (selectedClient === 'all') {
+      currentUrl.searchParams.delete('teamClient');
+    } else {
+      currentUrl.searchParams.set('teamClient', selectedClient);
+    }
+    console.log('Redirecting to:', currentUrl.toString());
+    window.location.href = currentUrl.toString();
+  }
+</script>
+
+<style>
+  .tab-button {
+    transition: all 0.2s ease-in-out;
+  }
+  
+  .tab-button:hover {
+    color: #374151;
+  }
+  
+  .tab-button.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+  }
+  
+  .tab-panel {
+    transition: opacity 0.2s ease-in-out;
+  }
+  
+  .tab-panel.hidden {
+    display: none;
+  }
+  
+  .tab-panel.active {
+    display: block;
+  }
+</style>
