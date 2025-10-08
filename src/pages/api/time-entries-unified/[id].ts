@@ -144,10 +144,36 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
       });
     }
 
-    const body = await request.json();
-    const updateRequest: UpdateTimeEntryRequest = body;
+    let body;
+    let updateRequest: UpdateTimeEntryRequest;
+    
+    try {
+      body = await request.json();
+      updateRequest = body;
+      console.log('🔧 API: Received update request:', updateRequest);
+      console.log('🔧 API: Entry ID:', entryId);
+    } catch (parseError) {
+      console.error('🔧 API: Error parsing request body:', parseError);
+      return new Response(JSON.stringify({
+        error: 'Invalid JSON in request body'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
-    const updatedEntry = await TimeEntryService.updateTimeEntry(parseInt(entryId), updateRequest);
+    let updatedEntry;
+    try {
+      updatedEntry = await TimeEntryService.updateTimeEntry(parseInt(entryId), updateRequest);
+    } catch (serviceError) {
+      console.error('🔧 API: Service layer error:', serviceError);
+      return new Response(JSON.stringify({
+        error: serviceError instanceof Error ? serviceError.message : 'Service layer error'
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
     // Calculate duration for the response
     const duration = updatedEntry.durationManual || 

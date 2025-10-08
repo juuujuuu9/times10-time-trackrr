@@ -1631,10 +1631,26 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
           // Check if this is a manual duration entry (has durationManual but no startTime/endTime)
           const isManualDurationEntry = currentEntry.durationManual && !currentEntry.startTime && !currentEntry.endTime;
           
+          console.log('🔍 Date change debug (time-entries):', {
+            entryId,
+            currentEntry: {
+              durationManual: currentEntry.durationManual,
+              startTime: currentEntry.startTime,
+              endTime: currentEntry.endTime,
+              createdAt: currentEntry.createdAt
+            },
+            isManualDurationEntry,
+            newISODate,
+            updateData
+          });
+          
+          console.log('🔍 Full currentEntry object (time-entries):', currentEntry);
+          
           if (isManualDurationEntry) {
             // For manual duration entries, update createdAt to the new date
             const newCreatedAt = new Date(year, month - 1, day, 12, 0, 0, 0); // Use noon to avoid timezone issues
             updateData.createdAt = newCreatedAt.toISOString();
+            console.log('📝 Updating manual duration entry createdAt:', updateData.createdAt);
           } else {
             // For timer-based entries, update startTime and endTime
             if (currentEntry.startTime) {

@@ -285,7 +285,9 @@ export class TimeEntryService {
 
     // Handle createdAt updates for manual duration entries
     if (request.createdAt) {
+      console.log('🔧 Service layer: Updating createdAt:', request.createdAt);
       updateData.createdAt = new Date(request.createdAt);
+      console.log('🔧 Service layer: CreatedAt set to:', updateData.createdAt);
     }
 
     // Handle other fields
@@ -296,12 +298,25 @@ export class TimeEntryService {
       updateData.notes = request.notes;
     }
 
+    // Debug: Log what we're updating
+    console.log('🔧 Service layer: Final updateData:', updateData);
+    console.log('🔧 Service layer: Entry ID:', entryId);
+    
     // Update the time entry
-    const [updatedEntry] = await db
-      .update(timeEntries)
-      .set(updateData)
-      .where(eq(timeEntries.id, entryId))
-      .returning();
+    let updatedEntry;
+    try {
+      console.log('🔧 Service layer: About to update database with:', updateData);
+      [updatedEntry] = await db
+        .update(timeEntries)
+        .set(updateData)
+        .where(eq(timeEntries.id, entryId))
+        .returning();
+        
+      console.log('🔧 Service layer: Updated entry:', updatedEntry);
+    } catch (dbError) {
+      console.error('🔧 Service layer: Database update error:', dbError);
+      throw dbError;
+    }
 
     // Map projectId to taskId for backward compatibility
     return {

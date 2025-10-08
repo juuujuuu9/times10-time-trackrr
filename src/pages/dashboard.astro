@@ -916,9 +916,8 @@ const user = await requireAuth('/')(Astro) as any;
               new Date(entry.createdAt);
             const durationHours = entry.duration ? (entry.duration / 3600).toFixed(1) : '0';
             
-            // Check if this is a manual duration entry (no meaningful start/end times)
-            // Manual duration entries have durationManual but no endTime
-            const isManualDurationEntry = entry.durationManual && !entry.endTime;
+            // Check if this is a manual duration entry (has durationManual but no startTime/endTime)
+            const isManualDurationEntry = entry.durationManual && !entry.startTime && !entry.endTime;
             const startTime = (!isManualDurationEntry && entry.startTime) ? new Date(entry.startTime) : null;
             const endTime = (!isManualDurationEntry && entry.endTime) ? new Date(entry.endTime) : null;
             
@@ -2366,8 +2365,18 @@ const user = await requireAuth('/')(Astro) as any;
       editTaskIdInput.value = entry.taskId ? entry.taskId.toString() : '';
     }
 
-    // Check if this is a manual duration entry (same logic as table rendering)
-    const isManualDurationEntry = entry.durationManual && !entry.endTime;
+    // Check if this is a manual duration entry (has durationManual but no startTime/endTime)
+    const isManualDurationEntry = entry.durationManual && !entry.startTime && !entry.endTime;
+    
+    // Debug logging for manual duration entries
+    console.log('🔍 Edit modal debug:', {
+      entryId: entry.id,
+      durationManual: entry.durationManual,
+      startTime: entry.startTime,
+      endTime: entry.endTime,
+      createdAt: entry.createdAt,
+      isManualDurationEntry
+    });
     
     // Format time inputs (12-hour format) - only if times exist and it's not a manual duration entry
     if (startTimeInput) {
@@ -2404,11 +2413,23 @@ const user = await requireAuth('/')(Astro) as any;
       }
     }
 
-    if (entry.durationManual && entry.startTime) {
-      const startDate = new Date(entry.startTime);
-      const dateString = startDate.toISOString().split('T')[0];
+    if (entry.durationManual && !entry.startTime && !entry.endTime) {
+      // For manual duration entries, use createdAt for date association
+      const taskDate = entry.createdAt ? new Date(entry.createdAt) : new Date();
+      const year = taskDate.getFullYear();
+      const month = taskDate.getMonth() + 1;
+      const day = taskDate.getDate();
+      const dateString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+      console.log('🔍 Setting date picker for manual entry:', {
+        taskDate,
+        dateString,
+        editDurationDateInput: !!editDurationDateInput
+      });
       if (editDurationDateInput) {
         editDurationDateInput.value = dateString;
+        console.log('✅ Date picker value set to:', editDurationDateInput.value);
+      } else {
+        console.error('❌ editDurationDateInput not found!');
       }
     }
 
@@ -2418,20 +2439,30 @@ const user = await requireAuth('/')(Astro) as any;
     
     // If this is a manual duration entry, show duration method
     if (isManualDurationEntry) {
+      console.log('🔍 Showing duration section for manual entry');
       const durationRadio = document.querySelector('input[name="editMethod"][value="duration"]') as HTMLInputElement;
       if (durationRadio) {
         durationRadio.checked = true;
+        console.log('✅ Duration radio checked');
+      } else {
+        console.error('❌ Duration radio not found');
       }
       timesSection?.classList.add('hidden');
       durationSection?.classList.remove('hidden');
+      console.log('✅ Duration section shown, times section hidden');
     } else {
+      console.log('🔍 Showing times section for timer entry');
       // Default to "times" method (start/end times)
       const timesRadio = document.querySelector('input[name="editMethod"][value="times"]') as HTMLInputElement;
       if (timesRadio) {
         timesRadio.checked = true;
+        console.log('✅ Times radio checked');
+      } else {
+        console.error('❌ Times radio not found');
       }
       timesSection?.classList.remove('hidden');
       durationSection?.classList.add('hidden');
+      console.log('✅ Times section shown, duration section hidden');
     }
 
     // Show modal
@@ -2631,7 +2662,12 @@ const user = await requireAuth('/')(Astro) as any;
         }
         
         updateData.duration = serverDurationFormat;
-        updateData.taskDate = editDurationDateInput.value;
+        // For manual duration entries, update createdAt instead of taskDate
+        if (editDurationDateInput.value) {
+          const [year, month, day] = editDurationDateInput.value.split('-').map(Number);
+          const newCreatedAt = new Date(year, month - 1, day, 12, 0, 0, 0);
+          updateData.createdAt = newCreatedAt.toISOString();
+        }
         // Clear start and end times for manual duration entries
         updateData.startTime = null;
         updateData.endTime = null;
@@ -3449,10 +3485,26 @@ const user = await requireAuth('/')(Astro) as any;
         // Check if this is a manual duration entry (has durationManual but no startTime/endTime)
         const isManualDurationEntry = currentEntry.durationManual && !currentEntry.startTime && !currentEntry.endTime;
         
+        console.log('🔍 Date change debug:', {
+          entryId,
+          currentEntry: {
+            durationManual: currentEntry.durationManual,
+            startTime: currentEntry.startTime,
+            endTime: currentEntry.endTime,
+            createdAt: currentEntry.createdAt
+          },
+          isManualDurationEntry,
+          newISODate,
+          updateData
+        });
+        
+        console.log('🔍 Full currentEntry object:', currentEntry);
+        
         if (isManualDurationEntry) {
           // For manual duration entries, update createdAt to the new date
           const newCreatedAt = new Date(year, month - 1, day, 12, 0, 0, 0); // Use noon to avoid timezone issues
           updateData.createdAt = newCreatedAt.toISOString();
+          console.log('📝 Updating manual duration entry createdAt:', updateData.createdAt);
         } else {
           // For timer-based entries, update startTime and endTime
           if (currentEntry.startTime) {
@@ -3477,6 +3529,8 @@ const user = await requireAuth('/')(Astro) as any;
         });
         
         if (response.ok) {
+          const result = await response.json();
+          console.log('✅ Date update successful:', result);
           // Reload dashboard data to refresh recent entries table and stats
           console.log('Date picker updated, refreshing dashboard...');
           loadDashboardData();

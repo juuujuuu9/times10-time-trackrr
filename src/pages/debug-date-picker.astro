@@ -1,0 +1,163 @@
+---
+// Debug page for testing date picker functionality with manual duration entries
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Date Picker Debug - Time Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-8">Date Picker Debug</h1>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">Manual Duration Entries</h2>
+            <div id="entriesList" class="space-y-4">
+                <!-- Entries will be loaded here -->
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">Test Date Picker</h2>
+            <div id="testForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Select Entry:</label>
+                    <select id="entrySelect" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Select an entry to test</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">New Date:</label>
+                    <input type="date" id="newDate" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <button id="testButton" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    Test Date Update
+                </button>
+            </div>
+            
+            <div id="testResults" class="mt-4 p-4 bg-gray-50 rounded-md hidden">
+                <h3 class="font-semibold text-gray-700 mb-2">Test Results:</h3>
+                <pre id="resultsContent" class="text-sm text-gray-600"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let entries = [];
+
+        // Load manual duration entries
+        async function loadEntries() {
+            try {
+                const response = await fetch('/api/debug/date-picker-test');
+                const result = await response.json();
+                
+                if (result.success) {
+                    entries = result.data.entries;
+                    displayEntries();
+                    populateSelect();
+                } else {
+                    console.error('Failed to load entries:', result.error);
+                }
+            } catch (error) {
+                console.error('Error loading entries:', error);
+            }
+        }
+
+        // Display entries
+        function displayEntries() {
+            const container = document.getElementById('entriesList');
+            container.innerHTML = '';
+
+            if (entries.length === 0) {
+                container.innerHTML = '<p class="text-gray-500">No manual duration entries found.</p>';
+                return;
+            }
+
+            entries.forEach(entry => {
+                const entryDiv = document.createElement('div');
+                entryDiv.className = 'border border-gray-200 rounded-md p-4';
+                
+                const duration = entry.durationManual ? Math.floor(entry.durationManual / 60) : 0;
+                const date = entry.createdAt ? new Date(entry.createdAt).toLocaleDateString() : 'No date';
+                
+                entryDiv.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="font-medium text-gray-800">Entry #${entry.id}</p>
+                            <p class="text-sm text-gray-600">Duration: ${duration} minutes</p>
+                            <p class="text-sm text-gray-600">Date: ${date}</p>
+                            <p class="text-sm text-gray-600">Notes: ${entry.notes || 'None'}</p>
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            <p>Start: ${entry.startTime ? 'Set' : 'Null'}</p>
+                            <p>End: ${entry.endTime ? 'Set' : 'Null'}</p>
+                            <p>Manual: ${entry.durationManual ? 'Yes' : 'No'}</p>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(entryDiv);
+            });
+        }
+
+        // Populate select dropdown
+        function populateSelect() {
+            const select = document.getElementById('entrySelect');
+            select.innerHTML = '<option value="">Select an entry to test</option>';
+            
+            entries.forEach(entry => {
+                const option = document.createElement('option');
+                option.value = entry.id;
+                option.textContent = `Entry #${entry.id} - ${Math.floor(entry.durationManual / 60)} min - ${entry.createdAt ? new Date(entry.createdAt).toLocaleDateString() : 'No date'}`;
+                select.appendChild(option);
+            });
+        }
+
+        // Test date update
+        async function testDateUpdate() {
+            const entryId = document.getElementById('entrySelect').value;
+            const newDate = document.getElementById('newDate').value;
+            
+            if (!entryId || !newDate) {
+                alert('Please select an entry and enter a new date');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/debug/date-picker-test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ entryId: parseInt(entryId), newDate })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('testResults').classList.remove('hidden');
+                    document.getElementById('resultsContent').textContent = JSON.stringify(result.data, null, 2);
+                    
+                    // Reload entries to show updated data
+                    await loadEntries();
+                } else {
+                    alert('Test failed: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Test error:', error);
+                alert('Test failed: ' + error.message);
+            }
+        }
+
+        // Event listeners
+        document.getElementById('testButton').addEventListener('click', testDateUpdate);
+
+        // Load entries on page load
+        loadEntries();
+    </script>
+</body>
+</html>
