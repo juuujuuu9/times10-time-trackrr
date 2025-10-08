@@ -1,4 +1,248 @@
-# Time Tracking App - Cursor Rules
+# .cursorrules
+
+ruleset: 1.0.0
+
+## Meta-Directive
+This file defines how Cursor should interpret, enforce, and adapt to this project's evolving codebase. Cursor must treat this as a living contract that reflects actual development patterns.
+
+## Core Principles
+- Explicit > implicit
+- Determinism > magic  
+- Local clarity > global cleverness
+- **Simple > clever: Choose the most straightforward solution**
+- **Minimal > maximal: Solve the immediate problem, not hypothetical futures**
+- **Direct > abstracted: Avoid premature optimization and over-engineering**
+- Enforce conventions through inline diagnostics and autofix suggestions
+- Reference rules by ID (RULE-###) in all completions and refactors
+
+## Simplicity Mandate
+
+### Default to Minimal Solutions
+- Solve the actual problem at hand, not imagined edge cases
+- Add complexity only when justified by real requirements
+- Prefer boring, proven patterns over novel approaches
+- Question every abstraction: "Does this add value now?"
+
+### Anti-Bloat Checklist
+Before suggesting code, verify:
+- ✓ Is this the simplest approach that works?
+- ✓ Can this be solved with existing tools/patterns?
+- ✓ Am I adding layers that aren't needed yet?
+- ✓ Would a junior developer understand this in 6 months?
+
+### Red Flags to Avoid
+- Generic wrappers around single-use functions
+- Premature abstraction of logic used once
+- Complex inheritance hierarchies
+- Over-engineered state management for simple data
+- Dependency injection where direct imports suffice
+- Configuration systems for static values
+- Middleware for operations that could be inline
+
+### When to Add Complexity
+Only introduce abstractions when:
+1. Pattern appears ≥3 times across codebase
+2. Complexity reduces cognitive load (not just lines of code)
+3. Change frequency justifies the indirection
+4. Team explicitly requests the pattern
+
+## Active Learning Protocol
+
+### 1. Pattern Recognition
+- Scan repo on initialization to infer architecture, stack, and conventions
+- Monitor for repeated patterns (≥3 occurrences across distinct files)
+- Detect anti-patterns and rule violations
+- **Flag over-engineered solutions and suggest simplifications**
+- Propose rule additions when stable patterns emerge
+- Suggest rule refinement when violations are frequent and justified
+
+### 2. Auto-Documentation
+- Maintain `/cursor-guides/` directory with:
+  - `RULE-###.md` for each rule (rationale, examples, cross-references)
+  - `index.json` manifest linking rule IDs to files
+  - `audit.log` for all rule modifications
+- Generate documentation automatically when rules change
+- Include code examples from actual project files
+- **Document why simple solutions were chosen over complex alternatives**
+
+### 3. Enforcement Mechanism
+- Provide inline diagnostics for rule violations
+- Show rule references in completion tooltips
+- Suggest autofixes with rule context
+- Flag critical violations that should block commits
+- **Warn when solutions introduce unnecessary complexity**
+
+## Project Rules
+
+### RULE-000: Simplicity First
+- Choose the most direct path to solve the problem
+- Avoid speculative generalization
+- Refactor toward simplicity, not complexity
+- Delete code more often than you add it
+- Inline small abstractions that obscure rather than clarify
+**Severity:** Warning  
+**Applies to:** All code suggestions and refactors
+
+### RULE-001: TypeScript Configuration
+- Strict mode enabled
+- No `any` type usage
+- Prefer explicit return types for exported functions
+- **Avoid complex generic gymnastics; use simple unions/intersections**
+**Severity:** Error
+
+### RULE-002: Project Structure  
+- Organize by feature, not file type
+- Use path aliases (`@/`, `@components/`, etc.)
+- Keep related code colocated
+- **Flat structure > deep nesting; avoid folder hierarchies beyond 3 levels**
+**Severity:** Warning
+
+### RULE-003: Styling Standards
+- Tailwind utilities are default
+- No inline `style` props
+- Use design tokens for spacing/colors
+- **Compose utilities inline; avoid @apply unless truly repetitive (≥5 uses)**
+**Severity:** Warning
+
+### RULE-004: Font Handling
+- Omit `"Satoshi Variable"` references
+- Map `"Lexend Mega"` → `.font-lexend-mega` class
+- Map `"Roboto"` → `.font-roboto` class  
+- Expand CSS variables manually
+- Add `/* VAR_NEEDED:<name> */` comment if variable is unresolved
+**Severity:** Error
+
+### RULE-005: Framework Architecture
+- Keep Astro pages minimal (routing/layout only)
+- Extract logic into typed modules/components
+- Share stateful logic through explicit imports
+- **No framework wrappers or abstract base classes; use composition**
+**Severity:** Warning
+
+### RULE-006: Data Validation
+- Validate all external data with Zod or schema guards
+- No unvalidated API responses or user input
+- Type guards for runtime checks
+- **Simple schemas only; avoid complex transforms unless necessary**
+**Severity:** Error
+
+### RULE-007: State Management
+- Prefer server-side caching over global stores
+- Use explicit state hydration patterns
+- Document state dependencies
+- **Start with component state; introduce stores only when sharing across ≥3 components**
+**Severity:** Warning
+
+### RULE-008: Accessibility
+- Enforce keyboard navigation support
+- Include ARIA attributes where semantic HTML insufficient
+- Test focus management in interactive components
+- **Use semantic HTML first; ARIA only when HTML semantics are insufficient**
+**Severity:** Error
+
+### RULE-009: Performance
+- Optimize all images before commit
+- Limit client-side hydration (`client:load` sparingly)
+- Lazy load heavy components
+- **Measure before optimizing; avoid speculative performance code**
+**Severity:** Warning
+
+### RULE-010: Security
+- No secrets in client-side code
+- Use parameterized queries only (no string concatenation)
+- Sanitize user-generated content
+- **Use framework/library security features; avoid custom crypto/auth**
+**Severity:** Error
+
+### RULE-011: Development Workflow
+- Use conventional commits (feat:, fix:, docs:, etc.)
+- Include "Rule Impact: RULE-###" in PR descriptions when relevant
+- Update tests when changing rule-enforced patterns
+- **Write tests for behavior, not implementation; avoid brittle tests**
+**Severity:** Warning
+
+### RULE-012: Dependency Management
+- Justify every new dependency
+- Prefer platform/framework features over libraries
+- Remove unused dependencies immediately
+- **Ask: "Can I write this in 20 lines instead of importing a package?"**
+**Severity:** Warning
+
+## Cursor Behavior Instructions
+
+### Code Completion
+- Always check completion against active rules
+- Annotate suggestions with relevant rule IDs
+- Prefer rule-compliant alternatives over raw suggestions
+- **Default to the simplest approach that satisfies requirements**
+- **Avoid suggesting abstractions, helpers, or utilities for single-use code**
+
+### Refactoring
+- Verify refactor maintains rule compliance
+- Flag rules that would be violated by proposed changes
+- Suggest rule-aligned alternative approaches
+- **Prioritize clarity over cleverness in all refactors**
+- **Remove unnecessary indirection and abstraction layers**
+- **Inline small functions that are only called once**
+
+### Problem-Solving Approach
+1. Understand the immediate requirement (not future possibilities)
+2. Identify the most direct solution using existing code
+3. Check if the solution can be simpler
+4. Only then suggest the code
+5. Note when resisting the urge to over-engineer
+
+### Code Review Mindset
+When reviewing or suggesting code, ask:
+- "What's the simplest thing that could work?"
+- "Am I solving a problem that doesn't exist yet?"
+- "Will this be obvious to someone new in 6 months?"
+- "Can I delete code instead of adding it?"
+
+### Rule Updates
+1. Detect pattern requiring new rule
+2. Draft rule with ID, description, severity
+3. Generate `/cursor-guides/RULE-###.md` with examples
+4. Update `index.json` and `audit.log`
+5. Present proposal to developer for approval
+6. **Include simplicity analysis: Why this rule prevents bloat**
+
+### Audit Log Format
+
+[YYYY-MM-DD HH:MM] ACTION: RULE-### | DESCRIPTION | AUTHOR
+
+## Integration Points
+
+### CI/CD
+- `scripts/rules-check.ts` validates compliance
+- `.github/workflows/rules.yml` runs on PR
+- Critical rule violations block merge
+
+### Documentation Sync
+- Rules changes trigger docs regeneration
+- Examples pulled from real project code
+- Cross-references maintained automatically
+- **Include "simple vs. complex" comparison examples**
+
+## Evolution Protocol
+1. New patterns emerge → Cursor proposes rule
+2. Rule violations spike → Cursor suggests refinement  
+3. Rules unused for 90 days → Cursor flags for deprecation
+4. Deprecated rules stay in history (never deleted)
+5. **Complexity detected → Cursor suggests simplification and documents rationale**
+
+## Complexity Warnings
+Cursor will flag and suggest alternatives for:
+- Functions longer than 50 lines without clear reason
+- Files longer than 300 lines
+- Nesting depth > 4 levels
+- Cyclomatic complexity > 10
+- Abstractions used only once
+- More than 2 layers of indirection to accomplish a task
+
+---
+
+# Time Tracking App - Specific Rules
 
 ## Manual Duration Entry Patterns
 
