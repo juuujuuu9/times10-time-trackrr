@@ -109,6 +109,41 @@ const finalProjectId = projectId || taskId; // Support both
 
 See `/cursor-guides/API_FIELD_MAPPING_PATTERNS.md` for comprehensive patterns.
 
+## Dashboard Filtering Patterns
+
+### Critical: Server-Side vs Client-Side Filtering
+**ALWAYS use server-side filtering for data that should be filtered by time periods or database criteria.**
+
+#### Dashboard Filtering Rules:
+- ✅ **Server-side filtering**: Time periods, client filters, user roles
+- ❌ **Client-side filtering**: Only for UI state, not data filtering
+- ✅ **Separate queries**: Different tabs need different data queries
+- ✅ **URL parameters**: Use URL for all filter state (bookmarkable)
+- ✅ **Persistent dropdowns**: Keep all options visible regardless of filter
+
+#### Common Dashboard Patterns:
+```typescript
+// ✅ CORRECT - Server-side filtering with separate queries
+const teamData = await db.select().where(and(timeFilter, teamClientFilter));
+const projectData = await db.select().where(and(timeFilter, projectClientFilter));
+const clientData = await db.select().where(timeFilter); // No client filter
+
+// ❌ WRONG - Client-side filtering of server data
+const filteredData = allData.filter(item => item.client === selectedClient);
+```
+
+#### Dropdown State Management:
+```javascript
+// ✅ CORRECT - Always show all options
+const allClients = await db.select({ name: clients.name }).from(clients);
+// Use allClients for dropdown options, not filtered data
+
+// ❌ WRONG - Options disappear when filtered
+const options = filteredData.map(item => item.client);
+```
+
+See `/cursor-guides/DASHBOARD_FILTERING_PATTERNS.md` for comprehensive dashboard filtering patterns.
+
 ## Debugging Patterns
 
 ### Duration Editing Issues
