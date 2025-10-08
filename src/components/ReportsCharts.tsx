@@ -429,7 +429,8 @@ export const CostBarChart: React.FC<{ data: ChartData[]; title: string; period: 
 };
 
 export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; canViewFinancialData: boolean }> = ({ data, title, canViewFinancialData }) => {
-  const colors = [
+  // Client-based colors - each client gets a distinct color
+  const clientColors = [
     'rgba(59, 130, 246, 0.8)',   // Blue
     'rgba(16, 185, 129, 0.8)',   // Green
     'rgba(245, 158, 11, 0.8)',   // Yellow
@@ -472,7 +473,7 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
     });
   };
 
-  // Group data by client for hierarchical legend
+  // Group data by client and create ordered data for chart
   const groupedData = data.reduce((acc, item, index) => {
     const clientName = item.clientName || 'Unknown Client';
     if (!acc[clientName]) {
@@ -482,8 +483,29 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
     return acc;
   }, {} as Record<string, Array<ChartData & { originalIndex: number }>>);
 
+  // Create ordered data where all projects from same client are grouped together
+  const orderedData: Array<ChartData & { originalIndex: number; clientColor: string }> = [];
+  const clientColorMap: Record<string, string> = {};
+  let colorIndex = 0;
+
+  Object.entries(groupedData).forEach(([clientName, projects]) => {
+    // Assign color to client
+    clientColorMap[clientName] = clientColors[colorIndex % clientColors.length];
+    const clientColor = clientColorMap[clientName];
+    
+    // Add all projects for this client
+    projects.forEach(project => {
+      orderedData.push({ ...project, clientColor });
+    });
+    
+    colorIndex++;
+  });
+
+  // State for hovered index - must be declared before chartData
+  const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
+
   const chartData = {
-    labels: data.map(item => {
+    labels: orderedData.map(item => {
       const parts = [];
       if (item.clientName) parts.push(item.clientName);
       if (item.projectName) parts.push(item.projectName);
@@ -492,7 +514,7 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
     }),
     datasets: [
       {
-        data: data.map(item => {
+        data: orderedData.map(item => {
           if (canViewFinancialData) {
             const cost = item.totalCost;
             return cost || 0;
@@ -501,11 +523,21 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
             return hours || 0;
           }
         }),
-        backgroundColor: colors.slice(0, data.length),
-        borderColor: colors.slice(0, data.length).map(color => color.replace('0.8', '1')),
-        borderWidth: 2,
-        hoverOffset: 4,
+        backgroundColor: orderedData.map((item, index) => 
+          hoveredIndex === index ? item.clientColor.replace('0.8', '0.9') : item.clientColor
+        ),
+        borderColor: orderedData.map((item, index) => 
+          hoveredIndex === index ? item.clientColor.replace('0.8', '1') : item.clientColor.replace('0.8', '1')
+        ),
+        borderWidth: orderedData.map((item, index) => 
+          hoveredIndex === index ? 4 : 2
+        ),
+        hoverOffset: 15, // Much larger hover offset for better visual feedback
         cutout: '40%', // Make the hole much smaller for thicker segments
+        hoverBorderWidth: 4, // Thicker border on hover
+        hoverBackgroundColor: orderedData.map((item, index) => 
+          hoveredIndex === index ? item.clientColor.replace('0.8', '0.9') : item.clientColor
+        ), // Only highlight the hovered slice
       },
     ],
   };
@@ -514,63 +546,138 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
   const CustomLegend = ({ 
     chartRef, 
     selectedProject, 
-    setSelectedProject 
+    setSelectedProject,
+    orderedData,
+    clientColorMap
   }: { 
     chartRef: any;
     selectedProject: ChartData | null;
     setSelectedProject: (project: ChartData | null) => void;
+    orderedData: Array<ChartData & { originalIndex: number; clientColor: string }>;
+    clientColorMap: Record<string, string>;
   }) => {
+    const [hoveredProject, setHoveredProject] = React.useState<number | null>(null);
+    
     const selectProject = (project: ChartData & { originalIndex: number }) => {
       setSelectedProject(project);
     };
 
+    const handleProjectHover = (project: ChartData & { originalIndex: number }, isHovering: boolean) => {
+      console.log('Hover event triggered:', { project: project.projectName, isHovering, chartRef: !!chartRef });
+      
+      const dataIndex = orderedData.findIndex(item => 
+        item.projectName === project.projectName && 
+        item.clientName === project.clientName
+      );
+      
+      console.log('Data index found:', dataIndex, 'out of', orderedData.length);
+      console.log('Looking for:', { projectName: project.projectName, clientName: project.clientName });
+      console.log('Ordered data:', orderedData.map(item => ({ projectName: item.projectName, clientName: item.clientName })));
+      
+      if (dataIndex !== -1) {
+        if (isHovering) {
+          setHoveredProject(dataIndex);
+          setHoveredIndex(dataIndex);
+          console.log('Set hovered project:', dataIndex);
+          
+          // Try to highlight the chart slice if chart reference is available
+          if (chartRef) {
+            try {
+              // Use Chart.js hover state to highlight only the specific slice
+              const chart = chartRef;
+              // Clear any existing active elements first
+              chart.setActiveElements([]);
+              // Then set only the specific element as active
+              chart.setActiveElements([{ datasetIndex: 0, index: dataIndex }]);
+              chart.update('none');
+              console.log('Chart slice highlighted for index:', dataIndex);
+            } catch (error) {
+              console.log('Chart highlight failed:', error);
+            }
+          } else {
+            console.log('No chart reference available');
+          }
+        } else {
+          setHoveredProject(null);
+          setHoveredIndex(null);
+          console.log('Cleared hovered project');
+          
+          // Try to clear chart highlight if chart reference is available
+          if (chartRef) {
+            try {
+              chartRef.setActiveElements([]);
+              chartRef.update('none');
+              console.log('Chart highlight cleared');
+            } catch (error) {
+              console.log('Chart clear failed:', error);
+            }
+          }
+        }
+      }
+    };
+
     return (
       <div className="space-y-4 max-h-96 overflow-y-auto">
-        {Object.entries(groupedData).map(([clientName, clientProjects]) => (
-          <div key={clientName} className="space-y-2">
-            {/* Client Header */}
-            <div className="flex items-center space-x-2 border-b border-gray-200 pb-2">
-              <div className="text-sm font-semibold text-gray-800 flex items-center">
-                <svg className="w-4 h-4 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-                {clientName}
+        {Object.entries(groupedData).map(([clientName, clientProjects]) => {
+          const clientColor = clientColorMap[clientName];
+          
+          return (
+            <div key={clientName} className="space-y-2">
+              {/* Client Header */}
+              <div className="flex items-center space-x-2 border-b border-gray-200 pb-2">
+                <div 
+                  className="w-4 h-4 rounded-full border-2 border-white shadow-sm flex-shrink-0"
+                  style={{ backgroundColor: clientColor }}
+                />
+                <div className="text-sm font-semibold text-gray-800">
+                  {clientName}
+                </div>
+              </div>
+              
+              {/* Projects under this client */}
+              <div className="ml-6 space-y-1">
+                {clientProjects.map((project) => {
+                  const projectName = project.projectName || 'Unknown Project';
+                  const dataIndex = orderedData.findIndex(item => 
+                    item.projectName === project.projectName && 
+                    item.clientName === project.clientName
+                  );
+                  const isHovered = hoveredProject === dataIndex;
+                  
+                  const isSelected = selectedProject?.projectName === project.projectName && 
+                                   selectedProject?.clientName === project.clientName;
+                  
+                  return (
+                    <div 
+                      key={project.originalIndex}
+                      className={`flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-all duration-200 ${
+                        isSelected ? 'bg-blue-50 border border-blue-200' : ''
+                      } ${isHovered ? 'bg-blue-100' : ''}`}
+                      onClick={() => selectProject(project)}
+                      onMouseEnter={() => handleProjectHover(project, true)}
+                      onMouseLeave={() => handleProjectHover(project, false)}
+                    >
+                      <div 
+                        className={`w-2 h-2 rounded-full border border-white shadow-sm flex-shrink-0 transition-all duration-200 ${
+                          isHovered ? 'scale-125' : ''
+                        }`}
+                        style={{ backgroundColor: clientColor }}
+                      />
+                      <span className={`text-sm flex-1 truncate transition-all duration-200 ${
+                        isSelected ? 'text-blue-700 font-medium' : 'text-gray-700'
+                      } ${isHovered ? 'font-semibold' : ''}`}>
+                        {projectName}
+                      </span>
+                      {isSelected && (
+                        <span className="text-xs text-blue-600 flex-shrink-0">(selected)</span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
-            
-            {/* Projects under this client */}
-            <div className="ml-4 space-y-1">
-              {clientProjects.map((project) => {
-                const backgroundColor = colors[project.originalIndex % colors.length];
-                const projectName = project.projectName || 'Unknown Project';
-                
-                const isSelected = selectedProject?.projectName === project.projectName && 
-                                 selectedProject?.clientName === project.clientName;
-                
-                return (
-                  <div 
-                    key={project.originalIndex}
-                    className={`flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors ${
-                      isSelected ? 'bg-blue-50 border border-blue-200' : ''
-                    }`}
-                    onClick={() => selectProject(project)}
-                  >
-                    <div 
-                      className="w-3 h-3 rounded-full border-2 border-white shadow-sm flex-shrink-0"
-                      style={{ backgroundColor }}
-                    />
-                    <span className={`text-sm flex-1 truncate ${isSelected ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
-                      {projectName}
-                    </span>
-                    {isSelected && (
-                      <span className="text-xs text-blue-600 flex-shrink-0">(selected)</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   };
@@ -592,59 +699,37 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
         setError(null);
         
         try {
-          // This would be the actual API call to get team members for this project
-          // For now, we'll simulate with mock data
-          const response = await fetch(`/api/projects/${project.projectName}/team-members`);
+          // Fetch team members from the API
+          const response = await fetch(`/api/projects/${encodeURIComponent(project.projectName || '')}/team-members`);
           
           if (response.ok) {
-            const data = await response.json();
-            setTeamMembers(data.teamMembers || []);
+            const result = await response.json();
+            console.log('Team members API response:', result);
+            
+            if (result.success && result.data && result.data.teamMembers) {
+              // Transform the API data to match component expectations
+              const transformedMembers = result.data.teamMembers.map((member: any) => ({
+                id: member.id,
+                name: member.name,
+                hours: member.hours || 0,
+                cost: member.cost || 0,
+                avatar: null, // API doesn't provide avatar, so set to null
+                hasTimeEntries: member.hasTimeEntries || false
+              }));
+              setTeamMembers(transformedMembers);
+            } else {
+              console.log('No team members found in API response');
+              setTeamMembers([]);
+            }
           } else {
-            // Fallback to mock data for demonstration
-            setTeamMembers([
-              {
-                id: 1,
-                name: 'John Doe',
-                hours: 24.5,
-                cost: 2450,
-                avatar: null
-              },
-              {
-                id: 2,
-                name: 'Jane Smith',
-                hours: 18.0,
-                cost: 1800,
-                avatar: null
-              },
-              {
-                id: 3,
-                name: 'Mike Johnson',
-                hours: 12.5,
-                cost: 1250,
-                avatar: null
-              }
-            ]);
+            console.log('API request failed:', response.status, response.statusText);
+            setError('Failed to load team members');
+            setTeamMembers([]);
           }
         } catch (err) {
           console.error('Error fetching team members:', err);
           setError('Failed to load team members');
-          // Fallback to mock data
-          setTeamMembers([
-            {
-              id: 1,
-              name: 'John Doe',
-              hours: 24.5,
-              cost: 2450,
-              avatar: null
-            },
-            {
-              id: 2,
-              name: 'Jane Smith',
-              hours: 18.0,
-              cost: 1800,
-              avatar: null
-            }
-          ]);
+          setTeamMembers([]);
         } finally {
           setLoading(false);
         }
@@ -729,13 +814,16 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
                       <div>
                         <div className="font-medium text-gray-800">{member.name}</div>
                         <div className="text-sm text-gray-500">
-                          {canViewFinancialData ? `$${member.cost.toLocaleString()}` : `${member.hours}h`}
+                          {canViewFinancialData ? `$${member.cost.toLocaleString()}` : `${member.hours.toFixed(1)}h`}
                         </div>
+                        {member.hasTimeEntries === false && (
+                          <div className="text-xs text-orange-500">No time logged yet</div>
+                        )}
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="text-sm font-medium text-gray-800">
-                        {canViewFinancialData ? `${member.hours}h` : `$${member.cost.toLocaleString()}`}
+                        {canViewFinancialData ? `${member.hours.toFixed(1)}h` : `$${member.cost.toLocaleString()}`}
                       </div>
                       <div className="text-xs text-gray-500">
                         {canViewFinancialData ? 'Hours' : 'Cost'}
@@ -765,6 +853,24 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
         left: 5,
         right: 5,
       },
+    },
+    interaction: {
+      intersect: false,
+      mode: 'index' as const,
+    },
+    // Disable built-in hover to prevent conflicts
+    hover: {
+      mode: 'nearest' as const,
+      intersect: false,
+    },
+    onHover: (event: any, elements: any) => {
+      // Change cursor style on hover
+      event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+    },
+    // Add animation configuration for better hover effects
+    animation: {
+      duration: 200,
+      easing: 'easeInOutQuart' as const
     },
     plugins: {
       legend: {
@@ -840,7 +946,7 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
     onClick: (event: any, elements: any) => {
       if (elements.length > 0) {
         const elementIndex = elements[0].index;
-        const item = data[elementIndex];
+        const item = orderedData[elementIndex];
         const value = canViewFinancialData 
           ? item.totalCost 
           : item.totalHours / 3600;
@@ -852,6 +958,14 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
 
   const [chartRef, setChartRef] = React.useState<any>(null);
   const [selectedProject, setSelectedProject] = React.useState<ChartData | null>(null);
+  
+  // Create a ref for the chart
+  const chartRefCallback = React.useCallback((chart: any) => {
+    if (chart) {
+      setChartRef(chart);
+      console.log('Chart reference set:', !!chart);
+    }
+  }, []);
 
   return (
     <div className="bg-white rounded-lg border border-gray-300 p-6 shadow-sm relative">
@@ -868,7 +982,7 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
               <Doughnut 
                 data={chartData} 
                 options={options}
-                ref={(ref) => setChartRef(ref)}
+                ref={chartRefCallback}
               />
             </div>
           )}
@@ -882,6 +996,8 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
               chartRef={chartRef} 
               selectedProject={selectedProject}
               setSelectedProject={setSelectedProject}
+              orderedData={orderedData}
+              clientColorMap={clientColorMap}
             />
           </div>
         </div>
