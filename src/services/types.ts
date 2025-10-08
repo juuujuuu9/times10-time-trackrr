@@ -50,6 +50,7 @@ export interface UpdateTimeEntryRequest {
   durationManual?: number;
   taskId?: number;
   notes?: string;
+  createdAt?: string; // ISO string for manual duration entry date updates
 }
 
 export interface ParsedTime {

@@ -322,3 +322,40 @@
 - Search for `durationManual` to find all manual entry logic
 - Search for `startTime.*targetDate` to find timezone issues
 - Check both API endpoints and service layers for consistency
+
+## Date Editing Patterns
+
+### Manual Duration Entry Date Updates
+- **CRITICAL**: Manual duration entries use `createdAt` for date association, not `startTime`
+- **ALWAYS** check entry type before updating dates in date picker logic
+- **ALWAYS** handle both timer-based and manual duration entries differently
+- Pattern for date change logic:
+  ```typescript
+  // Check if this is a manual duration entry
+  const isManualDurationEntry = currentEntry.durationManual && !currentEntry.startTime && !currentEntry.endTime;
+  
+  if (isManualDurationEntry) {
+    // For manual duration entries, update createdAt
+    const newCreatedAt = new Date(year, month - 1, day, 12, 0, 0, 0);
+    updateData.createdAt = newCreatedAt.toISOString();
+  } else {
+    // For timer-based entries, update startTime and endTime
+    if (currentEntry.startTime) {
+      // Update startTime logic
+    }
+    if (currentEntry.endTime) {
+      // Update endTime logic
+    }
+  }
+  ```
+
+### Date Picker Implementation
+- **ALWAYS** test date picker functionality for both entry types
+- **ALWAYS** ensure manual duration entries can have their dates changed
+- **ALWAYS** verify that date changes persist correctly in the database
+- **ALWAYS** check that date changes update the correct field (createdAt vs startTime)
+
+### Service Layer Date Updates
+- **ALWAYS** support `createdAt` updates in UpdateTimeEntryRequest interface
+- **ALWAYS** handle `createdAt` field in service layer update methods
+- **ALWAYS** ensure API endpoints can accept and process `createdAt` updates

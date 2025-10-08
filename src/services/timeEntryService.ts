@@ -283,6 +283,11 @@ export class TimeEntryService {
       updateData.endTime = null;
     }
 
+    // Handle createdAt updates for manual duration entries
+    if (request.createdAt) {
+      updateData.createdAt = new Date(request.createdAt);
+    }
+
     // Handle other fields
     if (request.taskId !== undefined) {
       updateData.projectId = request.taskId; // Map taskId to projectId for database

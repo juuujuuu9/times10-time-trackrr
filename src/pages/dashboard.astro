@@ -3347,16 +3347,26 @@ const user = await requireAuth('/')(Astro) as any;
               taskDate: newISODate
             };
             
-            if (currentEntry?.startTime) {
-              const startTime = new Date(currentEntry.startTime);
-              const newStartTime = new Date(year, month - 1, day, startTime.getHours(), startTime.getMinutes(), 0, 0);
-              updateData.startTime = newStartTime.toISOString();
-            }
+            // Check if this is a manual duration entry (has durationManual but no startTime/endTime)
+            const isManualDurationEntry = currentEntry?.durationManual && !currentEntry?.startTime && !currentEntry?.endTime;
             
-            if (currentEntry?.endTime) {
-              const endTime = new Date(currentEntry.endTime);
-              const newEndTime = new Date(year, month - 1, day, endTime.getHours(), endTime.getMinutes(), 0, 0);
-              updateData.endTime = newEndTime.toISOString();
+            if (isManualDurationEntry) {
+              // For manual duration entries, update createdAt to the new date
+              const newCreatedAt = new Date(year, month - 1, day, 12, 0, 0, 0); // Use noon to avoid timezone issues
+              updateData.createdAt = newCreatedAt.toISOString();
+            } else {
+              // For timer-based entries, update startTime and endTime
+              if (currentEntry?.startTime) {
+                const startTime = new Date(currentEntry.startTime);
+                const newStartTime = new Date(year, month - 1, day, startTime.getHours(), startTime.getMinutes(), 0, 0);
+                updateData.startTime = newStartTime.toISOString();
+              }
+              
+              if (currentEntry?.endTime) {
+                const endTime = new Date(currentEntry.endTime);
+                const newEndTime = new Date(year, month - 1, day, endTime.getHours(), endTime.getMinutes(), 0, 0);
+                updateData.endTime = newEndTime.toISOString();
+              }
             }
             
             const response = await fetch(`/api/time-entries-unified/${entryId}`, {
@@ -3433,20 +3443,29 @@ const user = await requireAuth('/')(Astro) as any;
         // Parse the new date
         const [year, month, day] = newISODate.split('-').map(Number);
         
-        const updateData: { startTime?: string; endTime?: string; taskDate?: string } = {};
+        const updateData: { startTime?: string; endTime?: string; taskDate?: string; createdAt?: string } = {};
         updateData.taskDate = newISODate;
         
-        // Update start and end times if they exist
-        if (currentEntry.startTime) {
-          const startTime = new Date(currentEntry.startTime);
-          const newStartTime = new Date(year, month - 1, day, startTime.getHours(), startTime.getMinutes(), 0, 0);
-          updateData.startTime = newStartTime.toISOString();
-        }
+        // Check if this is a manual duration entry (has durationManual but no startTime/endTime)
+        const isManualDurationEntry = currentEntry.durationManual && !currentEntry.startTime && !currentEntry.endTime;
         
-        if (currentEntry.endTime) {
-          const endTime = new Date(currentEntry.endTime);
-          const newEndTime = new Date(year, month - 1, day, endTime.getHours(), endTime.getMinutes(), 0, 0);
-          updateData.endTime = newEndTime.toISOString();
+        if (isManualDurationEntry) {
+          // For manual duration entries, update createdAt to the new date
+          const newCreatedAt = new Date(year, month - 1, day, 12, 0, 0, 0); // Use noon to avoid timezone issues
+          updateData.createdAt = newCreatedAt.toISOString();
+        } else {
+          // For timer-based entries, update startTime and endTime
+          if (currentEntry.startTime) {
+            const startTime = new Date(currentEntry.startTime);
+            const newStartTime = new Date(year, month - 1, day, startTime.getHours(), startTime.getMinutes(), 0, 0);
+            updateData.startTime = newStartTime.toISOString();
+          }
+          
+          if (currentEntry.endTime) {
+            const endTime = new Date(currentEntry.endTime);
+            const newEndTime = new Date(year, month - 1, day, endTime.getHours(), endTime.getMinutes(), 0, 0);
+            updateData.endTime = newEndTime.toISOString();
+          }
         }
         
         const response = await fetch(`/api/time-entries-unified/${entryId}`, {
