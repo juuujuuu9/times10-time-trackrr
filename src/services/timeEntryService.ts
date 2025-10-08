@@ -70,6 +70,13 @@ export class TimeEntryService {
       timeEntryData.durationManual = durationSeconds;
       timeEntryData.startTime = null;        // Manual entries should have null startTime
       timeEntryData.endTime = null;          // Manual entries should have null endTime
+      
+      // For manual duration entries, use the taskDate for createdAt to associate with correct day
+      if (request.taskDate) {
+        const [year, month, day] = request.taskDate.split('-').map(Number);
+        const targetDate = new Date(year, month - 1, day, 12, 0, 0, 0); // Use noon to avoid timezone issues
+        timeEntryData.createdAt = targetDate;
+      }
     }
 
     // Create the time entry
