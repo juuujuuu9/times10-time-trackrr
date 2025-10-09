@@ -145,6 +145,7 @@ export const userTaskLists = pgTable('user_task_lists', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   clients: many(clients),
@@ -237,4 +238,4 @@ export const userTaskListsRelations = relations(userTaskLists, ({ one }) => ({
     fields: [userTaskLists.taskId],
     references: [tasks.id],
   }),
-})); 
+}));

@@ -2,7 +2,6 @@
 import Layout from '../layouts/Layout.astro';
 import { requireAuth } from '../utils/session';
 import Timer from '../components/Timer';
-
 // Require authentication
 const user = await requireAuth('/')(Astro) as any;
 ---
@@ -590,6 +589,7 @@ const user = await requireAuth('/')(Astro) as any;
   
   // Import Flatpickr
   import flatpickr from 'flatpickr';
+  
   
   // Show dashboard content after a brief delay to prevent flash
   document.addEventListener('DOMContentLoaded', () => {

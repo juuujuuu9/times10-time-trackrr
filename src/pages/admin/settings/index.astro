@@ -568,34 +568,9 @@ const user = await requireRole('admin', '/admin')(Astro) as any;
     }
 
     if (systemForm) {
-      systemForm.addEventListener('submit', async (e) => {
+      systemForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const timezone = (document.getElementById('timezone') as HTMLSelectElement)?.value;
-        const dateFormat = (document.getElementById('dateFormat') as HTMLSelectElement)?.value;
-        const timeFormat = (document.getElementById('timeFormat') as HTMLSelectElement)?.value;
-        const weekStart = (document.getElementById('weekStart') as HTMLSelectElement)?.value;
-        
-        try {
-          const response = await fetch('/api/admin/settings/system', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              timezone,
-              dateFormat,
-              timeFormat,
-              weekStart
-            }),
-          });
-          
-          if (response.ok) {
-            alert('System preferences saved successfully');
-          } else {
-            alert('Error saving system preferences');
-          }
-        } catch (error) {
-          console.error('Error:', error);
-          alert('Error saving system preferences');
-        }
+        alert('System preferences functionality coming soon!');
       });
     }
   </script>

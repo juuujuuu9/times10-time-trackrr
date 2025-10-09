@@ -420,7 +420,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                         <input
                           type="text"
                           class={`time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer ${isManualDurationEntry ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                          value={startTime ? new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(startTime) : '--:-- --'}
+                          value={startTime ? formatTimeForDisplay(startTime) : '--:-- --'}
                           data-entry-id={entry.id}
                           data-time-type="start"
                           placeholder="9:30 AM"
@@ -432,7 +432,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                         <input
                           type="text"
                           class={`time-input w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-400 cursor-pointer ${isManualDurationEntry ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                          value={endTime ? new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(endTime) : '--:-- --'}
+                          value={endTime ? formatTimeForDisplay(endTime) : '--:-- --'}
                           data-entry-id={entry.id}
                           data-time-type="end"
                           placeholder="9:30 AM"
@@ -682,7 +682,14 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
     // Import Flatpickr
     import flatpickr from 'flatpickr';
     
-    // Note: timezone utilities will be handled server-side
+    // Helper function to format time
+    function formatTimeForUser(date: Date) {
+      return new Intl.DateTimeFormat(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }).format(date);
+    }
     
     // Flexible time parser for natural human shorthand formats
     function parseFlexibleTime(timeString: string): { hours: number; minutes: number } | null {
@@ -1115,7 +1122,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                 
                 if (startTimeInput && result.data.startTime) {
                   const startDate = new Date(result.data.startTime);
-                  startTimeInput.value = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(startDate);
+                  startTimeInput.value = formatTimeForUser(startDate);
                   // Re-enable start time input since we now have a start time
                   startTimeInput.readOnly = false;
                   startTimeInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
@@ -1126,7 +1133,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                 
                 if (endTimeInput && result.data.endTime) {
                   const endDate = new Date(result.data.endTime);
-                  endTimeInput.value = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(endDate);
+                  endTimeInput.value = formatTimeForUser(endDate);
                   // Re-enable end time input since we now have an end time
                   endTimeInput.readOnly = false;
                   endTimeInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
@@ -1909,7 +1916,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                           
                           if (startTimeInput && result.data.startTime) {
                             const startDate = new Date(result.data.startTime);
-                            startTimeInput.value = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(startDate);
+                            startTimeInput.value = formatTimeForUser(startDate);
                             // Re-enable start time input since we now have a start time
                             startTimeInput.readOnly = false;
                             startTimeInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
@@ -1920,7 +1927,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
                           
                           if (endTimeInput && result.data.endTime) {
                             const endDate = new Date(result.data.endTime);
-                            endTimeInput.value = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(endDate);
+                            endTimeInput.value = formatTimeForUser(endDate);
                             // Re-enable end time input since we now have an end time
                             endTimeInput.readOnly = false;
                             endTimeInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
@@ -2349,7 +2356,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
       if (startTimeInput) {
         if (entry.startTime && !isManualDurationEntry) {
           const startDate = new Date(entry.startTime);
-          startTimeInput.value = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(startDate);
+          startTimeInput.value = formatTimeForUser(startDate);
         } else {
           startTimeInput.value = '';
         }
@@ -2358,7 +2365,7 @@ const currentWeekRange = formatDateRange(weekStart, weekEnd);
       if (endTimeInput) {
         if (entry.endTime && !isManualDurationEntry) {
           const endDate = new Date(entry.endTime);
-          endTimeInput.value = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true }).format(endDate);
+          endTimeInput.value = formatTimeForUser(endDate);
         } else {
           endTimeInput.value = '';
         }

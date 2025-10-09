@@ -64,41 +64,43 @@ export function getDateComponents(date: Date): { year: number; month: number; da
 }
 
 /**
- * Formats a date for display in the user's local timezone
+ * Formats a date for display using user preferences
  * This should be used for all date displays to ensure consistency
  * 
  * @param date - Date object
- * @param options - Intl.DateTimeFormatOptions
+ * @param userId - User ID to get user-specific preferences
+ * @param options - Intl.DateTimeFormatOptions (optional override)
  * @returns Formatted date string
  */
 export function formatDateForDisplay(date: Date, options: Intl.DateTimeFormatOptions = {}): string {
-  const defaultOptions: Intl.DateTimeFormatOptions = {
+  const formatter = new Intl.DateTimeFormat(undefined, {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     ...options
-  };
+  });
   
-  return date.toLocaleDateString(undefined, defaultOptions);
+  return formatter.format(date);
 }
 
 /**
- * Formats a time for display preserving the user's intended time
+ * Formats a time for display using user preferences
  * This should be used for all time displays to ensure consistency
  * 
  * @param date - Date object (should be UTC)
- * @param options - Intl.DateTimeFormatOptions
+ * @param userId - User ID to get user-specific preferences
+ * @param options - Intl.DateTimeFormatOptions (optional override)
  * @returns Formatted time string
  */
 export function formatTimeForDisplay(date: Date, options: Intl.DateTimeFormatOptions = {}): string {
-  const defaultOptions: Intl.DateTimeFormatOptions = {
+  const formatter = new Intl.DateTimeFormat(undefined, {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
     ...options
-  };
+  });
   
-  return date.toLocaleTimeString(undefined, defaultOptions);
+  return formatter.format(date);
 }
 
 /**
