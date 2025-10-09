@@ -37,6 +37,15 @@ const allTimeEntries = await db
   .innerJoin(clients, sql`${projects.clientId} = ${clients.id}`)
   .orderBy(sql`${timeEntries.createdAt} DESC`);
 
+// Debug: Log the results
+console.log('🔍 Debug: Time entries count:', allTimeEntries.length);
+if (allTimeEntries.length > 0) {
+  console.log('📝 First entry:', allTimeEntries[0]);
+  console.log('📝 All entries:', allTimeEntries);
+} else {
+  console.log('❌ No time entries found');
+}
+
 // Get all clients for filtering
 const allClients = await db.select().from(clients).orderBy(clients.name);
 
@@ -110,14 +119,14 @@ const allProjects = await db
           </select>
         </div>
         <div>
-          <label for="projectFilter" class="block text-sm font-medium text-gray-700 mb-1">Project</label>
+          <label for="teamMemberFilter" class="block text-sm font-medium text-gray-700 mb-1">Team Member</label>
           <select
-            id="projectFilter"
+            id="teamMemberFilter"
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
           >
-            <option value="">All Projects</option>
-            {allProjects.map((project) => (
-              <option value={project.name}>{project.clientName} - {project.name}</option>
+            <option value="">All Team Members</option>
+            {allUsers.map((user) => (
+              <option value={user.name}>{user.name}</option>
             ))}
           </select>
         </div>
@@ -445,7 +454,7 @@ const allProjects = await db
     const cancelTimeEntryBtn = document.getElementById('cancelTimeEntryBtn');
     const searchInput = document.getElementById('search');
     const clientFilter = document.getElementById('clientFilter');
-    const taskFilter = document.getElementById('taskFilter');
+    const teamMemberFilter = document.getElementById('teamMemberFilter');
     const dateRange = document.getElementById('dateRange');
 
     if (addTimeEntryBtn) {
@@ -487,21 +496,21 @@ const allProjects = await db
           userInput.classList.remove('bg-gray-600', 'cursor-not-allowed');
         }
         if (userIdInput) userIdInput.value = '';
-        if (taskInput) {
-          taskInput.value = '';
-          // Task field is always enabled
+        if (projectInput) {
+          projectInput.value = '';
+          // Project field is always enabled
         }
-        if (taskIdInput) taskIdInput.value = '';
+        if (projectIdInput) projectIdInput.value = '';
         
         // Clear current duration display
         const currentDurationSpan = document.getElementById('currentDuration');
         if (currentDurationSpan) currentDurationSpan.textContent = '';
         
-        // Clear current team member and task displays
+        // Clear current team member and project displays
         const currentUserSpan = document.getElementById('currentUser');
         if (currentUserSpan) currentUserSpan.textContent = '';
-        const currentTaskSpan = document.getElementById('currentTask');
-        if (currentTaskSpan) currentTaskSpan.textContent = '';
+        const currentProjectSpan = document.getElementById('currentProject');
+        if (currentProjectSpan) currentProjectSpan.textContent = '';
         
         // Set default date to today
         const dateInput = document.getElementById('timeEntryDate');
@@ -521,10 +530,8 @@ const allProjects = await db
             const formFields = [
               'timeEntryUser',
               'timeEntryProject', 
-              'timeEntryTask',
-              'timeEntryStartTime',
-              'timeEntryEndTime',
               'timeEntryDuration',
+              'timeEntryDate',
               'timeEntryNotes'
             ];
             
@@ -540,8 +547,6 @@ const allProjects = await db
                   field.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-100');
                   // Reset placeholder to original values
                   if (fieldId === 'timeEntryDuration') field.placeholder = 'e.g., 2h, 3.5hr, 4:15, 90m';
-                  else if (fieldId === 'timeEntryStartTime') field.placeholder = '9:30 AM';
-                  else if (fieldId === 'timeEntryEndTime') field.placeholder = '5:30 PM';
                   else if (fieldId === 'timeEntryNotes') field.placeholder = 'Optional notes about this time entry...';
                 }
               }
@@ -686,11 +691,11 @@ const allProjects = await db
         const currentDurationSpan = document.getElementById('currentDuration');
         if (currentDurationSpan) currentDurationSpan.textContent = '';
         
-        // Clear current team member and task displays
+        // Clear current team member and project displays
         const currentUserSpan = document.getElementById('currentUser');
         if (currentUserSpan) currentUserSpan.textContent = '';
-        const currentTaskSpan = document.getElementById('currentTask');
-        if (currentTaskSpan) currentTaskSpan.textContent = '';
+        const currentProjectSpan = document.getElementById('currentProject');
+        if (currentProjectSpan) currentProjectSpan.textContent = '';
         
         // Clear current date display
         const currentDateSpan = document.getElementById('currentDate');
@@ -753,7 +758,7 @@ const allProjects = await db
         
         // Set the IDs
         if (userIdInput) userIdInput.value = timeEntry.userId.toString();
-        if (taskIdInput) taskIdInput.value = timeEntry.taskId.toString();
+        if (projectIdInput) projectIdInput.value = timeEntry.projectId.toString();
         if (notesTextarea) notesTextarea.value = timeEntry.notes || '';
         
         // Set the task date
@@ -889,45 +894,115 @@ const allProjects = await db
       });
     }
 
-    // Client filter functionality
-    if (clientFilter) {
-      clientFilter.addEventListener('change', (e) => {
-        const target = e.target;
-        const selectedClient = target.value;
-        const rows = document.querySelectorAll('tbody tr');
+    // Comprehensive filter function that considers team member, client, and date range
+    function applyAllFilters() {
+      const selectedTeamMember = teamMemberFilter?.value || '';
+      const selectedClient = clientFilter?.value || '';
+      const selectedDateRange = dateRange?.value || '';
+      const rows = document.querySelectorAll('tbody tr');
+      const now = new Date();
+      
+      console.log('🔍 Applying all filters:', { selectedTeamMember, selectedClient, selectedDateRange });
+      
+      rows.forEach(row => {
+        const teamMemberCell = row.querySelector('td:nth-child(1)');
+        const clientCell = row.querySelector('td:nth-child(2)');
+        const dateCell = row.querySelector('td:nth-child(4)');
         
-        rows.forEach(row => {
-          const clientCell = row.querySelector('td:nth-child(2)');
-          const clientName = clientCell?.textContent?.trim() || '';
-          if (!selectedClient || clientName === selectedClient) {
-            row.style.display = '';
-          } else {
-            row.style.display = 'none';
+        const teamMemberName = teamMemberCell?.textContent?.trim() || '';
+        const clientName = clientCell?.textContent?.trim() || '';
+        const dateText = dateCell?.textContent?.trim() || '';
+        
+        // Check team member filter
+        const matchesTeamMember = !selectedTeamMember || teamMemberName === selectedTeamMember;
+        
+        // Check client filter
+        const matchesClient = !selectedClient || clientName === selectedClient;
+        
+        // Check date range filter
+        let matchesDateRange = true;
+        if (selectedDateRange && selectedDateRange !== '') {
+          // Parse the date
+          let startDate;
+          try {
+            startDate = new Date(dateText);
+            if (isNaN(startDate.getTime())) {
+              const parts = dateText.split('/');
+              if (parts.length === 3) {
+                startDate = new Date(parts[2], parts[0] - 1, parts[1]);
+                if (isNaN(startDate.getTime())) {
+                  startDate = new Date(parts[2], parts[1] - 1, parts[0]);
+                }
+              }
+            }
+          } catch (e) {
+            console.error('Date parsing error:', e, 'for text:', dateText);
+            startDate = new Date();
           }
-        });
+          
+          if (selectedDateRange === 'today') {
+            matchesDateRange = startDate.toDateString() === now.toDateString();
+          } else if (selectedDateRange === 'week') {
+            const dayOfWeek = now.getDay();
+            const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek;
+            const weekStart = new Date(now);
+            weekStart.setDate(now.getDate() - daysToSubtract);
+            weekStart.setHours(0, 0, 0, 0);
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            weekEnd.setHours(23, 59, 59, 999);
+            matchesDateRange = startDate >= weekStart && startDate <= weekEnd;
+          } else if (selectedDateRange === 'month') {
+            const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1);
+            matchesDateRange = startDate >= monthAgo;
+          } else if (selectedDateRange === 'quarter') {
+            const quarterAgo = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+            matchesDateRange = startDate >= quarterAgo;
+          } else if (selectedDateRange === 'custom') {
+            const customStartDate = document.getElementById('startDate')?.value;
+            const customEndDate = document.getElementById('endDate')?.value;
+            
+            if (customStartDate && customEndDate) {
+              const start = new Date(customStartDate);
+              const end = new Date(customEndDate);
+              end.setHours(23, 59, 59, 999);
+              matchesDateRange = startDate >= start && startDate <= end;
+            } else if (customStartDate) {
+              const start = new Date(customStartDate);
+              matchesDateRange = startDate >= start;
+            } else if (customEndDate) {
+              const end = new Date(customEndDate);
+              end.setHours(23, 59, 59, 999);
+              matchesDateRange = startDate <= end;
+            } else {
+              matchesDateRange = true; // If no dates selected, show all
+            }
+          }
+        }
         
-        updateResultsCounter();
+        const shouldShow = matchesTeamMember && matchesClient && matchesDateRange;
+        
+        console.log('📝 Row:', { teamMemberName, clientName, dateText, matchesTeamMember, matchesClient, matchesDateRange, shouldShow });
+        
+        row.style.display = shouldShow ? '' : 'none';
+      });
+      
+      updateResultsCounter();
+    }
+
+    // Team member filter functionality
+    if (teamMemberFilter) {
+      teamMemberFilter.addEventListener('change', (e) => {
+        console.log('👤 Team member filter changed');
+        applyAllFilters();
       });
     }
 
-    // Task filter functionality
-    if (taskFilter) {
-      taskFilter.addEventListener('change', (e) => {
-        const target = e.target;
-        const selectedTask = target.value;
-        const rows = document.querySelectorAll('tbody tr');
-        
-        rows.forEach(row => {
-          const taskCell = row.querySelector('td:nth-child(4)');
-          const task = taskCell?.textContent?.trim() || '';
-          if (!selectedTask || task === selectedTask) {
-            row.style.display = '';
-          } else {
-            row.style.display = 'none';
-          }
-        });
-        
-        updateResultsCounter();
+    // Client filter functionality
+    if (clientFilter) {
+      clientFilter.addEventListener('change', (e) => {
+        console.log('🏢 Client filter changed');
+        applyAllFilters();
       });
     }
 
@@ -945,8 +1020,9 @@ const allProjects = await db
           customDateRange.classList.add('hidden');
         }
         
-        // Apply the filter
-        applyDateRangeFilter();
+        console.log('📅 Date range filter changed');
+        // Apply all filters including date range
+        applyAllFilters();
       });
     }
 
@@ -984,8 +1060,8 @@ const allProjects = await db
       
       // Sort rows based on date
       rows.sort((a, b) => {
-        const dateTextA = a.querySelector('td:nth-child(5)').textContent.trim();
-        const dateTextB = b.querySelector('td:nth-child(5)').textContent.trim();
+        const dateTextA = a.querySelector('td:nth-child(4)').textContent.trim();
+        const dateTextB = b.querySelector('td:nth-child(4)').textContent.trim();
         
         // Parse dates more robustly
         const dateA = new Date(dateTextA);
@@ -1011,7 +1087,7 @@ const allProjects = await db
     }
 
     if (startDate) {
-      startDate.addEventListener('change', applyDateRangeFilter);
+      startDate.addEventListener('change', applyAllFilters);
       // Ensure date picker opens on click
       startDate.addEventListener('click', () => {
         startDate.showPicker();
@@ -1019,7 +1095,7 @@ const allProjects = await db
     }
 
     if (endDate) {
-      endDate.addEventListener('change', applyDateRangeFilter);
+      endDate.addEventListener('change', applyAllFilters);
       // Ensure date picker opens on click
       endDate.addEventListener('click', () => {
         endDate.showPicker();
@@ -1036,82 +1112,23 @@ const allProjects = await db
       }
     }
 
-    function applyDateRangeFilter() {
-      const selectedRange = dateRange?.value;
-      const rows = document.querySelectorAll('tbody tr');
-      const now = new Date();
-      
-      rows.forEach(row => {
-        const startCell = row.querySelector('td:nth-child(5)');
-        const startText = startCell?.textContent?.trim() || '';
-        const startDate = new Date(startText);
-        
-        let show = true;
-        
-        if (selectedRange === 'today') {
-          show = startDate.toDateString() === now.toDateString();
-        } else if (selectedRange === 'week') {
-          // This week (Sunday to Saturday) - same logic as reports page
-          const dayOfWeek = now.getDay();
-          const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek;
-          const weekStart = new Date(now);
-          weekStart.setDate(now.getDate() - daysToSubtract);
-          weekStart.setHours(0, 0, 0, 0);
-          const weekEnd = new Date(weekStart);
-          weekEnd.setDate(weekStart.getDate() + 6);
-          weekEnd.setHours(23, 59, 59, 999);
-          show = startDate >= weekStart && startDate <= weekEnd;
-        } else if (selectedRange === 'month') {
-          const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1);
-          show = startDate >= monthAgo;
-        } else if (selectedRange === 'quarter') {
-          const quarterAgo = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
-          show = startDate >= quarterAgo;
-        } else if (selectedRange === 'custom') {
-          const customStartDate = document.getElementById('startDate')?.value;
-          const customEndDate = document.getElementById('endDate')?.value;
-          
-          if (customStartDate && customEndDate) {
-            const start = new Date(customStartDate);
-            const end = new Date(customEndDate);
-            // Set end date to end of day
-            end.setHours(23, 59, 59, 999);
-            
-            show = startDate >= start && startDate <= end;
-          } else if (customStartDate) {
-            const start = new Date(customStartDate);
-            show = startDate >= start;
-          } else if (customEndDate) {
-            const end = new Date(customEndDate);
-            end.setHours(23, 59, 59, 999);
-            show = startDate <= end;
-          } else {
-            show = true; // If no dates selected, show all
-          }
-        }
-        
-        row.style.display = show ? '' : 'none';
-      });
-      
-      updateResultsCounter();
-    }
 
     // Initialize default date range to "This Week" on page load
     if (dateRange) {
       dateRange.value = 'week';
-      // Apply the filter immediately
+      // Apply all filters immediately
       setTimeout(() => {
-        applyDateRangeFilter();
+        applyAllFilters();
       }, 100);
     }
 
-    // Searchable input functionality for User and Task
+    // Searchable input functionality for User and Project
     const userInput = document.getElementById('timeEntryUser');
     const userIdInput = document.getElementById('timeEntryUserId');
     const userDropdown = document.getElementById('userDropdown');
-    const taskInput = document.getElementById('timeEntryTask');
-    const taskIdInput = document.getElementById('timeEntryTaskId');
-    const taskDropdown = document.getElementById('taskDropdown');
+    const projectInput = document.getElementById('timeEntryProject');
+    const projectIdInput = document.getElementById('timeEntryProjectId');
+    const projectDropdown = document.getElementById('projectDropdown');
 
     // Data is already available from server-side
 
