@@ -1579,36 +1579,36 @@ export default function Timer() {
               {/* Daily totals should still be visible even if there are no task rows */}
               <div className="border-b border-gray-200">
                 <div className="flex px-4 py-3 text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  <div className="w-80 flex-shrink-0">&nbsp;</div>
-                  <div className="flex-1 text-center">Sun</div>
-                  <div className="flex-1 text-center">Mon</div>
-                  <div className="flex-1 text-center">Tues</div>
-                  <div className="flex-1 text-center">Wed</div>
-                  <div className="flex-1 text-center">Thurs</div>
-                  <div className="flex-1 text-center">Fri</div>
-                  <div className="flex-1 text-center">Sat</div>
-                  <div className="flex-1 text-center font-semibold">Total</div>
+                  <div className="w-80 flex-shrink-0 min-[888px]:w-80 min-[888px]:flex-shrink-0 max-[887px]:flex-1 max-[887px]:w-auto">&nbsp;</div>
+                  <div className="flex-1 text-center hidden min-[888px]:block">Sun</div>
+                  <div className="flex-1 text-center hidden min-[888px]:block">Mon</div>
+                  <div className="flex-1 text-center hidden min-[888px]:block">Tues</div>
+                  <div className="flex-1 text-center hidden min-[888px]:block">Wed</div>
+                  <div className="flex-1 text-center hidden min-[888px]:block">Thurs</div>
+                  <div className="flex-1 text-center hidden min-[888px]:block">Fri</div>
+                  <div className="flex-1 text-center hidden min-[888px]:block">Sat</div>
+                  <div className="flex-1 text-center font-semibold min-[888px]:flex-1 max-[887px]:max-w-24 max-[887px]:flex-shrink-0">Total</div>
                 </div>
                 <div className="flex px-4 pb-3 text-xs text-gray-500">
-                  <div className="w-80 flex-shrink-0"></div>
+                  <div className="w-80 flex-shrink-0 min-[888px]:w-80 min-[888px]:flex-shrink-0 max-[887px]:flex-1 max-[887px]:w-auto"></div>
                   {(() => {
                     let totalSeconds = 0;
                     const dayElements = (dailyDurationTotals && dailyDurationTotals.length > 0) ? dailyDurationTotals.map((dayTotal, index) => {
                       totalSeconds += dayTotal.totalSeconds;
                       return (
-                        <div key={index} className="flex-1 text-center">
+                        <div key={index} className="flex-1 text-center hidden min-[888px]:block">
                           {dayTotal.totalSeconds > 0 ? dayTotal.formatted : '-'}
                         </div>
                       );
                     }) : (
                       <>
-                        <div className="flex-1 text-center">-</div>
-                        <div className="flex-1 text-center">-</div>
-                        <div className="flex-1 text-center">-</div>
-                        <div className="flex-1 text-center">-</div>
-                        <div className="flex-1 text-center">-</div>
-                        <div className="flex-1 text-center">-</div>
-                        <div className="flex-1 text-center">-</div>
+                        <div className="flex-1 text-center hidden min-[888px]:block">-</div>
+                        <div className="flex-1 text-center hidden min-[888px]:block">-</div>
+                        <div className="flex-1 text-center hidden min-[888px]:block">-</div>
+                        <div className="flex-1 text-center hidden min-[888px]:block">-</div>
+                        <div className="flex-1 text-center hidden min-[888px]:block">-</div>
+                        <div className="flex-1 text-center hidden min-[888px]:block">-</div>
+                        <div className="flex-1 text-center hidden min-[888px]:block">-</div>
                       </>
                     );
 
@@ -1618,7 +1618,7 @@ export default function Timer() {
                     return (
                       <>
                         {dayElements}
-                        <div className="flex-1 text-center font-semibold text-gray-700">
+                        <div className="flex-1 text-center font-semibold text-gray-700 min-[888px]:flex-1 max-[887px]:max-w-24 max-[887px]:flex-shrink-0">
                           {totalFormatted}
                         </div>
                       </>
@@ -1643,19 +1643,19 @@ export default function Timer() {
               {/* Table Header */}
               <div className="bg-gray-50 border-b border-gray-200">
                 <div className="flex px-4 py-3 text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  <div className="table-column-separator-header w-80 flex-shrink-0">Task</div>
-                  <div className="table-column-separator-header flex-1 text-center">Sun</div>
-                  <div className="table-column-separator-header flex-1 text-center">Mon</div>
-                  <div className="table-column-separator-header flex-1 text-center">Tues</div>
-                  <div className="table-column-separator-header flex-1 text-center">Wed</div>
-                  <div className="table-column-separator-header flex-1 text-center">Thurs</div>
-                  <div className="table-column-separator-header flex-1 text-center">Fri</div>
-                  <div className="table-column-separator-header flex-1 text-center">Sat</div>
-                  <div className="table-column-separator-header flex-1 text-center font-semibold">Total</div>
+                  <div className="table-column-separator-header w-80 flex-shrink-0 min-[888px]:w-80 min-[888px]:flex-shrink-0 max-[887px]:flex-1 max-[887px]:w-auto">Task</div>
+                  <div className="table-column-separator-header flex-1 text-center hidden min-[888px]:block">Sun</div>
+                  <div className="table-column-separator-header flex-1 text-center hidden min-[888px]:block">Mon</div>
+                  <div className="table-column-separator-header flex-1 text-center hidden min-[888px]:block">Tues</div>
+                  <div className="table-column-separator-header flex-1 text-center hidden min-[888px]:block">Wed</div>
+                  <div className="table-column-separator-header flex-1 text-center hidden min-[888px]:block">Thurs</div>
+                  <div className="table-column-separator-header flex-1 text-center hidden min-[888px]:block">Fri</div>
+                  <div className="table-column-separator-header flex-1 text-center hidden min-[888px]:block">Sat</div>
+                  <div className="table-column-separator-header flex-1 text-center font-semibold min-[888px]:flex-1 max-[887px]:max-w-24 max-[887px]:flex-shrink-0">Total</div>
                 </div>
                 {/* Daily Duration Totals */}
                 <div className="flex px-4 pb-3 text-xs text-gray-500">
-                  <div className="table-column-separator w-80 flex-shrink-0"></div>
+                  <div className="table-column-separator w-80 flex-shrink-0 min-[888px]:w-80 min-[888px]:flex-shrink-0 max-[887px]:flex-1 max-[887px]:w-auto"></div>
                   {(() => {
                     console.log('dailyDurationTotals state:', dailyDurationTotals);
                     console.log('dailyDurationTotals.length:', dailyDurationTotals.length);
@@ -1665,20 +1665,20 @@ export default function Timer() {
                       console.log('Rendering day total:', index, dayTotal);
                       totalSeconds += dayTotal.totalSeconds;
                       return (
-                        <div key={index} className="table-column-separator flex-1 text-center">
+                        <div key={index} className="table-column-separator flex-1 text-center hidden min-[888px]:block">
                           {dayTotal.totalSeconds > 0 ? dayTotal.formatted : '-'}
                         </div>
                       );
                     }) : (
                       // Show placeholder when no data is loaded yet
                       <>
-                        <div className="table-column-separator flex-1 text-center">-</div>
-                        <div className="table-column-separator flex-1 text-center">-</div>
-                        <div className="table-column-separator flex-1 text-center">-</div>
-                        <div className="table-column-separator flex-1 text-center">-</div>
-                        <div className="table-column-separator flex-1 text-center">-</div>
-                        <div className="table-column-separator flex-1 text-center">-</div>
-                        <div className="table-column-separator flex-1 text-center">-</div>
+                        <div className="table-column-separator flex-1 text-center hidden min-[888px]:block">-</div>
+                        <div className="table-column-separator flex-1 text-center hidden min-[888px]:block">-</div>
+                        <div className="table-column-separator flex-1 text-center hidden min-[888px]:block">-</div>
+                        <div className="table-column-separator flex-1 text-center hidden min-[888px]:block">-</div>
+                        <div className="table-column-separator flex-1 text-center hidden min-[888px]:block">-</div>
+                        <div className="table-column-separator flex-1 text-center hidden min-[888px]:block">-</div>
+                        <div className="table-column-separator flex-1 text-center hidden min-[888px]:block">-</div>
                       </>
                     );
                     
@@ -1690,7 +1690,7 @@ export default function Timer() {
                     return (
                       <>
                         {dayElements}
-                        <div className="table-column-separator flex-1 text-center font-semibold text-gray-700">
+                        <div className="table-column-separator flex-1 text-center font-semibold text-gray-700 min-[888px]:flex-1 max-[887px]:max-w-24 max-[887px]:flex-shrink-0">
                           {totalFormatted}
                         </div>
                       </>
@@ -1722,7 +1722,7 @@ export default function Timer() {
                     >
                       <div className="flex items-center">
                         {/* Task Column */}
-                        <div className="table-column-separator w-80 flex-shrink-0">
+                        <div className="table-column-separator w-80 flex-shrink-0 min-[888px]:w-80 min-[888px]:flex-shrink-0 max-[887px]:flex-1 max-[887px]:w-auto">
                           <div className="flex items-center space-x-3">
                             {/* Start/Stop Button */}
                             <div className="flex-shrink-0">
@@ -1808,7 +1808,7 @@ export default function Timer() {
                             return (
                               <div 
                                 key={dayIndex} 
-                                className={`table-column-separator flex-1 text-center text-sm ${
+                                className={`table-column-separator flex-1 text-center text-sm hidden min-[888px]:block ${
                                   isRunningToday 
                                     ? 'text-green-600 font-semibold' 
                                     : dayTotal.totalSeconds > 0 
@@ -1885,7 +1885,7 @@ export default function Timer() {
                           return (
                             <>
                               {dayElements}
-                              <div className={`table-column-separator flex-1 text-center text-sm font-semibold ${
+                              <div className={`table-column-separator flex-1 text-center text-sm font-semibold min-[888px]:flex-1 max-[887px]:max-w-24 max-[887px]:flex-shrink-0 ${
                                 isRunningTask ? 'text-green-600' : 'text-gray-700'
                               }`}>
                                 {totalFormatted}
