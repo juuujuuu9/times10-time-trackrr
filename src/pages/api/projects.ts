@@ -24,18 +24,15 @@ export const GET: APIRoute = async ({ url }) => {
       .from(projects)
       .innerJoin(clients, eq(projects.clientId, clients.id))
       .leftJoin(tasks, eq(projects.id, tasks.projectId))
-      .where(eq(projects.archived, false))
+      .where(and(
+        eq(projects.archived, false),
+        eq(clients.archived, false)
+      ))
       .groupBy(projects.id, projects.name, projects.archived, projects.createdAt, projects.updatedAt, clients.name, clients.id);
 
-    // If userId is provided, only show projects where user has assigned tasks
-    if (userId) {
-      query = query
-        .innerJoin(taskAssignments, eq(tasks.id, taskAssignments.taskId))
-        .where(and(
-          eq(projects.archived, false),
-          eq(taskAssignments.userId, parseInt(userId))
-        ));
-    }
+    // If userId is provided, show all projects (not just assigned ones)
+    // This allows the time tracker dropdown to show all available projects
+    // No additional filtering needed - we already filter by non-archived projects and clients
 
     // Order by creation date (most recent first)
     query = query.orderBy(desc(projects.createdAt));
