@@ -17,6 +17,9 @@ export const GET: APIRoute = async ({ params }) => {
       });
     }
 
+    console.log(`[Team Members API] Starting request for project: ${projectName}`);
+    const startTime = Date.now();
+
     // Find the project by name
     const project = await db
       .select({
@@ -45,9 +48,10 @@ export const GET: APIRoute = async ({ params }) => {
     }
 
     const projectData = project[0];
+    console.log(`[Team Members API] Found project: ${projectData.name} (ID: ${projectData.id})`);
 
-    // Get team members who have logged time for this project
-    const timeEntryMembers = await db
+    // Simplified query - get users who have time entries for this project
+    const timeEntryUsers = await db
       .select({
         userId: users.id,
         userName: users.name,
@@ -76,7 +80,6 @@ export const GET: APIRoute = async ({ params }) => {
       .innerJoin(users, eq(timeEntries.userId, users.id))
       .where(and(
         eq(timeEntries.projectId, projectData.id),
-        // Only include completed entries (with endTime) OR manual duration entries
         or(
           and(isNotNull(timeEntries.endTime)),
           and(isNotNull(timeEntries.durationManual))
@@ -84,15 +87,15 @@ export const GET: APIRoute = async ({ params }) => {
       ))
       .groupBy(users.id, users.name, users.email, users.payRate);
 
-    // Get team members who are assigned to tasks in this project (but may not have logged time yet)
-    const taskAssignedMembers = await db
+    console.log(`[Team Members API] Found ${timeEntryUsers.length} users with time entries`);
+
+    // Get users assigned to tasks (simplified)
+    const taskAssignedUsers = await db
       .select({
         userId: users.id,
         userName: users.name,
         userEmail: users.email,
-        payRate: users.payRate,
-        totalHours: sql<number>`0`.as('total_hours'),
-        totalCost: sql<number>`0`.as('total_cost')
+        payRate: users.payRate
       })
       .from(taskAssignments)
       .innerJoin(tasks, eq(taskAssignments.taskId, tasks.id))
@@ -103,11 +106,13 @@ export const GET: APIRoute = async ({ params }) => {
       ))
       .groupBy(users.id, users.name, users.email, users.payRate);
 
+    console.log(`[Team Members API] Found ${taskAssignedUsers.length} users assigned to tasks`);
+
     // Combine and deduplicate team members
     const allMembers = new Map();
     
-    // Add members with time entries
-    timeEntryMembers.forEach(member => {
+    // Add users with time entries
+    timeEntryUsers.forEach(member => {
       allMembers.set(member.userId, {
         id: member.userId,
         name: member.userName,
@@ -119,8 +124,8 @@ export const GET: APIRoute = async ({ params }) => {
       });
     });
 
-    // Add members assigned to tasks (but not already in the map)
-    taskAssignedMembers.forEach(member => {
+    // Add users assigned to tasks (but not already in the map)
+    taskAssignedUsers.forEach(member => {
       if (!allMembers.has(member.userId)) {
         allMembers.set(member.userId, {
           id: member.userId,
@@ -135,6 +140,11 @@ export const GET: APIRoute = async ({ params }) => {
     });
 
     const teamMembers = Array.from(allMembers.values());
+    const endTime = Date.now();
+    const duration = endTime - startTime;
+    
+    console.log(`[Team Members API] Total team members: ${teamMembers.length}`);
+    console.log(`[Team Members API] Request completed in ${duration}ms`);
 
     return new Response(JSON.stringify({
       success: true,
