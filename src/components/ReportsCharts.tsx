@@ -428,6 +428,9 @@ export const CostBarChart: React.FC<{ data: ChartData[]; title: string; period: 
   );
 };
 
+// Global cache for team members data to persist across component re-renders
+const teamMembersCache = new Map<string, any[]>();
+
 export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; canViewFinancialData: boolean }> = ({ data, title, canViewFinancialData }) => {
   // Client-based colors - each client gets a distinct color
   const clientColors = [
@@ -586,21 +589,21 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
       
       if (dataIndex !== -1) {
         if (isHovering) {
-          // Immediate hover effect for better UX
+          // Only update if we're hovering over a different project
           if (hoveredProject !== dataIndex) {
             setHoveredProject(dataIndex);
             setHoveredIndex(dataIndex);
-          }
-          
-          // Try to highlight the chart slice if chart reference is available
-          if (chartRef) {
-            try {
-              const chart = chartRef;
-              chart.setActiveElements([]);
-              chart.setActiveElements([{ datasetIndex: 0, index: dataIndex }]);
-              chart.update('none');
-            } catch (error) {
-              // Silently handle chart update errors
+            
+            // Try to highlight the chart slice if chart reference is available
+            if (chartRef) {
+              try {
+                const chart = chartRef;
+                chart.setActiveElements([]);
+                chart.setActiveElements([{ datasetIndex: 0, index: dataIndex }]);
+                chart.update('none');
+              } catch (error) {
+                // Silently handle chart update errors
+              }
             }
           }
         } else {
@@ -620,7 +623,7 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
                 }
               }
             }
-          }, 100); // 100ms debounce
+          }, 150); // Increased debounce to 150ms for better stability
         }
       }
     };
@@ -704,12 +707,23 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
     // Fetch team members when component mounts
     React.useEffect(() => {
       const fetchTeamMembers = async () => {
+        const projectName = project.projectName || '';
+        const cacheKey = projectName;
+        
+        // Check if we already have cached data for this project
+        if (teamMembersCache.has(cacheKey)) {
+          console.log('Using cached team members for:', projectName);
+          setTeamMembers(teamMembersCache.get(cacheKey) || []);
+          return;
+        }
+        
         setLoading(true);
         setError(null);
         
         try {
+          console.log('Fetching team members for:', projectName);
           // Fetch team members from the API
-          const response = await fetch(`/api/projects/${encodeURIComponent(project.projectName || '')}/team-members`);
+          const response = await fetch(`/api/projects/${encodeURIComponent(projectName)}/team-members`);
           
           if (response.ok) {
             const result = await response.json();
@@ -725,9 +739,14 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
                 avatar: null, // API doesn't provide avatar, so set to null
                 hasTimeEntries: member.hasTimeEntries || false
               }));
+              
+              // Cache the results
+              teamMembersCache.set(cacheKey, transformedMembers);
               setTeamMembers(transformedMembers);
             } else {
               console.log('No team members found in API response');
+              // Cache empty result to prevent repeated API calls
+              teamMembersCache.set(cacheKey, []);
               setTeamMembers([]);
             }
           } else {
