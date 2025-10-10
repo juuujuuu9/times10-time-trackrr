@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../db';
-import { teams, teamMembers as teamMembersTable, projects, projectTeams } from '../../db/schema';
+import { teams, teamMembers as teamMembersTable, projects, projectTeams, clients } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getSessionUser } from '../../utils/session';
 
@@ -19,7 +19,7 @@ export const GET: APIRoute = async (context) => {
       });
     }
 
-    // Get collaborations where user is a member
+    // Get collaborations where user is a member with project information
     const userCollaborations = await db
       .select({
         id: teams.id,
@@ -28,10 +28,17 @@ export const GET: APIRoute = async (context) => {
         createdBy: teams.createdBy,
         createdAt: teams.createdAt,
         userRole: teamMembersTable.role,
-        joinedAt: teamMembersTable.joinedAt
+        joinedAt: teamMembersTable.joinedAt,
+        projectId: projects.id,
+        projectName: projects.name,
+        clientId: clients.id,
+        clientName: clients.name
       })
       .from(teams)
       .innerJoin(teamMembersTable, eq(teamMembersTable.teamId, teams.id))
+      .leftJoin(projectTeams, eq(projectTeams.teamId, teams.id))
+      .leftJoin(projects, eq(projects.id, projectTeams.projectId))
+      .leftJoin(clients, eq(clients.id, projects.clientId))
       .where(and(
         eq(teamMembersTable.userId, currentUser.id),
         eq(teams.archived, false)

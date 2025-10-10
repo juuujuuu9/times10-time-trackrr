@@ -120,8 +120,8 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
       <div class="bg-white rounded-lg shadow border border-gray-300 p-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center">
-            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg class="w-5 h-5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
               </svg>
             </div>
@@ -210,7 +210,7 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
                     
                     <div class="flex items-center space-x-2">
                       <a 
-                        href={`/teams/${team.id}`}
+                        href={`/admin/collaborations/${team.id}`}
                         class="inline-flex items-center px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
                       >
                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -225,6 +225,8 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
                         data-team-id={team.id}
                         data-team-name={team.name}
                         data-team-description={team.description || ''}
+                        data-project-name={team.projectName || ''}
+                        data-client-name={team.clientName || ''}
                       >
                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
@@ -382,37 +384,11 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
         <form id="editCollaborationForm" class="px-6 py-4">
           <input type="hidden" id="editCollaborationId" name="collaborationId" />
           <div class="space-y-4">
-            <div class="relative">
-              <label for="editProjectSelect" class="block text-sm font-medium text-gray-700 mb-1">Select Project</label>
-              <div class="relative">
-                <input
-                  type="text"
-                  id="editProjectSelect"
-                  placeholder="🔍 Search projects..."
-                  autocomplete="off"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500"
-                />
-                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-                  <svg class="fill-current h-5 w-5 transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
-                  </svg>
-                </div>
-              </div>
-              
-              <!-- Edit Project Dropdown -->
-              <div 
-                id="editProjectDropdown"
-                class="absolute z-50 w-full bg-white border border-gray-300 rounded-lg shadow-lg overflow-hidden hidden" 
-                style={{ 
-                  top: '100%', 
-                  left: 0, 
-                  maxHeight: '240px',
-                  overflowY: 'auto'
-                }}
-              >
-                <div class="px-4 py-2 text-gray-500 text-sm">
-                  Loading projects...
-                </div>
+            <!-- Project Information Display -->
+            <div class="bg-gray-50 px-4 py-3 rounded-lg border">
+              <div class="text-sm font-medium text-gray-700 mb-1">Project</div>
+              <div id="editProjectInfo" class="text-lg font-semibold text-gray-900">
+                <!-- Project info will be populated here -->
               </div>
             </div>
             <div>
@@ -426,6 +402,14 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
               ></textarea>
             </div>
             
+            <!-- Current Team Members -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Current Team Members</label>
+              <div id="editCurrentMembers" class="space-y-2">
+                <!-- Current members will be populated here -->
+              </div>
+            </div>
+
             <div class="relative">
               <label for="editTeamMembersSelect" class="block text-sm font-medium text-gray-700 mb-1">Add Team Members (Optional)</label>
               <div class="relative">
@@ -517,8 +501,79 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
     // State for user selection
     let selectedUsers: any[] = [];
     let selectedEditUsers: any[] = [];
+    let currentEditMembers: any[] = []; // Store current team members for edit modal
     let userDropdownOpen = false;
     let editUserDropdownOpen = false;
+
+    // Load current team members for edit modal
+    async function loadCurrentTeamMembers(teamId: number) {
+      try {
+        const response = await fetch(`/api/collaborations/${teamId}/members`);
+        if (response.ok) {
+          const data = await response.json();
+          currentEditMembers = data.data || [];
+          renderCurrentMembers();
+        }
+      } catch (error) {
+        console.error('Error loading current team members:', error);
+      }
+    }
+
+    // Render current team members in edit modal
+    function renderCurrentMembers() {
+      const container = document.getElementById('editCurrentMembers');
+      if (!container) return;
+
+      if (currentEditMembers.length === 0) {
+        container.innerHTML = '<div class="text-sm text-gray-500">No team members</div>';
+        return;
+      }
+
+      let html = '';
+      currentEditMembers.forEach((member: any) => {
+        const isCreator = member.role === 'lead';
+        html += `
+          <div class="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-md">
+            <div class="flex items-center space-x-2">
+              <div class="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                ${member.name.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div class="text-sm font-medium text-gray-900">${member.name}</div>
+                <div class="text-xs text-gray-500">${member.email}</div>
+              </div>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="text-xs px-2 py-1 rounded-full ${isCreator ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}">
+                ${isCreator ? 'Lead' : 'Member'}
+              </span>
+              ${!isCreator ? `
+                <button 
+                  type="button"
+                  onclick="removeCurrentMember(${member.userId})"
+                  class="text-red-500 hover:text-red-700 p-1"
+                  title="Remove member"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    // Remove current team member
+    function removeCurrentMember(userId: number) {
+      currentEditMembers = currentEditMembers.filter(member => member.userId !== userId);
+      renderCurrentMembers();
+    }
+
+    // Make removeCurrentMember globally accessible
+    (window as any).removeCurrentMember = removeCurrentMember;
 
     // Load projects into dropdowns
     async function loadProjects() {
@@ -855,21 +910,22 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
     }
 
     // Show edit collaboration modal
-    function showEditCollaborationModal(teamId: string, teamName: string, teamDescription: string) {
+    function showEditCollaborationModal(teamId: string, teamName: string, teamDescription: string, projectName?: string, clientName?: string) {
       (document.getElementById('editCollaborationId') as HTMLInputElement)!.value = teamId;
-      // Set the project input to the current team name (since team name will be the project name)
-      const editInput = document.getElementById('editProjectSelect') as HTMLInputElement;
-      if (editInput) {
-        // Find the project ID that matches the team name
-        const matchingProject = allProjects.find(project => project.name === teamName);
-        if (matchingProject) {
-          selectedEditProjectId = matchingProject.id;
-          editInput.value = `${matchingProject.clientName} - ${matchingProject.name}`;
-        } else {
-          editInput.value = teamName;
-        }
+      
+      // Display project information
+      const projectInfoElement = document.getElementById('editProjectInfo');
+      if (projectInfoElement && projectName && clientName) {
+        projectInfoElement.textContent = `${clientName} - ${projectName}`;
+      } else {
+        projectInfoElement!.textContent = teamName;
       }
+      
       (document.getElementById('editCollaborationDescription') as HTMLTextAreaElement)!.value = teamDescription;
+      
+      // Load current team members
+      loadCurrentTeamMembers(parseInt(teamId));
+      
       editCollaborationModal?.classList.remove('hidden');
     }
 
@@ -878,7 +934,6 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
       editCollaborationModal?.classList.add('hidden');
       (editCollaborationForm as HTMLFormElement)?.reset();
       selectedEditUsers = [];
-      selectedEditProjectId = null;
       renderSelectedUsers(true);
     }
 
@@ -890,9 +945,7 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
 
     // Project dropdown event listeners
     const projectSelect = document.getElementById('projectSelect');
-    const editProjectSelect = document.getElementById('editProjectSelect');
     const projectDropdown = document.getElementById('projectDropdown');
-    const editProjectDropdown = document.getElementById('editProjectDropdown');
 
     // Create project dropdown events
     projectSelect?.addEventListener('focus', () => {
@@ -911,22 +964,6 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
       showProjectDropdown(false);
     });
 
-    // Edit project dropdown events
-    editProjectSelect?.addEventListener('focus', () => {
-      showProjectDropdown(true);
-      renderProjectDropdown('', true);
-    });
-
-    editProjectSelect?.addEventListener('click', () => {
-      showProjectDropdown(true);
-      renderProjectDropdown('', true);
-    });
-
-    editProjectSelect?.addEventListener('input', (e) => {
-      const searchTerm = (e.target as HTMLInputElement).value;
-      renderProjectDropdown(searchTerm, true);
-      showProjectDropdown(true);
-    });
 
     // Project dropdown click events
     projectDropdown?.addEventListener('click', (e) => {
@@ -942,18 +979,6 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
       }
     });
 
-    editProjectDropdown?.addEventListener('click', (e) => {
-      const target = e.target as HTMLElement;
-      const projectItem = target.closest('[data-project-id]');
-      if (projectItem) {
-        const projectId = projectItem.getAttribute('data-project-id');
-        const projectName = projectItem.getAttribute('data-project-name');
-        const clientName = projectItem.getAttribute('data-client-name');
-        if (projectId && projectName && clientName) {
-          selectProject(parseInt(projectId), projectName, clientName, true);
-        }
-      }
-    });
 
     // User search event listeners
     const teamMembersSelect = document.getElementById('teamMembersSelect');
@@ -1045,7 +1070,9 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
         const teamId = this.dataset.teamId;
         const teamName = this.dataset.teamName;
         const teamDescription = this.dataset.teamDescription;
-        showEditCollaborationModal(teamId!, teamName!, teamDescription!);
+        const projectName = this.dataset.projectName;
+        const clientName = this.dataset.clientName;
+        showEditCollaborationModal(teamId!, teamName!, teamDescription!, projectName, clientName);
       });
     });
 
@@ -1132,15 +1159,14 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
       const collaborationId = formData.get('collaborationId');
       const description = formData.get('collaborationDescription');
       
-      if (!selectedEditProjectId) {
-        alert('Please select a project');
-        return;
-      }
+      // Combine current members (excluding removed ones) with new members
+      const currentMemberIds = currentEditMembers.map(member => member.userId);
+      const newMemberIds = selectedEditUsers.map(user => user.id);
+      const allMemberIds = [...currentMemberIds, ...newMemberIds];
 
       const collaborationData = {
-        projectId: selectedEditProjectId,
         description: description,
-        teamMembers: selectedEditUsers.map(user => user.id)
+        teamMembers: allMemberIds
       };
 
       try {

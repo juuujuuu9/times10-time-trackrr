@@ -1,0 +1,689 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { db } from '../../../db/index';
+import { teams, teamMembers as teamMembersTable, projects, clients, users, taskNotes, taskDiscussions, taskFiles, taskLinks } from '../../../db/schema';
+import { eq, and, desc, count } from 'drizzle-orm';
+import { getSessionUser } from '../../../utils/session';
+
+// Get current user
+const currentUser = await getSessionUser(Astro);
+if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'developer')) {
+  return Astro.redirect('/login');
+}
+
+const collaborationId = parseInt(Astro.params.id!);
+
+// Get collaboration details
+const collaboration = await db.query.teams.findFirst({
+  where: eq(teams.id, collaborationId),
+  with: {
+    creator: true,
+    members: {
+      with: {
+        user: true
+      }
+    }
+  }
+});
+
+if (!collaboration) {
+  return Astro.redirect('/admin/collaborations');
+}
+
+// Get project details if this collaboration is linked to a project
+let projectDetails = null;
+if (collaboration.name.includes(' - ')) {
+  const projectName = collaboration.name.split(' - ')[1];
+  projectDetails = await db.query.projects.findFirst({
+    where: eq(projects.name, projectName),
+    with: {
+      client: true
+    }
+  });
+}
+
+// Get team members
+const teamMembers = collaboration.members.map((member: any) => ({
+  id: member.user.id,
+  name: member.user.name,
+  email: member.user.email,
+  role: member.role,
+  joinedAt: member.joinedAt
+}));
+
+// Get recent notes (mock data for now - will be replaced with real data)
+const recentNotes = [
+  {
+    id: 1,
+    title: "Project Kickoff Notes",
+    content: "Outlined the QA checklist and assigned owners for each module. Please review before handoff.",
+    author: "Priya Shah",
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+    authorAvatar: "PS"
+  }
+];
+
+// Get recent discussions (mock data for now)
+const recentDiscussions = [
+  {
+    id: 1,
+    content: "Should we move the onboarding tooltip to appear after the user creates the first task?",
+    author: "Mark Chen",
+    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 hours ago
+    authorAvatar: "MC",
+    replies: [
+      {
+        id: 2,
+        content: "Yes, that reduces cognitive load on first run. Let's A/B test it this week.",
+        author: "Alex Rivera",
+        createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
+        authorAvatar: "AR"
+      }
+    ]
+  },
+  {
+    id: 3,
+    content: "Sharing final icons for review.",
+    author: "Lina Gomez",
+    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // Yesterday
+    authorAvatar: "LG",
+    replies: []
+  }
+];
+
+// Get recent files and links (mock data for now)
+const recentFiles = [
+  {
+    id: 1,
+    name: "Requirements v3.pdf",
+    type: "file",
+    author: "Priya",
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+    size: "1.2MB"
+  }
+];
+
+const recentLinks = [
+  {
+    id: 1,
+    title: "Figma Board",
+    url: "https://figma.com/design/example",
+    type: "link",
+    author: "Mark",
+    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
+  }
+];
+
+// Calculate total time tracked (mock for now)
+const totalTimeTracked = "42h";
+const dueDate = "Oct 28";
+---
+
+<AdminLayout title={`${collaboration.name} - Collaboration`} currentPage="collaborations">
+  <div class="flex h-full">
+    <!-- Left Sidebar -->
+    <div class="w-1/4 bg-white border-r border-gray-200 p-6">
+      <!-- Project Overview Card -->
+      <div class="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-lg font-semibold text-gray-900">{collaboration.name}</h2>
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active
+          </span>
+        </div>
+        
+        <div class="space-y-2 mb-4">
+          <div class="flex items-center text-sm text-gray-600">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            {totalTimeTracked} tracked
+          </div>
+          <div class="flex items-center text-sm text-gray-600">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            Due: {dueDate}
+          </div>
+        </div>
+
+        <!-- Team Members -->
+        <div class="flex items-center">
+          <div class="flex -space-x-2">
+            {teamMembers.slice(0, 4).map((member: any, index: number) => (
+              <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 border-2 border-white">
+                {member.name.charAt(0).toUpperCase()}
+              </div>
+            ))}
+            {teamMembers.length > 4 && (
+              <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 border-2 border-white">
+                +{teamMembers.length - 4}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Links -->
+      <div class="mb-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-3">Quick Links</h3>
+        <nav class="space-y-1">
+          <a href="#notes" class="flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-md">
+            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            All Notes
+          </a>
+          <a href="#discussions" class="flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-md">
+            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+            </svg>
+            Discussions
+          </a>
+          <a href="#files" class="flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-md">
+            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+            </svg>
+            Files & Links
+          </a>
+          <a href="#activity" class="flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-md">
+            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            Activity
+          </a>
+        </nav>
+      </div>
+
+      <!-- Filters -->
+      <div>
+        <h3 class="text-sm font-semibold text-gray-900 mb-3">Filters</h3>
+        <div class="space-y-2">
+          <select class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option>Tag: All</option>
+            <option>Important</option>
+            <option>Meeting</option>
+            <option>Decision</option>
+          </select>
+          <select class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option>Author: Any</option>
+            {teamMembers.map((member: any) => (
+              <option>{member.name}</option>
+            ))}
+          </select>
+          <select class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option>Date range</option>
+            <option>Today</option>
+            <option>This week</option>
+            <option>This month</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 p-6">
+      <!-- Header -->
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Project Collaboration</h1>
+        <div class="flex items-center space-x-3">
+          <button class="inline-flex items-center px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border border-gray-300 transition-all duration-200">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+            </svg>
+            Manage Team
+          </button>
+          <button class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            + New Note
+          </button>
+        </div>
+      </div>
+
+      <!-- Global Search -->
+      <div class="mb-6">
+        <div class="relative">
+          <input
+            type="text"
+            id="globalSearchInput"
+            placeholder="Search across notes, threads, files"
+            class="w-full px-4 py-3 pl-10 pr-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+        </div>
+        <div class="flex items-center space-x-2 mt-3">
+          <button class="search-filter-btn px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200" data-type="notes">Notes</button>
+          <button class="search-filter-btn px-3 py-1 text-sm text-gray-500 rounded-full hover:bg-gray-100" data-type="discussions">Threads</button>
+          <button class="search-filter-btn px-3 py-1 text-sm text-gray-500 rounded-full hover:bg-gray-100" data-type="files">Files</button>
+          <button class="search-filter-btn px-3 py-1 text-sm text-gray-500 rounded-full hover:bg-gray-100" data-type="links">Links</button>
+        </div>
+        
+        <!-- Search Results -->
+        <div id="searchResults" class="hidden mt-4 bg-white rounded-lg border border-gray-200 shadow-lg">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Search Results</h3>
+          </div>
+          <div id="searchResultsContent" class="p-6">
+            <!-- Search results will be populated here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes Section -->
+      <div class="bg-white rounded-lg border border-gray-200 mb-6">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-900">Notes</h2>
+            <button class="inline-flex items-center px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-all duration-200">
+              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+              </svg>
+              Save Draft
+            </button>
+          </div>
+        </div>
+        
+        <div class="p-6">
+          <!-- New Note Editor -->
+          <div class="mb-6">
+            <div class="border border-gray-300 rounded-lg">
+              <!-- Toolbar -->
+              <div class="px-4 py-2 border-b border-gray-200 bg-gray-50 flex items-center space-x-2">
+                <button class="p-1 hover:bg-gray-200 rounded">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 6h12M6 12h12M6 18h12"></path>
+                  </svg>
+                </button>
+                <button class="p-1 hover:bg-gray-200 rounded">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                  </svg>
+                </button>
+                <button class="p-1 hover:bg-gray-200 rounded">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                  </svg>
+                </button>
+                <button class="p-1 hover:bg-gray-200 rounded">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                  </svg>
+                </button>
+              </div>
+              
+              <!-- Editor -->
+              <div class="p-4">
+                <textarea
+                  placeholder="Write a project note... Include decisions, todos, or meeting minutes."
+                  class="w-full h-32 resize-none border-none outline-none text-gray-900 placeholder-gray-500"
+                ></textarea>
+              </div>
+              
+              <!-- Actions -->
+              <div class="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+                <div class="flex items-center">
+                  <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 mr-3">
+                    {currentUser.name.charAt(0).toUpperCase()}
+                  </div>
+                  <span class="text-sm text-gray-500">Just now</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <button class="inline-flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-200 rounded-lg transition-all duration-200">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+                    </svg>
+                    Attach
+                  </button>
+                  <button class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-all duration-200">
+                    Publish Note
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Existing Notes -->
+          <div class="space-y-4">
+            {recentNotes.map((note: any) => (
+              <div class="border border-gray-200 rounded-lg p-4">
+                <div class="flex items-start justify-between mb-3">
+                  <div class="flex items-center">
+                    <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 mr-3">
+                      {note.authorAvatar}
+                    </div>
+                    <div>
+                      <div class="text-sm font-medium text-gray-900">{note.author}</div>
+                      <div class="text-xs text-gray-500">{note.createdAt.toLocaleTimeString()} ago</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <button class="text-sm text-gray-600 hover:text-gray-800">View</button>
+                    <button class="text-sm text-gray-600 hover:text-gray-800">Download</button>
+                  </div>
+                </div>
+                <p class="text-gray-700">{note.content}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <!-- Discussions Section -->
+      <div class="bg-white rounded-lg border border-gray-200 mb-6">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h2 class="text-lg font-semibold text-gray-900">Discussions</h2>
+        </div>
+        
+        <div class="p-6">
+          <div class="space-y-6">
+            {recentDiscussions.map((discussion: any) => (
+              <div class="border-b border-gray-100 pb-6 last:border-b-0">
+                <div class="flex items-start space-x-3 mb-3">
+                  <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700">
+                    {discussion.authorAvatar}
+                  </div>
+                  <div class="flex-1">
+                    <div class="flex items-center space-x-2 mb-1">
+                      <span class="text-sm font-medium text-gray-900">{discussion.author}</span>
+                      <span class="text-xs text-gray-500">{discussion.createdAt.toLocaleTimeString()} ago</span>
+                    </div>
+                    <p class="text-gray-700 mb-3">{discussion.content}</p>
+                    
+                    <!-- Replies -->
+                    {discussion.replies.map((reply: any) => (
+                      <div class="ml-4 pl-4 border-l-2 border-gray-100">
+                        <div class="flex items-start space-x-3 mb-2">
+                          <div class="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium text-gray-600">
+                            {reply.authorAvatar}
+                          </div>
+                          <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-1">
+                              <span class="text-sm font-medium text-gray-900">{reply.author}</span>
+                              <span class="text-xs text-gray-500">{reply.createdAt.toLocaleTimeString()} ago</span>
+                            </div>
+                            <p class="text-gray-700">{reply.content}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    <!-- Reply Input -->
+                    <div class="mt-4">
+                      <div class="flex items-center space-x-2">
+                        <input
+                          type="text"
+                          placeholder="Write a reply..."
+                          class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        <button class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-all duration-200">
+                          Reply
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            <!-- New Discussion -->
+            <div class="border-t border-gray-200 pt-6">
+              <div class="flex items-center space-x-2">
+                <input
+                  type="text"
+                  placeholder="Start a new reply..."
+                  class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <button class="inline-flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200">
+                  <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+                  </svg>
+                  Attach
+                </button>
+                <button class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-all duration-200">
+                  Reply
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Files & Links Section -->
+      <div class="bg-white rounded-lg border border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h2 class="text-lg font-semibold text-gray-900">Files & Links</h2>
+        </div>
+        
+        <div class="p-6">
+          <div class="space-y-4">
+            <!-- Files -->
+            {recentFiles.map((file: any) => (
+              <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                <div class="flex items-center space-x-3">
+                  <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="text-sm font-medium text-gray-900">{file.name}</div>
+                    <div class="text-xs text-gray-500">{file.author} • {file.createdAt.toLocaleDateString()} • {file.size}</div>
+                  </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <button class="text-sm text-gray-600 hover:text-gray-800">View</button>
+                  <button class="text-sm text-gray-600 hover:text-gray-800">Download</button>
+                </div>
+              </div>
+            ))}
+            
+            <!-- Links -->
+            {recentLinks.map((link: any) => (
+              <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                <div class="flex items-center space-x-3">
+                  <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="text-sm font-medium text-gray-900">{link.title}</div>
+                    <div class="text-xs text-gray-500">{link.author} • {link.url}</div>
+                  </div>
+                </div>
+                <button class="text-sm text-gray-600 hover:text-gray-800">Open</button>
+              </div>
+            ))}
+          </div>
+          
+          <!-- Add Files/Links -->
+          <div class="mt-6 flex items-center space-x-3">
+            <button class="inline-flex items-center px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border border-gray-300 transition-all duration-200">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+              </svg>
+              Upload File
+            </button>
+            <button class="inline-flex items-center px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border border-gray-300 transition-all duration-200">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+              </svg>
+              Add Link
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  // Add any client-side functionality here
+  document.addEventListener('DOMContentLoaded', function() {
+    const collaborationId = window.location.pathname.split('/').pop();
+    let currentSearchType = 'all';
+    let searchTimeout: NodeJS.Timeout;
+
+    // Search functionality
+    const searchInput = document.getElementById('globalSearchInput') as HTMLInputElement;
+    const searchResults = document.getElementById('searchResults');
+    const searchResultsContent = document.getElementById('searchResultsContent');
+    const searchFilterBtns = document.querySelectorAll('.search-filter-btn');
+
+    // Handle search input
+    searchInput?.addEventListener('input', function() {
+      clearTimeout(searchTimeout);
+      const query = this.value.trim();
+      
+      if (query.length < 2) {
+        searchResults?.classList.add('hidden');
+        return;
+      }
+
+      searchTimeout = setTimeout(() => {
+        performSearch(query, currentSearchType);
+      }, 300);
+    });
+
+    // Handle search filter buttons
+    searchFilterBtns.forEach(btn => {
+      btn.addEventListener('click', function(this: HTMLElement) {
+        // Update active button
+        searchFilterBtns.forEach(b => {
+          b.classList.remove('bg-gray-100', 'text-gray-700');
+          b.classList.add('text-gray-500');
+        });
+        this.classList.add('bg-gray-100', 'text-gray-700');
+        this.classList.remove('text-gray-500');
+        
+        currentSearchType = this.getAttribute('data-type') || 'all';
+        
+        // Re-search with current query
+        const query = searchInput?.value.trim();
+        if (query && query.length >= 2) {
+          performSearch(query, currentSearchType);
+        }
+      });
+    });
+
+    // Perform search
+    async function performSearch(query: string, type: string) {
+      try {
+        const response = await fetch(`/api/collaborations/${collaborationId}/search?q=${encodeURIComponent(query)}&type=${type}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          displaySearchResults(data.data);
+        } else {
+          console.error('Search failed:', data.error);
+        }
+      } catch (error) {
+        console.error('Search error:', error);
+      }
+    }
+
+    // Display search results
+    function displaySearchResults(data: any) {
+      if (!searchResults || !searchResultsContent) return;
+
+      if (data.results.length === 0) {
+        searchResultsContent.innerHTML = '<p class="text-gray-500 text-center py-4">No results found</p>';
+        searchResults.classList.remove('hidden');
+        return;
+      }
+
+      let html = '';
+      data.results.forEach((result: any) => {
+        const typeIcon = getTypeIcon(result.type);
+        const typeColor = getTypeColor(result.type);
+        
+        html += `
+          <div class="border border-gray-200 rounded-lg p-4 mb-3 hover:bg-gray-50 cursor-pointer">
+            <div class="flex items-start space-x-3">
+              <div class="w-8 h-8 ${typeColor} rounded-lg flex items-center justify-center flex-shrink-0">
+                ${typeIcon}
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center space-x-2 mb-1">
+                  <span class="text-sm font-medium text-gray-900">${result.title || result.name || 'Untitled'}</span>
+                  <span class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">${result.type}</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-2">${result.content || result.description || ''}</p>
+                <div class="flex items-center space-x-4 text-xs text-gray-500">
+                  <span>${result.author.name}</span>
+                  <span>${new Date(result.createdAt).toLocaleDateString()}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      searchResultsContent.innerHTML = html;
+      searchResults.classList.remove('hidden');
+    }
+
+    // Get type icon
+    function getTypeIcon(type: string) {
+      switch (type) {
+        case 'note':
+          return '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>';
+        case 'discussion':
+          return '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>';
+        case 'file':
+          return '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>';
+        case 'link':
+          return '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>';
+        default:
+          return '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>';
+      }
+    }
+
+    // Get type color
+    function getTypeColor(type: string) {
+      switch (type) {
+        case 'note':
+          return 'bg-blue-100 text-blue-600';
+        case 'discussion':
+          return 'bg-green-100 text-green-600';
+        case 'file':
+          return 'bg-red-100 text-red-600';
+        case 'link':
+          return 'bg-purple-100 text-purple-600';
+        default:
+          return 'bg-gray-100 text-gray-600';
+      }
+    }
+
+    // Handle note publishing
+    const publishNoteBtn = document.querySelector('button:contains("Publish Note")');
+    if (publishNoteBtn) {
+      publishNoteBtn.addEventListener('click', function() {
+        // Handle note publishing logic
+        console.log('Publishing note...');
+      });
+    }
+    
+    // Handle file uploads
+    const uploadFileBtn = document.querySelector('button:contains("Upload File")');
+    if (uploadFileBtn) {
+      uploadFileBtn.addEventListener('click', function() {
+        // Handle file upload logic
+        console.log('Uploading file...');
+      });
+    }
+    
+    // Handle link addition
+    const addLinkBtn = document.querySelector('button:contains("Add Link")');
+    if (addLinkBtn) {
+      addLinkBtn.addEventListener('click', function() {
+        // Handle link addition logic
+        console.log('Adding link...');
+      });
+    }
+  });
+</script>

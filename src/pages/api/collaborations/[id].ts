@@ -100,32 +100,6 @@ export const PUT: APIRoute = async (context) => {
     const body = await context.request.json().catch(() => ({}));
     ({ projectId, description, teamMembers = [] } = body);
 
-    // Validate required fields
-    if (!projectId || typeof projectId !== 'number') {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Project ID is required'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Get project details to use as collaboration name
-    const project = await db.query.projects.findFirst({
-      where: eq(projects.id, projectId)
-    });
-
-    if (!project) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Project not found'
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
     // Check if collaboration exists
     const existingCollaboration = await db.query.teams.findFirst({
       where: eq(teams.id, collaborationId)
@@ -141,11 +115,10 @@ export const PUT: APIRoute = async (context) => {
       });
     }
 
-    // Update the collaboration
+    // Update the collaboration (only description, not name since project isn't changing)
     const updatedCollaboration = await db
       .update(teams)
       .set({
-        name: project.name,
         description: description?.trim() || null,
         updatedAt: new Date()
       })
