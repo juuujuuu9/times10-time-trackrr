@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
-import { getUserTeamDashboards } from '../../../utils/teamAccess';
-import { getSessionUser } from '../../../utils/session';
+import { getUserTeamDashboards } from '../../../utils/teamAccess.js';
+import { getSessionUser } from '../../../utils/session.js';
 
 // GET /api/users/[id]/team-dashboards - Get team dashboards for a user
 export const GET: APIRoute = async ({ params, request }) => {
