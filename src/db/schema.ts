@@ -168,6 +168,16 @@ export const teamMembers = pgTable('team_members', {
   pk: primaryKey(table.teamId, table.userId),
 }));
 
+// Project-Team assignments for collaborative features
+export const projectTeams = pgTable('project_teams', {
+  projectId: integer('project_id').references(() => projects.id).notNull(),
+  teamId: integer('team_id').references(() => teams.id).notNull(),
+  assignedAt: timestamp('assigned_at').defaultNow().notNull(),
+  assignedBy: integer('assigned_by').references(() => users.id).notNull(),
+}, (table) => ({
+  pk: primaryKey(table.projectId, table.teamId),
+}));
+
 // Task collaboration enhancements
 export const taskCollaborations = pgTable('task_collaborations', {
   id: serial('id').primaryKey(),
@@ -282,6 +292,7 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   }),
   tasks: many(tasks),
   timeEntries: many(timeEntries),
+  projectTeams: many(projectTeams),
 }));
 
 export const tasksRelations = relations(tasks, ({ one, many }) => ({
@@ -357,6 +368,7 @@ export const teamsRelations = relations(teams, ({ one, many }) => ({
   }),
   members: many(teamMembers),
   taskCollaborations: many(taskCollaborations),
+  projectTeams: many(projectTeams),
 }));
 
 export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
@@ -366,6 +378,21 @@ export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
   }),
   user: one(users, {
     fields: [teamMembers.userId],
+    references: [users.id],
+  }),
+}));
+
+export const projectTeamsRelations = relations(projectTeams, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectTeams.projectId],
+    references: [projects.id],
+  }),
+  team: one(teams, {
+    fields: [projectTeams.teamId],
+    references: [teams.id],
+  }),
+  assignedBy: one(users, {
+    fields: [projectTeams.assignedBy],
     references: [users.id],
   }),
 }));
