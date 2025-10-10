@@ -1,0 +1,175 @@
+import type { APIRoute } from 'astro';
+import { db } from '../../db';
+import { teams, teamMembers, projects, projectTeams } from '../../db/schema';
+import { eq, and } from 'drizzle-orm';
+import { getSessionUser } from '../../utils/session';
+
+// GET /api/collaborations - Get all collaborations for the current user
+export const GET: APIRoute = async ({ request }) => {
+  try {
+    // Check authentication
+    const currentUser = await getSessionUser(request);
+    if (!currentUser) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Get collaborations where user is a member
+    const userCollaborations = await db
+      .select({
+        id: teams.id,
+        name: teams.name,
+        description: teams.description,
+        createdBy: teams.createdBy,
+        createdAt: teams.createdAt,
+        userRole: teamMembers.role,
+        joinedAt: teamMembers.joinedAt
+      })
+      .from(teams)
+      .innerJoin(teamMembers, eq(teamMembers.teamId, teams.id))
+      .where(and(
+        eq(teamMembers.userId, currentUser.id),
+        eq(teams.archived, false)
+      ));
+
+    return new Response(JSON.stringify({
+      success: true,
+      data: userCollaborations
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+  } catch (error) {
+    console.error('Error fetching collaborations:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Failed to fetch collaborations'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+};
+
+// POST /api/collaborations - Create a new collaboration
+export const POST: APIRoute = async ({ request }) => {
+  try {
+    // Check authentication
+    const currentUser = await getSessionUser(request);
+    if (!currentUser) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const { projectId, description } = body;
+
+    // Validate required fields
+    if (!projectId || typeof projectId !== 'number') {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Project ID is required'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Get project details to use as collaboration name
+    const project = await db.query.projects.findFirst({
+      where: eq(projects.id, projectId)
+    });
+
+    if (!project) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Project not found'
+      }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Check if collaboration already exists for this project
+    const existingCollaboration = await db.query.teams.findFirst({
+      where: and(
+        eq(teams.name, project.name),
+        eq(teams.archived, false)
+      )
+    });
+
+    if (existingCollaboration) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'A collaboration for this project already exists'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Create the collaboration using project name
+    const newCollaboration = await db.insert(teams).values({
+      name: project.name,
+      description: description?.trim() || null,
+      createdBy: currentUser.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      archived: false
+    }).returning();
+
+    const collaborationId = newCollaboration[0].id;
+
+    // Add the creator as a collaboration lead
+    await db.insert(teamMembers).values({
+      teamId: collaborationId,
+      userId: currentUser.id,
+      role: 'lead',
+      joinedAt: new Date()
+    });
+
+    // Create the project-team assignment
+    await db.insert(projectTeams).values({
+      projectId: projectId,
+      teamId: collaborationId,
+      assignedBy: currentUser.id,
+      assignedAt: new Date()
+    });
+
+    return new Response(JSON.stringify({
+      success: true,
+      data: {
+        id: collaborationId,
+        name: newCollaboration[0].name,
+        description: newCollaboration[0].description,
+        createdBy: newCollaboration[0].createdBy,
+        createdAt: newCollaboration[0].createdAt
+      },
+      message: 'Collaboration created successfully'
+    }), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+  } catch (error) {
+    console.error('Error creating collaboration:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Failed to create collaboration'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+};

@@ -1,0 +1,825 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { db } from '../../db/index';
+import { teams, teamMembers, users } from '../../db/schema';
+import { eq, and, count, desc } from 'drizzle-orm';
+import { getSessionUser } from '../../utils/session';
+
+// Get current user
+const currentUser = await getSessionUser(Astro);
+if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'developer')) {
+  return Astro.redirect('/login');
+}
+
+// Get all teams with member counts
+const allTeams = await db
+  .select({
+    id: teams.id,
+    name: teams.name,
+    description: teams.description,
+    createdBy: teams.createdBy,
+    createdAt: teams.createdAt,
+    updatedAt: teams.updatedAt,
+    archived: teams.archived,
+    memberCount: count(teamMembers.userId)
+  })
+  .from(teams)
+  .leftJoin(teamMembers, eq(teams.id, teamMembers.teamId))
+  .where(eq(teams.archived, false))
+  .groupBy(teams.id)
+  .orderBy(desc(teams.createdAt));
+
+// Get team creators
+const teamCreators = await db
+  .select({
+    teamId: teams.id,
+    creatorName: users.name,
+    creatorEmail: users.email
+  })
+  .from(teams)
+  .innerJoin(users, eq(teams.createdBy, users.id))
+  .where(eq(teams.archived, false));
+
+const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]));
+---
+
+<AdminLayout title="Collaboration Management" currentPage="collaborations">
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Collaboration Management</h1>
+        <p class="text-gray-600">Create and manage collaborations for collaborative work</p>
+      </div>
+      <button
+        id="createCollaborationBtn"
+        class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+      >
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+        </svg>
+        Create Collaboration
+      </button>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="bg-white rounded-lg shadow border border-gray-300 p-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <div class="w-8 h-8 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm font-medium text-gray-600">Total Collaborations</p>
+            </div>
+          </div>
+          <p class="text-2xl font-bold text-gray-900">{allTeams.length}</p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow border border-gray-300 p-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm font-medium text-gray-600">Total Members</p>
+            </div>
+          </div>
+          <p class="text-2xl font-bold text-gray-900">{allTeams.reduce((sum, team) => sum + team.memberCount, 0)}</p>
+        </div>
+      </div>
+      
+      <div class="bg-white rounded-lg shadow border border-gray-300 p-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm font-medium text-gray-600">Active Collaborations</p>
+            </div>
+          </div>
+          <p class="text-2xl font-bold text-gray-900">{allTeams.filter(team => team.memberCount > 0).length}</p>
+        </div>
+      </div>
+      
+      <div class="bg-white rounded-lg shadow border border-gray-300 p-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-purple-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm font-medium text-gray-600">Avg Members</p>
+            </div>
+          </div>
+          <p class="text-2xl font-bold text-gray-900">
+            {allTeams.length > 0 ? Math.round(allTeams.reduce((sum, team) => sum + team.memberCount, 0) / allTeams.length) : 0}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Collaborations List -->
+    <div class="bg-white rounded-lg shadow border border-gray-300">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">All Collaborations</h2>
+      </div>
+      
+      <div class="p-6">
+        {allTeams.length === 0 ? (
+          <div class="text-center py-8">
+            <div class="mx-auto h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <svg class="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+              </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No collaborations yet</h3>
+            <p class="text-gray-600 mb-4">Create your first collaboration to get started with collaborative features.</p>
+            <button 
+              id="createFirstCollaborationBtn"
+              class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+            >
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+              </svg>
+              Create First Collaboration
+            </button>
+          </div>
+        ) : (
+          <div class="space-y-4">
+            {allTeams.map((team) => {
+              const creator = creatorMap.get(team.id);
+              return (
+                <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-200">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                      <div class="h-12 w-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                        <svg class="h-6 w-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                      </div>
+                      <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-gray-900">{team.name}</h3>
+                        <p class="text-sm text-gray-600">{team.description || 'No description'}</p>
+                        <div class="flex items-center space-x-4 mt-1">
+                          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            {team.memberCount} members
+                          </span>
+                          <span class="text-xs text-gray-500">
+                            Created by {creator?.creatorName || 'Unknown'}
+                          </span>
+                          <span class="text-xs text-gray-500">
+                            {new Date(team.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-2">
+                      <a 
+                        href={`/teams/${team.id}`}
+                        class="inline-flex items-center px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+                      >
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                        View
+                      </a>
+                      
+                      <button 
+                        class="edit-collaboration-btn inline-flex items-center px-3 py-2 bg-white hover:bg-gray-100 text-gray-700 text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-gray-300"
+                        data-team-id={team.id}
+                        data-team-name={team.name}
+                        data-team-description={team.description || ''}
+                      >
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                        Edit
+                      </button>
+                      
+                      <button 
+                        class="delete-collaboration-btn inline-flex items-center px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-red-300"
+                        data-team-id={team.id}
+                        data-team-name={team.name}
+                      >
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                        Archive
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Collaboration Modal -->
+  <div id="createCollaborationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900">Create New Collaboration</h3>
+        </div>
+        <form id="createCollaborationForm" class="px-6 py-4">
+          <div class="space-y-4">
+            <div class="relative">
+              <label for="projectSelect" class="block text-sm font-medium text-gray-700 mb-1">Select Project</label>
+              <div class="relative">
+                <input
+                  type="text"
+                  id="projectSelect"
+                  placeholder="🔍 Search projects..."
+                  autocomplete="off"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500"
+                />
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                  <svg class="fill-current h-5 w-5 transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                  </svg>
+                </div>
+              </div>
+              
+              <!-- Project Dropdown -->
+              <div 
+                id="projectDropdown"
+                class="absolute z-50 w-full bg-white border border-gray-300 rounded-lg shadow-lg overflow-hidden hidden" 
+                style={{ 
+                  top: '100%', 
+                  left: 0, 
+                  maxHeight: '240px',
+                  overflowY: 'auto'
+                }}
+              >
+                <div class="px-4 py-2 text-gray-500 text-sm">
+                  Loading projects...
+                </div>
+              </div>
+            </div>
+            <div>
+              <label for="collaborationDescription" class="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
+              <textarea 
+                id="collaborationDescription" 
+                name="collaborationDescription"
+                rows="3"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Describe what this collaboration does"
+              ></textarea>
+            </div>
+          </div>
+          <div class="flex justify-end space-x-3 mt-6">
+            <button 
+              type="button" 
+              id="cancelCreateCollaboration"
+              class="inline-flex items-center px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-all duration-200 font-medium"
+            >
+              <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+              Cancel
+            </button>
+            <button 
+              type="submit"
+              class="inline-flex items-center px-4 py-2 bg-[#415058] hover:bg-[#1F292E] text-white rounded-md transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+            >
+              <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+              Create Collaboration
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Collaboration Modal -->
+  <div id="editCollaborationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900">Edit Collaboration</h3>
+        </div>
+        <form id="editCollaborationForm" class="px-6 py-4">
+          <input type="hidden" id="editCollaborationId" name="collaborationId" />
+          <div class="space-y-4">
+            <div class="relative">
+              <label for="editProjectSelect" class="block text-sm font-medium text-gray-700 mb-1">Select Project</label>
+              <div class="relative">
+                <input
+                  type="text"
+                  id="editProjectSelect"
+                  placeholder="🔍 Search projects..."
+                  autocomplete="off"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500"
+                />
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                  <svg class="fill-current h-5 w-5 transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                  </svg>
+                </div>
+              </div>
+              
+              <!-- Edit Project Dropdown -->
+              <div 
+                id="editProjectDropdown"
+                class="absolute z-50 w-full bg-white border border-gray-300 rounded-lg shadow-lg overflow-hidden hidden" 
+                style={{ 
+                  top: '100%', 
+                  left: 0, 
+                  maxHeight: '240px',
+                  overflowY: 'auto'
+                }}
+              >
+                <div class="px-4 py-2 text-gray-500 text-sm">
+                  Loading projects...
+                </div>
+              </div>
+            </div>
+            <div>
+              <label for="editCollaborationDescription" class="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
+              <textarea 
+                id="editCollaborationDescription" 
+                name="collaborationDescription"
+                rows="3"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Describe what this collaboration does"
+              ></textarea>
+            </div>
+          </div>
+          <div class="flex justify-end space-x-3 mt-6">
+            <button 
+              type="button" 
+              id="cancelEditCollaboration"
+              class="inline-flex items-center px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-all duration-200 font-medium"
+            >
+              <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+              Cancel
+            </button>
+            <button 
+              type="submit"
+              class="inline-flex items-center px-4 py-2 bg-[#415058] hover:bg-[#1F292E] text-white rounded-md transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+            >
+              <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+              Update Collaboration
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  // Collaboration Management JavaScript
+  document.addEventListener('DOMContentLoaded', function() {
+    const createCollaborationBtn = document.getElementById('createCollaborationBtn');
+    const createFirstCollaborationBtn = document.getElementById('createFirstCollaborationBtn');
+    const createCollaborationModal = document.getElementById('createCollaborationModal');
+    const editCollaborationModal = document.getElementById('editCollaborationModal');
+    const cancelCreateCollaboration = document.getElementById('cancelCreateCollaboration');
+    const cancelEditCollaboration = document.getElementById('cancelEditCollaboration');
+    const createCollaborationForm = document.getElementById('createCollaborationForm');
+    const editCollaborationForm = document.getElementById('editCollaborationForm');
+    const editCollaborationBtns = document.querySelectorAll('.edit-collaboration-btn');
+    const deleteCollaborationBtns = document.querySelectorAll('.delete-collaboration-btn');
+
+    // State for project dropdowns
+    let allProjects: any[] = [];
+    let selectedProjectId: number | null = null;
+    let selectedEditProjectId: number | null = null;
+    let projectDropdownOpen = false;
+    let editProjectDropdownOpen = false;
+
+    // Load projects into dropdowns
+    async function loadProjects() {
+      try {
+        const response = await fetch('/api/admin/projects');
+        allProjects = await response.json();
+        console.log('Loaded projects:', allProjects);
+      } catch (error) {
+        console.error('Error loading projects:', error);
+      }
+    }
+
+    // Organize projects by client for dropdown display
+    function organizeProjectsByClient() {
+      const clientGroups: { [key: string]: any[] } = {};
+      
+      allProjects.forEach((project: any) => {
+        const clientName = project.clientName || 'Unknown Client';
+        if (!clientGroups[clientName]) {
+          clientGroups[clientName] = [];
+        }
+        clientGroups[clientName].push(project);
+      });
+      
+      // Sort clients alphabetically
+      const sortedClients = Object.keys(clientGroups).sort();
+      
+      // For each client, sort projects alphabetically
+      sortedClients.forEach(clientName => {
+        clientGroups[clientName].sort((a: any, b: any) => a.name.localeCompare(b.name));
+      });
+      
+      return { clientGroups, sortedClients };
+    }
+
+    // Filter projects based on search term
+    function getFilteredProjects(searchTerm: string, isEdit = false) {
+      if (!searchTerm.trim()) {
+        return organizeProjectsByClient();
+      }
+      
+      const searchLower = searchTerm.toLowerCase();
+      const filteredProjects = allProjects.filter((project: any) => {
+        const clientName = (project.clientName || '').toLowerCase();
+        const projectName = (project.name || '').toLowerCase();
+        return (
+          clientName.includes(searchLower) ||
+          projectName.includes(searchLower)
+        );
+      });
+      
+      const clientGroups: { [key: string]: any[] } = {};
+      filteredProjects.forEach((project: any) => {
+        const clientName = project.clientName || 'Unknown Client';
+        if (!clientGroups[clientName]) {
+          clientGroups[clientName] = [];
+        }
+        clientGroups[clientName].push(project);
+      });
+      
+      const sortedClients = Object.keys(clientGroups).sort();
+      
+      sortedClients.forEach(clientName => {
+        clientGroups[clientName].sort((a: any, b: any) => a.name.localeCompare(b.name));
+      });
+      
+      return { clientGroups, sortedClients };
+    }
+
+    // Render project dropdown
+    function renderProjectDropdown(searchTerm = '', isEdit = false) {
+      const { clientGroups, sortedClients } = getFilteredProjects(searchTerm, isEdit);
+      const dropdownId = isEdit ? 'editProjectDropdown' : 'projectDropdown';
+      const dropdown = document.getElementById(dropdownId);
+      
+      if (!dropdown) return;
+      
+      if (sortedClients.length === 0) {
+        dropdown.innerHTML = '<div class="px-4 py-2 text-gray-500 text-sm">No projects found</div>';
+        return;
+      }
+      
+      let html = '';
+      sortedClients.forEach(clientName => {
+        // Client Header
+        html += `
+          <div class="px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            ${clientName}
+          </div>
+        `;
+        
+        // Projects for this client
+        clientGroups[clientName].forEach((project: any) => {
+          html += `
+            <div
+              class="pl-8 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
+              data-project-id="${project.id}"
+              data-project-name="${project.name}"
+            >
+              <div class="font-medium text-gray-900">
+                ${project.name}
+              </div>
+            </div>
+          `;
+        });
+      });
+      
+      dropdown.innerHTML = html;
+    }
+
+    // Show project dropdown
+    function showProjectDropdown(isEdit = false) {
+      const dropdownId = isEdit ? 'editProjectDropdown' : 'projectDropdown';
+      const dropdown = document.getElementById(dropdownId);
+      if (dropdown) {
+        dropdown.classList.remove('hidden');
+        if (isEdit) {
+          editProjectDropdownOpen = true;
+        } else {
+          projectDropdownOpen = true;
+        }
+      }
+    }
+
+    // Hide project dropdown
+    function hideProjectDropdown(isEdit = false) {
+      const dropdownId = isEdit ? 'editProjectDropdown' : 'projectDropdown';
+      const dropdown = document.getElementById(dropdownId);
+      if (dropdown) {
+        dropdown.classList.add('hidden');
+        if (isEdit) {
+          editProjectDropdownOpen = false;
+        } else {
+          projectDropdownOpen = false;
+        }
+      }
+    }
+
+    // Select project
+    function selectProject(projectId: number, projectName: string, isEdit = false) {
+      const inputId = isEdit ? 'editProjectSelect' : 'projectSelect';
+      const input = document.getElementById(inputId) as HTMLInputElement;
+      
+      if (input) {
+        input.value = projectName;
+      }
+      
+      if (isEdit) {
+        selectedEditProjectId = projectId;
+      } else {
+        selectedProjectId = projectId;
+      }
+      
+      hideProjectDropdown(isEdit);
+    }
+
+    // Load projects on page load
+    loadProjects();
+
+    // Show create collaboration modal
+    function showCreateCollaborationModal() {
+      createCollaborationModal?.classList.remove('hidden');
+    }
+
+    // Hide create collaboration modal
+    function hideCreateCollaborationModal() {
+      createCollaborationModal?.classList.add('hidden');
+      (createCollaborationForm as HTMLFormElement)?.reset();
+    }
+
+    // Show edit collaboration modal
+    function showEditCollaborationModal(teamId: string, teamName: string, teamDescription: string) {
+      (document.getElementById('editCollaborationId') as HTMLInputElement)!.value = teamId;
+      // Set the project input to the current team name (since team name will be the project name)
+      const editInput = document.getElementById('editProjectSelect') as HTMLInputElement;
+      if (editInput) {
+        editInput.value = teamName;
+        // Find the project ID that matches the team name
+        const matchingProject = allProjects.find(project => project.name === teamName);
+        if (matchingProject) {
+          selectedEditProjectId = matchingProject.id;
+        }
+      }
+      (document.getElementById('editCollaborationDescription') as HTMLTextAreaElement)!.value = teamDescription;
+      editCollaborationModal?.classList.remove('hidden');
+    }
+
+    // Hide edit collaboration modal
+    function hideEditCollaborationModal() {
+      editCollaborationModal?.classList.add('hidden');
+      (editCollaborationForm as HTMLFormElement)?.reset();
+    }
+
+    // Event listeners
+    createCollaborationBtn?.addEventListener('click', showCreateCollaborationModal);
+    createFirstCollaborationBtn?.addEventListener('click', showCreateCollaborationModal);
+    cancelCreateCollaboration?.addEventListener('click', hideCreateCollaborationModal);
+    cancelEditCollaboration?.addEventListener('click', hideEditCollaborationModal);
+
+    // Project dropdown event listeners
+    const projectSelect = document.getElementById('projectSelect');
+    const editProjectSelect = document.getElementById('editProjectSelect');
+    const projectDropdown = document.getElementById('projectDropdown');
+    const editProjectDropdown = document.getElementById('editProjectDropdown');
+
+    // Create project dropdown events
+    projectSelect?.addEventListener('focus', () => {
+      showProjectDropdown(false);
+      renderProjectDropdown('', false);
+    });
+
+    projectSelect?.addEventListener('click', () => {
+      showProjectDropdown(false);
+      renderProjectDropdown('', false);
+    });
+
+    projectSelect?.addEventListener('input', (e) => {
+      const searchTerm = (e.target as HTMLInputElement).value;
+      renderProjectDropdown(searchTerm, false);
+      showProjectDropdown(false);
+    });
+
+    // Edit project dropdown events
+    editProjectSelect?.addEventListener('focus', () => {
+      showProjectDropdown(true);
+      renderProjectDropdown('', true);
+    });
+
+    editProjectSelect?.addEventListener('click', () => {
+      showProjectDropdown(true);
+      renderProjectDropdown('', true);
+    });
+
+    editProjectSelect?.addEventListener('input', (e) => {
+      const searchTerm = (e.target as HTMLInputElement).value;
+      renderProjectDropdown(searchTerm, true);
+      showProjectDropdown(true);
+    });
+
+    // Project dropdown click events
+    projectDropdown?.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const projectItem = target.closest('[data-project-id]');
+      if (projectItem) {
+        const projectId = projectItem.getAttribute('data-project-id');
+        const projectName = projectItem.getAttribute('data-project-name');
+        if (projectId && projectName) {
+          selectProject(parseInt(projectId), projectName, false);
+        }
+      }
+    });
+
+    editProjectDropdown?.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const projectItem = target.closest('[data-project-id]');
+      if (projectItem) {
+        const projectId = projectItem.getAttribute('data-project-id');
+        const projectName = projectItem.getAttribute('data-project-name');
+        if (projectId && projectName) {
+          selectProject(parseInt(projectId), projectName, true);
+        }
+      }
+    });
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', (e) => {
+      const target = e.target as Element;
+      if (!target.closest('.relative')) {
+        hideProjectDropdown(false);
+        hideProjectDropdown(true);
+      }
+    });
+
+    // Edit collaboration buttons
+    editCollaborationBtns.forEach(btn => {
+      btn.addEventListener('click', function(this: HTMLElement) {
+        const teamId = this.dataset.teamId;
+        const teamName = this.dataset.teamName;
+        const teamDescription = this.dataset.teamDescription;
+        showEditCollaborationModal(teamId!, teamName!, teamDescription!);
+      });
+    });
+
+    // Delete collaboration buttons
+    deleteCollaborationBtns.forEach(btn => {
+      btn.addEventListener('click', function(this: HTMLElement) {
+        const teamId = this.dataset.teamId;
+        const teamName = this.dataset.teamName;
+        
+        if (confirm(`Are you sure you want to archive the collaboration "${teamName}"? This action can be undone.`)) {
+          deleteCollaboration(teamId!);
+        }
+      });
+    });
+
+    // Close modals when clicking outside
+    createCollaborationModal?.addEventListener('click', function(e) {
+      if (e.target === createCollaborationModal) {
+        hideCreateCollaborationModal();
+      }
+    });
+
+    editCollaborationModal?.addEventListener('click', function(e) {
+      if (e.target === editCollaborationModal) {
+        hideEditCollaborationModal();
+      }
+    });
+
+    // Handle create collaboration form submission
+    createCollaborationForm?.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(createCollaborationForm as HTMLFormElement);
+      const description = formData.get('collaborationDescription');
+      
+      if (!selectedProjectId) {
+        alert('Please select a project');
+        return;
+      }
+
+      const collaborationData = {
+        projectId: selectedProjectId,
+        description: description
+      };
+
+      try {
+        const response = await fetch('/api/collaborations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(collaborationData)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Refresh the page to show the new collaboration
+          window.location.reload();
+        } else {
+          alert('Error creating collaboration: ' + (result.error || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('Error creating collaboration:', error);
+        alert('Error creating collaboration. Please try again.');
+      }
+    });
+
+    // Handle edit collaboration form submission
+    editCollaborationForm?.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(editCollaborationForm as HTMLFormElement);
+      const collaborationId = formData.get('collaborationId');
+      const description = formData.get('collaborationDescription');
+      
+      if (!selectedEditProjectId) {
+        alert('Please select a project');
+        return;
+      }
+
+      const collaborationData = {
+        projectId: selectedEditProjectId,
+        description: description
+      };
+
+      try {
+        const response = await fetch(`/api/collaborations/${collaborationId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(collaborationData)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Refresh the page to show the updated collaboration
+          window.location.reload();
+        } else {
+          alert('Error updating collaboration: ' + (result.error || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('Error updating collaboration:', error);
+        alert('Error updating collaboration. Please try again.');
+      }
+    });
+
+    // Delete collaboration function
+    async function deleteCollaboration(teamId: string) {
+      try {
+        const response = await fetch(`/api/collaborations/${teamId}`, {
+          method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Refresh the page to show the updated list
+          window.location.reload();
+        } else {
+          alert('Error archiving collaboration: ' + (result.error || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('Error archiving collaboration:', error);
+        alert('Error archiving collaboration. Please try again.');
+      }
+    }
+  });
+</script>
