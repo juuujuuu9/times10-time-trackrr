@@ -1,13 +1,13 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db';
-import { teams, teamMembers, projects } from '../../../db/schema';
+import { teams, teamMembers as teamMembersTable, projects } from '../../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getSessionUser } from '../../../utils/session';
 
 // GET /api/collaborations/[id] - Get a specific collaboration
-export const GET: APIRoute = async ({ params, request }) => {
+export const GET: APIRoute = async (context) => {
   try {
-    const collaborationId = parseInt(params.id!);
+    const collaborationId = parseInt(context.params.id!);
     
     if (!collaborationId || isNaN(collaborationId)) {
       return new Response(JSON.stringify({
@@ -20,7 +20,7 @@ export const GET: APIRoute = async ({ params, request }) => {
     }
 
     // Check authentication
-    const currentUser = await getSessionUser(request);
+    const currentUser = await getSessionUser(context);
     if (!currentUser) {
       return new Response(JSON.stringify({
         success: false,
@@ -67,9 +67,13 @@ export const GET: APIRoute = async ({ params, request }) => {
 };
 
 // PUT /api/collaborations/[id] - Update a collaboration
-export const PUT: APIRoute = async ({ params, request }) => {
+export const PUT: APIRoute = async (context) => {
+  let projectId: number | undefined;
+  let description: string | undefined;
+  let teamMembers: number[] = [];
+  
   try {
-    const collaborationId = parseInt(params.id!);
+    const collaborationId = parseInt(context.params.id!);
     
     if (!collaborationId || isNaN(collaborationId)) {
       return new Response(JSON.stringify({
@@ -82,7 +86,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
     }
 
     // Check authentication
-    const currentUser = await getSessionUser(request);
+    const currentUser = await getSessionUser(context);
     if (!currentUser) {
       return new Response(JSON.stringify({
         success: false,
@@ -93,8 +97,8 @@ export const PUT: APIRoute = async ({ params, request }) => {
       });
     }
 
-    const body = await request.json().catch(() => ({}));
-    const { projectId, description } = body;
+    const body = await context.request.json().catch(() => ({}));
+    ({ projectId, description, teamMembers = [] } = body);
 
     // Validate required fields
     if (!projectId || typeof projectId !== 'number') {
@@ -148,6 +152,33 @@ export const PUT: APIRoute = async ({ params, request }) => {
       .where(eq(teams.id, collaborationId))
       .returning();
 
+    // Update team members if provided
+    if (teamMembers && teamMembers.length >= 0) {
+      // Remove all existing team members (except the creator/lead)
+      await db.delete(teamMembersTable).where(
+        and(
+          eq(teamMembersTable.teamId, collaborationId),
+          eq(teamMembersTable.role, 'member')
+        )
+      );
+
+      // Add new team members (exclude the creator to avoid duplicate)
+      if (teamMembers.length > 0) {
+        const filteredTeamMembers = teamMembers.filter(userId => userId !== currentUser.id);
+        
+        if (filteredTeamMembers.length > 0) {
+          const teamMemberInserts = filteredTeamMembers.map((userId: number) => ({
+            teamId: collaborationId,
+            userId: userId,
+            role: 'member',
+            joinedAt: new Date()
+          }));
+          
+          await db.insert(teamMembersTable).values(teamMemberInserts);
+        }
+      }
+    }
+
     return new Response(JSON.stringify({
       success: true,
       data: {
@@ -177,9 +208,9 @@ export const PUT: APIRoute = async ({ params, request }) => {
 };
 
 // DELETE /api/collaborations/[id] - Archive a collaboration
-export const DELETE: APIRoute = async ({ params, request }) => {
+export const DELETE: APIRoute = async (context) => {
   try {
-    const collaborationId = parseInt(params.id!);
+    const collaborationId = parseInt(context.params.id!);
     
     if (!collaborationId || isNaN(collaborationId)) {
       return new Response(JSON.stringify({
@@ -192,7 +223,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     }
 
     // Check authentication
-    const currentUser = await getSessionUser(request);
+    const currentUser = await getSessionUser(context);
     if (!currentUser) {
       return new Response(JSON.stringify({
         success: false,

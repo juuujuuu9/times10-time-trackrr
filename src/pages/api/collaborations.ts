@@ -1,14 +1,14 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../db';
-import { teams, teamMembers, projects, projectTeams } from '../../db/schema';
+import { teams, teamMembers as teamMembersTable, projects, projectTeams } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getSessionUser } from '../../utils/session';
 
 // GET /api/collaborations - Get all collaborations for the current user
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async (context) => {
   try {
     // Check authentication
-    const currentUser = await getSessionUser(request);
+    const currentUser = await getSessionUser(context);
     if (!currentUser) {
       return new Response(JSON.stringify({
         success: false,
@@ -27,13 +27,13 @@ export const GET: APIRoute = async ({ request }) => {
         description: teams.description,
         createdBy: teams.createdBy,
         createdAt: teams.createdAt,
-        userRole: teamMembers.role,
-        joinedAt: teamMembers.joinedAt
+        userRole: teamMembersTable.role,
+        joinedAt: teamMembersTable.joinedAt
       })
       .from(teams)
-      .innerJoin(teamMembers, eq(teamMembers.teamId, teams.id))
+      .innerJoin(teamMembersTable, eq(teamMembersTable.teamId, teams.id))
       .where(and(
-        eq(teamMembers.userId, currentUser.id),
+        eq(teamMembersTable.userId, currentUser.id),
         eq(teams.archived, false)
       ));
 
@@ -58,10 +58,18 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 // POST /api/collaborations - Create a new collaboration
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async (context) => {
+  console.log('=== COLLABORATION API CALLED ===');
+  console.log('Request URL:', context.request.url);
+  console.log('Request method:', context.request.method);
+  
+  let projectId: number | undefined;
+  let description: string | undefined;
+  let teamMembers: number[] = [];
+  
   try {
     // Check authentication
-    const currentUser = await getSessionUser(request);
+    const currentUser = await getSessionUser(context);
     if (!currentUser) {
       return new Response(JSON.stringify({
         success: false,
@@ -72,8 +80,20 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    const body = await request.json().catch(() => ({}));
-    const { projectId, description } = body;
+    const body = await context.request.json().catch((error) => {
+      console.error('Error parsing request body:', error);
+      return {};
+    });
+    
+    console.log('Raw request body:', body);
+    ({ projectId, description, teamMembers = [] } = body);
+    
+    console.log('Creating collaboration with data:', {
+      projectId,
+      description,
+      teamMembers,
+      currentUserId: currentUser.id
+    });
 
     // Validate required fields
     if (!projectId || typeof projectId !== 'number') {
@@ -132,12 +152,38 @@ export const POST: APIRoute = async ({ request }) => {
     const collaborationId = newCollaboration[0].id;
 
     // Add the creator as a collaboration lead
-    await db.insert(teamMembers).values({
+    await db.insert(teamMembersTable).values({
       teamId: collaborationId,
       userId: currentUser.id,
       role: 'lead',
       joinedAt: new Date()
     });
+
+    // Add team members if provided (exclude the creator since they're already added as lead)
+    if (teamMembers && teamMembers.length > 0) {
+      console.log('Adding team members:', teamMembers);
+      
+      // Filter out the creator from team members to avoid duplicate
+      const filteredTeamMembers = teamMembers.filter(userId => userId !== currentUser.id);
+      
+      if (filteredTeamMembers.length > 0) {
+        const teamMemberInserts = filteredTeamMembers.map((userId: number) => ({
+          teamId: collaborationId,
+          userId: userId,
+          role: 'member',
+          joinedAt: new Date()
+        }));
+        
+        console.log('Team member inserts (filtered):', teamMemberInserts);
+        const insertResult = await db.insert(teamMembersTable).values(teamMemberInserts);
+        console.log('Team members insert result:', insertResult);
+        console.log('Team members added successfully');
+      } else {
+        console.log('No additional team members to add (creator already included)');
+      }
+    } else {
+      console.log('No team members to add');
+    }
 
     // Create the project-team assignment
     await db.insert(projectTeams).values({
@@ -164,9 +210,17 @@ export const POST: APIRoute = async ({ request }) => {
 
   } catch (error) {
     console.error('Error creating collaboration:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      projectId,
+      teamMembers,
+      description
+    });
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to create collaboration'
+      error: 'Failed to create collaboration',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

@@ -1,7 +1,7 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { db } from '../../db/index';
-import { teams, teamMembers, users } from '../../db/schema';
+import { teams, teamMembers as teamMembersTable, users } from '../../db/schema';
 import { eq, and, count, desc } from 'drizzle-orm';
 import { getSessionUser } from '../../utils/session';
 
@@ -11,8 +11,8 @@ if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'devel
   return Astro.redirect('/login');
 }
 
-// Get all teams with member counts
-const allTeams = await db
+// Get all teams
+const teamsData = await db
   .select({
     id: teams.id,
     name: teams.name,
@@ -20,14 +20,35 @@ const allTeams = await db
     createdBy: teams.createdBy,
     createdAt: teams.createdAt,
     updatedAt: teams.updatedAt,
-    archived: teams.archived,
-    memberCount: count(teamMembers.userId)
+    archived: teams.archived
   })
   .from(teams)
-  .leftJoin(teamMembers, eq(teams.id, teamMembers.teamId))
   .where(eq(teams.archived, false))
-  .groupBy(teams.id)
   .orderBy(desc(teams.createdAt));
+
+// Get member counts for each team
+const memberCounts = await db
+  .select({
+    teamId: teamMembersTable.teamId,
+    memberCount: count(teamMembersTable.userId)
+  })
+  .from(teamMembersTable)
+  .groupBy(teamMembersTable.teamId);
+
+// Create a map of team ID to member count
+const memberCountMap = new Map();
+memberCounts.forEach(mc => {
+  memberCountMap.set(mc.teamId, mc.memberCount);
+});
+
+// Add member counts to teams
+const allTeams = teamsData.map(team => ({
+  ...team,
+  memberCount: memberCountMap.get(team.id) || 0
+}));
+
+console.log('Teams with member counts:', allTeams);
+console.log('Member count map:', memberCountMap);
 
 // Get team creators
 const teamCreators = await db
@@ -284,6 +305,46 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
                 placeholder="Describe what this collaboration does"
               ></textarea>
             </div>
+            
+            <div class="relative">
+              <label for="teamMembersSelect" class="block text-sm font-medium text-gray-700 mb-1">Add Team Members (Optional)</label>
+              <div class="relative">
+                <input
+                  type="text"
+                  id="teamMembersSelect"
+                  placeholder="🔍 Search users..."
+                  autocomplete="off"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500"
+                />
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                  <svg class="fill-current h-5 w-5 transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                  </svg>
+                </div>
+              </div>
+              
+              <!-- User Dropdown -->
+              <div 
+                id="userDropdown"
+                class="absolute z-50 w-full bg-white border border-gray-300 rounded-lg shadow-lg overflow-hidden hidden" 
+                style={{ 
+                  top: '100%', 
+                  left: 0, 
+                  maxHeight: '240px',
+                  overflowY: 'auto'
+                }}
+              >
+                <div class="px-4 py-2 text-gray-500 text-sm">
+                  Loading users...
+                </div>
+              </div>
+              
+              <!-- Selected Users List -->
+              <div id="selectedUsersList" class="mt-2 space-y-2 hidden">
+                <div class="text-sm font-medium text-gray-700">Selected Team Members:</div>
+                <div id="selectedUsers" class="space-y-1"></div>
+              </div>
+            </div>
           </div>
           <div class="flex justify-end space-x-3 mt-6">
             <button 
@@ -364,6 +425,46 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
                 placeholder="Describe what this collaboration does"
               ></textarea>
             </div>
+            
+            <div class="relative">
+              <label for="editTeamMembersSelect" class="block text-sm font-medium text-gray-700 mb-1">Add Team Members (Optional)</label>
+              <div class="relative">
+                <input
+                  type="text"
+                  id="editTeamMembersSelect"
+                  placeholder="🔍 Search users..."
+                  autocomplete="off"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500"
+                />
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                  <svg class="fill-current h-5 w-5 transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                  </svg>
+                </div>
+              </div>
+              
+              <!-- Edit User Dropdown -->
+              <div 
+                id="editUserDropdown"
+                class="absolute z-50 w-full bg-white border border-gray-300 rounded-lg shadow-lg overflow-hidden hidden" 
+                style={{ 
+                  top: '100%', 
+                  left: 0, 
+                  maxHeight: '240px',
+                  overflowY: 'auto'
+                }}
+              >
+                <div class="px-4 py-2 text-gray-500 text-sm">
+                  Loading users...
+                </div>
+              </div>
+              
+              <!-- Edit Selected Users List -->
+              <div id="editSelectedUsersList" class="mt-2 space-y-2 hidden">
+                <div class="text-sm font-medium text-gray-700">Selected Team Members:</div>
+                <div id="editSelectedUsers" class="space-y-1"></div>
+              </div>
+            </div>
           </div>
           <div class="flex justify-end space-x-3 mt-6">
             <button 
@@ -412,6 +513,12 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
     let selectedEditProjectId: number | null = null;
     let projectDropdownOpen = false;
     let editProjectDropdownOpen = false;
+    
+    // State for user selection
+    let selectedUsers: any[] = [];
+    let selectedEditUsers: any[] = [];
+    let userDropdownOpen = false;
+    let editUserDropdownOpen = false;
 
     // Load projects into dropdowns
     async function loadProjects() {
@@ -510,6 +617,7 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
               class="pl-8 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
               data-project-id="${project.id}"
               data-project-name="${project.name}"
+              data-client-name="${clientName}"
             >
               <div class="font-medium text-gray-900">
                 ${project.name}
@@ -551,12 +659,12 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
     }
 
     // Select project
-    function selectProject(projectId: number, projectName: string, isEdit = false) {
+    function selectProject(projectId: number, projectName: string, clientName: string, isEdit = false) {
       const inputId = isEdit ? 'editProjectSelect' : 'projectSelect';
       const input = document.getElementById(inputId) as HTMLInputElement;
       
       if (input) {
-        input.value = projectName;
+        input.value = `${clientName} - ${projectName}`;
       }
       
       if (isEdit) {
@@ -571,6 +679,167 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
     // Load projects on page load
     loadProjects();
 
+    // User search and selection functions
+    async function searchUsers(searchTerm: string, isEdit = false) {
+      try {
+        const response = await fetch(`/api/admin/users/search?q=${encodeURIComponent(searchTerm)}&activeOnly=true&limit=20`);
+        const users = await response.json();
+        return users;
+      } catch (error) {
+        console.error('Error searching users:', error);
+        return [];
+      }
+    }
+
+    // Render user dropdown
+    function renderUserDropdown(users: any[], isEdit = false) {
+      const dropdownId = isEdit ? 'editUserDropdown' : 'userDropdown';
+      const dropdown = document.getElementById(dropdownId);
+      
+      if (!dropdown) return;
+      
+      if (users.length === 0) {
+        dropdown.innerHTML = '<div class="px-4 py-2 text-gray-500 text-sm">No users found</div>';
+        return;
+      }
+      
+      let html = '';
+      users.forEach((user: any) => {
+        const isSelected = isEdit ? 
+          selectedEditUsers.some(selected => selected.id === user.id) :
+          selectedUsers.some(selected => selected.id === user.id);
+        
+        if (!isSelected) {
+          html += `
+            <div
+              class="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
+              data-user-id="${user.id}"
+              data-user-name="${user.name}"
+              data-user-email="${user.email}"
+            >
+              <div class="font-medium text-gray-900">${user.name}</div>
+              <div class="text-xs text-gray-500">${user.email}</div>
+            </div>
+          `;
+        }
+      });
+      
+      dropdown.innerHTML = html;
+    }
+
+    // Show user dropdown
+    function showUserDropdown(isEdit = false) {
+      const dropdownId = isEdit ? 'editUserDropdown' : 'userDropdown';
+      const dropdown = document.getElementById(dropdownId);
+      if (dropdown) {
+        dropdown.classList.remove('hidden');
+        if (isEdit) {
+          editUserDropdownOpen = true;
+        } else {
+          userDropdownOpen = true;
+        }
+      }
+    }
+
+    // Hide user dropdown
+    function hideUserDropdown(isEdit = false) {
+      const dropdownId = isEdit ? 'editUserDropdown' : 'userDropdown';
+      const dropdown = document.getElementById(dropdownId);
+      if (dropdown) {
+        dropdown.classList.add('hidden');
+        if (isEdit) {
+          editUserDropdownOpen = false;
+        } else {
+          userDropdownOpen = false;
+        }
+      }
+    }
+
+    // Select user
+    function selectUser(userId: number, userName: string, userEmail: string, isEdit = false) {
+      const inputId = isEdit ? 'editTeamMembersSelect' : 'teamMembersSelect';
+      const input = document.getElementById(inputId) as HTMLInputElement;
+      
+      if (input) {
+        input.value = '';
+      }
+      
+      const user = { id: userId, name: userName, email: userEmail };
+      
+      if (isEdit) {
+        if (!selectedEditUsers.some(u => u.id === userId)) {
+          selectedEditUsers.push(user);
+        }
+        renderSelectedUsers(true);
+      } else {
+        if (!selectedUsers.some(u => u.id === userId)) {
+          selectedUsers.push(user);
+        }
+        renderSelectedUsers(false);
+      }
+      
+      hideUserDropdown(isEdit);
+    }
+
+    // Remove user
+    function removeUser(userId: number, isEdit = false) {
+      if (isEdit) {
+        selectedEditUsers = selectedEditUsers.filter(u => u.id !== userId);
+        renderSelectedUsers(true);
+      } else {
+        selectedUsers = selectedUsers.filter(u => u.id !== userId);
+        renderSelectedUsers(false);
+      }
+    }
+
+    // Render selected users
+    function renderSelectedUsers(isEdit = false) {
+      const users = isEdit ? selectedEditUsers : selectedUsers;
+      const containerId = isEdit ? 'editSelectedUsers' : 'selectedUsers';
+      const listId = isEdit ? 'editSelectedUsersList' : 'selectedUsersList';
+      const container = document.getElementById(containerId);
+      const list = document.getElementById(listId);
+      
+      if (!container || !list) return;
+      
+      if (users.length === 0) {
+        list.classList.add('hidden');
+        return;
+      }
+      
+      list.classList.remove('hidden');
+      
+      let html = '';
+      users.forEach((user: any) => {
+        html += `
+          <div class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+            <div class="flex items-center">
+              <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-3">
+                <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+              </div>
+              <div>
+                <div class="text-sm font-medium text-gray-900">${user.name}</div>
+                <div class="text-xs text-gray-500">${user.email}</div>
+              </div>
+            </div>
+            <button 
+              type="button"
+              class="text-gray-400 hover:text-red-500 transition-colors"
+              onclick="removeUser(${user.id}, ${isEdit})"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        `;
+      });
+      
+      container.innerHTML = html;
+    }
+
     // Show create collaboration modal
     function showCreateCollaborationModal() {
       createCollaborationModal?.classList.remove('hidden');
@@ -580,6 +849,9 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
     function hideCreateCollaborationModal() {
       createCollaborationModal?.classList.add('hidden');
       (createCollaborationForm as HTMLFormElement)?.reset();
+      selectedUsers = [];
+      selectedProjectId = null;
+      renderSelectedUsers(false);
     }
 
     // Show edit collaboration modal
@@ -588,11 +860,13 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
       // Set the project input to the current team name (since team name will be the project name)
       const editInput = document.getElementById('editProjectSelect') as HTMLInputElement;
       if (editInput) {
-        editInput.value = teamName;
         // Find the project ID that matches the team name
         const matchingProject = allProjects.find(project => project.name === teamName);
         if (matchingProject) {
           selectedEditProjectId = matchingProject.id;
+          editInput.value = `${matchingProject.clientName} - ${matchingProject.name}`;
+        } else {
+          editInput.value = teamName;
         }
       }
       (document.getElementById('editCollaborationDescription') as HTMLTextAreaElement)!.value = teamDescription;
@@ -603,6 +877,9 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
     function hideEditCollaborationModal() {
       editCollaborationModal?.classList.add('hidden');
       (editCollaborationForm as HTMLFormElement)?.reset();
+      selectedEditUsers = [];
+      selectedEditProjectId = null;
+      renderSelectedUsers(true);
     }
 
     // Event listeners
@@ -658,8 +935,9 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
       if (projectItem) {
         const projectId = projectItem.getAttribute('data-project-id');
         const projectName = projectItem.getAttribute('data-project-name');
-        if (projectId && projectName) {
-          selectProject(parseInt(projectId), projectName, false);
+        const clientName = projectItem.getAttribute('data-client-name');
+        if (projectId && projectName && clientName) {
+          selectProject(parseInt(projectId), projectName, clientName, false);
         }
       }
     });
@@ -670,8 +948,82 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
       if (projectItem) {
         const projectId = projectItem.getAttribute('data-project-id');
         const projectName = projectItem.getAttribute('data-project-name');
-        if (projectId && projectName) {
-          selectProject(parseInt(projectId), projectName, true);
+        const clientName = projectItem.getAttribute('data-client-name');
+        if (projectId && projectName && clientName) {
+          selectProject(parseInt(projectId), projectName, clientName, true);
+        }
+      }
+    });
+
+    // User search event listeners
+    const teamMembersSelect = document.getElementById('teamMembersSelect');
+    const editTeamMembersSelect = document.getElementById('editTeamMembersSelect');
+    const userDropdown = document.getElementById('userDropdown');
+    const editUserDropdown = document.getElementById('editUserDropdown');
+
+    // Create user dropdown events
+    teamMembersSelect?.addEventListener('focus', async () => {
+      showUserDropdown(false);
+      const users = await searchUsers('', false);
+      renderUserDropdown(users, false);
+    });
+
+    teamMembersSelect?.addEventListener('click', async () => {
+      showUserDropdown(false);
+      const users = await searchUsers('', false);
+      renderUserDropdown(users, false);
+    });
+
+    teamMembersSelect?.addEventListener('input', async (e) => {
+      const searchTerm = (e.target as HTMLInputElement).value;
+      const users = await searchUsers(searchTerm, false);
+      renderUserDropdown(users, false);
+      showUserDropdown(false);
+    });
+
+    // Edit user dropdown events
+    editTeamMembersSelect?.addEventListener('focus', async () => {
+      showUserDropdown(true);
+      const users = await searchUsers('', true);
+      renderUserDropdown(users, true);
+    });
+
+    editTeamMembersSelect?.addEventListener('click', async () => {
+      showUserDropdown(true);
+      const users = await searchUsers('', true);
+      renderUserDropdown(users, true);
+    });
+
+    editTeamMembersSelect?.addEventListener('input', async (e) => {
+      const searchTerm = (e.target as HTMLInputElement).value;
+      const users = await searchUsers(searchTerm, true);
+      renderUserDropdown(users, true);
+      showUserDropdown(true);
+    });
+
+    // User dropdown click events
+    userDropdown?.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const userItem = target.closest('[data-user-id]');
+      if (userItem) {
+        const userId = userItem.getAttribute('data-user-id');
+        const userName = userItem.getAttribute('data-user-name');
+        const userEmail = userItem.getAttribute('data-user-email');
+        if (userId && userName && userEmail) {
+          selectUser(parseInt(userId), userName, userEmail, false);
+        }
+      }
+    });
+
+    editUserDropdown?.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const userItem = target.closest('[data-user-id]');
+      if (userItem) {
+        const userId = userItem.getAttribute('data-user-id');
+        const userName = userItem.getAttribute('data-user-name');
+        const userEmail = userItem.getAttribute('data-user-email');
+        if (userId && userName && userEmail) {
+          selectUser(parseInt(userId), userName, userEmail, true);
         }
       }
     });
@@ -682,6 +1034,8 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
       if (!target.closest('.relative')) {
         hideProjectDropdown(false);
         hideProjectDropdown(true);
+        hideUserDropdown(false);
+        hideUserDropdown(true);
       }
     });
 
@@ -734,8 +1088,12 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
 
       const collaborationData = {
         projectId: selectedProjectId,
-        description: description
+        description: description,
+        teamMembers: selectedUsers.map(user => user.id)
       };
+      
+      console.log('Sending collaboration data:', collaborationData);
+      console.log('Selected users:', selectedUsers);
 
       try {
         const response = await fetch('/api/collaborations', {
@@ -752,7 +1110,13 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
           // Refresh the page to show the new collaboration
           window.location.reload();
         } else {
-          alert('Error creating collaboration: ' + (result.error || 'Unknown error'));
+          // Check if it's a duplicate key error (collaboration was actually created)
+          if (result.error && result.error.includes('duplicate key')) {
+            console.log('Collaboration created successfully (duplicate key error ignored)');
+            window.location.reload();
+          } else {
+            alert('Error creating collaboration: ' + (result.error || 'Unknown error'));
+          }
         }
       } catch (error) {
         console.error('Error creating collaboration:', error);
@@ -775,7 +1139,8 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
 
       const collaborationData = {
         projectId: selectedEditProjectId,
-        description: description
+        description: description,
+        teamMembers: selectedEditUsers.map(user => user.id)
       };
 
       try {
@@ -793,7 +1158,13 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]
           // Refresh the page to show the updated collaboration
           window.location.reload();
         } else {
-          alert('Error updating collaboration: ' + (result.error || 'Unknown error'));
+          // Check if it's a duplicate key error (collaboration was actually updated)
+          if (result.error && result.error.includes('duplicate key')) {
+            console.log('Collaboration updated successfully (duplicate key error ignored)');
+            window.location.reload();
+          } else {
+            alert('Error updating collaboration: ' + (result.error || 'Unknown error'));
+          }
         }
       } catch (error) {
         console.error('Error updating collaboration:', error);
