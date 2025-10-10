@@ -145,6 +145,101 @@ export const userTaskLists = pgTable('user_task_lists', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// Collaborative Features Tables
+
+// Teams table for grouping users
+export const teams = pgTable('teams', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  createdBy: integer('created_by').references(() => users.id).notNull(),
+  archived: boolean('archived').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Team memberships
+export const teamMembers = pgTable('team_members', {
+  teamId: integer('team_id').references(() => teams.id).notNull(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  role: varchar('role', { length: 50 }).notNull().default('member'), // 'lead', 'member'
+  joinedAt: timestamp('joined_at').defaultNow().notNull(),
+}, (table) => ({
+  pk: primaryKey(table.teamId, table.userId),
+}));
+
+// Task collaboration enhancements
+export const taskCollaborations = pgTable('task_collaborations', {
+  id: serial('id').primaryKey(),
+  taskId: integer('task_id').references(() => tasks.id).notNull(),
+  teamId: integer('team_id').references(() => teams.id).notNull(),
+  createdBy: integer('created_by').references(() => users.id).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Task discussions/comments
+export const taskDiscussions = pgTable('task_discussions', {
+  id: serial('id').primaryKey(),
+  taskId: integer('task_id').references(() => tasks.id).notNull(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  content: text('content').notNull(),
+  parentId: integer('parent_id').references(() => taskDiscussions.id), // For replies
+  archived: boolean('archived').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Task files/attachments
+export const taskFiles = pgTable('task_files', {
+  id: serial('id').primaryKey(),
+  taskId: integer('task_id').references(() => tasks.id).notNull(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  filename: varchar('filename', { length: 255 }).notNull(),
+  filePath: varchar('file_path', { length: 500 }).notNull(),
+  fileSize: integer('file_size'),
+  mimeType: varchar('mime_type', { length: 100 }),
+  archived: boolean('archived').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Task links/resources
+export const taskLinks = pgTable('task_links', {
+  id: serial('id').primaryKey(),
+  taskId: integer('task_id').references(() => tasks.id).notNull(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  url: varchar('url', { length: 500 }).notNull(),
+  description: text('description'),
+  archived: boolean('archived').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Task notes (enhanced from current notes)
+export const taskNotes = pgTable('task_notes', {
+  id: serial('id').primaryKey(),
+  taskId: integer('task_id').references(() => tasks.id).notNull(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  title: varchar('title', { length: 255 }),
+  content: text('content').notNull(),
+  isPrivate: boolean('is_private').notNull().default(false),
+  archived: boolean('archived').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Notifications for collaboration
+export const notifications = pgTable('notifications', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  type: varchar('type', { length: 50 }).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  message: text('message').notNull(),
+  relatedId: integer('related_id'),
+  relatedType: varchar('related_type', { length: 50 }),
+  read: boolean('read').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
@@ -155,6 +250,14 @@ export const usersRelations = relations(users, ({ many }) => ({
   slackUsers: many(slackUsers),
   passwordResetTokens: many(passwordResetTokens),
   userTaskLists: many(userTaskLists),
+  teams: many(teams),
+  teamMemberships: many(teamMembers),
+  taskCollaborations: many(taskCollaborations),
+  taskDiscussions: many(taskDiscussions),
+  taskFiles: many(taskFiles),
+  taskLinks: many(taskLinks),
+  taskNotes: many(taskNotes),
+  notifications: many(notifications),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -187,6 +290,11 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
     references: [projects.id],
   }),
   taskAssignments: many(taskAssignments),
+  taskCollaborations: many(taskCollaborations),
+  taskDiscussions: many(taskDiscussions),
+  taskFiles: many(taskFiles),
+  taskLinks: many(taskLinks),
+  taskNotes: many(taskNotes),
 }));
 
 export const taskAssignmentsRelations = relations(taskAssignments, ({ one }) => ({
@@ -237,5 +345,98 @@ export const userTaskListsRelations = relations(userTaskLists, ({ one }) => ({
   task: one(tasks, {
     fields: [userTaskLists.taskId],
     references: [tasks.id],
+  }),
+}));
+
+// Collaborative Features Relations
+
+export const teamsRelations = relations(teams, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [teams.createdBy],
+    references: [users.id],
+  }),
+  members: many(teamMembers),
+  taskCollaborations: many(taskCollaborations),
+}));
+
+export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
+  team: one(teams, {
+    fields: [teamMembers.teamId],
+    references: [teams.id],
+  }),
+  user: one(users, {
+    fields: [teamMembers.userId],
+    references: [users.id],
+  }),
+}));
+
+export const taskCollaborationsRelations = relations(taskCollaborations, ({ one }) => ({
+  task: one(tasks, {
+    fields: [taskCollaborations.taskId],
+    references: [tasks.id],
+  }),
+  team: one(teams, {
+    fields: [taskCollaborations.teamId],
+    references: [teams.id],
+  }),
+  creator: one(users, {
+    fields: [taskCollaborations.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const taskDiscussionsRelations = relations(taskDiscussions, ({ one, many }) => ({
+  task: one(tasks, {
+    fields: [taskDiscussions.taskId],
+    references: [tasks.id],
+  }),
+  user: one(users, {
+    fields: [taskDiscussions.userId],
+    references: [users.id],
+  }),
+  parent: one(taskDiscussions, {
+    fields: [taskDiscussions.parentId],
+    references: [taskDiscussions.id],
+  }),
+  replies: many(taskDiscussions),
+}));
+
+export const taskFilesRelations = relations(taskFiles, ({ one }) => ({
+  task: one(tasks, {
+    fields: [taskFiles.taskId],
+    references: [tasks.id],
+  }),
+  user: one(users, {
+    fields: [taskFiles.userId],
+    references: [users.id],
+  }),
+}));
+
+export const taskLinksRelations = relations(taskLinks, ({ one }) => ({
+  task: one(tasks, {
+    fields: [taskLinks.taskId],
+    references: [tasks.id],
+  }),
+  user: one(users, {
+    fields: [taskLinks.userId],
+    references: [users.id],
+  }),
+}));
+
+export const taskNotesRelations = relations(taskNotes, ({ one }) => ({
+  task: one(tasks, {
+    fields: [taskNotes.taskId],
+    references: [tasks.id],
+  }),
+  user: one(users, {
+    fields: [taskNotes.userId],
+    references: [users.id],
+  }),
+}));
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
   }),
 }));

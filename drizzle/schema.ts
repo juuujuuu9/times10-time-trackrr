@@ -175,3 +175,177 @@ export const taskAssignments = pgTable("task_assignments", {
 		}),
 	primaryKey({ columns: [table.taskId, table.userId], name: "task_assignments_task_id_user_id_pk"}),
 ]);
+
+// Collaborative Features Tables
+
+export const teams = pgTable("teams", {
+	id: serial().primaryKey().notNull(),
+	name: varchar({ length: 255 }).notNull(),
+	description: text(),
+	createdBy: integer("created_by").notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
+	archived: boolean().default(false).notNull(),
+}, (table) => [
+	foreignKey({
+			columns: [table.createdBy],
+			foreignColumns: [users.id],
+			name: "teams_created_by_users_id_fk"
+		}),
+]);
+
+export const teamMembers = pgTable("team_members", {
+	teamId: integer("team_id").notNull(),
+	userId: integer("user_id").notNull(),
+	role: varchar({ length: 50 }).default('member').notNull(),
+	joinedAt: timestamp("joined_at", { mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	foreignKey({
+			columns: [table.teamId],
+			foreignColumns: [teams.id],
+			name: "team_members_team_id_teams_id_fk"
+		}),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.id],
+			name: "team_members_user_id_users_id_fk"
+		}),
+	primaryKey({ columns: [table.teamId, table.userId], name: "team_members_team_id_user_id_pk"}),
+]);
+
+export const taskCollaborations = pgTable("task_collaborations", {
+	id: serial().primaryKey().notNull(),
+	taskId: integer("task_id").notNull(),
+	teamId: integer("team_id").notNull(),
+	createdBy: integer("created_by").notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	foreignKey({
+			columns: [table.taskId],
+			foreignColumns: [tasks.id],
+			name: "task_collaborations_task_id_tasks_id_fk"
+		}),
+	foreignKey({
+			columns: [table.teamId],
+			foreignColumns: [teams.id],
+			name: "task_collaborations_team_id_teams_id_fk"
+		}),
+	foreignKey({
+			columns: [table.createdBy],
+			foreignColumns: [users.id],
+			name: "task_collaborations_created_by_users_id_fk"
+		}),
+]);
+
+export const taskDiscussions = pgTable("task_discussions", {
+	id: serial().primaryKey().notNull(),
+	taskId: integer("task_id").notNull(),
+	userId: integer("user_id").notNull(),
+	content: text().notNull(),
+	parentId: integer("parent_id"),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
+	archived: boolean().default(false).notNull(),
+}, (table) => [
+	foreignKey({
+			columns: [table.taskId],
+			foreignColumns: [tasks.id],
+			name: "task_discussions_task_id_tasks_id_fk"
+		}),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.id],
+			name: "task_discussions_user_id_users_id_fk"
+		}),
+	foreignKey({
+			columns: [table.parentId],
+			foreignColumns: [table.id],
+			name: "task_discussions_parent_id_task_discussions_id_fk"
+		}),
+]);
+
+export const taskFiles = pgTable("task_files", {
+	id: serial().primaryKey().notNull(),
+	taskId: integer("task_id").notNull(),
+	userId: integer("user_id").notNull(),
+	filename: varchar({ length: 255 }).notNull(),
+	filePath: varchar("file_path", { length: 500 }).notNull(),
+	fileSize: integer("file_size"),
+	mimeType: varchar("mime_type", { length: 100 }),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	archived: boolean().default(false).notNull(),
+}, (table) => [
+	foreignKey({
+			columns: [table.taskId],
+			foreignColumns: [tasks.id],
+			name: "task_files_task_id_tasks_id_fk"
+		}),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.id],
+			name: "task_files_user_id_users_id_fk"
+		}),
+]);
+
+export const taskLinks = pgTable("task_links", {
+	id: serial().primaryKey().notNull(),
+	taskId: integer("task_id").notNull(),
+	userId: integer("user_id").notNull(),
+	title: varchar({ length: 255 }).notNull(),
+	url: varchar({ length: 500 }).notNull(),
+	description: text(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	archived: boolean().default(false).notNull(),
+}, (table) => [
+	foreignKey({
+			columns: [table.taskId],
+			foreignColumns: [tasks.id],
+			name: "task_links_task_id_tasks_id_fk"
+		}),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.id],
+			name: "task_links_user_id_users_id_fk"
+		}),
+]);
+
+export const taskNotes = pgTable("task_notes", {
+	id: serial().primaryKey().notNull(),
+	taskId: integer("task_id").notNull(),
+	userId: integer("user_id").notNull(),
+	title: varchar({ length: 255 }),
+	content: text().notNull(),
+	isPrivate: boolean("is_private").default(false).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
+	archived: boolean().default(false).notNull(),
+}, (table) => [
+	foreignKey({
+			columns: [table.taskId],
+			foreignColumns: [tasks.id],
+			name: "task_notes_task_id_tasks_id_fk"
+		}),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.id],
+			name: "task_notes_user_id_users_id_fk"
+		}),
+]);
+
+export const notifications = pgTable("notifications", {
+	id: serial().primaryKey().notNull(),
+	userId: integer("user_id").notNull(),
+	type: varchar({ length: 50 }).notNull(),
+	title: varchar({ length: 255 }).notNull(),
+	message: text().notNull(),
+	relatedId: integer("related_id"),
+	relatedType: varchar("related_type", { length: 50 }),
+	read: boolean().default(false).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.id],
+			name: "notifications_user_id_users_id_fk"
+		}),
+]);
