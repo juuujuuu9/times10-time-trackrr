@@ -1,12 +1,17 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../../db/index';
 import { projects, tasks, timeEntries } from '../../../../db/schema';
-import { eq, count, sql } from 'drizzle-orm';
+import { eq, count, sql, and, gte, lt } from 'drizzle-orm';
 
 export const prerender = false;
 
 export const GET: APIRoute = async () => {
   try {
+    // Get current month date range
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
     // Get all projects
     const allProjects = await db
       .select({
@@ -25,16 +30,26 @@ export const GET: APIRoute = async () => {
         
         const taskCount = taskCountResult[0]?.count || 0;
         
-        // Get total hours
+        // Get total hours for current month using projectId directly
         const timeEntriesResult = await db
           .select({
             durationManual: timeEntries.durationManual,
             startTime: timeEntries.startTime,
             endTime: timeEntries.endTime,
+            createdAt: timeEntries.createdAt,
           })
           .from(timeEntries)
-          .leftJoin(tasks, eq(timeEntries.taskId, tasks.id))
-          .where(eq(tasks.projectId, project.id));
+          .where(
+            and(
+              eq(timeEntries.projectId, project.id),
+              // Filter by current month - check both startTime and createdAt for manual entries
+              sql`(
+                (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startOfMonth} AND ${timeEntries.startTime} <= ${endOfMonth})
+                OR 
+                (${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${startOfMonth} AND ${timeEntries.createdAt} <= ${endOfMonth})
+              )`
+            )
+          );
         
         const totalHours = timeEntriesResult.reduce((sum, entry) => {
           if (entry.durationManual) {

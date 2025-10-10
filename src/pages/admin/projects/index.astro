@@ -2,7 +2,7 @@
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { db } from '../../../db/index';
 import { projects, clients, tasks, timeEntries } from '../../../db/schema';
-import { count, sql, eq } from 'drizzle-orm';
+import { count, sql, eq, and } from 'drizzle-orm';
 
 // Get all projects with client info - simplified to avoid database issues
 const allProjects = await db
@@ -174,7 +174,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                     Project Name
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Total Hours
+                    This Month
                   </th>
                   <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
                     Actions
@@ -824,6 +824,9 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
           filterProjects();
         });
       }
+
+      // Apply initial filtering on page load
+      filterProjects();
 
       // Function to filter projects based on current settings
       function filterProjects() {

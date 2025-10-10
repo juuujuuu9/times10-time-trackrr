@@ -25,7 +25,6 @@ class AdminRealTimeUpdates {
     if (path.includes('/admin/dashboard') || path === '/admin') return 'dashboard';
     if (path.includes('/admin/tasks')) return 'tasks';
     if (path.includes('/admin/projects')) return 'projects';
-    if (path.includes('/admin/clients')) return 'clients';
     if (path.includes('/admin/users')) return 'users';
     return 'other';
   }
