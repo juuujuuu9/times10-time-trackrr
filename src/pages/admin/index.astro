@@ -203,6 +203,20 @@ const activeTeamMembersResult = await db
     sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
   ));
 
+// Get active projects (projects with time entries, with all filters applied)
+const activeProjectsResult = await db
+  .select({
+    count: count(sql`DISTINCT ${timeEntries.projectId}`)
+  })
+  .from(timeEntries)
+  .innerJoin(projects, eq(timeEntries.projectId, projects.id))
+  .innerJoin(clients, eq(projects.clientId, clients.id))
+  .where(and(
+    dateFilter,
+    // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
+    sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
+  ));
+
 // Get data based on project/client selection
 const teamMemberId = selectedTeamMember !== 'all' ? parseInt(selectedTeamMember) : undefined;
 let projectCosts: Array<{
@@ -267,6 +281,7 @@ try {
 const totalHours = totalHoursResult[0]?.totalSeconds || 0;
 const totalCost = totalCostResult[0]?.totalCost || 0;
 const activeTeamMembers = activeTeamMembersResult[0]?.count || 0;
+const activeProjects = activeProjectsResult[0]?.count || 0;
 
 // Format duration
 const formatDuration = (seconds: number) => {
@@ -513,6 +528,12 @@ try {
             <div class="text-left p-3 bg-gray-50 rounded border border-gray-200">
               <div class="text-lg font-semibold text-gray-900">{activeTeamMembers}</div>
               <div class="text-xs text-gray-600">Active Team Members</div>
+            </div>
+
+            <!-- Active Projects -->
+            <div class="text-left p-3 bg-gray-50 rounded border border-gray-200">
+              <div class="text-lg font-semibold text-gray-900">{activeProjects}</div>
+              <div class="text-xs text-gray-600">Active Projects</div>
             </div>
 
             <!-- Average Hours per Member -->
