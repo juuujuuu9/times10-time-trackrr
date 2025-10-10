@@ -1175,10 +1175,20 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
           const rows = section.querySelectorAll('tbody tr');
           let hasVisibleProjects = false;
           
+          // Get the client name from the h3 element
+          const clientNameElement = section.querySelector('h3');
+          const clientName = clientNameElement?.textContent?.toLowerCase() || '';
+          
+          // Check if client name matches search term
+          const clientMatches = clientName.includes(searchTerm);
+          
           rows.forEach(row => {
             const firstCell = row.querySelector('td:first-child');
             const projectName = firstCell?.textContent?.toLowerCase() || '';
-            const isVisible = projectName.includes(searchTerm);
+            const projectMatches = projectName.includes(searchTerm);
+            
+            // Show row if either client name or project name matches
+            const isVisible = clientMatches || projectMatches;
             (row as HTMLElement).style.display = isVisible ? '' : 'none';
             
             if (isVisible) {

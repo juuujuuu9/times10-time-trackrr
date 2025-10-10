@@ -158,13 +158,22 @@ const user = await requireRole('admin', '/admin')(Astro) as any;
                 Account Actions
               </label>
               <div class="space-y-3">
-                <button class="w-full px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg transition-colors">
+                <button 
+                  id="changePasswordBtn"
+                  class="w-full px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg transition-colors"
+                >
                   🔐 Change Password
                 </button>
-                <button class="w-full px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg transition-colors">
+                <button 
+                  id="updateEmailBtn"
+                  class="w-full px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg transition-colors"
+                >
                   📧 Update Email
                 </button>
-                <button class="w-full px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg transition-colors">
+                <button 
+                  id="editProfileBtn"
+                  class="w-full px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg transition-colors"
+                >
                   👤 Edit Profile
                 </button>
               </div>
@@ -530,6 +539,204 @@ const user = await requireRole('admin', '/admin')(Astro) as any;
     </div>
   </div>
 
+  <!-- Profile Edit Modal -->
+  <div id="profileEditModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="bg-white rounded-xl shadow-xl max-w-md w-full">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900">Edit Profile</h3>
+            <button id="closeProfileModal" class="text-gray-400 hover:text-gray-600">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <form id="profileEditForm" class="p-6">
+          <div class="space-y-4">
+            <div>
+              <label for="editName" class="block text-sm font-semibold text-gray-700 mb-2">
+                Full Name
+              </label>
+              <input
+                type="text"
+                id="editName"
+                value={user?.name || ''}
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent transition-all duration-200"
+                placeholder="Enter your full name"
+              />
+            </div>
+            <div>
+              <label for="editEmail" class="block text-sm font-semibold text-gray-700 mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                id="editEmail"
+                value={user?.email || ''}
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent transition-all duration-200"
+                placeholder="Enter your email"
+              />
+            </div>
+          </div>
+          <div class="flex justify-end space-x-3 mt-6">
+            <button
+              type="button"
+              id="cancelProfileEdit"
+              class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Password Change Modal -->
+  <div id="passwordChangeModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="bg-white rounded-xl shadow-xl max-w-md w-full">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900">Change Password</h3>
+            <button id="closePasswordModal" class="text-gray-400 hover:text-gray-600">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <form id="passwordChangeForm" class="p-6">
+          <div class="space-y-4">
+            <div>
+              <label for="currentPassword" class="block text-sm font-semibold text-gray-700 mb-2">
+                Current Password
+              </label>
+              <input
+                type="password"
+                id="currentPassword"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent transition-all duration-200"
+                placeholder="Enter current password"
+                required
+              />
+            </div>
+            <div>
+              <label for="newPassword" class="block text-sm font-semibold text-gray-700 mb-2">
+                New Password
+              </label>
+              <input
+                type="password"
+                id="newPassword"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent transition-all duration-200"
+                placeholder="Enter new password"
+                minlength="8"
+                required
+              />
+            </div>
+            <div>
+              <label for="confirmPassword" class="block text-sm font-semibold text-gray-700 mb-2">
+                Confirm New Password
+              </label>
+              <input
+                type="password"
+                id="confirmPassword"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent transition-all duration-200"
+                placeholder="Confirm new password"
+                minlength="8"
+                required
+              />
+            </div>
+          </div>
+          <div class="flex justify-end space-x-3 mt-6">
+            <button
+              type="button"
+              id="cancelPasswordChange"
+              class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Change Password
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Email Update Modal -->
+  <div id="emailUpdateModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="bg-white rounded-xl shadow-xl max-w-md w-full">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900">Update Email</h3>
+            <button id="closeEmailModal" class="text-gray-400 hover:text-gray-600">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <form id="emailUpdateForm" class="p-6">
+          <div class="space-y-4">
+            <div>
+              <label for="newEmail" class="block text-sm font-semibold text-gray-700 mb-2">
+                New Email Address
+              </label>
+              <input
+                type="email"
+                id="newEmail"
+                value={user?.email || ''}
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent transition-all duration-200"
+                placeholder="Enter new email address"
+                required
+              />
+            </div>
+            <div>
+              <label for="emailPassword" class="block text-sm font-semibold text-gray-700 mb-2">
+                Current Password
+              </label>
+              <input
+                type="password"
+                id="emailPassword"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent transition-all duration-200"
+                placeholder="Enter current password to confirm"
+                required
+              />
+            </div>
+          </div>
+          <div class="flex justify-end space-x-3 mt-6">
+            <button
+              type="button"
+              id="cancelEmailUpdate"
+              class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Update Email
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <script>
     // Settings JavaScript
     const orgForm = document.getElementById('orgForm');
@@ -573,5 +780,167 @@ const user = await requireRole('admin', '/admin')(Astro) as any;
         alert('System preferences functionality coming soon!');
       });
     }
+
+    // Profile Management JavaScript
+    const profileEditBtn = document.getElementById('editProfileBtn');
+    const changePasswordBtn = document.getElementById('changePasswordBtn');
+    const updateEmailBtn = document.getElementById('updateEmailBtn');
+
+    // Modal elements
+    const profileEditModal = document.getElementById('profileEditModal');
+    const passwordChangeModal = document.getElementById('passwordChangeModal');
+    const emailUpdateModal = document.getElementById('emailUpdateModal');
+
+    // Profile Edit Modal
+    if (profileEditBtn && profileEditModal) {
+      profileEditBtn.addEventListener('click', () => {
+        profileEditModal.classList.remove('hidden');
+      });
+
+      document.getElementById('closeProfileModal')?.addEventListener('click', () => {
+        profileEditModal.classList.add('hidden');
+      });
+
+      document.getElementById('cancelProfileEdit')?.addEventListener('click', () => {
+        profileEditModal.classList.add('hidden');
+      });
+
+      document.getElementById('profileEditForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = (document.getElementById('editName') as HTMLInputElement)?.value;
+        const email = (document.getElementById('editEmail') as HTMLInputElement)?.value;
+
+        try {
+          const response = await fetch('/api/profile/update', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email }),
+          });
+
+          const result = await response.json();
+          
+          if (result.success) {
+            alert('Profile updated successfully');
+            profileEditModal.classList.add('hidden');
+            // Refresh the page to show updated information
+            window.location.reload();
+          } else {
+            alert(result.error || 'Error updating profile');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('Error updating profile');
+        }
+      });
+    }
+
+    // Password Change Modal
+    if (changePasswordBtn && passwordChangeModal) {
+      changePasswordBtn.addEventListener('click', () => {
+        passwordChangeModal.classList.remove('hidden');
+      });
+
+      document.getElementById('closePasswordModal')?.addEventListener('click', () => {
+        passwordChangeModal.classList.add('hidden');
+      });
+
+      document.getElementById('cancelPasswordChange')?.addEventListener('click', () => {
+        passwordChangeModal.classList.add('hidden');
+      });
+
+      document.getElementById('passwordChangeForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const currentPassword = (document.getElementById('currentPassword') as HTMLInputElement)?.value;
+        const newPassword = (document.getElementById('newPassword') as HTMLInputElement)?.value;
+        const confirmPassword = (document.getElementById('confirmPassword') as HTMLInputElement)?.value;
+
+        if (newPassword !== confirmPassword) {
+          alert('New passwords do not match');
+          return;
+        }
+
+        try {
+          const response = await fetch('/api/profile/update', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              currentPassword, 
+              newPassword 
+            }),
+          });
+
+          const result = await response.json();
+          
+          if (result.success) {
+            alert('Password changed successfully');
+            passwordChangeModal.classList.add('hidden');
+            // Clear form
+            (document.getElementById('passwordChangeForm') as HTMLFormElement)?.reset();
+          } else {
+            alert(result.error || 'Error changing password');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('Error changing password');
+        }
+      });
+    }
+
+    // Email Update Modal
+    if (updateEmailBtn && emailUpdateModal) {
+      updateEmailBtn.addEventListener('click', () => {
+        emailUpdateModal.classList.remove('hidden');
+      });
+
+      document.getElementById('closeEmailModal')?.addEventListener('click', () => {
+        emailUpdateModal.classList.add('hidden');
+      });
+
+      document.getElementById('cancelEmailUpdate')?.addEventListener('click', () => {
+        emailUpdateModal.classList.add('hidden');
+      });
+
+      document.getElementById('emailUpdateForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = (document.getElementById('newEmail') as HTMLInputElement)?.value;
+        const password = (document.getElementById('emailPassword') as HTMLInputElement)?.value;
+
+        try {
+          const response = await fetch('/api/profile/update', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              email,
+              currentPassword: password
+            }),
+          });
+
+          const result = await response.json();
+          
+          if (result.success) {
+            alert('Email updated successfully');
+            emailUpdateModal.classList.add('hidden');
+            // Refresh the page to show updated information
+            window.location.reload();
+          } else {
+            alert(result.error || 'Error updating email');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('Error updating email');
+        }
+      });
+    }
+
+    // Close modals when clicking outside
+    [profileEditModal, passwordChangeModal, emailUpdateModal].forEach(modal => {
+      if (modal) {
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) {
+            modal.classList.add('hidden');
+          }
+        });
+      }
+    });
   </script>
 </AdminLayout> 
