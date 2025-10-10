@@ -557,61 +557,70 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
     clientColorMap: Record<string, string>;
   }) => {
     const [hoveredProject, setHoveredProject] = React.useState<number | null>(null);
+    const hoverTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+    
+    // Cleanup timeout on unmount
+    React.useEffect(() => {
+      return () => {
+        if (hoverTimeoutRef.current) {
+          clearTimeout(hoverTimeoutRef.current);
+        }
+      };
+    }, []);
     
     const selectProject = (project: ChartData & { originalIndex: number }) => {
       setSelectedProject(project);
     };
 
     const handleProjectHover = (project: ChartData & { originalIndex: number }, isHovering: boolean) => {
-      console.log('Hover event triggered:', { project: project.projectName, isHovering, chartRef: !!chartRef });
+      // Clear any existing timeout
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = null;
+      }
       
       const dataIndex = orderedData.findIndex(item => 
         item.projectName === project.projectName && 
         item.clientName === project.clientName
       );
       
-      console.log('Data index found:', dataIndex, 'out of', orderedData.length);
-      console.log('Looking for:', { projectName: project.projectName, clientName: project.clientName });
-      console.log('Ordered data:', orderedData.map(item => ({ projectName: item.projectName, clientName: item.clientName })));
-      
       if (dataIndex !== -1) {
         if (isHovering) {
-          setHoveredProject(dataIndex);
-          setHoveredIndex(dataIndex);
-          console.log('Set hovered project:', dataIndex);
+          // Immediate hover effect for better UX
+          if (hoveredProject !== dataIndex) {
+            setHoveredProject(dataIndex);
+            setHoveredIndex(dataIndex);
+          }
           
           // Try to highlight the chart slice if chart reference is available
           if (chartRef) {
             try {
-              // Use Chart.js hover state to highlight only the specific slice
               const chart = chartRef;
-              // Clear any existing active elements first
               chart.setActiveElements([]);
-              // Then set only the specific element as active
               chart.setActiveElements([{ datasetIndex: 0, index: dataIndex }]);
               chart.update('none');
-              console.log('Chart slice highlighted for index:', dataIndex);
             } catch (error) {
-              console.log('Chart highlight failed:', error);
+              // Silently handle chart update errors
             }
-          } else {
-            console.log('No chart reference available');
           }
         } else {
-          setHoveredProject(null);
-          setHoveredIndex(null);
-          console.log('Cleared hovered project');
-          
-          // Try to clear chart highlight if chart reference is available
-          if (chartRef) {
-            try {
-              chartRef.setActiveElements([]);
-              chartRef.update('none');
-              console.log('Chart highlight cleared');
-            } catch (error) {
-              console.log('Chart clear failed:', error);
+          // Debounce the hover out effect to prevent jitter
+          hoverTimeoutRef.current = setTimeout(() => {
+            if (hoveredProject === dataIndex) {
+              setHoveredProject(null);
+              setHoveredIndex(null);
+              
+              // Try to clear chart highlight if chart reference is available
+              if (chartRef) {
+                try {
+                  chartRef.setActiveElements([]);
+                  chartRef.update('none');
+                } catch (error) {
+                  // Silently handle chart update errors
+                }
+              }
             }
-          }
+          }, 100); // 100ms debounce
         }
       }
     };
