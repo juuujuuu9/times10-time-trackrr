@@ -4,7 +4,7 @@ import { db } from '../../../db/index';
 import { projects, clients, tasks, timeEntries, projectTeams, teams } from '../../../db/schema';
 import { count, sql, eq, and } from 'drizzle-orm';
 
-// Get all projects with client info and collaboration data
+// Get all projects with client info first
 const allProjects = await db
   .select({
     id: projects.id,
@@ -14,18 +14,44 @@ const allProjects = await db
     clientName: clients.name,
     clientArchived: clients.archived,
     projectArchived: projects.archived,
-    collaborationId: projectTeams.teamId,
-    collaborationName: teams.name,
   })
   .from(projects)
   .leftJoin(clients, eq(projects.clientId, clients.id))
-  .leftJoin(projectTeams, eq(projects.id, projectTeams.projectId))
-  .leftJoin(teams, eq(projectTeams.teamId, teams.id))
-  .where(eq(clients.archived, false)) // Only show projects from active clients
+  .where(and(
+    eq(clients.archived, false), // Only show projects from active clients
+    eq(projects.archived, false) // Only show non-archived projects
+  ))
   .orderBy(sql`LOWER(${clients.name})`, sql`LOWER(${projects.name})`);
 
+// Get collaboration data separately
+const projectCollaborations = await db
+  .select({
+    projectId: projectTeams.projectId,
+    collaborationId: projectTeams.teamId,
+    collaborationName: teams.name,
+  })
+  .from(projectTeams)
+  .leftJoin(teams, eq(projectTeams.teamId, teams.id))
+  .where(eq(teams.archived, false));
+
+// Create a map of project collaborations
+const collaborationMap = new Map();
+projectCollaborations.forEach(collab => {
+  collaborationMap.set(collab.projectId, {
+    collaborationId: collab.collaborationId,
+    collaborationName: collab.collaborationName,
+  });
+});
+
+// Merge collaboration data with projects
+const projectsWithCollaborations = allProjects.map(project => ({
+  ...project,
+  collaborationId: collaborationMap.get(project.id)?.collaborationId || null,
+  collaborationName: collaborationMap.get(project.id)?.collaborationName || null,
+}));
+
 // Add default values for taskCount and totalHours to avoid complex queries
-const projectStats = allProjects.map((project) => ({
+const projectStats = projectsWithCollaborations.map((project) => ({
   ...project,
   taskCount: 0, // Will be loaded dynamically via JavaScript
   totalHours: 0, // Will be loaded dynamically via JavaScript
