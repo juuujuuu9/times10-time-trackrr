@@ -1,0 +1,168 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { neon } from '@neondatabase/serverless';
+import { getSessionUser } from '../../utils/session';
+
+console.log('🔍 DEBUG: Starting collaborations-fixed page...');
+
+try {
+  // Get current user
+  console.log('🔍 DEBUG: Getting session user...');
+  const currentUser = await getSessionUser(Astro);
+  console.log('🔍 DEBUG: Current user:', currentUser ? { id: currentUser.id, role: currentUser.role } : 'null');
+  
+  if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'developer')) {
+    console.log('🔍 DEBUG: Redirecting to login - user not authenticated or not admin');
+    return Astro.redirect('/login');
+  }
+
+  console.log('🔍 DEBUG: User authenticated, proceeding with database queries...');
+
+  // Get database connection
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL environment variable is not set');
+  }
+  
+  const sql = neon(databaseUrl);
+  console.log('🔍 DEBUG: Database connection established');
+
+  // Get all teams using direct SQL
+  console.log('🔍 DEBUG: Fetching teams with direct SQL...');
+  const teamsData = await sql`
+    SELECT id, name, description, created_by, created_at, updated_at, archived
+    FROM teams 
+    WHERE archived = false 
+    ORDER BY created_at DESC
+  `;
+  
+  console.log('🔍 DEBUG: Teams fetched:', teamsData.length, 'teams');
+
+  // Get member counts for each team using direct SQL
+  console.log('🔍 DEBUG: Fetching member counts with direct SQL...');
+  const memberCounts = await sql`
+    SELECT team_id, COUNT(user_id) as member_count
+    FROM team_members 
+    GROUP BY team_id
+  `;
+  
+  console.log('🔍 DEBUG: Member counts fetched:', memberCounts.length, 'team-member relationships');
+
+  // Create a map of team ID to member count
+  console.log('🔍 DEBUG: Creating member count map...');
+  const memberCountMap = new Map();
+  memberCounts.forEach(mc => {
+    memberCountMap.set(mc.team_id, mc.member_count);
+  });
+
+  // Add member counts to teams
+  console.log('🔍 DEBUG: Combining teams with member counts...');
+  const allTeams = teamsData.map(team => ({
+    ...team,
+    memberCount: memberCountMap.get(team.id) || 0
+  }));
+
+  console.log('🔍 DEBUG: Teams with member counts:', allTeams);
+
+  // Get team creators using direct SQL
+  console.log('🔍 DEBUG: Fetching team creators with direct SQL...');
+  const teamCreators = await sql`
+    SELECT t.id as team_id, u.name as creator_name, u.email as creator_email
+    FROM teams t
+    INNER JOIN users u ON t.created_by = u.id
+    WHERE t.archived = false
+  `;
+  
+  console.log('🔍 DEBUG: Team creators fetched:', teamCreators.length, 'creators');
+
+  const creatorMap = new Map(teamCreators.map(creator => [creator.team_id, creator]));
+  
+  console.log('🔍 DEBUG: All database queries completed successfully!');
+
+} catch (error) {
+  console.error('❌ DEBUG: Error in collaborations-fixed page:', error);
+  console.error('❌ DEBUG: Error message:', error.message);
+  console.error('❌ DEBUG: Error stack:', error.stack);
+  
+  // Return a simple error page instead of crashing
+  return new Response(`
+    <html>
+      <body>
+        <h1>Error in Collaborations Page</h1>
+        <p>Error: ${error.message}</p>
+        <pre>${error.stack}</pre>
+      </body>
+    </html>
+  `, {
+    status: 500,
+    headers: { 'Content-Type': 'text/html' }
+  });
+}
+---
+
+<AdminLayout title="Collaboration Management" currentPage="collaborations">
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Collaboration Management</h1>
+        <p class="text-gray-600">Create and manage collaborations for collaborative work</p>
+      </div>
+    </div>
+
+    <!-- Collaborations List -->
+    <div class="bg-white rounded-lg shadow border border-gray-300">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">All Collaborations</h2>
+      </div>
+      
+      <div class="p-6">
+        {allTeams.length === 0 ? (
+          <div class="text-center py-8">
+            <div class="mx-auto h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <svg class="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+              </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No collaborations yet</h3>
+            <p class="text-gray-500 mb-6">Get started by creating your first collaboration.</p>
+          </div>
+        ) : (
+          <div class="space-y-4">
+            {allTeams.map((team) => (
+              <div key={team.id} class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                <div class="flex items-center justify-between">
+                  <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-gray-900">{team.name}</h3>
+                    {team.description && (
+                      <p class="text-gray-600 mt-1">{team.description}</p>
+                    )}
+                    <div class="mt-2 text-sm text-gray-500">
+                      Created: {new Date(team.created_at).toLocaleDateString()}
+                      {team.memberCount > 0 && (
+                        <span class="ml-4">Members: {team.memberCount}</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center space-x-2">
+                    <a 
+                      href={`/admin/collaborations/${team.id}`}
+                      class="inline-flex items-center px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+                    >
+                      <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                      </svg>
+                      View
+                    </a>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+</AdminLayout>
