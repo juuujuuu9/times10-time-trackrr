@@ -150,6 +150,8 @@ export async function getWeeklyTotals() {
 
 // Get project costs for a specific time period
 export async function getProjectCosts(startDate: Date, endDate: Date, teamMemberId?: number, canViewFinancialData: boolean = true) {
+  // Handle "All Time" case with a more reliable date range
+  const actualStartDate = startDate.getTime() === 0 ? new Date('1900-01-01') : startDate;
   return await db
     .select({
       projectId: projects.id,
@@ -181,34 +183,34 @@ export async function getProjectCosts(startDate: Date, endDate: Date, teamMember
       teamMemberId 
         ? and(
             sql`(
-              (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate})
+              (${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${actualStartDate} AND ${timeEntries.createdAt} <= ${endDate})
               OR 
-              (${timeEntries.startTime} IS NULL AND ${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${startDate} AND ${timeEntries.createdAt} <= ${endDate})
+              (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NOT NULL AND ${timeEntries.durationManual} IS NULL AND ${timeEntries.startTime} >= ${actualStartDate} AND ${timeEntries.startTime} <= ${endDate})
             )`,
             eq(timeEntries.userId, teamMemberId),
             eq(clients.archived, false),
             eq(projects.archived, false),
-            // Exclude ongoing timers (entries with startTime but no endTime)
-            sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL)`
+            // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
+            sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
           )
         : and(
             sql`(
-              (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate})
+              (${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${actualStartDate} AND ${timeEntries.createdAt} <= ${endDate})
               OR 
-              (${timeEntries.startTime} IS NULL AND ${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${startDate} AND ${timeEntries.createdAt} <= ${endDate})
+              (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NOT NULL AND ${timeEntries.durationManual} IS NULL AND ${timeEntries.startTime} >= ${actualStartDate} AND ${timeEntries.startTime} <= ${endDate})
             )`,
             eq(clients.archived, false),
             eq(projects.archived, false),
-            // Exclude ongoing timers (entries with startTime but no endTime)
-            sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL)`
+            // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
+            sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
           )
     )
     .groupBy(projects.id, projects.name, clients.id, clients.name)
     .having(sql`COALESCE(SUM(
       CASE 
         WHEN ${timeEntries.endTime} IS NOT NULL 
-        THEN ROUND((ROUND(EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))::numeric, 0) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
-        ELSE ROUND((COALESCE(${timeEntries.durationManual}, 0) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
+        THEN ROUND(EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))::numeric, 0)
+        ELSE COALESCE(${timeEntries.durationManual}, 0)
       END
     ), 0) > 0`)
     .orderBy(clients.name, projects.name);
@@ -216,6 +218,8 @@ export async function getProjectCosts(startDate: Date, endDate: Date, teamMember
 
 // Get client costs for a specific time period
 export async function getClientCosts(startDate: Date, endDate: Date, teamMemberId?: number, canViewFinancialData: boolean = true) {
+  // Handle "All Time" case with a more reliable date range
+  const actualStartDate = startDate.getTime() === 0 ? new Date('1900-01-01') : startDate;
   return await db
     .select({
       clientId: clients.id,
@@ -246,34 +250,34 @@ export async function getClientCosts(startDate: Date, endDate: Date, teamMemberI
       teamMemberId 
         ? and(
             sql`(
-              (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate})
+              (${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${actualStartDate} AND ${timeEntries.createdAt} <= ${endDate})
               OR 
-              (${timeEntries.startTime} IS NULL AND ${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${startDate} AND ${timeEntries.createdAt} <= ${endDate})
+              (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NOT NULL AND ${timeEntries.durationManual} IS NULL AND ${timeEntries.startTime} >= ${actualStartDate} AND ${timeEntries.startTime} <= ${endDate})
             )`,
             eq(timeEntries.userId, teamMemberId),
             eq(clients.archived, false),
             eq(projects.archived, false),
-            // Exclude ongoing timers (entries with startTime but no endTime)
-            sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL)`
+            // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
+            sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
           )
         : and(
             sql`(
-              (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.startTime} >= ${startDate} AND ${timeEntries.startTime} <= ${endDate})
+              (${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${actualStartDate} AND ${timeEntries.createdAt} <= ${endDate})
               OR 
-              (${timeEntries.startTime} IS NULL AND ${timeEntries.durationManual} IS NOT NULL AND ${timeEntries.createdAt} >= ${startDate} AND ${timeEntries.createdAt} <= ${endDate})
+              (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NOT NULL AND ${timeEntries.durationManual} IS NULL AND ${timeEntries.startTime} >= ${actualStartDate} AND ${timeEntries.startTime} <= ${endDate})
             )`,
             eq(clients.archived, false),
             eq(projects.archived, false),
-            // Exclude ongoing timers (entries with startTime but no endTime)
-            sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL)`
+            // Exclude ongoing timers (entries with startTime but no endTime AND no durationManual)
+            sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
           )
     )
     .groupBy(clients.id, clients.name)
     .having(sql`COALESCE(SUM(
       CASE 
         WHEN ${timeEntries.endTime} IS NOT NULL 
-        THEN ROUND((ROUND(EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))::numeric, 0) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
-        ELSE ROUND((COALESCE(${timeEntries.durationManual}, 0) / 3600 * COALESCE(${users.payRate}, 0))::numeric, 2)
+        THEN ROUND(EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime}))::numeric, 0)
+        ELSE COALESCE(${timeEntries.durationManual}, 0)
       END
     ), 0) > 0`)
     .orderBy(clients.name);

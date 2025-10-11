@@ -1186,10 +1186,22 @@ export const ReportsCharts: React.FC<ReportsChartsProps> = ({
   viewType,
   canViewFinancialData
 }) => {
+  // Debug logging (uncomment for debugging)
+  // console.log('🔍 ReportsCharts Debug:');
+  // console.log('📊 projectCosts:', projectCosts);
+  // console.log('📊 clientCosts:', clientCosts);
+  // console.log('📊 timeSeriesData:', timeSeriesData);
+  // console.log('📊 period:', period);
+  // console.log('📊 viewType:', viewType);
+  // console.log('📊 canViewFinancialData:', canViewFinancialData);
+
   const currentData = viewType === 'project' ? projectCosts : clientCosts;
   const chartTitle = canViewFinancialData 
     ? (viewType === 'project' ? 'Project Costs' : 'Client Costs')
     : (viewType === 'project' ? 'Project Hours' : 'Client Hours');
+
+  // console.log('📊 currentData:', currentData);
+  // console.log('📊 currentData.length:', currentData.length);
 
   return (
     <div className="space-y-8">

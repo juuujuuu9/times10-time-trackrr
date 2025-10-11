@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db/index';
-import { timeEntries, users, tasks, projects, clients } from '../../../db/schema';
+import { timeEntries, users, projects, clients } from '../../../db/schema';
 import { sql, eq, and } from 'drizzle-orm';
 import { parseTimeInput } from '../../../utils/timeParser';
 
@@ -16,7 +16,6 @@ export const GET: APIRoute = async () => {
         notes: timeEntries.notes,
         createdAt: timeEntries.createdAt,
         userName: users.name,
-        taskName: tasks.name,
         projectName: projects.name,
         clientName: clients.name,
 
