@@ -2,6 +2,10 @@ import { defineConfig } from 'astro/config';
 import vercel from '@astrojs/vercel';
 import tailwind from '@astrojs/tailwind';
 import react from '@astrojs/react';
+import * as dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
 
 export default defineConfig({
   output: 'server',
