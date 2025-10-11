@@ -23,7 +23,7 @@ const allProjects = await db
   ))
   .orderBy(sql`LOWER(${clients.name})`, sql`LOWER(${projects.name})`);
 
-// Get collaboration data separately
+// Get collaboration data (one per project max)
 const projectCollaborations = await db
   .select({
     projectId: projectTeams.projectId,
@@ -34,9 +34,10 @@ const projectCollaborations = await db
   .leftJoin(teams, eq(projectTeams.teamId, teams.id))
   .where(eq(teams.archived, false));
 
-// Create a map of project collaborations
+// Create a map of project collaborations (1:1 relationship)
 const collaborationMap = new Map();
 projectCollaborations.forEach(collab => {
+  // Since we enforce 1:1 relationship, we can safely overwrite
   collaborationMap.set(collab.projectId, {
     collaborationId: collab.collaborationId,
     collaborationName: collab.collaborationName,
@@ -236,7 +237,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                             data-project-id={project.id}
                             data-collaboration-id={project.collaborationId}
                             data-collaboration-name={project.collaborationName}
-                            title="View collaboration"
+                            title="View collaboration (1:1 relationship)"
                           >
                             <svg class="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 512 512">
                               <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
@@ -261,7 +262,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                             class="start-collab-btn inline-flex items-center px-3 py-2 bg-white hover:bg-gray-100 text-gray-700 text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-gray-300"
                             data-project-id={project.id}
                             data-project-name={project.name}
-                            title="Start collaboration for this project"
+                            title="Start collaboration for this project (1:1 relationship)"
                           >
                             <svg class="w-4 h-4 mr-1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                               <g id="SVGRepo_bgCarrier" stroke-width="0"></g>

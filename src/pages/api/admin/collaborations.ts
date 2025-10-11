@@ -56,6 +56,21 @@ export const POST: APIRoute = async (context) => {
           headers: { 'Content-Type': 'application/json' }
         });
       }
+
+      // Check if project already has a collaboration (1:1 relationship)
+      const existingCollaboration = await db.query.projectTeams.findFirst({
+        where: eq(projectTeams.projectId, projectId)
+      });
+
+      if (existingCollaboration) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Project already has a collaboration. Each project can only have one collaboration.'
+        }), {
+          status: 409,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
     }
 
     // Create the team
