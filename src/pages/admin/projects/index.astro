@@ -1,10 +1,10 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { db } from '../../../db/index';
-import { projects, clients, tasks, timeEntries } from '../../../db/schema';
+import { projects, clients, tasks, timeEntries, projectTeams, teams } from '../../../db/schema';
 import { count, sql, eq, and } from 'drizzle-orm';
 
-// Get all projects with client info - simplified to avoid database issues
+// Get all projects with client info and collaboration data
 const allProjects = await db
   .select({
     id: projects.id,
@@ -14,9 +14,13 @@ const allProjects = await db
     clientName: clients.name,
     clientArchived: clients.archived,
     projectArchived: projects.archived,
+    collaborationId: projectTeams.teamId,
+    collaborationName: teams.name,
   })
   .from(projects)
   .leftJoin(clients, eq(projects.clientId, clients.id))
+  .leftJoin(projectTeams, eq(projects.id, projectTeams.projectId))
+  .leftJoin(teams, eq(projectTeams.teamId, teams.id))
   .where(eq(clients.archived, false)) // Only show projects from active clients
   .orderBy(sql`LOWER(${clients.name})`, sql`LOWER(${projects.name})`);
 
@@ -199,6 +203,55 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div class="flex justify-end space-x-2">
+                        {project.collaborationId ? (
+                          <button
+                            type="button"
+                            class="view-collab-btn inline-flex items-center px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+                            data-project-id={project.id}
+                            data-collaboration-id={project.collaborationId}
+                            data-collaboration-name={project.collaborationName}
+                            title="View collaboration"
+                          >
+                            <svg class="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 512 512">
+                              <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                              <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                              <g id="SVGRepo_iconCarrier">
+                                <g>
+                                  <g>
+                                    <g>
+                                      <path d="M428.04,224.391H227.942c-9.024,0-16.34,7.316-16.34,16.34c0,9.024,7.316,16.34,16.34,16.34H428.04 c9.024,0,16.34-7.316,16.34-16.34C444.38,231.707,437.064,224.391,428.04,224.391z"></path>
+                                      <path d="M428.04,274.872H227.942c-9.024,0-16.34,7.316-16.34,16.34c0,9.024,7.316,16.34,16.34,16.34H428.04 c9.024,0,16.34-7.316,16.34-16.34C444.38,282.188,437.064,274.872,428.04,274.872z"></path>
+                                      <path d="M465.553,157.482h-97.532v-41.075c0-25.61-20.835-46.446-46.446-46.446H46.457C20.841,69.961,0,90.797,0,116.407v124.075 c0,23.89,18.132,43.623,41.361,46.168l-14.139,46.745c-4.352,14.384,11.352,26.307,24.003,18.77l92.754-55.256v31.106 c0,25.611,20.835,46.446,46.446,46.446H351.28l109.494,65.235c12.724,7.58,28.338-4.433,24.005-18.766l-14.132-46.747 C493.87,371.639,512,351.904,512,328.015V203.928C512,178.318,491.164,157.482,465.553,157.482z M143.979,203.928v54.94 l-73.276,43.653l8.228-27.201c3.171-10.48-4.684-21.072-15.641-21.072H46.457c-7.597,0-13.776-6.176-13.776-13.765V116.407 c0-7.59,6.18-13.765,13.776-13.765h275.118c7.591,0,13.765,6.176,13.765,13.765v41.075H190.425 C164.814,157.482,143.979,178.318,143.979,203.928z M479.32,328.015h-0.001c0,7.591-6.176,13.765-13.766,13.765H448.72 c-10.949,0-18.81,10.583-15.641,21.068l8.225,27.206l-77.161-45.972c-2.529-1.507-5.42-2.303-8.364-2.303H190.425 c-7.591,0-13.765-6.174-13.765-13.765c0-12.773,0-112.432,0-124.086c0-7.591,6.174-13.765,13.765-13.765 c11.693,0,263.14,0,275.129,0c7.591,0,13.766,6.176,13.766,13.765V328.015z"></path>
+                                    </g>
+                                  </g>
+                                </g>
+                              </g>
+                            </svg>
+                            Collab
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            class="start-collab-btn inline-flex items-center px-3 py-2 bg-white hover:bg-gray-100 text-gray-700 text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-gray-300"
+                            data-project-id={project.id}
+                            data-project-name={project.name}
+                            title="Start collaboration for this project"
+                          >
+                            <svg class="w-4 h-4 mr-1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                              <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                              <g id="SVGRepo_iconCarrier">
+                                <circle cx="9" cy="9" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"></circle>
+                                <path d="M12.2679 9C12.5332 8.54063 12.97 8.20543 13.4824 8.06815C13.9947 7.93086 14.5406 8.00273 15 8.26795C15.4594 8.53317 15.7946 8.97 15.9319 9.48236C16.0691 9.99472 15.9973 10.5406 15.7321 11C15.4668 11.4594 15.03 11.7946 14.5176 11.9319C14.0053 12.0691 13.4594 11.9973 13 11.7321C12.5406 11.4668 12.2054 11.03 12.0681 10.5176C11.9309 10.0053 12.0027 9.45937 12.2679 9L12.2679 9Z" stroke="currentColor" stroke-width="2"></path>
+                                <path d="M13.8816 19L12.9013 19.1974L13.0629 20H13.8816V19ZM17.7202 17.9042L18.6627 17.5699L17.7202 17.9042ZM11.7808 15.7105L11.176 14.9142L10.0194 15.7927L11.2527 16.5597L11.7808 15.7105ZM16.8672 18H13.8816V20H16.8672V18ZM16.7777 18.2384C16.7707 18.2186 16.7642 18.181 16.7725 18.1354C16.7804 18.0921 16.7982 18.0593 16.8151 18.0383C16.8474 17.9982 16.874 18 16.8672 18V20C18.0132 20 19.1414 18.9194 18.6627 17.5699L16.7777 18.2384ZM14 16C15.6416 16 16.4027 17.1811 16.7777 18.2384L18.6627 17.5699C18.1976 16.2588 16.9485 14 14 14V16ZM12.3857 16.5069C12.7702 16.2148 13.282 16 14 16V14C12.8381 14 11.9028 14.3622 11.176 14.9142L12.3857 16.5069ZM11.2527 16.5597C12.2918 17.206 12.7271 18.3324 12.9013 19.1974L14.8619 18.8026C14.644 17.7204 14.0374 15.9364 12.309 14.8614L11.2527 16.5597Z" fill="currentColor"></path>
+                                <path d="M9 15C12.5715 15 13.5919 17.5512 13.8834 19.0089C13.9917 19.5504 13.5523 20 13 20H5C4.44772 20 4.00829 19.5504 4.11659 19.0089C4.4081 17.5512 5.42846 15 9 15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                                <path d="M19 3V7" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                                <path d="M21 5L17 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                              </g>
+                            </svg>
+                            Start Collab
+                          </button>
+                        )}
                         <button
                           type="button"
                           class="edit-project-btn inline-flex items-center px-3 py-2 bg-white hover:bg-gray-100 text-gray-700 text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-gray-300"
@@ -775,6 +828,88 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
     </div>
   </div>
 
+  <!-- Start Collaboration Modal -->
+  <div id="startCollabModal" class="fixed inset-0 bg-black/50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900">Start Collaboration</h3>
+            <button
+              type="button"
+              id="closeCollabModal"
+              class="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        
+        <form id="collabForm" class="p-6 space-y-6">
+          <input type="hidden" id="collabProjectId" name="projectId" />
+          
+          <!-- Project Info (Read-only) -->
+          <div class="bg-gray-50 rounded-lg p-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Project
+            </label>
+            <div class="text-lg font-medium text-gray-900" id="collabProjectName">
+              <!-- Project name will be populated here -->
+            </div>
+            <p class="text-sm text-gray-600 mt-1">This collaboration will be automatically linked to this project.</p>
+          </div>
+          
+          <!-- Description -->
+          <div>
+            <label for="collabDescription" class="block text-sm font-medium text-gray-700 mb-2">
+              Description *
+            </label>
+            <textarea
+              id="collabDescription"
+              name="description"
+              required
+              rows="4"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Describe the purpose and goals of this collaboration"
+            ></textarea>
+          </div>
+          
+          <!-- Team Members -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Team Members
+            </label>
+            <div class="space-y-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-4" id="collabMembersList">
+              <!-- Members will be populated here -->
+            </div>
+            <p class="text-sm text-gray-500 mt-2">
+              Select team members who will participate in this collaboration. You can add more members later.
+            </p>
+          </div>
+          
+          <!-- Form Actions -->
+          <div class="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200">
+            <button
+              type="button"
+              id="cancelCollabBtn"
+              class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+            >
+              Create Collaboration
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <script>
     // Project management JavaScript
     document.addEventListener('DOMContentLoaded', function() {
@@ -1241,6 +1376,31 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         
         console.log('Delete project button clicked:', { projectId, projectName });
         (window as any).deleteProject(projectId);
+        return;
+      }
+      
+      // Handle start collaboration buttons
+      if (target.classList.contains('start-collab-btn') || target.closest('.start-collab-btn')) {
+        const button = target.classList.contains('start-collab-btn') ? target : target.closest('.start-collab-btn') as HTMLElement;
+        const projectId = parseInt(button?.getAttribute('data-project-id') || '0');
+        const projectName = button?.getAttribute('data-project-name') || 'Unknown Project';
+        (window as any).openStartCollabModal(projectId, projectName);
+        return;
+      }
+      
+      // Handle view collaboration buttons
+      if (target.classList.contains('view-collab-btn') || target.closest('.view-collab-btn')) {
+        const button = target.classList.contains('view-collab-btn') ? target : target.closest('.view-collab-btn') as HTMLElement;
+        const collaborationId = button?.getAttribute('data-collaboration-id');
+        if (collaborationId) {
+          window.location.href = `/admin/collaborations/${collaborationId}`;
+        }
+        return;
+      }
+      
+      // Handle collaboration modal close buttons
+      if (target.id === 'closeCollabModal' || target.id === 'cancelCollabBtn') {
+        (window as any).closeStartCollabModal();
         return;
       }
       
@@ -2632,6 +2792,106 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         console.log('Delete client button clicked:', { clientId, clientName });
         (window as any).deleteClient(clientId);
         return;
+      }
+    });
+
+    // Collaboration modal functions
+    (window as any).openStartCollabModal = async function(projectId: number, projectName: string) {
+      const modal = document.getElementById('startCollabModal');
+      const projectIdInput = document.getElementById('collabProjectId') as HTMLInputElement;
+      const projectNameDisplay = document.getElementById('collabProjectName');
+      const membersList = document.getElementById('collabMembersList');
+      
+      if (!modal || !projectIdInput || !projectNameDisplay || !membersList) {
+        console.error('Modal elements not found');
+        return;
+      }
+      
+      // Set project info
+      projectIdInput.value = projectId.toString();
+      projectNameDisplay.textContent = projectName;
+      
+      // Load users for member selection
+      try {
+        const response = await fetch('/api/admin/users', { credentials: 'include' });
+        if (response.ok) {
+          const users = await response.json();
+          membersList.innerHTML = users.map((user: any) => `
+            <label class="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                name="members"
+                value="${user.id}"
+                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <div class="flex-1">
+                <div class="text-sm font-medium text-gray-900">${user.name}</div>
+                <div class="text-sm text-gray-500">${user.email}</div>
+              </div>
+            </label>
+          `).join('');
+        } else {
+          console.error('Failed to load users');
+          membersList.innerHTML = '<p class="text-gray-500">Failed to load users</p>';
+        }
+      } catch (error) {
+        console.error('Error loading users:', error);
+        membersList.innerHTML = '<p class="text-gray-500">Error loading users</p>';
+      }
+      
+      // Show modal
+      modal.classList.remove('hidden');
+      modal.style.display = 'block';
+    };
+
+    (window as any).closeStartCollabModal = function() {
+      const modal = document.getElementById('startCollabModal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+      }
+    };
+
+    // Handle collaboration form submission
+    document.getElementById('collabForm')?.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(e.target as HTMLFormElement);
+      const description = formData.get('description') as string;
+      const projectId = formData.get('projectId') as string;
+      const memberIds = formData.getAll('members') as string[];
+      
+      if (!description.trim()) {
+        alert('Please enter a description for the collaboration');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/admin/collaborations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            name: `Collaboration for Project ${projectId}`, // Auto-generated name
+            description,
+            projectId: parseInt(projectId),
+            members: memberIds.map(id => parseInt(id))
+          })
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          alert('Collaboration created successfully!');
+          (window as any).closeStartCollabModal();
+          // Redirect to the new collaboration page
+          window.location.href = `/admin/collaborations/${result.teamId}`;
+        } else {
+          const errorData = await response.json();
+          alert(`Error creating collaboration: ${errorData.error || 'Unknown error'}`);
+        }
+      } catch (error) {
+        console.error('Error creating collaboration:', error);
+        alert('Network error: Unable to create collaboration. Please try again.');
       }
     });
   </script>
