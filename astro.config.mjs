@@ -30,6 +30,13 @@ export default defineConfig({
       'process.env.SLACK_SIGNING_SECRET': JSON.stringify(process.env.SLACK_SIGNING_SECRET || ''),
       'process.env.SLACK_CLIENT_ID': JSON.stringify(process.env.SLACK_CLIENT_ID || ''),
       'process.env.SLACK_CLIENT_SECRET': JSON.stringify(process.env.SLACK_CLIENT_SECRET || ''),
+      'import.meta.env.DATABASE_URL': JSON.stringify(process.env.DATABASE_URL || ''),
+      'import.meta.env.RESEND_API_KEY': JSON.stringify(process.env.RESEND_API_KEY || ''),
+      'import.meta.env.BASE_URL': JSON.stringify(process.env.BASE_URL || ''),
+      'import.meta.env.PUBLIC_SITE_URL': JSON.stringify(process.env.PUBLIC_SITE_URL || ''),
+      'import.meta.env.SLACK_SIGNING_SECRET': JSON.stringify(process.env.SLACK_SIGNING_SECRET || ''),
+      'import.meta.env.SLACK_CLIENT_ID': JSON.stringify(process.env.SLACK_CLIENT_ID || ''),
+      'import.meta.env.SLACK_CLIENT_SECRET': JSON.stringify(process.env.SLACK_CLIENT_SECRET || ''),
     }
   }
 });

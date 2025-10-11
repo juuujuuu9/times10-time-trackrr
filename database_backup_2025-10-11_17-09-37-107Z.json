@@ -1,0 +1,468 @@
+{
+  "timestamp": "2025-10-11T17:09:37.107Z",
+  "version": "1.0",
+  "tables": {
+    "users": [
+      {
+        "id": 1,
+        "email": "admin@times10.com",
+        "name": "Admin User",
+        "password": "$2b$12$19PseN0voysbPKlveUws6OCAkaVErOrX.kV8vDNLwO12wLGXzb6Mq",
+        "role": "admin",
+        "status": "active",
+        "pay_rate": "50.00",
+        "created_at": "2025-09-25T03:31:57.528Z",
+        "updated_at": "2025-09-30T06:57:05.924Z"
+      },
+      {
+        "id": 2,
+        "email": "developer@times10.com",
+        "name": "Developer User",
+        "password": "$2b$12$3YZhOm4OtmbMb.0h7UQnkOmq3c3aPvVXeuo4Z4w7KeDnEC3R.yuSa",
+        "role": "developer",
+        "status": "active",
+        "pay_rate": "40.00",
+        "created_at": "2025-09-25T03:31:57.896Z",
+        "updated_at": "2025-09-25T03:31:57.896Z"
+      },
+      {
+        "id": 3,
+        "email": "user@times10.com",
+        "name": "Regular User",
+        "password": "$2b$12$xltp1XxLtQdqQFg/9Lhjsuoia9kTKqOYgqzFXjE2YtZGI3UZqGq0S",
+        "role": "user",
+        "status": "active",
+        "pay_rate": "25.00",
+        "created_at": "2025-09-25T03:31:58.204Z",
+        "updated_at": "2025-09-30T06:57:06.634Z"
+      },
+      {
+        "id": 4,
+        "email": "admin@test.com",
+        "name": "Admin",
+        "password": "$2b$12$..3lK9aYLMtc.s0HqZ6tOurCBHdowgK.8P/WjBcbby934ZEGhPp.i",
+        "role": "admin",
+        "status": "active",
+        "pay_rate": "30.00",
+        "created_at": "2025-09-25T03:32:13.299Z",
+        "updated_at": "2025-10-12T00:04:01.928Z"
+      },
+      {
+        "id": 5,
+        "email": "user@test.com",
+        "name": "Team Member",
+        "password": "$2b$12$8htS2.CSG49l2KvqPDwlBeTRMR1/hw0jFHZFt8LDu5a.ufw21CF/S",
+        "role": "user",
+        "status": "active",
+        "pay_rate": "0.00",
+        "created_at": "2025-09-25T03:32:13.658Z",
+        "updated_at": "2025-09-25T03:37:42.771Z"
+      },
+      {
+        "id": 6,
+        "email": "manager@times10.com",
+        "name": "Manager User",
+        "password": "$2b$12$F6I2GDL4q7EIiqHgGcfZj.QpOg.0QKyGl.zlFRfVkTbF2OOh9Lu6C",
+        "role": "manager",
+        "status": "active",
+        "pay_rate": "35.00",
+        "created_at": "2025-09-30T06:57:06.430Z",
+        "updated_at": "2025-09-30T06:57:06.430Z"
+      }
+    ],
+    "clients": [
+      {
+        "id": 2,
+        "name": "FLERISH",
+        "created_by": 4,
+        "archived": false,
+        "created_at": "2025-09-25T03:38:28.659Z",
+        "updated_at": "2025-09-25T03:38:28.659Z"
+      },
+      {
+        "id": 4,
+        "name": "NIKE",
+        "created_by": 4,
+        "archived": false,
+        "created_at": "2025-09-25T03:38:29.219Z",
+        "updated_at": "2025-09-25T03:38:29.219Z"
+      },
+      {
+        "id": 5,
+        "name": "APPLE",
+        "created_by": 4,
+        "archived": false,
+        "created_at": "2025-09-25T03:38:29.405Z",
+        "updated_at": "2025-09-25T03:38:29.405Z"
+      },
+      {
+        "id": 6,
+        "name": "Adidas",
+        "created_by": 1,
+        "archived": false,
+        "created_at": "2025-09-25T03:41:53.998Z",
+        "updated_at": "2025-09-25T03:41:53.998Z"
+      }
+    ],
+    "projects": [
+      {
+        "id": 1,
+        "client_id": 2,
+        "name": "Time Tracking",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-09-25T03:38:28.718Z",
+        "updated_at": "2025-09-25T03:38:28.718Z"
+      },
+      {
+        "id": 2,
+        "client_id": 6,
+        "name": "Time Tracking",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-09-25T03:38:28.918Z",
+        "updated_at": "2025-09-25T03:38:28.918Z"
+      },
+      {
+        "id": 3,
+        "client_id": 4,
+        "name": "Time Tracking",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-09-25T03:38:29.273Z",
+        "updated_at": "2025-09-25T03:38:29.273Z"
+      },
+      {
+        "id": 4,
+        "client_id": 5,
+        "name": "Time Tracking",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-09-25T03:38:29.451Z",
+        "updated_at": "2025-09-25T03:38:29.451Z"
+      },
+      {
+        "id": 5,
+        "client_id": 6,
+        "name": "NIL Summit",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-09-25T03:39:53.356Z",
+        "updated_at": "2025-09-25T03:39:53.356Z"
+      },
+      {
+        "id": 6,
+        "client_id": 6,
+        "name": "D. Rose",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-09-25T03:41:54.095Z",
+        "updated_at": "2025-09-25T03:41:54.095Z"
+      }
+    ],
+    "tasks": [
+      {
+        "id": 1,
+        "project_id": 1,
+        "name": "General",
+        "description": "General task for FLERISH",
+        "status": "active",
+        "priority": "regular",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-09-25T03:38:28.770Z",
+        "updated_at": "2025-09-25T03:38:28.770Z"
+      },
+      {
+        "id": 2,
+        "project_id": 2,
+        "name": "General",
+        "description": "General task for ADIDAS",
+        "status": "active",
+        "priority": "regular",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-09-25T03:38:29.094Z",
+        "updated_at": "2025-09-25T03:38:29.094Z"
+      },
+      {
+        "id": 3,
+        "project_id": 3,
+        "name": "General",
+        "description": "General task for NIKE",
+        "status": "active",
+        "priority": "regular",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-09-25T03:38:29.318Z",
+        "updated_at": "2025-09-25T03:38:29.318Z"
+      },
+      {
+        "id": 4,
+        "project_id": 4,
+        "name": "General",
+        "description": "General task for APPLE",
+        "status": "active",
+        "priority": "regular",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-09-25T03:38:29.491Z",
+        "updated_at": "2025-09-25T03:38:29.491Z"
+      },
+      {
+        "id": 5,
+        "project_id": 5,
+        "name": "NIL Summit",
+        "description": "Work on NIL Summit",
+        "status": "pending",
+        "priority": "regular",
+        "archived": false,
+        "is_system": true,
+        "created_at": "2025-09-25T03:39:53.622Z",
+        "updated_at": "2025-09-25T03:39:53.622Z"
+      },
+      {
+        "id": 6,
+        "project_id": 5,
+        "name": "NIL Summit",
+        "description": "Work on NIL Summit",
+        "status": "in-progress",
+        "priority": "regular",
+        "archived": false,
+        "is_system": true,
+        "created_at": "2025-09-25T03:40:22.503Z",
+        "updated_at": "2025-09-25T03:40:22.503Z"
+      },
+      {
+        "id": 7,
+        "project_id": 6,
+        "name": "D. Rose",
+        "description": "Work on D. Rose",
+        "status": "pending",
+        "priority": "regular",
+        "archived": false,
+        "is_system": true,
+        "created_at": "2025-09-25T03:41:54.215Z",
+        "updated_at": "2025-09-25T03:41:54.215Z"
+      },
+      {
+        "id": 8,
+        "project_id": 6,
+        "name": "D. Rose",
+        "description": "Work on D. Rose",
+        "status": "pending",
+        "priority": "regular",
+        "archived": false,
+        "is_system": true,
+        "created_at": "2025-09-25T03:42:09.978Z",
+        "updated_at": "2025-09-25T03:42:09.978Z"
+      }
+    ],
+    "timeEntries": [
+      {
+        "id": 17,
+        "project_id": 4,
+        "user_id": 1,
+        "start_time": "2025-09-02T21:00:00.000Z",
+        "end_time": null,
+        "duration_manual": 6300,
+        "notes": "hyteh",
+        "created_at": "2025-09-30T23:32:29.212Z",
+        "updated_at": "2025-10-11T23:32:01.483Z"
+      },
+      {
+        "id": 20,
+        "project_id": 1,
+        "user_id": 1,
+        "start_time": "2025-10-02T01:40:00.000Z",
+        "end_time": null,
+        "duration_manual": 3600,
+        "notes": null,
+        "created_at": "2025-10-01T01:28:29.125Z",
+        "updated_at": "2025-10-11T23:32:01.483Z"
+      },
+      {
+        "id": 21,
+        "project_id": 1,
+        "user_id": 1,
+        "start_time": "2025-10-02T01:33:00.000Z",
+        "end_time": null,
+        "duration_manual": 3600,
+        "notes": null,
+        "created_at": "2025-10-01T01:33:40.357Z",
+        "updated_at": "2025-10-11T23:32:01.483Z"
+      },
+      {
+        "id": 22,
+        "project_id": 2,
+        "user_id": 1,
+        "start_time": "2025-09-30T19:00:00.000Z",
+        "end_time": null,
+        "duration_manual": 300,
+        "notes": "trh",
+        "created_at": "2025-10-01T02:32:19.631Z",
+        "updated_at": "2025-10-11T23:32:01.483Z"
+      },
+      {
+        "id": 23,
+        "project_id": 1,
+        "user_id": 1,
+        "start_time": "2025-09-29T22:00:00.000Z",
+        "end_time": null,
+        "duration_manual": 21960,
+        "notes": null,
+        "created_at": "2025-10-01T02:35:25.858Z",
+        "updated_at": "2025-10-11T23:32:01.483Z"
+      },
+      {
+        "id": 24,
+        "project_id": 5,
+        "user_id": 1,
+        "start_time": "2025-09-03T01:18:00.000Z",
+        "end_time": null,
+        "duration_manual": 2940,
+        "notes": "rthrt",
+        "created_at": "2025-10-03T01:18:59.068Z",
+        "updated_at": "2025-10-11T23:32:01.483Z"
+      },
+      {
+        "id": 25,
+        "project_id": 6,
+        "user_id": 1,
+        "start_time": "2025-10-02T11:42:00.000Z",
+        "end_time": null,
+        "duration_manual": 60,
+        "notes": null,
+        "created_at": "2025-10-03T02:42:17.291Z",
+        "updated_at": "2025-10-11T23:32:01.483Z"
+      },
+      {
+        "id": 26,
+        "project_id": 4,
+        "user_id": 1,
+        "start_time": "2025-10-03T05:51:07.852Z",
+        "end_time": null,
+        "duration_manual": 3600,
+        "notes": "The notes inputs will now have a compact appearance by default (5rem) but expand when the user wants to type, providing a clean, space-efficient interface while maintaining usability.",
+        "created_at": "2025-10-03T05:51:08.039Z",
+        "updated_at": "2025-10-11T23:32:01.483Z"
+      },
+      {
+        "id": 27,
+        "project_id": 2,
+        "user_id": 1,
+        "start_time": "2025-10-03T09:01:00.000Z",
+        "end_time": "2025-10-03T09:05:00.000Z",
+        "duration_manual": 240,
+        "notes": null,
+        "created_at": "2025-10-03T09:01:03.850Z",
+        "updated_at": "2025-10-11T23:32:01.483Z"
+      },
+      {
+        "id": 28,
+        "project_id": 6,
+        "user_id": 1,
+        "start_time": "2025-10-02T23:02:00.000Z",
+        "end_time": "2025-10-03T00:30:00.000Z",
+        "duration_manual": 5280,
+        "notes": null,
+        "created_at": "2025-10-03T09:26:10.261Z",
+        "updated_at": "2025-10-11T23:32:01.483Z"
+      },
+      {
+        "id": 30,
+        "project_id": 4,
+        "user_id": 4,
+        "start_time": "2025-10-11T23:52:28.367Z",
+        "end_time": "2025-10-11T23:59:41.242Z",
+        "duration_manual": null,
+        "notes": null,
+        "created_at": "2025-10-11T23:52:28.629Z",
+        "updated_at": "2025-10-11T23:59:41.564Z"
+      }
+    ],
+    "userTaskLists": [],
+    "teams": [
+      {
+        "id": 1,
+        "name": "Test Team for Time Tracking",
+        "description": "Test collaboration created by API test",
+        "created_by": 1,
+        "created_at": "2025-10-11T23:26:54.676Z",
+        "updated_at": "2025-10-11T23:26:54.676Z",
+        "archived": false
+      },
+      {
+        "id": 2,
+        "name": "NIL Summit",
+        "description": null,
+        "created_by": 4,
+        "created_at": "2025-10-11T23:30:28.577Z",
+        "updated_at": "2025-10-11T23:30:28.577Z",
+        "archived": false
+      },
+      {
+        "id": 3,
+        "name": "Test Team",
+        "description": "A test team for schema validation",
+        "created_by": 2,
+        "created_at": "2025-10-12T00:07:49.697Z",
+        "updated_at": "2025-10-12T00:07:49.697Z",
+        "archived": false
+      },
+      {
+        "id": 4,
+        "name": "Test Team",
+        "description": "A test team for schema validation",
+        "created_by": 2,
+        "created_at": "2025-10-12T00:09:09.517Z",
+        "updated_at": "2025-10-12T00:09:09.517Z",
+        "archived": false
+      }
+    ],
+    "teamMembers": [
+      {
+        "team_id": 1,
+        "user_id": 1,
+        "role": "lead",
+        "joined_at": "2025-10-11T23:26:54.720Z"
+      },
+      {
+        "team_id": 2,
+        "user_id": 3,
+        "role": "member",
+        "joined_at": "2025-10-11T23:30:28.671Z"
+      },
+      {
+        "team_id": 2,
+        "user_id": 4,
+        "role": "lead",
+        "joined_at": "2025-10-11T23:30:28.625Z"
+      },
+      {
+        "team_id": 2,
+        "user_id": 6,
+        "role": "member",
+        "joined_at": "2025-10-11T23:30:28.671Z"
+      },
+      {
+        "team_id": 3,
+        "user_id": 2,
+        "role": "lead",
+        "joined_at": "2025-10-12T00:07:49.742Z"
+      },
+      {
+        "team_id": 4,
+        "user_id": 2,
+        "role": "lead",
+        "joined_at": "2025-10-12T00:09:09.562Z"
+      }
+    ],
+    "taskCollaborations": [],
+    "taskDiscussions": [],
+    "taskFiles": [],
+    "taskLinks": [],
+    "taskNotes": [],
+    "notifications": []
+  }
+}
