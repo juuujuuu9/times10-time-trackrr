@@ -1,0 +1,1145 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { neon } from '@neondatabase/serverless';
+import { getSessionUser } from '../../utils/session';
+
+// Get current user
+const currentUser = await getSessionUser(Astro);
+if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'developer')) {
+  return Astro.redirect('/login');
+}
+
+// Get database connection
+const databaseUrl = import.meta.env.DATABASE_URL || process.env.DATABASE_URL;
+if (!databaseUrl) {
+  throw new Error('DATABASE_URL environment variable is not set');
+}
+
+const sql = neon(databaseUrl);
+
+// Get all teams using direct SQL
+const teamsData = await sql`
+  SELECT id, name, description, created_by, created_at, updated_at, archived
+  FROM teams 
+  WHERE archived = false 
+  ORDER BY created_at DESC
+`;
+
+// Get member counts for each team using direct SQL
+const memberCounts = await sql`
+  SELECT team_id, COUNT(user_id) as member_count
+  FROM team_members 
+  GROUP BY team_id
+`;
+
+// Create a map of team ID to member count
+const memberCountMap = new Map();
+memberCounts.forEach(mc => {
+  memberCountMap.set(mc.team_id, mc.member_count);
+});
+
+// Add member counts to teams
+const allTeams = teamsData.map(team => ({
+  ...team,
+  memberCount: memberCountMap.get(team.id) || 0
+}));
+
+// Get team creators using direct SQL
+const teamCreators = await sql`
+  SELECT t.id as team_id, u.name as creator_name, u.email as creator_email
+  FROM teams t
+  INNER JOIN users u ON t.created_by = u.id
+  WHERE t.archived = false
+`;
+
+const creatorMap = new Map(teamCreators.map(creator => [creator.team_id, creator]));
+---
+
+<AdminLayout title="Collaboration Management" currentPage="collaborations">
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Collaboration Management</h1>
+        <p class="text-gray-600">Create and manage collaborations for collaborative work</p>
+      </div>
+      <button
+        id="createCollaborationBtn"
+        class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+      >
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+        </svg>
+        Create Collaboration
+      </button>
+    </div>
+
+
+    <!-- Collaborations List -->
+    <div class="bg-white rounded-lg shadow border border-gray-300">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">All Collaborations</h2>
+      </div>
+      
+      <div class="p-6">
+        {allTeams.length === 0 ? (
+          <div class="text-center py-8">
+            <div class="mx-auto h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <svg class="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+              </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No collaborations yet</h3>
+            <p class="text-gray-600 mb-4">Create your first collaboration to get started with collaborative features.</p>
+            <button 
+              id="createFirstCollaborationBtn"
+              class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+            >
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+              </svg>
+              Create First Collaboration
+            </button>
+          </div>
+        ) : (
+          <div class="space-y-4">
+            {allTeams.map((team) => {
+              const creator = creatorMap.get(team.id);
+              return (
+                <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-200">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                      <div class="h-12 w-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                        <svg class="h-6 w-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                      </div>
+                      <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-gray-900">{team.name}</h3>
+                        <p class="text-sm text-gray-600">{team.description || 'No description'}</p>
+                        <div class="flex items-center space-x-4 mt-1">
+                          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            {team.memberCount} members
+                          </span>
+                          <span class="text-xs text-gray-500">
+                            Created by {creator?.creatorName || 'Unknown'}
+                          </span>
+                          <span class="text-xs text-gray-500">
+                            {new Date(team.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-2">
+                      <a 
+                        href={`/admin/collaborations/${team.id}`}
+                        class="inline-flex items-center px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+                      >
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                        View
+                      </a>
+                      
+                      <button 
+                        class="edit-collaboration-btn inline-flex items-center px-3 py-2 bg-white hover:bg-gray-100 text-gray-700 text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-gray-300"
+                        data-team-id={team.id}
+                        data-team-name={team.name}
+                        data-team-description={team.description || ''}
+                        data-project-name={team.projectName || ''}
+                        data-client-name={team.clientName || ''}
+                      >
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                        Edit
+                      </button>
+                      
+                      <button 
+                        class="delete-collaboration-btn inline-flex items-center px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 border border-red-300"
+                        data-team-id={team.id}
+                        data-team-name={team.name}
+                      >
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                        Archive
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Collaboration Modal -->
+  <div id="createCollaborationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900">Create New Collaboration</h3>
+        </div>
+        <form id="createCollaborationForm" class="px-6 py-4">
+          <div class="space-y-4">
+            <div class="relative">
+              <label for="projectSelect" class="block text-sm font-medium text-gray-700 mb-1">Select Project</label>
+              <div class="relative">
+                <input
+                  type="text"
+                  id="projectSelect"
+                  placeholder="🔍 Search projects..."
+                  autocomplete="off"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500"
+                />
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                  <svg class="fill-current h-5 w-5 transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                  </svg>
+                </div>
+              </div>
+              
+              <!-- Project Dropdown -->
+              <div 
+                id="projectDropdown"
+                class="absolute z-50 w-full bg-white border border-gray-300 rounded-lg shadow-lg overflow-hidden hidden" 
+                style={{ 
+                  top: '100%', 
+                  left: 0, 
+                  maxHeight: '240px',
+                  overflowY: 'auto'
+                }}
+              >
+                <div class="px-4 py-2 text-gray-500 text-sm">
+                  Loading projects...
+                </div>
+              </div>
+            </div>
+            <div>
+              <label for="collaborationDescription" class="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
+              <textarea 
+                id="collaborationDescription" 
+                name="collaborationDescription"
+                rows="3"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Describe what this collaboration does"
+              ></textarea>
+            </div>
+            
+            <div class="relative">
+              <label for="teamMembersSelect" class="block text-sm font-medium text-gray-700 mb-1">Add Team Members (Optional)</label>
+              <div class="relative">
+                <input
+                  type="text"
+                  id="teamMembersSelect"
+                  placeholder="🔍 Search users..."
+                  autocomplete="off"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500"
+                />
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                  <svg class="fill-current h-5 w-5 transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                  </svg>
+                </div>
+              </div>
+              
+              <!-- User Dropdown -->
+              <div 
+                id="userDropdown"
+                class="absolute z-50 w-full bg-white border border-gray-300 rounded-lg shadow-lg overflow-hidden hidden" 
+                style={{ 
+                  top: '100%', 
+                  left: 0, 
+                  maxHeight: '240px',
+                  overflowY: 'auto'
+                }}
+              >
+                <div class="px-4 py-2 text-gray-500 text-sm">
+                  Loading users...
+                </div>
+              </div>
+              
+              <!-- Selected Users List -->
+              <div id="selectedUsersList" class="mt-2 space-y-2 hidden">
+                <div class="text-sm font-medium text-gray-700">Selected Team Members:</div>
+                <div id="selectedUsers" class="space-y-1"></div>
+              </div>
+            </div>
+          </div>
+          <div class="flex justify-end space-x-3 mt-6">
+            <button 
+              type="button" 
+              id="cancelCreateCollaboration"
+              class="inline-flex items-center px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-all duration-200 font-medium"
+            >
+              <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+              Cancel
+            </button>
+            <button 
+              type="submit"
+              class="inline-flex items-center px-4 py-2 bg-[#415058] hover:bg-[#1F292E] text-white rounded-md transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+            >
+              <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+              Create Collaboration
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Collaboration Modal -->
+  <div id="editCollaborationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900">Edit Collaboration</h3>
+        </div>
+        <form id="editCollaborationForm" class="px-6 py-4">
+          <input type="hidden" id="editCollaborationId" name="collaborationId" />
+          <div class="space-y-4">
+            <!-- Project Information Display -->
+            <div class="bg-gray-50 px-4 py-3 rounded-lg border">
+              <div class="text-sm font-medium text-gray-700 mb-1">Project</div>
+              <div id="editProjectInfo" class="text-lg font-semibold text-gray-900">
+                <!-- Project info will be populated here -->
+              </div>
+            </div>
+            <div>
+              <label for="editCollaborationDescription" class="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
+              <textarea 
+                id="editCollaborationDescription" 
+                name="collaborationDescription"
+                rows="3"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Describe what this collaboration does"
+              ></textarea>
+            </div>
+            
+            <!-- Current Team Members -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Current Team Members</label>
+              <div id="editCurrentMembers" class="space-y-2">
+                <!-- Current members will be populated here -->
+              </div>
+            </div>
+
+            <div class="relative">
+              <label for="editTeamMembersSelect" class="block text-sm font-medium text-gray-700 mb-1">Add Team Members (Optional)</label>
+              <div class="relative">
+                <input
+                  type="text"
+                  id="editTeamMembersSelect"
+                  placeholder="🔍 Search users..."
+                  autocomplete="off"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500"
+                />
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                  <svg class="fill-current h-5 w-5 transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                  </svg>
+                </div>
+              </div>
+              
+              <!-- Edit User Dropdown -->
+              <div 
+                id="editUserDropdown"
+                class="absolute z-50 w-full bg-white border border-gray-300 rounded-lg shadow-lg overflow-hidden hidden" 
+                style={{ 
+                  top: '100%', 
+                  left: 0, 
+                  maxHeight: '240px',
+                  overflowY: 'auto'
+                }}
+              >
+                <div class="px-4 py-2 text-gray-500 text-sm">
+                  Loading users...
+                </div>
+              </div>
+              
+              <!-- Edit Selected Users List -->
+              <div id="editSelectedUsersList" class="mt-2 space-y-2 hidden">
+                <div class="text-sm font-medium text-gray-700">Selected Team Members:</div>
+                <div id="editSelectedUsers" class="space-y-1"></div>
+              </div>
+            </div>
+          </div>
+          <div class="flex justify-end space-x-3 mt-6">
+            <button 
+              type="button" 
+              id="cancelEditCollaboration"
+              class="inline-flex items-center px-4 py-2 text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md transition-all duration-200 font-medium"
+            >
+              <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+              Cancel
+            </button>
+            <button 
+              type="submit"
+              class="inline-flex items-center px-4 py-2 bg-[#415058] hover:bg-[#1F292E] text-white rounded-md transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+            >
+              <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+              Update Collaboration
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  // Collaboration Management JavaScript
+  document.addEventListener('DOMContentLoaded', function() {
+    const createCollaborationBtn = document.getElementById('createCollaborationBtn');
+    const createFirstCollaborationBtn = document.getElementById('createFirstCollaborationBtn');
+    const createCollaborationModal = document.getElementById('createCollaborationModal');
+    const editCollaborationModal = document.getElementById('editCollaborationModal');
+    const cancelCreateCollaboration = document.getElementById('cancelCreateCollaboration');
+    const cancelEditCollaboration = document.getElementById('cancelEditCollaboration');
+    const createCollaborationForm = document.getElementById('createCollaborationForm');
+    const editCollaborationForm = document.getElementById('editCollaborationForm');
+    const editCollaborationBtns = document.querySelectorAll('.edit-collaboration-btn');
+    const deleteCollaborationBtns = document.querySelectorAll('.delete-collaboration-btn');
+
+    // State for project dropdowns
+    let allProjects: any[] = [];
+    let selectedProjectId: number | null = null;
+    let selectedEditProjectId: number | null = null;
+    let projectDropdownOpen = false;
+    let editProjectDropdownOpen = false;
+    
+    // State for user selection
+    let selectedUsers: any[] = [];
+    let selectedEditUsers: any[] = [];
+    let currentEditMembers: any[] = []; // Store current team members for edit modal
+    let userDropdownOpen = false;
+    let editUserDropdownOpen = false;
+
+    // Load current team members for edit modal
+    async function loadCurrentTeamMembers(teamId: number) {
+      try {
+        const response = await fetch(`/api/collaborations/${teamId}/members`);
+        if (response.ok) {
+          const data = await response.json();
+          currentEditMembers = data.data || [];
+          renderCurrentMembers();
+        }
+      } catch (error) {
+        console.error('Error loading current team members:', error);
+      }
+    }
+
+    // Render current team members in edit modal
+    function renderCurrentMembers() {
+      const container = document.getElementById('editCurrentMembers');
+      if (!container) return;
+
+      if (currentEditMembers.length === 0) {
+        container.innerHTML = '<div class="text-sm text-gray-500">No team members</div>';
+        return;
+      }
+
+      let html = '';
+      currentEditMembers.forEach((member: any) => {
+        const isCreator = member.role === 'lead';
+        html += `
+          <div class="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-md">
+            <div class="flex items-center space-x-2">
+              <div class="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                ${member.name.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div class="text-sm font-medium text-gray-900">${member.name}</div>
+                <div class="text-xs text-gray-500">${member.email}</div>
+              </div>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="text-xs px-2 py-1 rounded-full ${isCreator ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}">
+                ${isCreator ? 'Lead' : 'Member'}
+              </span>
+              ${!isCreator ? `
+                <button 
+                  type="button"
+                  onclick="removeCurrentMember(${member.userId})"
+                  class="text-red-500 hover:text-red-700 p-1"
+                  title="Remove member"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    // Remove current team member
+    function removeCurrentMember(userId: number) {
+      currentEditMembers = currentEditMembers.filter(member => member.userId !== userId);
+      renderCurrentMembers();
+    }
+
+    // Make removeCurrentMember globally accessible
+    (window as any).removeCurrentMember = removeCurrentMember;
+
+    // Load projects into dropdowns
+    async function loadProjects() {
+      try {
+        const response = await fetch('/api/admin/projects');
+        allProjects = await response.json();
+        console.log('Loaded projects:', allProjects);
+      } catch (error) {
+        console.error('Error loading projects:', error);
+      }
+    }
+
+    // Organize projects by client for dropdown display
+    function organizeProjectsByClient() {
+      const clientGroups: { [key: string]: any[] } = {};
+      
+      allProjects.forEach((project: any) => {
+        const clientName = project.clientName || 'Unknown Client';
+        if (!clientGroups[clientName]) {
+          clientGroups[clientName] = [];
+        }
+        clientGroups[clientName].push(project);
+      });
+      
+      // Sort clients alphabetically
+      const sortedClients = Object.keys(clientGroups).sort();
+      
+      // For each client, sort projects alphabetically
+      sortedClients.forEach(clientName => {
+        clientGroups[clientName].sort((a: any, b: any) => a.name.localeCompare(b.name));
+      });
+      
+      return { clientGroups, sortedClients };
+    }
+
+    // Filter projects based on search term
+    function getFilteredProjects(searchTerm: string, isEdit = false) {
+      if (!searchTerm.trim()) {
+        return organizeProjectsByClient();
+      }
+      
+      const searchLower = searchTerm.toLowerCase();
+      const filteredProjects = allProjects.filter((project: any) => {
+        const clientName = (project.clientName || '').toLowerCase();
+        const projectName = (project.name || '').toLowerCase();
+        return (
+          clientName.includes(searchLower) ||
+          projectName.includes(searchLower)
+        );
+      });
+      
+      const clientGroups: { [key: string]: any[] } = {};
+      filteredProjects.forEach((project: any) => {
+        const clientName = project.clientName || 'Unknown Client';
+        if (!clientGroups[clientName]) {
+          clientGroups[clientName] = [];
+        }
+        clientGroups[clientName].push(project);
+      });
+      
+      const sortedClients = Object.keys(clientGroups).sort();
+      
+      sortedClients.forEach(clientName => {
+        clientGroups[clientName].sort((a: any, b: any) => a.name.localeCompare(b.name));
+      });
+      
+      return { clientGroups, sortedClients };
+    }
+
+    // Render project dropdown
+    function renderProjectDropdown(searchTerm = '', isEdit = false) {
+      const { clientGroups, sortedClients } = getFilteredProjects(searchTerm, isEdit);
+      const dropdownId = isEdit ? 'editProjectDropdown' : 'projectDropdown';
+      const dropdown = document.getElementById(dropdownId);
+      
+      if (!dropdown) return;
+      
+      if (sortedClients.length === 0) {
+        dropdown.innerHTML = '<div class="px-4 py-2 text-gray-500 text-sm">No projects found</div>';
+        return;
+      }
+      
+      let html = '';
+      sortedClients.forEach(clientName => {
+        // Client Header
+        html += `
+          <div class="px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            ${clientName}
+          </div>
+        `;
+        
+        // Projects for this client
+        clientGroups[clientName].forEach((project: any) => {
+          html += `
+            <div
+              class="pl-8 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
+              data-project-id="${project.id}"
+              data-project-name="${project.name}"
+              data-client-name="${clientName}"
+            >
+              <div class="font-medium text-gray-900">
+                ${project.name}
+              </div>
+            </div>
+          `;
+        });
+      });
+      
+      dropdown.innerHTML = html;
+    }
+
+    // Show project dropdown
+    function showProjectDropdown(isEdit = false) {
+      const dropdownId = isEdit ? 'editProjectDropdown' : 'projectDropdown';
+      const dropdown = document.getElementById(dropdownId);
+      if (dropdown) {
+        dropdown.classList.remove('hidden');
+        if (isEdit) {
+          editProjectDropdownOpen = true;
+        } else {
+          projectDropdownOpen = true;
+        }
+      }
+    }
+
+    // Hide project dropdown
+    function hideProjectDropdown(isEdit = false) {
+      const dropdownId = isEdit ? 'editProjectDropdown' : 'projectDropdown';
+      const dropdown = document.getElementById(dropdownId);
+      if (dropdown) {
+        dropdown.classList.add('hidden');
+        if (isEdit) {
+          editProjectDropdownOpen = false;
+        } else {
+          projectDropdownOpen = false;
+        }
+      }
+    }
+
+    // Select project
+    function selectProject(projectId: number, projectName: string, clientName: string, isEdit = false) {
+      const inputId = isEdit ? 'editProjectSelect' : 'projectSelect';
+      const input = document.getElementById(inputId) as HTMLInputElement;
+      
+      if (input) {
+        input.value = `${clientName} - ${projectName}`;
+      }
+      
+      if (isEdit) {
+        selectedEditProjectId = projectId;
+      } else {
+        selectedProjectId = projectId;
+      }
+      
+      hideProjectDropdown(isEdit);
+    }
+
+    // Load projects on page load
+    loadProjects();
+
+    // User search and selection functions
+    async function searchUsers(searchTerm: string, isEdit = false) {
+      try {
+        const response = await fetch(`/api/admin/users/search?q=${encodeURIComponent(searchTerm)}&activeOnly=true&limit=20`);
+        const users = await response.json();
+        return users;
+      } catch (error) {
+        console.error('Error searching users:', error);
+        return [];
+      }
+    }
+
+    // Render user dropdown
+    function renderUserDropdown(users: any[], isEdit = false) {
+      const dropdownId = isEdit ? 'editUserDropdown' : 'userDropdown';
+      const dropdown = document.getElementById(dropdownId);
+      
+      if (!dropdown) return;
+      
+      if (users.length === 0) {
+        dropdown.innerHTML = '<div class="px-4 py-2 text-gray-500 text-sm">No users found</div>';
+        return;
+      }
+      
+      let html = '';
+      users.forEach((user: any) => {
+        const isSelected = isEdit ? 
+          selectedEditUsers.some(selected => selected.id === user.id) :
+          selectedUsers.some(selected => selected.id === user.id);
+        
+        if (!isSelected) {
+          html += `
+            <div
+              class="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
+              data-user-id="${user.id}"
+              data-user-name="${user.name}"
+              data-user-email="${user.email}"
+            >
+              <div class="font-medium text-gray-900">${user.name}</div>
+              <div class="text-xs text-gray-500">${user.email}</div>
+            </div>
+          `;
+        }
+      });
+      
+      dropdown.innerHTML = html;
+    }
+
+    // Show user dropdown
+    function showUserDropdown(isEdit = false) {
+      const dropdownId = isEdit ? 'editUserDropdown' : 'userDropdown';
+      const dropdown = document.getElementById(dropdownId);
+      if (dropdown) {
+        dropdown.classList.remove('hidden');
+        if (isEdit) {
+          editUserDropdownOpen = true;
+        } else {
+          userDropdownOpen = true;
+        }
+      }
+    }
+
+    // Hide user dropdown
+    function hideUserDropdown(isEdit = false) {
+      const dropdownId = isEdit ? 'editUserDropdown' : 'userDropdown';
+      const dropdown = document.getElementById(dropdownId);
+      if (dropdown) {
+        dropdown.classList.add('hidden');
+        if (isEdit) {
+          editUserDropdownOpen = false;
+        } else {
+          userDropdownOpen = false;
+        }
+      }
+    }
+
+    // Select user
+    function selectUser(userId: number, userName: string, userEmail: string, isEdit = false) {
+      const inputId = isEdit ? 'editTeamMembersSelect' : 'teamMembersSelect';
+      const input = document.getElementById(inputId) as HTMLInputElement;
+      
+      if (input) {
+        input.value = '';
+      }
+      
+      const user = { id: userId, name: userName, email: userEmail };
+      
+      if (isEdit) {
+        if (!selectedEditUsers.some(u => u.id === userId)) {
+          selectedEditUsers.push(user);
+        }
+        renderSelectedUsers(true);
+      } else {
+        if (!selectedUsers.some(u => u.id === userId)) {
+          selectedUsers.push(user);
+        }
+        renderSelectedUsers(false);
+      }
+      
+      hideUserDropdown(isEdit);
+    }
+
+    // Remove user
+    function removeUser(userId: number, isEdit = false) {
+      if (isEdit) {
+        selectedEditUsers = selectedEditUsers.filter(u => u.id !== userId);
+        renderSelectedUsers(true);
+      } else {
+        selectedUsers = selectedUsers.filter(u => u.id !== userId);
+        renderSelectedUsers(false);
+      }
+    }
+
+    // Render selected users
+    function renderSelectedUsers(isEdit = false) {
+      const users = isEdit ? selectedEditUsers : selectedUsers;
+      const containerId = isEdit ? 'editSelectedUsers' : 'selectedUsers';
+      const listId = isEdit ? 'editSelectedUsersList' : 'selectedUsersList';
+      const container = document.getElementById(containerId);
+      const list = document.getElementById(listId);
+      
+      if (!container || !list) return;
+      
+      if (users.length === 0) {
+        list.classList.add('hidden');
+        return;
+      }
+      
+      list.classList.remove('hidden');
+      
+      let html = '';
+      users.forEach((user: any) => {
+        html += `
+          <div class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+            <div class="flex items-center">
+              <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-3">
+                <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+              </div>
+              <div>
+                <div class="text-sm font-medium text-gray-900">${user.name}</div>
+                <div class="text-xs text-gray-500">${user.email}</div>
+              </div>
+            </div>
+            <button 
+              type="button"
+              class="text-gray-400 hover:text-red-500 transition-colors"
+              onclick="removeUser(${user.id}, ${isEdit})"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        `;
+      });
+      
+      container.innerHTML = html;
+    }
+
+    // Show create collaboration modal
+    function showCreateCollaborationModal() {
+      createCollaborationModal?.classList.remove('hidden');
+    }
+
+    // Hide create collaboration modal
+    function hideCreateCollaborationModal() {
+      createCollaborationModal?.classList.add('hidden');
+      (createCollaborationForm as HTMLFormElement)?.reset();
+      selectedUsers = [];
+      selectedProjectId = null;
+      renderSelectedUsers(false);
+    }
+
+    // Show edit collaboration modal
+    function showEditCollaborationModal(teamId: string, teamName: string, teamDescription: string, projectName?: string, clientName?: string) {
+      (document.getElementById('editCollaborationId') as HTMLInputElement)!.value = teamId;
+      
+      // Display project information
+      const projectInfoElement = document.getElementById('editProjectInfo');
+      if (projectInfoElement && projectName && clientName) {
+        projectInfoElement.textContent = `${clientName} - ${projectName}`;
+      } else {
+        projectInfoElement!.textContent = teamName;
+      }
+      
+      (document.getElementById('editCollaborationDescription') as HTMLTextAreaElement)!.value = teamDescription;
+      
+      // Load current team members
+      loadCurrentTeamMembers(parseInt(teamId));
+      
+      editCollaborationModal?.classList.remove('hidden');
+    }
+
+    // Hide edit collaboration modal
+    function hideEditCollaborationModal() {
+      editCollaborationModal?.classList.add('hidden');
+      (editCollaborationForm as HTMLFormElement)?.reset();
+      selectedEditUsers = [];
+      renderSelectedUsers(true);
+    }
+
+    // Event listeners
+    createCollaborationBtn?.addEventListener('click', showCreateCollaborationModal);
+    createFirstCollaborationBtn?.addEventListener('click', showCreateCollaborationModal);
+    cancelCreateCollaboration?.addEventListener('click', hideCreateCollaborationModal);
+    cancelEditCollaboration?.addEventListener('click', hideEditCollaborationModal);
+
+    // Project dropdown event listeners
+    const projectSelect = document.getElementById('projectSelect');
+    const projectDropdown = document.getElementById('projectDropdown');
+
+    // Create project dropdown events
+    projectSelect?.addEventListener('focus', () => {
+      showProjectDropdown(false);
+      renderProjectDropdown('', false);
+    });
+
+    projectSelect?.addEventListener('click', () => {
+      showProjectDropdown(false);
+      renderProjectDropdown('', false);
+    });
+
+    projectSelect?.addEventListener('input', (e) => {
+      const searchTerm = (e.target as HTMLInputElement).value;
+      renderProjectDropdown(searchTerm, false);
+      showProjectDropdown(false);
+    });
+
+
+    // Project dropdown click events
+    projectDropdown?.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const projectItem = target.closest('[data-project-id]');
+      if (projectItem) {
+        const projectId = projectItem.getAttribute('data-project-id');
+        const projectName = projectItem.getAttribute('data-project-name');
+        const clientName = projectItem.getAttribute('data-client-name');
+        if (projectId && projectName && clientName) {
+          selectProject(parseInt(projectId), projectName, clientName, false);
+        }
+      }
+    });
+
+
+    // User search event listeners
+    const teamMembersSelect = document.getElementById('teamMembersSelect');
+    const editTeamMembersSelect = document.getElementById('editTeamMembersSelect');
+    const userDropdown = document.getElementById('userDropdown');
+    const editUserDropdown = document.getElementById('editUserDropdown');
+
+    // Create user dropdown events
+    teamMembersSelect?.addEventListener('focus', async () => {
+      showUserDropdown(false);
+      const users = await searchUsers('', false);
+      renderUserDropdown(users, false);
+    });
+
+    teamMembersSelect?.addEventListener('click', async () => {
+      showUserDropdown(false);
+      const users = await searchUsers('', false);
+      renderUserDropdown(users, false);
+    });
+
+    teamMembersSelect?.addEventListener('input', async (e) => {
+      const searchTerm = (e.target as HTMLInputElement).value;
+      const users = await searchUsers(searchTerm, false);
+      renderUserDropdown(users, false);
+      showUserDropdown(false);
+    });
+
+    // Edit user dropdown events
+    editTeamMembersSelect?.addEventListener('focus', async () => {
+      showUserDropdown(true);
+      const users = await searchUsers('', true);
+      renderUserDropdown(users, true);
+    });
+
+    editTeamMembersSelect?.addEventListener('click', async () => {
+      showUserDropdown(true);
+      const users = await searchUsers('', true);
+      renderUserDropdown(users, true);
+    });
+
+    editTeamMembersSelect?.addEventListener('input', async (e) => {
+      const searchTerm = (e.target as HTMLInputElement).value;
+      const users = await searchUsers(searchTerm, true);
+      renderUserDropdown(users, true);
+      showUserDropdown(true);
+    });
+
+    // User dropdown click events
+    userDropdown?.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const userItem = target.closest('[data-user-id]');
+      if (userItem) {
+        const userId = userItem.getAttribute('data-user-id');
+        const userName = userItem.getAttribute('data-user-name');
+        const userEmail = userItem.getAttribute('data-user-email');
+        if (userId && userName && userEmail) {
+          selectUser(parseInt(userId), userName, userEmail, false);
+        }
+      }
+    });
+
+    editUserDropdown?.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const userItem = target.closest('[data-user-id]');
+      if (userItem) {
+        const userId = userItem.getAttribute('data-user-id');
+        const userName = userItem.getAttribute('data-user-name');
+        const userEmail = userItem.getAttribute('data-user-email');
+        if (userId && userName && userEmail) {
+          selectUser(parseInt(userId), userName, userEmail, true);
+        }
+      }
+    });
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', (e) => {
+      const target = e.target as Element;
+      if (!target.closest('.relative')) {
+        hideProjectDropdown(false);
+        hideProjectDropdown(true);
+        hideUserDropdown(false);
+        hideUserDropdown(true);
+      }
+    });
+
+    // Edit collaboration buttons
+    editCollaborationBtns.forEach(btn => {
+      btn.addEventListener('click', function(this: HTMLElement) {
+        const teamId = this.dataset.teamId;
+        const teamName = this.dataset.teamName;
+        const teamDescription = this.dataset.teamDescription;
+        const projectName = this.dataset.projectName;
+        const clientName = this.dataset.clientName;
+        showEditCollaborationModal(teamId!, teamName!, teamDescription!, projectName, clientName);
+      });
+    });
+
+    // Delete collaboration buttons
+    deleteCollaborationBtns.forEach(btn => {
+      btn.addEventListener('click', function(this: HTMLElement) {
+        const teamId = this.dataset.teamId;
+        const teamName = this.dataset.teamName;
+        
+        if (confirm(`Are you sure you want to archive the collaboration "${teamName}"? This action can be undone.`)) {
+          deleteCollaboration(teamId!);
+        }
+      });
+    });
+
+    // Close modals when clicking outside
+    createCollaborationModal?.addEventListener('click', function(e) {
+      if (e.target === createCollaborationModal) {
+        hideCreateCollaborationModal();
+      }
+    });
+
+    editCollaborationModal?.addEventListener('click', function(e) {
+      if (e.target === editCollaborationModal) {
+        hideEditCollaborationModal();
+      }
+    });
+
+    // Handle create collaboration form submission
+    createCollaborationForm?.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(createCollaborationForm as HTMLFormElement);
+      const description = formData.get('collaborationDescription');
+      
+      if (!selectedProjectId) {
+        alert('Please select a project');
+        return;
+      }
+
+      const collaborationData = {
+        projectId: selectedProjectId,
+        description: description,
+        teamMembers: selectedUsers.map(user => user.id)
+      };
+      
+      console.log('Sending collaboration data:', collaborationData);
+      console.log('Selected users:', selectedUsers);
+
+      try {
+        const response = await fetch('/api/collaborations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(collaborationData)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Refresh the page to show the new collaboration
+          window.location.reload();
+        } else {
+          // Check if it's a duplicate key error (collaboration was actually created)
+          if (result.error && result.error.includes('duplicate key')) {
+            console.log('Collaboration created successfully (duplicate key error ignored)');
+            window.location.reload();
+          } else {
+            alert('Error creating collaboration: ' + (result.error || 'Unknown error'));
+          }
+        }
+      } catch (error) {
+        console.error('Error creating collaboration:', error);
+        alert('Error creating collaboration. Please try again.');
+      }
+    });
+
+    // Handle edit collaboration form submission
+    editCollaborationForm?.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(editCollaborationForm as HTMLFormElement);
+      const collaborationId = formData.get('collaborationId');
+      const description = formData.get('collaborationDescription');
+      
+      // Combine current members (excluding removed ones) with new members
+      const currentMemberIds = currentEditMembers.map(member => member.userId);
+      const newMemberIds = selectedEditUsers.map(user => user.id);
+      const allMemberIds = [...currentMemberIds, ...newMemberIds];
+
+      const collaborationData = {
+        description: description,
+        teamMembers: allMemberIds
+      };
+
+      try {
+        const response = await fetch(`/api/collaborations/${collaborationId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(collaborationData)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Refresh the page to show the updated collaboration
+          window.location.reload();
+        } else {
+          // Check if it's a duplicate key error (collaboration was actually updated)
+          if (result.error && result.error.includes('duplicate key')) {
+            console.log('Collaboration updated successfully (duplicate key error ignored)');
+            window.location.reload();
+          } else {
+            alert('Error updating collaboration: ' + (result.error || 'Unknown error'));
+          }
+        }
+      } catch (error) {
+        console.error('Error updating collaboration:', error);
+        alert('Error updating collaboration. Please try again.');
+      }
+    });
+
+    // Delete collaboration function
+    async function deleteCollaboration(teamId: string) {
+      try {
+        const response = await fetch(`/api/collaborations/${teamId}`, {
+          method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Refresh the page to show the updated list
+          window.location.reload();
+        } else {
+          alert('Error archiving collaboration: ' + (result.error || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('Error archiving collaboration:', error);
+        alert('Error archiving collaboration. Please try again.');
+      }
+    }
+  });
+</script>
