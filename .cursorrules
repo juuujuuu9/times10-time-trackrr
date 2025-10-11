@@ -72,6 +72,28 @@ Only introduce abstractions when:
 - Flag critical violations that should block commits
 - **Warn when solutions introduce unnecessary complexity**
 
+## Rule Hierarchy
+
+### FOUNDATIONAL (RULE-000): Simplicity First - Error
+- **OVERRIDES**: All other rules when they conflict with simplicity
+- **PRINCIPLE**: The simplest solution that works is always preferred
+
+### ARCHITECTURAL (RULE-001-012): Code Quality - Error/Warning  
+- **FOLLOWS**: RULE-000 (Simplicity First)
+- **COVERS**: TypeScript, Structure, Styling, Framework, Validation, State, Accessibility, Performance, Security, Workflow, Dependencies
+
+### DOMAIN-SPECIFIC: Time Tracking Application Logic - Warning
+- **FOLLOWS**: RULE-000 (Simplicity First)
+- **COVERS**: Manual duration entries, timezone handling, API patterns, database queries
+
+### OPERATIONAL (RULE-DB-001-002): Production Safety - Error
+- **FOLLOWS**: RULE-000 (Simplicity First)
+- **COVERS**: Database schema management, environment configuration
+
+### TIMEZONE (RULE-TZ-001-003): Timezone Safety - Error/Warning
+- **FOLLOWS**: RULE-000 (Simplicity First)
+- **COVERS**: Date handling, manual entries, utility usage
+
 ## Project Rules
 
 ### RULE-000: Simplicity First
@@ -80,7 +102,7 @@ Only introduce abstractions when:
 - Refactor toward simplicity, not complexity
 - Delete code more often than you add it
 - Inline small abstractions that obscure rather than clarify
-**Severity:** Warning  
+**Severity:** Error  
 **Applies to:** All code suggestions and refactors
 
 ### RULE-001: TypeScript Configuration
@@ -175,6 +197,40 @@ Only introduce abstractions when:
 - **ALWAYS** show loading states or "Feature not implemented" messages rather than fake data
 - **ALWAYS** provide clear guidance on what API endpoint needs to be created
 **Severity:** Error
+
+### RULE-DB-001: Database Schema Management
+- **ALWAYS** run comprehensive schema audits before and after migrations
+- **ALWAYS** verify all expected tables exist in production
+- **ALWAYS** check foreign key constraints and indexes
+- **ALWAYS** validate data integrity before applying schema changes
+- **ALWAYS** create environment-agnostic audit scripts
+- **ALWAYS** compare localhost vs production schemas before deployments
+- **ALWAYS** fix data integrity issues before applying schema changes
+- **ALWAYS** handle orphaned records that violate foreign key constraints
+- **ALWAYS** use `drizzle-kit push --force` for production schema updates
+- **ALWAYS** verify migration success with comprehensive checks
+- **ALWAYS** create rollback procedures for critical migrations
+- **ALWAYS** use production database URLs for critical schema operations
+- **ALWAYS** create comprehensive audit reports with findings
+- **ALWAYS** provide step-by-step fix procedures
+- **ALWAYS** include success verification in all database operations
+- **ALWAYS** document the impact of schema changes on application functionality
+- **ALWAYS** ensure all collaborative feature tables are present in production
+- **ALWAYS** verify foreign key relationships for collaborative tables
+- **ALWAYS** check that collaborative features work without 500 errors
+- **ALWAYS** include collaborative table validation in schema audits
+- **ALWAYS** provide clear guidance on missing collaborative functionality
+**Severity:** Error
+**Applies to:** All database operations
+
+### RULE-DB-002: Database Environment Management
+- **ALWAYS** use environment-specific database URLs for audits
+- **ALWAYS** create environment-agnostic audit scripts
+- **ALWAYS** document database connection patterns in scripts
+- **ALWAYS** provide clear error messages for missing environment variables
+- **ALWAYS** include database URL validation in audit scripts
+**Severity:** Warning
+**Applies to:** Database environment configuration
 
 ## Cursor Behavior Instructions
 
@@ -488,36 +544,51 @@ Cursor will flag and suggest alternatives for:
 
 ## Timezone Issue Prevention Patterns
 
-### Manual Duration Entry Timezone Issues
-- **CRITICAL**: Manual duration entries MUST have `startTime: null` and `endTime: null`
-- **NEVER** set `startTime` to a date for manual duration entries - this causes timezone conversion issues
-- Use `createdAt` field for date association with manual entries, not `startTime`
-- When displaying manual entries, check `if (entry.startTime)` to determine date source
-
-### Date Display Logic
-- For timer entries: Use `entry.startTime` for date calculation
-- For manual entries: Use `entry.createdAt` for date calculation
-- Pattern:
-  ```typescript
-  const taskDate = entry.startTime ? 
-    (() => {
-      const date = new Date(entry.startTime);
-      const year = date.getFullYear();
-      const month = date.getMonth() + 1;
-      const day = date.getDate();
-      return new Date(year, month - 1, day, 0, 0, 0, 0);
-    })() : 
-    new Date(entry.createdAt);
-  ```
-
-### Timezone-Safe Date Construction
-- **ALWAYS** construct dates using local date components to avoid timezone issues
+### RULE-TZ-001: Timezone-Safe Date Handling
+- **ALWAYS** use local date components for date construction to avoid timezone issues
+- **ALWAYS** use the timezone utilities from `src/utils/timezoneUtils.ts`
+- **NEVER** use `toISOString().split('T')[0]` for date strings
 - **NEVER** use `new Date(dateString)` for date construction in production
-- Pattern:
+- **ALWAYS** construct dates using this proven pattern:
   ```typescript
-  const [year, month, day] = dateString.split('-').map(Number);
-  const targetDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+  const date = new Date(entry.startTime || entry.createdAt);
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  return new Date(year, month - 1, day, 0, 0, 0, 0);
   ```
+**Severity:** Error
+**Applies to:** All date/time operations
+
+### RULE-TZ-002: Manual Duration Entry Patterns
+- **CRITICAL**: Manual duration entries MUST have `startTime: null` and `endTime: null`
+- **ALWAYS** use `createdAt` field for date association with manual entries, not `startTime`
+- **ALWAYS** check entry type before date operations:
+  ```typescript
+  const isManualDurationEntry = entry.durationManual && !entry.startTime && !entry.endTime;
+  ```
+- **ALWAYS** use this pattern for manual entry date updates:
+  ```typescript
+  if (isManualDurationEntry) {
+    const taskDate = new Date(entry.createdAt);
+    const year = taskDate.getFullYear();
+    const month = taskDate.getMonth() + 1;
+    const day = taskDate.getDate();
+    const newCreatedAt = new Date(year, month - 1, day, 12, 0, 0, 0);
+    updateData.createdAt = newCreatedAt.toISOString();
+  }
+  ```
+**Severity:** Error
+**Applies to:** Manual duration entries
+
+### RULE-TZ-003: Timezone Utilities Usage
+- **ALWAYS** import and use timezone utilities from `src/utils/timezoneUtils.ts`
+- **ALWAYS** use `formatTimeForDisplay()` for time display
+- **ALWAYS** use `createTaskDateTime()` for creating time entries
+- **ALWAYS** use `getDateComponents()` for date component extraction
+- **ALWAYS** use `getTodayString()` for today's date in YYYY-MM-DD format
+**Severity:** Warning
+**Applies to:** All timezone-sensitive operations
 
 ## Data Migration Patterns
 
@@ -620,3 +691,120 @@ Cursor will flag and suggest alternatives for:
 - **ALWAYS** support `createdAt` updates in UpdateTimeEntryRequest interface
 - **ALWAYS** handle `createdAt` field in service layer update methods
 - **ALWAYS** ensure API endpoints can accept and process `createdAt` updates
+
+## Database Schema Audit & Migration Patterns
+
+### RULE-DB-001: Database Schema Management
+- **ALWAYS** run comprehensive schema audits before and after migrations
+- **ALWAYS** verify all expected tables exist in production
+- **ALWAYS** check foreign key constraints and indexes
+- **ALWAYS** validate data integrity before applying schema changes
+- **ALWAYS** create environment-agnostic audit scripts
+- **ALWAYS** compare localhost vs production schemas before deployments
+- **ALWAYS** fix data integrity issues before applying schema changes
+- **ALWAYS** handle orphaned records that violate foreign key constraints
+- **ALWAYS** use `drizzle-kit push --force` for production schema updates
+- **ALWAYS** verify migration success with comprehensive checks
+- **ALWAYS** create rollback procedures for critical migrations
+- **ALWAYS** use production database URLs for critical schema operations
+- **ALWAYS** create comprehensive audit reports with findings
+- **ALWAYS** provide step-by-step fix procedures
+- **ALWAYS** include success verification in all database operations
+- **ALWAYS** document the impact of schema changes on application functionality
+- **ALWAYS** ensure all collaborative feature tables are present in production
+- **ALWAYS** verify foreign key relationships for collaborative tables
+- **ALWAYS** check that collaborative features work without 500 errors
+- **ALWAYS** include collaborative table validation in schema audits
+- **ALWAYS** provide clear guidance on missing collaborative functionality
+**Severity:** Error
+**Applies to:** All database operations
+
+### RULE-DB-002: Database Environment Management
+- **ALWAYS** use environment-specific database URLs for audits
+- **ALWAYS** create environment-agnostic audit scripts
+- **ALWAYS** document database connection patterns in scripts
+- **ALWAYS** provide clear error messages for missing environment variables
+- **ALWAYS** include database URL validation in audit scripts
+**Severity:** Warning
+**Applies to:** Database environment configuration
+
+## Database Audit Script Patterns
+
+### Schema Audit Script Structure
+- **ALWAYS** create environment-agnostic audit scripts
+- **ALWAYS** include table existence checks
+- **ALWAYS** verify foreign key constraints
+- **ALWAYS** check indexes and performance optimizations
+- **ALWAYS** provide comprehensive summary reports
+- **ALWAYS** include specific recommendations for fixes
+
+### Migration Script Patterns
+- **ALWAYS** create scripts that can fix data integrity issues
+- **ALWAYS** provide both detection and remediation functionality
+- **ALWAYS** include verification steps in all fix scripts
+- **ALWAYS** test migrations on development data first
+- **ALWAYS** create rollback procedures for critical changes
+
+### Production Database Patterns
+- **ALWAYS** use the correct production database URL for operations
+- **ALWAYS** verify schema changes with comprehensive audits
+- **ALWAYS** document the impact of schema changes on application functionality
+- **ALWAYS** provide clear success/failure indicators
+- **ALWAYS** include troubleshooting guidance for common issues
+
+## Database Schema Audit Checklist
+
+### Pre-Migration Checklist
+- [ ] Run comprehensive schema audit
+- [ ] Identify missing tables and constraints
+- [ ] Check for data integrity issues
+- [ ] Fix orphaned records
+- [ ] Verify foreign key relationships
+
+### Post-Migration Checklist
+- [ ] Verify all expected tables exist
+- [ ] Check all foreign key constraints
+- [ ] Validate all indexes are present
+- [ ] Test collaborative features functionality
+- [ ] Confirm no 500 errors on related pages
+
+### Database Environment Patterns
+- **ALWAYS** use environment-specific database URLs
+- **ALWAYS** create scripts that work across environments
+- **ALWAYS** provide clear error messages for configuration issues
+- **ALWAYS** include database connection validation
+- **ALWAYS** document environment setup requirements
+
+## Debugging Patterns from Production Issues
+
+### RULE-021: Production vs Local Environment Debugging
+- **ALWAYS** check if production database has same schema as local
+- **ALWAYS** verify environment variables are correctly set in production
+- **ALWAYS** test database connections before assuming schema issues
+- **ALWAYS** create environment-specific debugging endpoints
+- **ALWAYS** document differences between local and production environments
+**Severity:** Error
+
+### RULE-022: Database Migration Debugging
+- **ALWAYS** check if migration actually ran successfully
+- **ALWAYS** verify tables exist after migration claims success
+- **ALWAYS** test database queries directly when migrations fail
+- **ALWAYS** create manual table creation scripts as backup
+- **ALWAYS** include table existence verification in all migrations
+**Severity:** Error
+
+### RULE-023: Error Handling for Missing Database Tables
+- **ALWAYS** create graceful error handling for missing tables
+- **ALWAYS** show helpful error messages instead of 500 errors
+- **ALWAYS** provide clear guidance on how to fix missing tables
+- **ALWAYS** test error states in production environments
+- **ALWAYS** include table existence checks in critical pages
+**Severity:** Error
+
+### RULE-024: Collaborative Features Database Patterns
+- **ALWAYS** ensure teams and team_members tables exist before using collaborative features
+- **ALWAYS** verify foreign key constraints are properly set
+- **ALWAYS** test collaborative features in production after schema changes
+- **ALWAYS** include collaborative table validation in deployment checks
+- **ALWAYS** provide clear error messages when collaborative tables are missing
+**Severity:** Error
