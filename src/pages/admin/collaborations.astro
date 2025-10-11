@@ -5,63 +5,105 @@ import { teams, teamMembers as teamMembersTable, users } from '../../db/schema';
 import { eq, and, count, desc } from 'drizzle-orm';
 import { getSessionUser } from '../../utils/session';
 
-// Get current user
-const currentUser = await getSessionUser(Astro);
-if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'developer')) {
-  return Astro.redirect('/login');
+console.log('🔍 DEBUG: Starting collaborations page...');
+
+try {
+  // Get current user
+  console.log('🔍 DEBUG: Getting session user...');
+  const currentUser = await getSessionUser(Astro);
+  console.log('🔍 DEBUG: Current user:', currentUser ? { id: currentUser.id, role: currentUser.role } : 'null');
+  
+  if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'developer')) {
+    console.log('🔍 DEBUG: Redirecting to login - user not authenticated or not admin');
+    return Astro.redirect('/login');
+  }
+
+  console.log('🔍 DEBUG: User authenticated, proceeding with database queries...');
+
+  // Get all teams
+  console.log('🔍 DEBUG: Fetching teams...');
+  const teamsData = await db
+    .select({
+      id: teams.id,
+      name: teams.name,
+      description: teams.description,
+      createdBy: teams.createdBy,
+      createdAt: teams.createdAt,
+      updatedAt: teams.updatedAt,
+      archived: teams.archived
+    })
+    .from(teams)
+    .where(eq(teams.archived, false))
+    .orderBy(desc(teams.createdAt));
+  
+  console.log('🔍 DEBUG: Teams fetched:', teamsData.length, 'teams');
+
+  // Get member counts for each team
+  console.log('🔍 DEBUG: Fetching member counts...');
+  const memberCounts = await db
+    .select({
+      teamId: teamMembersTable.teamId,
+      memberCount: count(teamMembersTable.userId)
+    })
+    .from(teamMembersTable)
+    .groupBy(teamMembersTable.teamId);
+  
+  console.log('🔍 DEBUG: Member counts fetched:', memberCounts.length, 'team-member relationships');
+
+  // Create a map of team ID to member count
+  console.log('🔍 DEBUG: Creating member count map...');
+  const memberCountMap = new Map();
+  memberCounts.forEach(mc => {
+    memberCountMap.set(mc.teamId, mc.memberCount);
+  });
+
+  // Add member counts to teams
+  console.log('🔍 DEBUG: Combining teams with member counts...');
+  const allTeams = teamsData.map(team => ({
+    ...team,
+    memberCount: memberCountMap.get(team.id) || 0
+  }));
+
+  console.log('🔍 DEBUG: Teams with member counts:', allTeams);
+  console.log('🔍 DEBUG: Member count map:', memberCountMap);
+
+  // Get team creators
+  console.log('🔍 DEBUG: Fetching team creators...');
+  const teamCreators = await db
+    .select({
+      teamId: teams.id,
+      creatorName: users.name,
+      creatorEmail: users.email
+    })
+    .from(teams)
+    .innerJoin(users, eq(teams.createdBy, users.id))
+    .where(eq(teams.archived, false));
+  
+  console.log('🔍 DEBUG: Team creators fetched:', teamCreators.length, 'creators');
+
+  const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]));
+  
+  console.log('🔍 DEBUG: All database queries completed successfully!');
+
+} catch (error) {
+  console.error('❌ DEBUG: Error in collaborations page:', error);
+  console.error('❌ DEBUG: Error message:', error.message);
+  console.error('❌ DEBUG: Error stack:', error.stack);
+  
+  // Return a simple error page instead of crashing
+  return new Response(`
+    <html>
+      <body>
+        <h1>Error in Collaborations Page</h1>
+        <p>Error: ${error.message}</p>
+        <pre>${error.stack}</pre>
+      </body>
+    </html>
+  `, {
+    status: 500,
+    headers: { 'Content-Type': 'text/html' }
+  });
 }
-
-// Get all teams
-const teamsData = await db
-  .select({
-    id: teams.id,
-    name: teams.name,
-    description: teams.description,
-    createdBy: teams.createdBy,
-    createdAt: teams.createdAt,
-    updatedAt: teams.updatedAt,
-    archived: teams.archived
-  })
-  .from(teams)
-  .where(eq(teams.archived, false))
-  .orderBy(desc(teams.createdAt));
-
-// Get member counts for each team
-const memberCounts = await db
-  .select({
-    teamId: teamMembersTable.teamId,
-    memberCount: count(teamMembersTable.userId)
-  })
-  .from(teamMembersTable)
-  .groupBy(teamMembersTable.teamId);
-
-// Create a map of team ID to member count
-const memberCountMap = new Map();
-memberCounts.forEach(mc => {
-  memberCountMap.set(mc.teamId, mc.memberCount);
-});
-
-// Add member counts to teams
-const allTeams = teamsData.map(team => ({
-  ...team,
-  memberCount: memberCountMap.get(team.id) || 0
-}));
-
-console.log('Teams with member counts:', allTeams);
-console.log('Member count map:', memberCountMap);
-
-// Get team creators
-const teamCreators = await db
-  .select({
-    teamId: teams.id,
-    creatorName: users.name,
-    creatorEmail: users.email
-  })
-  .from(teams)
-  .innerJoin(users, eq(teams.createdBy, users.id))
-  .where(eq(teams.archived, false));
-
-const creatorMap = new Map(teamCreators.map(creator => [creator.teamId, creator]));
 ---
 
 <AdminLayout title="Collaboration Management" currentPage="collaborations">
