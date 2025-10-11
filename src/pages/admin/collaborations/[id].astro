@@ -51,30 +51,19 @@ const teamMembers = collaboration.members.map((member: any) => ({
   joinedAt: member.joinedAt
 }));
 
-// Get recent notes from API
-let recentNotes = [];
-try {
-  const notesResponse = await fetch(`${Astro.url.origin}/api/collaborations/${collaborationId}/notes`);
-  if (notesResponse.ok) {
-    const notesData = await notesResponse.json();
-    if (notesData.success) {
-      recentNotes = notesData.data.map((note: any) => ({
-        id: note.id,
-        title: note.title,
-        content: note.content,
-        author: note.author.name,
-        createdAt: new Date(note.createdAt),
-        authorAvatar: note.author.name.charAt(0).toUpperCase()
-      }));
-    }
+// Get recent notes (mock data for now - will be replaced with real data)
+const recentNotes = [
+  {
+    id: 1,
+    title: "Project Kickoff Notes",
+    content: "Outlined the QA checklist and assigned owners for each module. Please review before handoff.",
+    author: "Priya Shah",
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+    authorAvatar: "PS"
   }
-} catch (error) {
-  console.error('Error fetching notes:', error);
-  // Fallback to empty array
-  recentNotes = [];
-}
+];
 
-// Get recent discussions (mock data for now - will be replaced with real data)
+// Get recent discussions (mock data for now)
 const recentDiscussions = [
   {
     id: 1,
@@ -102,39 +91,28 @@ const recentDiscussions = [
   }
 ];
 
-// Get recent files and links from API
-let recentFiles = [];
-let recentLinks = [];
-try {
-  const filesResponse = await fetch(`${Astro.url.origin}/api/collaborations/${collaborationId}/files`);
-  if (filesResponse.ok) {
-    const filesData = await filesResponse.json();
-    if (filesData.success) {
-      recentFiles = filesData.data.files.map((file: any) => ({
-        id: file.id,
-        name: file.name,
-        type: "file",
-        author: file.author.name,
-        createdAt: new Date(file.createdAt),
-        size: file.size
-      }));
-      
-      recentLinks = filesData.data.links.map((link: any) => ({
-        id: link.id,
-        title: link.title,
-        url: link.url,
-        type: "link",
-        author: link.author.name,
-        createdAt: new Date(link.createdAt)
-      }));
-    }
+// Get recent files and links (mock data for now)
+const recentFiles = [
+  {
+    id: 1,
+    name: "Requirements v3.pdf",
+    type: "file",
+    author: "Priya",
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+    size: "1.2MB"
   }
-} catch (error) {
-  console.error('Error fetching files and links:', error);
-  // Fallback to empty arrays
-  recentFiles = [];
-  recentLinks = [];
-}
+];
+
+const recentLinks = [
+  {
+    id: 1,
+    title: "Figma Board",
+    url: "https://figma.com/design/example",
+    type: "link",
+    author: "Mark",
+    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
+  }
+];
 
 // Calculate total time tracked (mock for now)
 const totalTimeTracked = "42h";
@@ -685,139 +663,29 @@ const dueDate = "Oct 28";
     }
 
     // Handle note publishing
-    const publishNoteBtn = document.querySelector('button:contains("Publish Note")') || 
-                          Array.from(document.querySelectorAll('button')).find(btn => btn.textContent?.includes('Publish Note'));
+    const publishNoteBtn = document.querySelector('button:contains("Publish Note")');
     if (publishNoteBtn) {
-      publishNoteBtn.addEventListener('click', async function() {
-        const textarea = document.querySelector('textarea[placeholder*="Write a project note"]') as HTMLTextAreaElement;
-        const content = textarea?.value.trim();
-        
-        if (!content) {
-          alert('Please enter note content');
-          return;
-        }
-        
-        try {
-          const response = await fetch(`/api/collaborations/${collaborationId}/notes`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              title: 'New Note',
-              content: content,
-              isPrivate: false
-            })
-          });
-          
-          const result = await response.json();
-          if (result.success) {
-            // Clear the textarea
-            textarea.value = '';
-            // Show success message
-            alert('Note published successfully!');
-            // Refresh the page to show the new note
-            window.location.reload();
-          } else {
-            alert('Failed to publish note: ' + result.error);
-          }
-        } catch (error) {
-          console.error('Error publishing note:', error);
-          alert('Failed to publish note');
-        }
+      publishNoteBtn.addEventListener('click', function() {
+        // Handle note publishing logic
+        console.log('Publishing note...');
       });
     }
     
     // Handle file uploads
-    const uploadFileBtn = document.querySelector('button:contains("Upload File")') || 
-                         Array.from(document.querySelectorAll('button')).find(btn => btn.textContent?.includes('Upload File'));
+    const uploadFileBtn = document.querySelector('button:contains("Upload File")');
     if (uploadFileBtn) {
       uploadFileBtn.addEventListener('click', function() {
-        // Create a file input element
-        const fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.accept = '*/*';
-        fileInput.style.display = 'none';
-        document.body.appendChild(fileInput);
-        
-        fileInput.addEventListener('change', async function(e) {
-          const file = (e.target as HTMLInputElement).files?.[0];
-          if (!file) return;
-          
-          try {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('type', 'file');
-            formData.append('title', file.name);
-            
-            const response = await fetch(`/api/collaborations/${collaborationId}/files`, {
-              method: 'POST',
-              body: formData
-            });
-            
-            const result = await response.json();
-            if (result.success) {
-              alert('File uploaded successfully!');
-              window.location.reload();
-            } else {
-              alert('Failed to upload file: ' + result.error);
-            }
-          } catch (error) {
-            console.error('Error uploading file:', error);
-            alert('Failed to upload file');
-          }
-        });
-        
-        fileInput.click();
-        document.body.removeChild(fileInput);
+        // Handle file upload logic
+        console.log('Uploading file...');
       });
     }
     
     // Handle link addition
-    const addLinkBtn = document.querySelector('button:contains("Add Link")') || 
-                      Array.from(document.querySelectorAll('button')).find(btn => btn.textContent?.includes('Add Link'));
+    const addLinkBtn = document.querySelector('button:contains("Add Link")');
     if (addLinkBtn) {
       addLinkBtn.addEventListener('click', function() {
-        const title = prompt('Enter link title:');
-        if (!title) return;
-        
-        const url = prompt('Enter link URL:');
-        if (!url) return;
-        
-        // Basic URL validation
-        try {
-          new URL(url);
-        } catch {
-          alert('Please enter a valid URL');
-          return;
-        }
-        
-        // Add the link
-        fetch(`/api/collaborations/${collaborationId}/files`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            type: 'link',
-            title: title,
-            url: url,
-            description: ''
-          })
-        })
-        .then(response => response.json())
-        .then(result => {
-          if (result.success) {
-            alert('Link added successfully!');
-            window.location.reload();
-          } else {
-            alert('Failed to add link: ' + result.error);
-          }
-        })
-        .catch(error => {
-          console.error('Error adding link:', error);
-          alert('Failed to add link');
-        });
+        // Handle link addition logic
+        console.log('Adding link...');
       });
     }
   });

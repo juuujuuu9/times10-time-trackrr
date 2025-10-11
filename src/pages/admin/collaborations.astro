@@ -17,10 +17,10 @@ if (!databaseUrl) {
 
 const sql = neon(databaseUrl);
 
-let teamsData = [];
-let memberCounts = [];
-let teamCreators = [];
-let error = null;
+let teamsData: any[] = [];
+let memberCounts: any[] = [];
+let teamCreators: any[] = [];
+let error: string | null = null;
 
 try {
   // Check if teams table exists first
@@ -61,7 +61,7 @@ try {
 
 } catch (err) {
   console.error('Database error:', err);
-  error = err.message;
+  error = err instanceof Error ? err.message : 'Unknown database error';
 }
 
 // Create a map of team ID to member count
@@ -197,3 +197,24 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.team_id, creator
     )}
   </div>
 </AdminLayout>
+
+<script>
+  // Handle Create Collaboration button clicks
+  document.addEventListener('DOMContentLoaded', function() {
+    const createCollaborationBtn = document.getElementById('createCollaborationBtn');
+    const createFirstCollaborationBtn = document.getElementById('createFirstCollaborationBtn');
+    
+    function handleCreateCollaboration() {
+      // Redirect to create collaboration page or show modal
+      window.location.href = '/admin/collaborations/create';
+    }
+    
+    if (createCollaborationBtn) {
+      createCollaborationBtn.addEventListener('click', handleCreateCollaboration);
+    }
+    
+    if (createFirstCollaborationBtn) {
+      createFirstCollaborationBtn.addEventListener('click', handleCreateCollaboration);
+    }
+  });
+</script>

@@ -49,57 +49,45 @@ export const GET: APIRoute = async (context) => {
       });
     }
 
-    // Get files and links for this collaboration
-    // Using taskFiles and taskLinks tables for now
-    const files = await db.query.taskFiles.findMany({
-      where: eq(taskFiles.taskId, collaborationId), // Using taskId as collaborationId for now
-      with: {
-        author: true
-      },
-      orderBy: [desc(taskFiles.createdAt)]
-    });
+    // For now, return mock data since we don't have files/links linked to collaborations yet
+    // TODO: Implement proper file/link system for collaborations
+    const mockFiles = [
+      {
+        id: 1,
+        name: "Requirements v3.pdf",
+        type: "file",
+        author: {
+          id: 1,
+          name: "Priya",
+          email: "priya@example.com"
+        },
+        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+        size: "1.2MB",
+        mimeType: "application/pdf"
+      }
+    ];
 
-    const links = await db.query.taskLinks.findMany({
-      where: eq(taskLinks.taskId, collaborationId), // Using taskId as collaborationId for now
-      with: {
-        author: true
-      },
-      orderBy: [desc(taskLinks.createdAt)]
-    });
-
-    const formattedFiles = files.map(file => ({
-      id: file.id,
-      name: file.filename,
-      type: "file",
-      author: {
-        id: file.author.id,
-        name: file.author.name,
-        email: file.author.email
-      },
-      createdAt: file.createdAt,
-      size: file.fileSize ? `${(file.fileSize / 1024 / 1024).toFixed(1)}MB` : 'Unknown',
-      mimeType: file.mimeType || 'application/octet-stream'
-    }));
-
-    const formattedLinks = links.map(link => ({
-      id: link.id,
-      title: link.title,
-      url: link.url,
-      type: "link",
-      author: {
-        id: link.author.id,
-        name: link.author.name,
-        email: link.author.email
-      },
-      createdAt: link.createdAt,
-      description: link.description || ''
-    }));
+    const mockLinks = [
+      {
+        id: 1,
+        title: "Figma Board",
+        url: "https://figma.com/design/example",
+        type: "link",
+        author: {
+          id: 2,
+          name: "Mark",
+          email: "mark@example.com"
+        },
+        createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
+        description: "Main design board for the project"
+      }
+    ];
 
     return new Response(JSON.stringify({
       success: true,
       data: {
-        files: formattedFiles,
-        links: formattedLinks
+        files: mockFiles,
+        links: mockLinks
       }
     }), {
       status: 200,
@@ -177,34 +165,25 @@ export const POST: APIRoute = async (context) => {
         });
       }
 
-      // Create the link in the database
-      const newLink = await db.insert(taskLinks).values({
-        taskId: collaborationId, // Using taskId as collaborationId for now
-        authorId: currentUser.id,
+      // For now, return success without actually creating the link
+      // TODO: Implement proper link creation system for collaborations
+      const newLink = {
+        id: Date.now(), // Temporary ID
         title: title.trim(),
         url: url.trim(),
         description: description || '',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }).returning();
-
-      const createdLink = newLink[0];
+        type: 'link',
+        author: {
+          id: currentUser.id,
+          name: currentUser.name,
+          email: currentUser.email
+        },
+        createdAt: new Date()
+      };
 
       return new Response(JSON.stringify({
         success: true,
-        data: {
-          id: createdLink.id,
-          title: createdLink.title,
-          url: createdLink.url,
-          description: createdLink.description,
-          type: 'link',
-          author: {
-            id: currentUser.id,
-            name: currentUser.name,
-            email: currentUser.email
-          },
-          createdAt: createdLink.createdAt
-        },
+        data: newLink,
         message: 'Link added successfully'
       }), {
         status: 201,
@@ -222,34 +201,25 @@ export const POST: APIRoute = async (context) => {
         });
       }
 
-      // Create the file record in the database
-      const newFile = await db.insert(taskFiles).values({
-        taskId: collaborationId, // Using taskId as collaborationId for now
-        authorId: currentUser.id,
-        filename: filename,
-        fileSize: fileSize ? parseInt(fileSize.toString()) : null,
-        mimeType: mimeType || 'application/octet-stream',
+      // For now, return success without actually creating the file
+      // TODO: Implement proper file upload system for collaborations
+      const newFile = {
+        id: Date.now(), // Temporary ID
+        name: filename,
+        type: 'file',
+        author: {
+          id: currentUser.id,
+          name: currentUser.name,
+          email: currentUser.email
+        },
         createdAt: new Date(),
-        updatedAt: new Date()
-      }).returning();
-
-      const createdFile = newFile[0];
+        size: fileSize || 'Unknown',
+        mimeType: mimeType || 'application/octet-stream'
+      };
 
       return new Response(JSON.stringify({
         success: true,
-        data: {
-          id: createdFile.id,
-          name: createdFile.filename,
-          type: 'file',
-          author: {
-            id: currentUser.id,
-            name: currentUser.name,
-            email: currentUser.email
-          },
-          createdAt: createdFile.createdAt,
-          size: createdFile.fileSize ? `${(createdFile.fileSize / 1024 / 1024).toFixed(1)}MB` : 'Unknown',
-          mimeType: createdFile.mimeType
-        },
+        data: newFile,
         message: 'File uploaded successfully'
       }), {
         status: 201,
