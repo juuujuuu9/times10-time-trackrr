@@ -73,9 +73,20 @@ export const POST: APIRoute = async (context) => {
       }
     }
 
+    // Get project name if projectId is provided to use as collaboration name
+    let collaborationName = name;
+    if (projectId) {
+      const project = await db.query.projects.findFirst({
+        where: eq(projects.id, projectId)
+      });
+      if (project) {
+        collaborationName = project.name; // Use project name exactly
+      }
+    }
+
     // Create the team
     const [newTeam] = await db.insert(teams).values({
-      name,
+      name: collaborationName,
       description: description || null, // Allow empty descriptions
       createdBy: currentUser.id,
       createdAt: new Date(),

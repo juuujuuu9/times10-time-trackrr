@@ -66,13 +66,16 @@ if (Astro.request.method === 'POST') {
     
     // Link to project if selected
     if (projectId && projectId !== '') {
-      // Update the team name to include project reference
-      await db.update(teams)
-        .set({ 
-          name: `${name} - ${allProjects.find(p => p.id === parseInt(projectId))?.name}`,
-          updatedAt: new Date()
-        })
-        .where(eq(teams.id, newTeam.id));
+      // Update the team name to match the project name exactly
+      const selectedProject = allProjects.find(p => p.id === parseInt(projectId));
+      if (selectedProject) {
+        await db.update(teams)
+          .set({ 
+            name: selectedProject.name, // Use project name exactly
+            updatedAt: new Date()
+          })
+          .where(eq(teams.id, newTeam.id));
+      }
     }
     
     successMessage = 'Collaboration created successfully!';

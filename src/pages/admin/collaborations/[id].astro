@@ -1,8 +1,8 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { db } from '../../../db/index';
-import { teams, teamMembers as teamMembersTable, projects, clients, users, taskNotes, taskDiscussions, taskFiles, taskLinks } from '../../../db/schema';
-import { eq, and, desc, count } from 'drizzle-orm';
+import { teams, teamMembers as teamMembersTable, projects, clients, users, taskNotes, taskDiscussions, taskFiles, taskLinks, tasks, taskAssignments, projectTeams, timeEntries } from '../../../db/schema';
+import { eq, and, desc, count, sql } from 'drizzle-orm';
 import { getSessionUser } from '../../../utils/session';
 
 // Get current user
@@ -38,24 +38,85 @@ const collaboration = await db.query.teams.findFirst({
   }
 });
 
+// Debug: Log the collaboration data
+console.log('Collaboration data:', {
+  id: collaboration?.id,
+  name: (collaboration as any)?.name,
+  description: (collaboration as any)?.description,
+  creator: (collaboration as any)?.creator?.name,
+  memberCount: (collaboration as any)?.members?.length
+});
+
 if (!collaboration) {
   return Astro.redirect('/admin/collaborations');
 }
 
 // Get project details if this collaboration is linked to a project
-let projectDetails = null;
-if (collaboration.name.includes(' - ')) {
+let projectDetails: any = null;
+let projectTasks: any[] = [];
+
+// Try to find the linked project through project_teams table first
+const projectTeam = await db.query.projectTeams.findFirst({
+  where: eq(projectTeams.teamId, collaborationId),
+  with: {
+    project: {
+      with: {
+        client: true
+      }
+    }
+  }
+});
+
+if (projectTeam?.project) {
+  projectDetails = projectTeam.project;
+  console.log('Found linked project through project_teams:', {
+    id: projectDetails.id,
+    name: projectDetails.name,
+    client: projectDetails.client?.name
+  });
+} else if (collaboration.name.includes(' - ')) {
+  // Fallback: try to extract project name from collaboration name
   const projectName = collaboration.name.split(' - ')[1];
+  console.log('Looking for project with name:', projectName);
+  
   projectDetails = await db.query.projects.findFirst({
     where: eq(projects.name, projectName),
     with: {
       client: true
     }
   });
+  
+  console.log('Found project:', {
+    id: projectDetails?.id,
+    name: projectDetails?.name,
+    client: projectDetails?.client?.name
+  });
 }
+  
+  // Get tasks for this project
+  if (projectDetails) {
+    projectTasks = await db.query.tasks.findMany({
+      where: and(
+        eq(tasks.projectId, projectDetails.id),
+        eq(tasks.archived, false)
+      ),
+      orderBy: [desc(tasks.createdAt)]
+    });
+    
+    // Get task assignments separately
+    for (const task of projectTasks) {
+      const assignments = await db.query.taskAssignments.findMany({
+        where: eq(taskAssignments.taskId, task.id),
+        with: {
+          user: true
+        }
+      });
+      task.assignments = assignments;
+    }
+  }
 
 // Get team members
-const teamMembers = collaboration.members.map((member: any) => ({
+const teamMembers = (collaboration as any).members.map((member: any) => ({
   id: member.user.id,
   name: member.user.name,
   email: member.user.email,
@@ -126,9 +187,69 @@ const recentLinks = [
   }
 ];
 
-// Calculate total time tracked (mock for now)
-const totalTimeTracked = "42h";
-const dueDate = "Oct 28";
+// Calculate total time tracked for the project
+let totalTimeTracked = "0h";
+let dueDate = "No due date";
+
+if (projectDetails) {
+  // Get time entries for this project with same filters as dashboard
+  const projectTimeEntries = await db.query.timeEntries.findMany({
+    where: and(
+      eq(timeEntries.projectId, projectDetails.id),
+      // Exclude ongoing timers (same as dashboard)
+      sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
+    ),
+    with: {
+      user: true,
+      project: true
+    }
+  });
+  
+  // Calculate total hours
+  let totalSeconds = 0;
+  for (const entry of projectTimeEntries) {
+    if (entry.durationManual) {
+      // Manual duration entry (stored in seconds)
+      totalSeconds += entry.durationManual;
+    } else if (entry.startTime && entry.endTime) {
+      // Timer-based entry
+      const start = new Date(entry.startTime);
+      const end = new Date(entry.endTime);
+      const durationMs = end.getTime() - start.getTime();
+      const durationSeconds = Math.floor(durationMs / 1000);
+      totalSeconds += durationSeconds;
+    }
+  }
+  
+  // Convert to hours and format
+  const totalHours = Math.floor(totalSeconds / 3600);
+  const remainingSeconds = totalSeconds % 3600;
+  const remainingMinutes = Math.floor(remainingSeconds / 60);
+  
+  if (totalHours > 0) {
+    totalTimeTracked = `${totalHours}h${remainingMinutes > 0 ? ` ${remainingMinutes}m` : ''}`;
+  } else if (remainingMinutes > 0) {
+    totalTimeTracked = `${remainingMinutes}m`;
+  }
+  
+  console.log('Time tracking calculation:', {
+    projectId: projectDetails.id,
+    projectName: projectDetails.name,
+    totalEntries: projectTimeEntries.length,
+    totalSeconds,
+    totalHours,
+    remainingMinutes,
+    formattedTime: totalTimeTracked,
+    entries: projectTimeEntries.map(entry => ({
+      id: entry.id,
+      durationManual: entry.durationManual,
+      startTime: entry.startTime,
+      endTime: entry.endTime,
+      hasManual: !!entry.durationManual,
+      hasTimer: !!(entry.startTime && entry.endTime)
+    }))
+  });
+}
 ---
 
 <AdminLayout title={`${collaboration.name} - Collaboration`} currentPage="collaborations">
@@ -138,7 +259,7 @@ const dueDate = "Oct 28";
       <!-- Project Overview Card -->
       <div class="bg-white rounded-lg border border-gray-200 p-4 mb-6">
         <div class="flex items-center justify-between mb-3">
-          <h2 class="text-lg font-semibold text-gray-900">{collaboration.name}</h2>
+          <h2 class="text-lg font-semibold text-gray-900">{(collaboration as any).name}</h2>
           <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
             Active
           </span>
@@ -238,19 +359,7 @@ const dueDate = "Oct 28";
       <!-- Header -->
       <div class="flex justify-between gap-4 items-center mb-6">
         <div class="flex items-center flex-1">
-          <h1 class="text-2xl font-bold text-gray-900"></h1>
-          <!-- Global Search -->
-          <div class="relative flex-1 max-w-md">
-            <input
-              type="text"
-              id="globalSearchInput"
-              placeholder="Search across notes, threads, files"
-              class="w-full px-4 py-2 pl-10 pr-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-            <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-            </svg>
-          </div>
+          <h1 class="text-2xl font-bold text-gray-900">Project Tasks</h1>
         </div>
         <div class="flex items-center space-x-3">
           <button class="inline-flex items-center px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border border-gray-300 transition-all duration-200">
@@ -263,275 +372,104 @@ const dueDate = "Oct 28";
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
             </svg>
-            + New Note
+            + New Task
           </button>
         </div>
       </div>
 
-      <!-- Search Filters -->
-      <div class="mb-6">
-        <div class="flex items-center space-x-2">
-          <button class="search-filter-btn px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200" data-type="notes">Notes</button>
-          <button class="search-filter-btn px-3 py-1 text-sm text-gray-500 rounded-full hover:bg-gray-100" data-type="discussions">Threads</button>
-          <button class="search-filter-btn px-3 py-1 text-sm text-gray-500 rounded-full hover:bg-gray-100" data-type="files">Files</button>
-          <button class="search-filter-btn px-3 py-1 text-sm text-gray-500 rounded-full hover:bg-gray-100" data-type="links">Links</button>
-        </div>
-        
-        <!-- Search Results -->
-        <div id="searchResults" class="hidden mt-4 bg-white rounded-lg border border-gray-200 shadow-lg">
-          <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg font-semibold text-gray-900">Search Results</h3>
-          </div>
-          <div id="searchResultsContent" class="p-6">
-            <!-- Search results will be populated here -->
-          </div>
-        </div>
-      </div>
-
-      <!-- Notes Section -->
-      <div class="bg-white rounded-lg border border-gray-200 mb-6">
+      <!-- Tasks Table -->
+      <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
         <div class="px-6 py-4 border-b border-gray-200">
-          <div class="flex items-center justify-between">
-            <h2 class="text-lg font-semibold text-gray-900">Notes</h2>
-            <button class="inline-flex items-center px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-all duration-200">
-              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
-              </svg>
-              Save Draft
-            </button>
-          </div>
+          <h2 class="text-lg font-semibold text-gray-900">Tasks</h2>
         </div>
         
-        <div class="p-6">
-          <!-- New Note Editor -->
-          <div class="mb-6">
-            <div class="border border-gray-300 rounded-lg">
-              <!-- Toolbar -->
-              <div class="px-4 py-2 border-b border-gray-200 bg-gray-50 flex items-center space-x-2">
-                <button class="p-1 hover:bg-gray-200 rounded">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 6h12M6 12h12M6 18h12"></path>
-                  </svg>
-                </button>
-                <button class="p-1 hover:bg-gray-200 rounded">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
-                  </svg>
-                </button>
-                <button class="p-1 hover:bg-gray-200 rounded">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
-                  </svg>
-                </button>
-                <button class="p-1 hover:bg-gray-200 rounded">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
-                  </svg>
-                </button>
-              </div>
-              
-              <!-- Editor -->
-              <div class="p-4">
-                <textarea
-                  placeholder="Write a project note... Include decisions, todos, or meeting minutes."
-                  class="w-full h-32 resize-none border-none outline-none text-gray-900 placeholder-gray-500"
-                ></textarea>
-              </div>
-              
-              <!-- Actions -->
-              <div class="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
-                <div class="flex items-center">
-                  <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 mr-3">
-                    {currentUser.name.charAt(0).toUpperCase()}
-                  </div>
-                  <span class="text-sm text-gray-500">Just now</span>
-                </div>
-                <div class="flex items-center space-x-2">
-                  <button class="inline-flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-200 rounded-lg transition-all duration-200">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
-                    </svg>
-                    Attach
-                  </button>
-                  <button class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-all duration-200">
-                    Publish Note
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Existing Notes -->
-          <div class="space-y-4">
-            {recentNotes.map((note: any) => (
-              <div class="border border-gray-200 rounded-lg p-4">
-                <div class="flex items-start justify-between mb-3">
-                  <div class="flex items-center">
-                    <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 mr-3">
-                      {note.authorAvatar}
-                    </div>
-                    <div>
-                      <div class="text-sm font-medium text-gray-900">{note.author}</div>
-                      <div class="text-xs text-gray-500">{note.createdAt.toLocaleTimeString()} ago</div>
-                    </div>
-                  </div>
-                  <div class="flex items-center space-x-2">
-                    <button class="text-sm text-gray-600 hover:text-gray-800">View</button>
-                    <button class="text-sm text-gray-600 hover:text-gray-800">Download</button>
-                  </div>
-                </div>
-                <p class="text-gray-700">{note.content}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <!-- Discussions Section -->
-      <div class="bg-white rounded-lg border border-gray-200 mb-6">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-900">Discussions</h2>
-        </div>
-        
-        <div class="p-6">
-          <div class="space-y-6">
-            {recentDiscussions.map((discussion: any) => (
-              <div class="border-b border-gray-100 pb-6 last:border-b-0">
-                <div class="flex items-start space-x-3 mb-3">
-                  <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700">
-                    {discussion.authorAvatar}
-                  </div>
-                  <div class="flex-1">
-                    <div class="flex items-center space-x-2 mb-1">
-                      <span class="text-sm font-medium text-gray-900">{discussion.author}</span>
-                      <span class="text-xs text-gray-500">{discussion.createdAt.toLocaleTimeString()} ago</span>
-                    </div>
-                    <p class="text-gray-700 mb-3">{discussion.content}</p>
-                    
-                    <!-- Replies -->
-                    {discussion.replies.map((reply: any) => (
-                      <div class="ml-4 pl-4 border-l-2 border-gray-100">
-                        <div class="flex items-start space-x-3 mb-2">
-                          <div class="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium text-gray-600">
-                            {reply.authorAvatar}
-                          </div>
-                          <div class="flex-1">
-                            <div class="flex items-center space-x-2 mb-1">
-                              <span class="text-sm font-medium text-gray-900">{reply.author}</span>
-                              <span class="text-xs text-gray-500">{reply.createdAt.toLocaleTimeString()} ago</span>
-                            </div>
-                            <p class="text-gray-700">{reply.content}</p>
-                          </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assignee</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              {projectTasks.length > 0 ? projectTasks.map((task: any) => (
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                      <div class="flex-shrink-0 h-10 w-10">
+                        <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                          <svg class="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                          </svg>
                         </div>
                       </div>
-                    ))}
-                    
-                    <!-- Reply Input -->
-                    <div class="mt-4">
-                      <div class="flex items-center space-x-2">
-                        <input
-                          type="text"
-                          placeholder="Write a reply..."
-                          class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                        <button class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-all duration-200">
-                          Reply
-                        </button>
+                      <div class="ml-4">
+                        <div class="text-sm font-medium text-gray-900">{task.name}</div>
+                        {task.description && (
+                          <div class="text-sm text-gray-500">{task.description}</div>
+                        )}
                       </div>
                     </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-            
-            <!-- New Discussion -->
-            <div class="border-t border-gray-200 pt-6">
-              <div class="flex items-center space-x-2">
-                <input
-                  type="text"
-                  placeholder="Start a new reply..."
-                  class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-                <button class="inline-flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200">
-                  <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
-                  </svg>
-                  Attach
-                </button>
-                <button class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-all duration-200">
-                  Reply
-                </button>
-              </div>
-            </div>
-          </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                      {task.assignments && task.assignments.length > 0 ? (
+                        <div class="flex -space-x-2">
+                          {task.assignments.slice(0, 3).map((assignment: any) => (
+                            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 border-2 border-white">
+                              {assignment.user.name.charAt(0).toUpperCase()}
+                            </div>
+                          ))}
+                          {task.assignments.length > 3 && (
+                            <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 border-2 border-white">
+                              +{task.assignments.length - 3}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span class="text-sm text-gray-500">Unassigned</span>
+                      )}
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    No due date
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      task.priority === 'urgent' ? 'bg-red-100 text-red-800' :
+                      task.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                      task.priority === 'regular' ? 'bg-blue-100 text-blue-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      task.status === 'completed' ? 'bg-green-100 text-green-800' :
+                      task.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                      task.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {task.status.replace('_', ' ').charAt(0).toUpperCase() + task.status.replace('_', ' ').slice(1)}
+                    </span>
+                  </td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colspan="5" class="px-6 py-12 text-center text-sm text-gray-500">
+                    {projectDetails ? 'No tasks found for this project.' : 'No project linked to this collaboration.'}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <!-- Files & Links Section -->
-      <div class="bg-white rounded-lg border border-gray-200">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-900">Files & Links</h2>
-        </div>
-        
-        <div class="p-6">
-          <div class="space-y-4">
-            <!-- Files -->
-            {recentFiles.map((file: any) => (
-              <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                <div class="flex items-center space-x-3">
-                  <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                    <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                    </svg>
-                  </div>
-                  <div>
-                    <div class="text-sm font-medium text-gray-900">{file.name}</div>
-                    <div class="text-xs text-gray-500">{file.author} • {file.createdAt.toLocaleDateString()} • {file.size}</div>
-                  </div>
-                </div>
-                <div class="flex items-center space-x-2">
-                  <button class="text-sm text-gray-600 hover:text-gray-800">View</button>
-                  <button class="text-sm text-gray-600 hover:text-gray-800">Download</button>
-                </div>
-              </div>
-            ))}
-            
-            <!-- Links -->
-            {recentLinks.map((link: any) => (
-              <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                <div class="flex items-center space-x-3">
-                  <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
-                    </svg>
-                  </div>
-                  <div>
-                    <div class="text-sm font-medium text-gray-900">{link.title}</div>
-                    <div class="text-xs text-gray-500">{link.author} • {link.url}</div>
-                  </div>
-                </div>
-                <button class="text-sm text-gray-600 hover:text-gray-800">Open</button>
-              </div>
-            ))}
-          </div>
-          
-          <!-- Add Files/Links -->
-          <div class="mt-6 flex items-center space-x-3">
-            <button class="inline-flex items-center px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border border-gray-300 transition-all duration-200">
-              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-              </svg>
-              Upload File
-            </button>
-            <button class="inline-flex items-center px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border border-gray-300 transition-all duration-200">
-              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
-              </svg>
-              Add Link
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </AdminLayout>
@@ -539,165 +477,12 @@ const dueDate = "Oct 28";
 <script>
   // Add any client-side functionality here
   document.addEventListener('DOMContentLoaded', function() {
-    const collaborationId = window.location.pathname.split('/').pop();
-    let currentSearchType = 'all';
-    let searchTimeout: NodeJS.Timeout;
-
-    // Search functionality
-    const searchInput = document.getElementById('globalSearchInput') as HTMLInputElement;
-    const searchResults = document.getElementById('searchResults');
-    const searchResultsContent = document.getElementById('searchResultsContent');
-    const searchFilterBtns = document.querySelectorAll('.search-filter-btn');
-
-    // Handle search input
-    searchInput?.addEventListener('input', function() {
-      clearTimeout(searchTimeout);
-      const query = this.value.trim();
-      
-      if (query.length < 2) {
-        searchResults?.classList.add('hidden');
-        return;
-      }
-
-      searchTimeout = setTimeout(() => {
-        performSearch(query, currentSearchType);
-      }, 300);
-    });
-
-    // Handle search filter buttons
-    searchFilterBtns.forEach(btn => {
-      btn.addEventListener('click', function(this: HTMLElement) {
-        // Update active button
-        searchFilterBtns.forEach(b => {
-          b.classList.remove('bg-gray-100', 'text-gray-700');
-          b.classList.add('text-gray-500');
-        });
-        this.classList.add('bg-gray-100', 'text-gray-700');
-        this.classList.remove('text-gray-500');
-        
-        currentSearchType = this.getAttribute('data-type') || 'all';
-        
-        // Re-search with current query
-        const query = searchInput?.value.trim();
-        if (query && query.length >= 2) {
-          performSearch(query, currentSearchType);
-        }
-      });
-    });
-
-    // Perform search
-    async function performSearch(query: string, type: string) {
-      try {
-        const response = await fetch(`/api/collaborations/${collaborationId}/search?q=${encodeURIComponent(query)}&type=${type}`);
-        const data = await response.json();
-        
-        if (data.success) {
-          displaySearchResults(data.data);
-        } else {
-          console.error('Search failed:', data.error);
-        }
-      } catch (error) {
-        console.error('Search error:', error);
-      }
-    }
-
-    // Display search results
-    function displaySearchResults(data: any) {
-      if (!searchResults || !searchResultsContent) return;
-
-      if (data.results.length === 0) {
-        searchResultsContent.innerHTML = '<p class="text-gray-500 text-center py-4">No results found</p>';
-        searchResults.classList.remove('hidden');
-        return;
-      }
-
-      let html = '';
-      data.results.forEach((result: any) => {
-        const typeIcon = getTypeIcon(result.type);
-        const typeColor = getTypeColor(result.type);
-        
-        html += `
-          <div class="border border-gray-200 rounded-lg p-4 mb-3 hover:bg-gray-50 cursor-pointer">
-            <div class="flex items-start space-x-3">
-              <div class="w-8 h-8 ${typeColor} rounded-lg flex items-center justify-center flex-shrink-0">
-                ${typeIcon}
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center space-x-2 mb-1">
-                  <span class="text-sm font-medium text-gray-900">${result.title || result.name || 'Untitled'}</span>
-                  <span class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">${result.type}</span>
-                </div>
-                <p class="text-sm text-gray-600 mb-2">${result.content || result.description || ''}</p>
-                <div class="flex items-center space-x-4 text-xs text-gray-500">
-                  <span>${result.author.name}</span>
-                  <span>${new Date(result.createdAt).toLocaleDateString()}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
-      });
-
-      searchResultsContent.innerHTML = html;
-      searchResults.classList.remove('hidden');
-    }
-
-    // Get type icon
-    function getTypeIcon(type: string) {
-      switch (type) {
-        case 'note':
-          return '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>';
-        case 'discussion':
-          return '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>';
-        case 'file':
-          return '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>';
-        case 'link':
-          return '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>';
-        default:
-          return '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>';
-      }
-    }
-
-    // Get type color
-    function getTypeColor(type: string) {
-      switch (type) {
-        case 'note':
-          return 'bg-blue-100 text-blue-600';
-        case 'discussion':
-          return 'bg-green-100 text-green-600';
-        case 'file':
-          return 'bg-red-100 text-red-600';
-        case 'link':
-          return 'bg-purple-100 text-purple-600';
-        default:
-          return 'bg-gray-100 text-gray-600';
-      }
-    }
-
-    // Handle note publishing
-    const publishNoteBtn = document.querySelector('button:contains("Publish Note")');
-    if (publishNoteBtn) {
-      publishNoteBtn.addEventListener('click', function() {
-        // Handle note publishing logic
-        console.log('Publishing note...');
-      });
-    }
-    
-    // Handle file uploads
-    const uploadFileBtn = document.querySelector('button:contains("Upload File")');
-    if (uploadFileBtn) {
-      uploadFileBtn.addEventListener('click', function() {
-        // Handle file upload logic
-        console.log('Uploading file...');
-      });
-    }
-    
-    // Handle link addition
-    const addLinkBtn = document.querySelector('button:contains("Add Link")');
-    if (addLinkBtn) {
-      addLinkBtn.addEventListener('click', function() {
-        // Handle link addition logic
-        console.log('Adding link...');
+    // Handle new task button
+    const newTaskBtn = document.querySelector('button');
+    if (newTaskBtn && newTaskBtn.textContent?.includes('+ New Task')) {
+      newTaskBtn.addEventListener('click', function() {
+        // Handle new task creation logic
+        console.log('Creating new task...');
       });
     }
   });
