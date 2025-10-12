@@ -808,3 +808,48 @@ Cursor will flag and suggest alternatives for:
 - **ALWAYS** include collaborative table validation in deployment checks
 - **ALWAYS** provide clear error messages when collaborative tables are missing
 **Severity:** Error
+
+### RULE-025: Database Deletion Patterns
+- **ALWAYS** identify and delete all foreign key dependencies before deleting parent records
+- **ALWAYS** delete in the correct order: child tables first, then parent tables
+- **ALWAYS** check for foreign key constraints when deleting records with relationships
+- **ALWAYS** include comprehensive error handling for foreign key constraint violations
+- **ALWAYS** test deletion operations with existing data to verify constraint handling
+- **ALWAYS** document the deletion order for complex entities with multiple relationships
+**Severity:** Error
+**Applies to:** All database deletion operations
+
+### RULE-026: API Endpoint Debugging Patterns
+- **ALWAYS** add comprehensive logging to API endpoints during development
+- **ALWAYS** test database connections before performing operations
+- **ALWAYS** include step-by-step logging for complex operations
+- **ALWAYS** create minimal test endpoints to isolate issues
+- **ALWAYS** log both success and failure paths with detailed error information
+- **ALWAYS** remove debug logging before production deployment
+**Severity:** Warning
+**Applies to:** API endpoint development and debugging
+
+### RULE-027: Foreign Key Constraint Handling
+- **ALWAYS** map out all foreign key relationships before implementing deletion
+- **ALWAYS** include all related tables in deletion operations (project_teams, task_collaborations, team_members, etc.)
+- **ALWAYS** delete in dependency order: most dependent first, least dependent last
+- **ALWAYS** handle foreign key constraint violations gracefully with clear error messages
+- **ALWAYS** verify deletion order matches database schema relationships
+**Severity:** Error
+**Applies to:** Database operations with foreign key relationships
+
+### RULE-028: API Route Import Path Patterns
+- **ALWAYS** verify import paths are correct for API routes based on their depth in the file structure
+- **ALWAYS** use relative paths that match the actual file location (../../../../ for 4 levels deep)
+- **ALWAYS** test import paths by checking if the API endpoint can be reached
+- **ALWAYS** include import path validation in API endpoint development
+**Severity:** Error
+**Applies to:** API route development
+
+### RULE-029: Authentication Context Patterns
+- **ALWAYS** pass the full context object to getSessionUser, not just request
+- **ALWAYS** use context.params for URL parameters in API routes
+- **ALWAYS** test authentication in API endpoints with proper context handling
+- **ALWAYS** verify user permissions before performing destructive operations
+**Severity:** Error
+**Applies to:** API authentication and authorization

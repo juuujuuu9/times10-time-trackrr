@@ -185,6 +185,16 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.team_id, creator
                           </svg>
                           View
                         </a>
+                        <button 
+                          data-team-id={team.id}
+                          data-team-name={team.name}
+                          class="delete-collaboration-btn inline-flex items-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+                        >
+                          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                          </svg>
+                          Delete
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -216,5 +226,63 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.team_id, creator
     if (createFirstCollaborationBtn) {
       createFirstCollaborationBtn.addEventListener('click', handleCreateCollaboration);
     }
+
+    // Handle Delete Collaboration button clicks
+    const deleteButtons = document.querySelectorAll('.delete-collaboration-btn');
+    deleteButtons.forEach(button => {
+      button.addEventListener('click', async function(e: Event) {
+        e.preventDefault();
+        
+        const target = e.target as HTMLButtonElement;
+        const teamId = target.getAttribute('data-team-id');
+        const teamName = target.getAttribute('data-team-name');
+        
+        // Show confirmation dialog
+        const confirmed = confirm(`Are you sure you want to delete the collaboration "${teamName}"?\n\nThis action cannot be undone and will remove all team members and associated data.`);
+        
+        if (!confirmed) {
+          return;
+        }
+        
+        // Show loading state
+        const originalText = target.innerHTML;
+        target.innerHTML = `
+          <svg class="w-4 h-4 mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          Deleting...
+        `;
+        target.disabled = true;
+        
+        try {
+          const response = await fetch(`/api/admin/collaborations/${teamId}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            // Show success message and reload page
+            alert('Collaboration deleted successfully!');
+            window.location.reload();
+          } else {
+            // Show error message
+            alert(`Error deleting collaboration: ${result.message || 'Unknown error'}`);
+            // Restore button state
+            target.innerHTML = originalText;
+            target.disabled = false;
+          }
+        } catch (error) {
+          console.error('Error deleting collaboration:', error);
+          alert('Error deleting collaboration. Please try again.');
+          // Restore button state
+          target.innerHTML = originalText;
+          target.disabled = false;
+        }
+      });
+    });
   });
 </script>

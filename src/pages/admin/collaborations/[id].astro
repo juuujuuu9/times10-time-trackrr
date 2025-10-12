@@ -11,7 +11,19 @@ if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'devel
   return Astro.redirect('/login');
 }
 
+// Debug: Log the raw parameter
+console.log('Raw ID parameter:', Astro.params.id);
+
 const collaborationId = parseInt(Astro.params.id!);
+
+// Debug: Log the parsed ID
+console.log('Parsed collaboration ID:', collaborationId);
+
+// Validate that the ID is a valid number
+if (isNaN(collaborationId)) {
+  console.log('Invalid collaboration ID, redirecting to collaborations list');
+  return Astro.redirect('/admin/collaborations');
+}
 
 // Get collaboration details
 const collaboration = await db.query.teams.findFirst({
