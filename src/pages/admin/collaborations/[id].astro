@@ -93,12 +93,13 @@ if (projectTeam?.project) {
   });
 }
   
-  // Get tasks for this project
+  // Get tasks for this project (excluding system-generated "General" tasks)
   if (projectDetails) {
     projectTasks = await db.query.tasks.findMany({
       where: and(
         eq(tasks.projectId, projectDetails.id),
-        eq(tasks.archived, false)
+        eq(tasks.archived, false),
+        eq(tasks.isSystem, false) // Exclude system-generated tasks like "General"
       ),
       orderBy: [desc(tasks.createdAt)]
     });
@@ -372,7 +373,7 @@ if (projectDetails) {
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
             </svg>
-            + New Task
+            New Task
           </button>
         </div>
       </div>
@@ -460,8 +461,30 @@ if (projectDetails) {
                 </tr>
               )) : (
                 <tr>
-                  <td colspan="5" class="px-6 py-12 text-center text-sm text-gray-500">
-                    {projectDetails ? 'No tasks found for this project.' : 'No project linked to this collaboration.'}
+                  <td colspan="5" class="px-6 py-12 text-center">
+                    <div class="flex flex-col items-center space-y-4">
+                      <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                        </svg>
+                      </div>
+                      <div class="text-center">
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">
+                          {projectDetails ? 'No collaboration tasks yet' : 'No project linked to this collaboration'}
+                        </h3>
+                        <p class="text-sm text-gray-500 mb-4">
+                          {projectDetails ? 'Create your first task to start collaborating with your team.' : 'Link this collaboration to a project to manage tasks.'}
+                        </p>
+                        {projectDetails && (
+                          <button class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Create First Task
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </td>
                 </tr>
               )}
@@ -474,16 +497,261 @@ if (projectDetails) {
   </div>
 </AdminLayout>
 
-<script>
+<!-- Task Creation Modal -->
+<div id="taskModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+  <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white">
+    <div class="mt-3">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Create New Task</h3>
+        <button id="closeTaskModal" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Form -->
+      <form id="taskForm" class="space-y-4">
+        <!-- Task Name -->
+        <div>
+          <label for="taskName" class="block text-sm font-medium text-gray-700 mb-1">Task Name *</label>
+          <input 
+            type="text" 
+            id="taskName" 
+            name="name" 
+            required 
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter task name"
+          />
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label for="taskDescription" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <textarea 
+            id="taskDescription" 
+            name="description" 
+            rows="3"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter task description"
+          ></textarea>
+        </div>
+
+        <!-- Status and Priority Row -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Status -->
+          <div>
+            <label for="taskStatus" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select 
+              id="taskStatus" 
+              name="status" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+
+          <!-- Priority -->
+          <div>
+            <label for="taskPriority" class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+            <select 
+              id="taskPriority" 
+              name="priority" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="low">Low</option>
+              <option value="regular" selected>Regular</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Assignees -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Assign to Team Members</label>
+          <div id="assigneeList" class="space-y-2 max-h-32 overflow-y-auto border border-gray-200 rounded-md p-3">
+            <!-- Team members will be populated here -->
+          </div>
+        </div>
+
+        <!-- Modal Actions -->
+        <div class="flex items-center justify-end space-x-3 pt-4 border-t">
+          <button 
+            type="button" 
+            id="cancelTaskModal" 
+            class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 font-medium rounded-md transition-colors duration-200"
+          >
+            Cancel
+          </button>
+          <button 
+            type="submit" 
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors duration-200"
+          >
+            Create Task
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Data for client-side JavaScript -->
+<script define:vars={{ teamMembersData: teamMembers.map((member: any) => ({
+  id: member.id,
+  name: member.name,
+  email: member.email
+})), projectDetailsData: projectDetails ? {
+  id: projectDetails.id,
+  name: projectDetails.name
+} : null }}>
   // Add any client-side functionality here
   document.addEventListener('DOMContentLoaded', function() {
-    // Handle new task button
-    const newTaskBtn = document.querySelector('button');
-    if (newTaskBtn && newTaskBtn.textContent?.includes('+ New Task')) {
-      newTaskBtn.addEventListener('click', function() {
-        // Handle new task creation logic
-        console.log('Creating new task...');
+    const taskModal = document.getElementById('taskModal');
+    const taskForm = document.getElementById('taskForm');
+    const closeTaskModal = document.getElementById('closeTaskModal');
+    const cancelTaskModal = document.getElementById('cancelTaskModal');
+    const assigneeList = document.getElementById('assigneeList');
+
+    if (!taskModal || !taskForm || !closeTaskModal || !cancelTaskModal || !assigneeList) {
+      console.error('Required modal elements not found');
+      return;
+    }
+
+    // Populate assignee list
+    function populateAssigneeList() {
+      if (!assigneeList) return;
+      assigneeList.innerHTML = '';
+      teamMembersData.forEach((member) => {
+        const assigneeItem = document.createElement('div');
+        assigneeItem.className = 'flex items-center space-x-3';
+        assigneeItem.innerHTML = `
+          <input 
+            type="checkbox" 
+            id="assignee-${member.id}" 
+            value="${member.id}" 
+            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <label for="assignee-${member.id}" class="flex items-center space-x-2 cursor-pointer">
+            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700">
+              ${member.name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div class="text-sm font-medium text-gray-900">${member.name}</div>
+              <div class="text-xs text-gray-500">${member.email}</div>
+            </div>
+          </label>
+        `;
+        assigneeList.appendChild(assigneeItem);
       });
     }
+
+    // Show modal
+    function showTaskModal() {
+      if (!projectDetailsData) {
+        alert('No project linked to this collaboration. Please link a project first.');
+        return;
+      }
+      if (!taskModal) return;
+      taskModal.classList.remove('hidden');
+      populateAssigneeList();
+    }
+
+    // Hide modal
+    function hideTaskModal() {
+      if (!taskModal || !taskForm) return;
+      taskModal.classList.add('hidden');
+      taskForm.reset();
+    }
+
+    // Handle new task buttons (both header and empty state)
+    const newTaskButtons = document.querySelectorAll('button');
+    newTaskButtons.forEach(button => {
+      if (button.textContent?.includes('New Task') || button.textContent?.includes('Create First Task')) {
+        button.addEventListener('click', showTaskModal);
+      }
+    });
+
+    // Close modal handlers
+    closeTaskModal.addEventListener('click', hideTaskModal);
+    cancelTaskModal.addEventListener('click', hideTaskModal);
+
+    // Close modal when clicking outside
+    taskModal.addEventListener('click', function(e) {
+      if (e.target === taskModal) {
+        hideTaskModal();
+      }
+    });
+
+    // Handle form submission
+    taskForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(taskForm);
+      const taskData = {
+        name: formData.get('name'),
+        description: formData.get('description'),
+        status: formData.get('status'),
+        priority: formData.get('priority'),
+        projectId: projectDetailsData.id
+      };
+
+      // Get selected assignees
+      const selectedAssignees = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
+        .map(checkbox => parseInt(checkbox.value));
+
+      try {
+        // Create the task
+        const taskResponse = await fetch('/api/admin/tasks', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(taskData)
+        });
+
+        if (!taskResponse.ok) {
+          const errorData = await taskResponse.json();
+          throw new Error(errorData.error || 'Failed to create task');
+        }
+
+        const newTask = await taskResponse.json();
+        console.log('Task created:', newTask);
+
+        // Assign users to the task if any were selected
+        if (selectedAssignees.length > 0) {
+          const assignResponse = await fetch('/api/admin/tasks/assign', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              taskId: newTask.id,
+              userIds: selectedAssignees
+            })
+          });
+
+          if (!assignResponse.ok) {
+            const errorData = await assignResponse.json();
+            console.error('Failed to assign users:', errorData.error);
+            // Don't throw here - task was created successfully
+          }
+        }
+
+        // Show success message and refresh page
+        alert('Task created successfully!');
+        hideTaskModal();
+        window.location.reload();
+
+      } catch (error) {
+        console.error('Error creating task:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        alert('Failed to create task: ' + errorMessage);
+      }
+    });
   });
 </script>
