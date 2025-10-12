@@ -888,26 +888,23 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
             <p class="text-sm text-gray-600 mt-1">This collaboration will be automatically linked to this project.</p>
           </div>
           
-          <!-- Description -->
-          <div>
-            <label for="collabDescription" class="block text-sm font-medium text-gray-700 mb-2">
-              Description *
-            </label>
-            <textarea
-              id="collabDescription"
-              name="description"
-              required
-              rows="4"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Describe the purpose and goals of this collaboration"
-            ></textarea>
-          </div>
           
           <!-- Team Members -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
               Team Members
             </label>
+            
+            <!-- Search Input -->
+            <div class="mb-3">
+              <input
+                type="text"
+                id="collabMemberSearch"
+                placeholder="Search team members..."
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            
             <div class="space-y-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-4" id="collabMembersList">
               <!-- Members will be populated here -->
             </div>
@@ -2822,14 +2819,82 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       }
     });
 
+    // Store users data for filtering
+    let allUsers: any[] = [];
+    let selectedUserIds: Set<number> = new Set();
+
+    // Function to render users in the members list
+    function renderUsers(users: any[], selectedFirst: boolean = false) {
+      const membersList = document.getElementById('collabMembersList');
+      if (!membersList) return;
+      
+      // Sort users: selected users first if selectedFirst is true
+      let sortedUsers = [...users];
+      if (selectedFirst) {
+        sortedUsers.sort((a, b) => {
+          const aSelected = selectedUserIds.has(a.id);
+          const bSelected = selectedUserIds.has(b.id);
+          if (aSelected && !bSelected) return -1;
+          if (!aSelected && bSelected) return 1;
+          return 0;
+        });
+      }
+      
+      membersList.innerHTML = sortedUsers.map((user: any) => `
+        <label class="flex items-center space-x-3">
+          <input
+            type="checkbox"
+            name="members"
+            value="${user.id}"
+            ${selectedUserIds.has(user.id) ? 'checked' : ''}
+            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+          <div class="flex-1">
+            <div class="text-sm font-medium text-gray-900">${user.name}</div>
+            <div class="text-sm text-gray-500">${user.email}</div>
+          </div>
+        </label>
+      `).join('');
+    }
+
+    // Function to filter users based on search term
+    function filterUsers(searchTerm: string) {
+      if (!searchTerm.trim()) {
+        renderUsers(allUsers, true); // Show all users with selected ones first
+        return;
+      }
+      
+      const filteredUsers = allUsers.filter(user => 
+        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      renderUsers(filteredUsers);
+    }
+
+    // Function to handle user selection
+    function handleUserSelection(userId: number, isChecked: boolean) {
+      if (isChecked) {
+        selectedUserIds.add(userId);
+        // Clear search and show full list with selected user at top
+        const searchInput = document.getElementById('collabMemberSearch') as HTMLInputElement;
+        if (searchInput) {
+          searchInput.value = '';
+        }
+        renderUsers(allUsers, true);
+      } else {
+        selectedUserIds.delete(userId);
+      }
+    }
+
     // Collaboration modal functions
     (window as any).openStartCollabModal = async function(projectId: number, projectName: string) {
       const modal = document.getElementById('startCollabModal');
       const projectIdInput = document.getElementById('collabProjectId') as HTMLInputElement;
       const projectNameDisplay = document.getElementById('collabProjectName');
       const membersList = document.getElementById('collabMembersList');
+      const searchInput = document.getElementById('collabMemberSearch') as HTMLInputElement;
       
-      if (!modal || !projectIdInput || !projectNameDisplay || !membersList) {
+      if (!modal || !projectIdInput || !projectNameDisplay || !membersList || !searchInput) {
         console.error('Modal elements not found');
         return;
       }
@@ -2838,25 +2903,16 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       projectIdInput.value = projectId.toString();
       projectNameDisplay.textContent = projectName;
       
+      // Clear search input and reset selections
+      searchInput.value = '';
+      selectedUserIds.clear();
+      
       // Load users for member selection
       try {
         const response = await fetch('/api/admin/users', { credentials: 'include' });
         if (response.ok) {
-          const users = await response.json();
-          membersList.innerHTML = users.map((user: any) => `
-            <label class="flex items-center space-x-3">
-              <input
-                type="checkbox"
-                name="members"
-                value="${user.id}"
-                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <div class="flex-1">
-                <div class="text-sm font-medium text-gray-900">${user.name}</div>
-                <div class="text-sm text-gray-500">${user.email}</div>
-              </div>
-            </label>
-          `).join('');
+          allUsers = await response.json();
+          renderUsers(allUsers, true);
         } else {
           console.error('Failed to load users');
           membersList.innerHTML = '<p class="text-gray-500">Failed to load users</p>';
@@ -2865,6 +2921,22 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         console.error('Error loading users:', error);
         membersList.innerHTML = '<p class="text-gray-500">Error loading users</p>';
       }
+      
+      // Set up search functionality
+      searchInput.addEventListener('input', (e: Event) => {
+        const searchTerm = (e.target as HTMLInputElement).value;
+        filterUsers(searchTerm);
+      });
+      
+      // Set up checkbox change listeners
+      membersList.addEventListener('change', (e: Event) => {
+        const target = e.target as HTMLInputElement;
+        if (target.type === 'checkbox' && target.name === 'members') {
+          const userId = parseInt(target.value);
+          const isChecked = target.checked;
+          handleUserSelection(userId, isChecked);
+        }
+      });
       
       // Show modal
       modal.classList.remove('hidden');
@@ -2884,14 +2956,8 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
       e.preventDefault();
       
       const formData = new FormData(e.target as HTMLFormElement);
-      const description = formData.get('description') as string;
       const projectId = formData.get('projectId') as string;
       const memberIds = formData.getAll('members') as string[];
-      
-      if (!description.trim()) {
-        alert('Please enter a description for the collaboration');
-        return;
-      }
       
       try {
         const response = await fetch('/api/admin/collaborations', {
@@ -2900,7 +2966,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
           credentials: 'include',
           body: JSON.stringify({
             name: `Collaboration for Project ${projectId}`, // Auto-generated name
-            description,
+            description: '', // Empty description since it's not required
             projectId: parseInt(projectId),
             members: memberIds.map(id => parseInt(id))
           })

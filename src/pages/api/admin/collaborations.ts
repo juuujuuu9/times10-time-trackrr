@@ -31,10 +31,10 @@ export const POST: APIRoute = async (context) => {
     });
 
     // Validate required fields
-    if (!name || !description) {
+    if (!name) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Name and description are required'
+        error: 'Name is required'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -76,7 +76,7 @@ export const POST: APIRoute = async (context) => {
     // Create the team
     const [newTeam] = await db.insert(teams).values({
       name,
-      description,
+      description: description || null, // Allow empty descriptions
       createdBy: currentUser.id,
       createdAt: new Date(),
       updatedAt: new Date(),
