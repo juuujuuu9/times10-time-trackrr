@@ -853,3 +853,161 @@ Cursor will flag and suggest alternatives for:
 - **ALWAYS** verify user permissions before performing destructive operations
 **Severity:** Error
 **Applies to:** API authentication and authorization
+
+### RULE-030: Astro Client-Side Data Injection Patterns
+- **ALWAYS** use `define:vars` directive for passing server-side data to client-side scripts
+- **NEVER** use `JSON.parse()` on data already serialized by Astro's template system
+- **ALWAYS** avoid variable name conflicts between server-side and client-side variables
+- **ALWAYS** use different variable names for client-side data (e.g., `teamMembersData` vs `teamMembers`)
+- **ALWAYS** use this pattern for data injection:
+  ```astro
+  <script define:vars={{ clientData: serverData.map(item => ({...})) }}>
+    // Use clientData directly, no JSON.parse needed
+  </script>
+  ```
+- **NEVER** use template literals with `JSON.stringify()` in script tags
+- **ALWAYS** handle null/undefined server data gracefully in client scripts
+**Severity:** Error
+**Applies to:** Astro client-side scripting
+
+### RULE-031: Modal Implementation Patterns
+- **ALWAYS** include proper null checks for all DOM elements in modal scripts
+- **ALWAYS** use semantic HTML structure for modals (form, labels, proper input types)
+- **ALWAYS** implement both click-outside-to-close and escape-key-to-close functionality
+- **ALWAYS** reset form state when closing modals
+- **ALWAYS** validate required fields before submission
+- **ALWAYS** provide user feedback for all operations (success/error messages)
+- **ALWAYS** use this pattern for modal DOM element access:
+  ```javascript
+  const modal = document.getElementById('modalId');
+  if (!modal) {
+    console.error('Modal element not found');
+    return;
+  }
+  ```
+- **ALWAYS** implement form reset on modal close:
+  ```javascript
+  function hideModal() {
+    modal.classList.add('hidden');
+    form.reset(); // Always reset form state
+  }
+  ```
+**Severity:** Warning
+**Applies to:** Modal implementations
+
+### RULE-032: API Integration Patterns
+- **ALWAYS** use existing API endpoints when available instead of creating new ones
+- **ALWAYS** check for existing API patterns before implementing new functionality
+- **ALWAYS** maintain consistency with existing API response formats
+- **ALWAYS** handle both success and failure cases in API calls
+- **ALWAYS** provide fallback behavior when secondary API calls fail
+- **ALWAYS** use this pattern for API integration:
+  ```javascript
+  // Primary operation
+  const response = await fetch('/api/primary-endpoint', {...});
+  if (!response.ok) throw new Error('Primary operation failed');
+  
+  // Secondary operation (don't fail if this fails)
+  try {
+    await fetch('/api/secondary-endpoint', {...});
+  } catch (error) {
+    console.error('Secondary operation failed:', error);
+    // Continue execution - don't throw
+  }
+  ```
+- **ALWAYS** search existing API endpoints before creating new ones
+- **ALWAYS** maintain backward compatibility with existing API patterns
+**Severity:** Warning
+**Applies to:** API integrations
+
+### RULE-033: TypeScript in Astro Scripts
+- **NEVER** use TypeScript syntax in regular `<script>` tags in Astro files
+- **ALWAYS** use plain JavaScript for client-side scripts in Astro
+- **ALWAYS** use proper type checking through runtime validation instead of compile-time types
+- **ALWAYS** handle type safety through proper null checks and validation
+- **ALWAYS** use this pattern for type safety:
+  ```javascript
+  // ❌ Don't use TypeScript syntax in Astro scripts
+  const element = document.getElementById('id') as HTMLElement | null;
+  
+  // ✅ Use runtime validation instead
+  const element = document.getElementById('id');
+  if (!element) {
+    console.error('Element not found');
+    return;
+  }
+  // Now element is guaranteed to exist
+  ```
+- **ALWAYS** use `instanceof` checks for type validation in client-side code
+- **ALWAYS** provide fallback values for potentially undefined data
+**Severity:** Error
+**Applies to:** Astro client-side scripting
+
+### RULE-034: Form Validation Patterns
+- **ALWAYS** validate required fields at the start of form submission
+- **ALWAYS** provide clear error messages for validation failures
+- **ALWAYS** disable form submission during API calls to prevent double-submission
+- **ALWAYS** show loading states during form submission
+- **ALWAYS** reset form state after successful submission
+- **ALWAYS** use this pattern for form validation:
+  ```javascript
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    // Validate required fields
+    const requiredFields = ['name', 'email'];
+    for (const field of requiredFields) {
+      if (!formData.get(field)) {
+        alert(`${field} is required`);
+        return;
+      }
+    }
+    
+    // Disable form during submission
+    submitButton.disabled = true;
+    submitButton.textContent = 'Creating...';
+    
+    try {
+      await fetch('/api/endpoint', {...});
+      form.reset();
+      hideModal();
+    } catch (error) {
+      alert('Error: ' + error.message);
+    } finally {
+      submitButton.disabled = false;
+      submitButton.textContent = 'Submit';
+    }
+  });
+  ```
+- **ALWAYS** provide visual feedback for form state changes
+- **ALWAYS** handle form reset on both success and modal close
+**Severity:** Warning
+**Applies to:** Form implementations
+
+### RULE-035: Error Handling in Client-Side Code
+- **ALWAYS** use try-catch blocks for all async operations
+- **ALWAYS** provide user-friendly error messages
+- **ALWAYS** log detailed errors to console for debugging
+- **ALWAYS** handle both network errors and application errors
+- **ALWAYS** provide fallback behavior when operations fail
+- **ALWAYS** use this pattern for error handling:
+  ```javascript
+  try {
+    const response = await fetch('/api/endpoint', {...});
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Request failed');
+    }
+    const data = await response.json();
+    // Success handling
+  } catch (error) {
+    console.error('Operation failed:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    alert('Failed: ' + errorMessage);
+  }
+  ```
+- **ALWAYS** distinguish between user errors and system errors
+- **ALWAYS** provide actionable error messages to users
+- **ALWAYS** log technical details for debugging while showing user-friendly messages
+**Severity:** Error
+**Applies to:** All client-side async operations
