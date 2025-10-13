@@ -22,7 +22,7 @@ export const GET: APIRoute = async () => {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { name, description, projectId, status, priority } = body;
+    const { name, description, projectId, status, priority, dueDate } = body;
 
     if (!name || !projectId) {
       return new Response(JSON.stringify({ error: 'Task name and project ID are required' }), {
@@ -37,6 +37,7 @@ export const POST: APIRoute = async ({ request }) => {
       projectId: parseInt(projectId),
       status: status || 'pending',
       priority: priority || 'regular',
+      dueDate: dueDate ? new Date(dueDate + 'T12:00:00') : null, // Set to noon to avoid timezone issues
     }).returning();
 
     return new Response(JSON.stringify(newTask[0]), {
@@ -55,7 +56,7 @@ export const POST: APIRoute = async ({ request }) => {
 export const PUT: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { id, name, description, projectId, status, priority } = body;
+    const { id, name, description, projectId, status, priority, dueDate } = body;
 
     console.log('PUT /api/admin/tasks - Request body:', body);
 
@@ -77,6 +78,7 @@ export const PUT: APIRoute = async ({ request }) => {
         projectId: parseInt(projectId),
         status: status || 'pending',
         priority: priority || 'regular',
+        dueDate: dueDate ? new Date(dueDate + 'T12:00:00') : null, // Set to noon to avoid timezone issues
         updatedAt: new Date() 
       })
       .where(eq(tasks.id, parseInt(id)))

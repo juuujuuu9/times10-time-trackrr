@@ -52,6 +52,7 @@ export const tasks = pgTable('tasks', {
   description: text('description'),
   status: varchar('status', { length: 50 }).notNull().default('pending'),
   priority: varchar('priority', { length: 20 }).notNull().default('regular'),
+  dueDate: timestamp('due_date'), // Due date for the task
   archived: boolean('archived').notNull().default(false),
   isSystem: boolean('is_system').notNull().default(false), // Mark system-generated tasks
   createdAt: timestamp('created_at').defaultNow().notNull(),

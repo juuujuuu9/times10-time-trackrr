@@ -1126,3 +1126,97 @@ Cursor will flag and suggest alternatives for:
 - **ALWAYS** ensure timer state is properly synchronized across components
 **Severity:** Warning
 **Applies to:** Timer and dashboard integration
+
+### RULE-040: Date Input Timezone Safety Patterns
+- **ALWAYS** append `'T12:00:00'` to date strings before creating Date objects to avoid timezone shifts
+- **ALWAYS** use `new Date(dateString + 'T12:00:00')` for date inputs from forms
+- **ALWAYS** display dates using UTC timezone formatting to ensure consistency
+- **ALWAYS** use this pattern for date storage:
+  ```typescript
+  // ❌ DON'T - causes timezone shifts
+  dueDate: dueDate ? new Date(dueDate) : null,
+  
+  // ✅ DO - prevents timezone issues
+  dueDate: dueDate ? new Date(dueDate + 'T12:00:00') : null,
+  ```
+- **ALWAYS** use UTC timezone for date display:
+  ```typescript
+  new Date(task.dueDate).toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: '2-digit', 
+    day: '2-digit',
+    timeZone: 'UTC'
+  })
+  ```
+- **ALWAYS** normalize dates to UTC for filtering comparisons
+**Severity:** Error
+**Applies to:** All date input handling and storage
+
+### RULE-041: Database Schema Evolution Patterns
+- **ALWAYS** add new fields to schema.ts first, then use `drizzle-kit push --force` for migrations
+- **ALWAYS** update both POST and PUT API endpoints when adding new fields to entities
+- **ALWAYS** update client-side data injection when adding new fields to display
+- **ALWAYS** update form handling JavaScript when adding new input fields
+- **ALWAYS** test the complete flow: schema → API → form → display → filtering
+- **ALWAYS** use this pattern for schema evolution:
+  ```typescript
+  // 1. Update schema.ts
+  dueDate: timestamp('due_date'),
+  
+  // 2. Run migration
+  npx drizzle-kit push --force
+  
+  // 3. Update API endpoints (POST and PUT)
+  dueDate: dueDate ? new Date(dueDate + 'T12:00:00') : null,
+  
+  // 4. Update form handling
+  dueDate: formData.get('dueDate') || null,
+  
+  // 5. Update display logic
+  {task.dueDate ? new Date(task.dueDate).toLocaleDateString(...) : 'No due date'}
+  ```
+**Severity:** Error
+**Applies to:** Database schema changes and feature additions
+
+### RULE-042: Form Field Integration Patterns
+- **ALWAYS** add form fields in logical order: required fields first, optional fields after
+- **ALWAYS** use semantic HTML input types (`type="date"` for dates, `type="email"` for emails)
+- **ALWAYS** include proper labels and accessibility attributes
+- **ALWAYS** validate required fields before form submission
+- **ALWAYS** handle optional fields gracefully (use `|| null` for optional values)
+- **ALWAYS** update both the form HTML and the JavaScript form handling together
+- **ALWAYS** use this pattern for form integration:
+  ```html
+  <!-- Form field -->
+  <input type="date" id="taskDueDate" name="dueDate" />
+  
+  <!-- JavaScript handling -->
+  const taskData = {
+    dueDate: formData.get('dueDate') || null,
+    // other fields...
+  };
+  ```
+**Severity:** Warning
+**Applies to:** Form implementations and field additions
+
+### RULE-043: Client-Side Filter Implementation Patterns
+- **ALWAYS** implement filtering logic that works with actual data, not mock data
+- **ALWAYS** handle date comparisons with proper timezone normalization
+- **ALWAYS** provide fallback behavior when filters don't match any data
+- **ALWAYS** update both the filter UI and the filtering logic together
+- **ALWAYS** test filters with real data scenarios (overdue, due today, etc.)
+- **ALWAYS** use this pattern for date filtering:
+  ```javascript
+  const normalizeDate = (date) => {
+    const normalized = new Date(date);
+    normalized.setHours(12, 0, 0, 0); // Set to noon UTC
+    return normalized;
+  };
+  
+  // Use normalized dates for comparisons
+  if (normalizeDate(taskDueDate) >= today) {
+    showTask = false;
+  }
+  ```
+**Severity:** Warning
+**Applies to:** Client-side filtering implementations
