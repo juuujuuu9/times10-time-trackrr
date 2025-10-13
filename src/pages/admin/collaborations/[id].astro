@@ -354,8 +354,13 @@ if (projectDetails) {
         </div>
         <div class="flex items-center space-x-3">
           <button class="inline-flex items-center px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border border-gray-300 transition-all duration-200">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+            <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 512 512">
+              <path d="M435.95,287.525c32.51,0,58.87-26.343,58.87-58.853c0-32.51-26.361-58.871-58.87-58.871 c-32.502,0-58.863,26.361-58.863,58.871C377.088,261.182,403.448,287.525,435.95,287.525z"></path>
+              <path d="M511.327,344.251c-2.623-15.762-15.652-37.822-25.514-47.677c-1.299-1.306-7.105-1.608-8.673-0.636 c-11.99,7.374-26.074,11.714-41.19,11.714c-15.099,0-29.184-4.34-41.175-11.714c-1.575-0.972-7.373-0.67-8.672,0.636 c-2.757,2.757-5.765,6.427-8.698,10.683c7.935,14.94,14.228,30.81,16.499,44.476c2.27,13.7,1.533,26.67-2.138,38.494 c13.038,4.717,28.673,6.787,44.183,6.787C476.404,397.014,517.804,382.987,511.327,344.251z"></path>
+              <path d="M254.487,262.691c52.687,0,95.403-42.716,95.403-95.402c0-52.67-42.716-95.386-95.403-95.386 c-52.678,0-95.378,42.716-95.378,95.386C159.109,219.975,201.808,262.691,254.487,262.691z"></path>
+              <path d="M335.269,277.303c-2.07-2.061-11.471-2.588-14.027-1.006c-19.448,11.966-42.271,18.971-66.755,18.971 c-24.466,0-47.3-7.005-66.738-18.971c-2.555-1.583-11.956-1.055-14.026,1.006c-16.021,16.004-37.136,51.782-41.384,77.288 c-10.474,62.826,56.634,85.508,122.148,85.508c65.532,0,132.639-22.682,122.165-85.508 C372.404,329.085,351.289,293.307,335.269,277.303z"></path>
+              <path d="M76.049,287.525c32.502,0,58.862-26.343,58.862-58.853c0-32.51-26.36-58.871-58.862-58.871 c-32.511,0-58.871,26.361-58.871,58.871C17.178,261.182,43.538,287.525,76.049,287.525z"></path>
+              <path d="M115.094,351.733c2.414-14.353,9.225-31.253,17.764-46.88c-2.38-3.251-4.759-6.083-6.955-8.279 c-1.299-1.306-7.097-1.608-8.672-0.636c-11.991,7.374-26.076,11.714-41.182,11.714c-15.108,0-29.202-4.34-41.183-11.714 c-1.568-0.972-7.382-0.67-8.681,0.636c-9.887,9.854-22.882,31.915-25.514,47.677c-6.468,38.736,34.924,52.762,75.378,52.762 c14.437,0,29.016-1.777,41.459-5.84C113.587,379.108,112.757,365.835,115.094,351.733z"></path>
             </svg>
             Manage Team
           </button>
@@ -494,6 +499,76 @@ if (projectDetails) {
   </div>
 </AdminLayout>
 
+<!-- Team Management Modal -->
+<div id="teamModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+  <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white">
+    <div class="mt-3">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Manage Team Members</h3>
+        <button id="closeTeamModal" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Current Team Members -->
+      <div class="mb-6">
+        <h4 class="text-sm font-medium text-gray-700 mb-3">Current Team Members</h4>
+        <div id="currentMembersList" class="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-3">
+          <!-- Current members will be populated here -->
+        </div>
+      </div>
+
+      <!-- Add New Members -->
+      <div class="mb-6">
+        <h4 class="text-sm font-medium text-gray-700 mb-3">Add New Members</h4>
+        <div class="flex space-x-2 mb-3">
+          <div class="flex-1 relative">
+            <input 
+              type="text" 
+              id="userSearch" 
+              placeholder="Search users by name or email..."
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <div id="searchSpinner" class="absolute right-3 top-1/2 transform -translate-y-1/2 hidden">
+              <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </div>
+          </div>
+          <button id="searchUsers" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors duration-200">
+            Search
+          </button>
+        </div>
+        <div id="searchResults" class="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-3 hidden">
+          <!-- Search results will be populated here -->
+        </div>
+      </div>
+
+      <!-- Modal Actions -->
+      <div class="flex items-center justify-end space-x-3 pt-4 border-t">
+        <button 
+          type="button" 
+          id="cancelTeamModal" 
+          class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 font-medium rounded-md transition-colors duration-200"
+        >
+          Cancel
+        </button>
+        <button 
+          type="button" 
+          id="saveTeamChanges" 
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors duration-200"
+        >
+          Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Task Creation Modal -->
 <div id="taskModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
   <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white">
@@ -609,23 +684,28 @@ if (projectDetails) {
 </div>
 
 <!-- Data for client-side JavaScript -->
-<script define:vars={{ teamMembersData: teamMembers.map((member: any) => ({
-  id: member.id,
-  name: member.name,
-  email: member.email
-})), projectDetailsData: projectDetails ? {
-  id: projectDetails.id,
-  name: projectDetails.name
-} : null, tasksData: projectTasks.map((task: any) => ({
-  id: task.id,
-  name: task.name,
-  description: task.description,
-  status: task.status,
-  priority: task.priority,
-  dueDate: task.dueDate,
-  assignments: task.assignments || [],
-  createdAt: task.createdAt
-})) }}>
+<script define:vars={{ 
+  collaborationId: collaborationId,
+  teamMembersData: teamMembers.map((member: any) => ({
+    id: member.id,
+    name: member.name,
+    email: member.email
+  })), 
+  projectDetailsData: projectDetails ? {
+    id: projectDetails.id,
+    name: projectDetails.name
+  } : null, 
+  tasksData: projectTasks.map((task: any) => ({
+    id: task.id,
+    name: task.name,
+    description: task.description,
+    status: task.status,
+    priority: task.priority,
+    dueDate: task.dueDate,
+    assignments: task.assignments || [],
+    createdAt: task.createdAt
+  }))
+}}>
   // Add any client-side functionality here
   document.addEventListener('DOMContentLoaded', function() {
     const taskModal = document.getElementById('taskModal');
@@ -633,6 +713,17 @@ if (projectDetails) {
     const closeTaskModal = document.getElementById('closeTaskModal');
     const cancelTaskModal = document.getElementById('cancelTaskModal');
     const assigneeList = document.getElementById('assigneeList');
+    
+    // Team management modal elements
+    const teamModal = document.getElementById('teamModal');
+    const closeTeamModal = document.getElementById('closeTeamModal');
+    const cancelTeamModal = document.getElementById('cancelTeamModal');
+    const currentMembersList = document.getElementById('currentMembersList');
+    const userSearch = document.getElementById('userSearch');
+    const searchUsers = document.getElementById('searchUsers');
+    const searchResults = document.getElementById('searchResults');
+    const searchSpinner = document.getElementById('searchSpinner');
+    const saveTeamChanges = document.getElementById('saveTeamChanges');
     
     // Filter elements
     const priorityFilter = document.getElementById('priorityFilter');
@@ -643,6 +734,11 @@ if (projectDetails) {
 
     if (!taskModal || !taskForm || !closeTaskModal || !cancelTaskModal || !assigneeList) {
       console.error('Required modal elements not found');
+      return;
+    }
+
+    if (!teamModal || !closeTeamModal || !cancelTeamModal || !currentMembersList || !userSearch || !searchUsers || !searchResults || !saveTeamChanges) {
+      console.error('Required team modal elements not found');
       return;
     }
 
@@ -674,6 +770,131 @@ if (projectDetails) {
       });
     }
 
+    // Team management functions
+    function populateCurrentMembers() {
+      if (!currentMembersList) return;
+      currentMembersList.innerHTML = '';
+      teamMembersData.forEach((member) => {
+        const memberItem = document.createElement('div');
+        memberItem.className = 'flex items-center justify-between p-2 bg-gray-50 rounded-md';
+        memberItem.innerHTML = `
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700">
+              ${member.name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div class="text-sm font-medium text-gray-900">${member.name}</div>
+              <div class="text-xs text-gray-500">${member.email}</div>
+            </div>
+          </div>
+          <button 
+            class="remove-member-btn text-red-600 hover:text-red-800 text-sm font-medium"
+            data-member-id="${member.id}"
+          >
+            Remove
+          </button>
+        `;
+        currentMembersList.appendChild(memberItem);
+      });
+    }
+
+    // Debounce timer for search
+    let searchTimeout;
+
+    function searchUsersForTeam() {
+      const searchTerm = userSearch.value.trim();
+      if (!searchTerm) {
+        searchResults.classList.add('hidden');
+        if (searchSpinner) searchSpinner.classList.add('hidden');
+        return;
+      }
+
+      // Clear previous timeout
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+
+      // Show loading state
+      if (searchSpinner) searchSpinner.classList.remove('hidden');
+      searchResults.innerHTML = '<div class="text-center py-4 text-gray-500">Searching...</div>';
+      searchResults.classList.remove('hidden');
+
+      // Debounce the actual search
+      searchTimeout = setTimeout(() => {
+        // Search users via API
+        fetch(`/api/admin/users/search?q=${encodeURIComponent(searchTerm)}`)
+          .then(response => response.json())
+          .then(data => {
+            if (searchSpinner) searchSpinner.classList.add('hidden');
+            if (data.success && data.users) {
+              displaySearchResults(data.users);
+            } else {
+              searchResults.innerHTML = '<div class="text-center py-4 text-gray-500">No users found</div>';
+            }
+          })
+          .catch(error => {
+            console.error('Error searching users:', error);
+            if (searchSpinner) searchSpinner.classList.add('hidden');
+            searchResults.innerHTML = '<div class="text-center py-4 text-red-500">Error searching users</div>';
+          });
+      }, 300); // 300ms debounce delay
+    }
+
+    function displaySearchResults(users) {
+      if (!searchResults) return;
+      
+      searchResults.innerHTML = '';
+      
+      if (users.length === 0) {
+        searchResults.innerHTML = '<div class="text-center py-4 text-gray-500">No users found</div>';
+        return;
+      }
+
+      users.forEach(user => {
+        // Check if user is already a team member
+        const isAlreadyMember = teamMembersData.some(member => member.id === user.id);
+        
+        const userItem = document.createElement('div');
+        userItem.className = `flex items-center justify-between p-2 rounded-md cursor-pointer transition-colors duration-200 ${isAlreadyMember ? 'bg-gray-100 cursor-not-allowed' : 'bg-white hover:bg-blue-50 hover:border-blue-200 border border-transparent'}`;
+        
+        if (!isAlreadyMember) {
+          userItem.setAttribute('data-user-id', user.id);
+          userItem.setAttribute('data-user-name', user.name);
+          userItem.setAttribute('data-user-email', user.email);
+        }
+        
+        userItem.innerHTML = `
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700">
+              ${user.name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div class="text-sm font-medium text-gray-900">${user.name}</div>
+              <div class="text-xs text-gray-500">${user.email}</div>
+            </div>
+          </div>
+          ${isAlreadyMember ? 
+            '<span class="text-sm text-gray-500">Already a member</span>' :
+            '<span class="text-sm text-blue-600 font-medium">Click to add</span>'
+          }
+        `;
+        searchResults.appendChild(userItem);
+      });
+    }
+
+    function showTeamModal() {
+      if (!teamModal) return;
+      teamModal.classList.remove('hidden');
+      populateCurrentMembers();
+    }
+
+    function hideTeamModal() {
+      if (!teamModal) return;
+      teamModal.classList.add('hidden');
+      userSearch.value = '';
+      searchResults.classList.add('hidden');
+    }
+
     // Show modal
     function showTaskModal() {
       if (!projectDetailsData) {
@@ -698,16 +919,29 @@ if (projectDetails) {
       if (button.textContent?.includes('New Task') || button.textContent?.includes('Create First Task')) {
         button.addEventListener('click', showTaskModal);
       }
+      if (button.textContent?.includes('Manage Team')) {
+        button.addEventListener('click', showTeamModal);
+      }
     });
 
     // Close modal handlers
     closeTaskModal.addEventListener('click', hideTaskModal);
     cancelTaskModal.addEventListener('click', hideTaskModal);
+    
+    // Team modal handlers
+    closeTeamModal.addEventListener('click', hideTeamModal);
+    cancelTeamModal.addEventListener('click', hideTeamModal);
 
     // Close modal when clicking outside
     taskModal.addEventListener('click', function(e) {
       if (e.target === taskModal) {
         hideTaskModal();
+      }
+    });
+    
+    teamModal.addEventListener('click', function(e) {
+      if (e.target === teamModal) {
+        hideTeamModal();
       }
     });
 
@@ -776,6 +1010,132 @@ if (projectDetails) {
         console.error('Error creating task:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         alert('Failed to create task: ' + errorMessage);
+      }
+    });
+
+    // Team management event handlers
+    searchUsers.addEventListener('click', searchUsersForTeam);
+    
+    // Search as user types
+    userSearch.addEventListener('input', function(e) {
+      const searchTerm = e.target.value.trim();
+      if (searchTerm.length >= 2) {
+        searchUsersForTeam();
+      } else if (searchTerm.length === 0) {
+        // Clear timeout if user clears the search
+        if (searchTimeout) {
+          clearTimeout(searchTimeout);
+        }
+        searchResults.classList.add('hidden');
+        if (searchSpinner) searchSpinner.classList.add('hidden');
+      }
+    });
+    
+    userSearch.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        searchUsersForTeam();
+      }
+    });
+
+    // Handle add/remove member buttons dynamically
+    document.addEventListener('click', function(e) {
+      // Handle clicking on entire user container
+      const userContainer = e.target.closest('[data-user-id]');
+      if (userContainer && !userContainer.classList.contains('cursor-not-allowed')) {
+        const userId = userContainer.getAttribute('data-user-id');
+        addMemberToTeam(userId);
+        return;
+      }
+      
+      // Handle old add-member-btn (for backward compatibility)
+      if (e.target.classList.contains('add-member-btn')) {
+        const userId = e.target.getAttribute('data-user-id');
+        addMemberToTeam(userId);
+      }
+      
+      if (e.target.classList.contains('remove-member-btn')) {
+        const memberId = e.target.getAttribute('data-member-id');
+        removeMemberFromTeam(memberId);
+      }
+    });
+
+    function addMemberToTeam(userId) {
+      // Get user data from container attributes
+      const userContainer = document.querySelector(`[data-user-id="${userId}"]`);
+      if (!userContainer) return;
+      
+      const userName = userContainer.getAttribute('data-user-name');
+      const userEmail = userContainer.getAttribute('data-user-email');
+      
+      // Add to team members data
+      const newMember = {
+        id: parseInt(userId),
+        name: userName,
+        email: userEmail,
+        role: 'member',
+        joinedAt: new Date()
+      };
+      teamMembersData.push(newMember);
+      
+      // Update UI
+      populateCurrentMembers();
+      
+      // Reset search
+      userSearch.value = '';
+      searchResults.classList.add('hidden');
+      if (searchSpinner) searchSpinner.classList.add('hidden');
+      
+      // Show success message
+      alert(`${userName} has been added to the team!`);
+    }
+
+    function removeMemberFromTeam(memberId) {
+      const member = teamMembersData.find(m => m.id === parseInt(memberId));
+      if (!member) return;
+      
+      if (confirm(`Are you sure you want to remove ${member.name} from the team?`)) {
+        // Remove from team members data
+        teamMembersData = teamMembersData.filter(m => m.id !== parseInt(memberId));
+        
+        // Update UI
+        populateCurrentMembers();
+        
+        // Show success message
+        alert(`${member.name} has been removed from the team!`);
+      }
+    }
+
+    // Save team changes
+    saveTeamChanges.addEventListener('click', async function() {
+      try {
+        // Get current team member IDs
+        const currentMemberIds = teamMembersData.map(member => member.id);
+        
+        // Update team members via API
+        const response = await fetch(`/api/admin/teams/${collaborationId}/members`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            memberIds: currentMemberIds
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update team members');
+        }
+
+        alert('Team members updated successfully!');
+        hideTeamModal();
+        window.location.reload(); // Refresh to show updated team
+        
+      } catch (error) {
+        console.error('Error updating team members:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        alert('Failed to update team members: ' + errorMessage);
       }
     });
 

@@ -1,59 +1,65 @@
-import type { APIRoute } from 'astro';
 import { db } from '../../../../db/index';
 import { users } from '../../../../db/schema';
-import { ilike, or, and, eq } from 'drizzle-orm';
+import { ilike, or } from 'drizzle-orm';
+import { getSessionUser } from '../../../../utils/session';
 
-export const GET: APIRoute = async ({ request }) => {
+export async function GET(Astro: any) {
   try {
-    const url = new URL(request.url);
-    const searchTerm = url.searchParams.get('q') || '';
-    const limit = parseInt(url.searchParams.get('limit') || '10');
-    const activeOnly = url.searchParams.get('activeOnly') === 'true';
-
-    let query = db
-      .select({
-        id: users.id,
-        name: users.name,
-        email: users.email,
-        role: users.role,
-        status: users.status,
-      })
-      .from(users);
-
-    // Add filters
-    const conditions = [];
-    
-    if (searchTerm) {
-      conditions.push(
-        or(
-          ilike(users.name, `%${searchTerm}%`),
-          ilike(users.email, `%${searchTerm}%`)
-        )
-      );
-    }
-    
-    if (activeOnly) {
-      conditions.push(eq(users.status, 'active'));
+    // Check authentication
+    const currentUser = await getSessionUser(Astro);
+    if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'developer')) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Unauthorized'
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
+    // Get search query
+    const searchQuery = Astro.url.searchParams.get('q');
+    if (!searchQuery || searchQuery.trim().length < 2) {
+      return new Response(JSON.stringify({
+        success: true,
+        users: []
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    const results = await query
-      .orderBy(users.name)
-      .limit(limit);
+    // Search users by name or email
+    const searchResults = await db.query.users.findMany({
+      where: or(
+        ilike(users.name, `%${searchQuery}%`),
+        ilike(users.email, `%${searchQuery}%`)
+      ),
+      limit: 20,
+      columns: {
+        id: true,
+        name: true,
+        email: true,
+        role: true
+      }
+    });
 
-    return new Response(JSON.stringify(results), {
+    return new Response(JSON.stringify({
+      success: true,
+      users: searchResults
+    }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
     console.error('Error searching users:', error);
-    return new Response(JSON.stringify({ error: 'Failed to search users' }), {
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Internal server error'
+    }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
   }
-};
+}
