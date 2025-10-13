@@ -1011,3 +1011,118 @@ Cursor will flag and suggest alternatives for:
 - **ALWAYS** log technical details for debugging while showing user-friendly messages
 **Severity:** Error
 **Applies to:** All client-side async operations
+
+### RULE-036: React Hook Declaration Order
+- **ALWAYS** declare all `useCallback` and `useMemo` functions before any `useEffect` hooks that use them
+- **ALWAYS** group hook declarations in this order: state, callbacks, effects, other hooks
+- **ALWAYS** ensure function dependencies are available before use in `useEffect` dependencies
+- **ALWAYS** use this pattern for hook organization:
+  ```typescript
+  // 1. State declarations
+  const [state, setState] = useState();
+  
+  // 2. Callback functions (useCallback)
+  const handleSomething = useCallback(() => {
+    // implementation
+  }, [dependencies]);
+  
+  // 3. Effect hooks (useEffect)
+  useEffect(() => {
+    handleSomething();
+  }, [handleSomething]);
+  ```
+- **NEVER** use functions in `useEffect` dependencies before they are declared
+- **ALWAYS** check for "Cannot access before initialization" errors when organizing hooks
+**Severity:** Error
+**Applies to:** React component development
+
+### RULE-037: Real-Time Data Integration Patterns
+- **ALWAYS** implement real-time updates using custom events for cross-component communication
+- **ALWAYS** use `window.dispatchEvent(new CustomEvent('eventName', { detail: data }))` for broadcasting
+- **ALWAYS** use `window.addEventListener('eventName', handler)` for receiving updates
+- **ALWAYS** clean up event listeners in `useEffect` cleanup functions
+- **ALWAYS** include comprehensive data in custom events to avoid additional API calls
+- **ALWAYS** use this pattern for real-time updates:
+  ```typescript
+  // Dispatch updates
+  const dispatchUpdate = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('dataUpdated', {
+      detail: { isRunning, currentData, timestamp: Date.now() }
+    }));
+  }, [isRunning, currentData]);
+  
+  // Listen for updates
+  useEffect(() => {
+    const handleUpdate = (event: CustomEvent) => {
+      const { isRunning, currentData } = event.detail;
+      // Update local state
+    };
+    
+    window.addEventListener('dataUpdated', handleUpdate);
+    return () => window.removeEventListener('dataUpdated', handleUpdate);
+  }, []);
+  ```
+- **ALWAYS** test real-time updates across different components
+- **ALWAYS** include fallback mechanisms when real-time updates fail
+**Severity:** Warning
+**Applies to:** Real-time feature development
+
+### RULE-038: Function Definition Order in React Components
+- **ALWAYS** define all functions before they are used in `useEffect` dependencies
+- **ALWAYS** group function definitions by purpose: data loading, event handlers, utility functions
+- **ALWAYS** use `useCallback` for functions used in `useEffect` dependencies
+- **ALWAYS** ensure proper dependency arrays in `useCallback` to prevent infinite re-renders
+- **ALWAYS** use this pattern for function organization:
+  ```typescript
+  // Data loading functions
+  const loadData = useCallback(async () => {
+    // implementation
+  }, [dependencies]);
+  
+  // Event handlers
+  const handleEvent = useCallback(() => {
+    // implementation
+  }, [dependencies]);
+  
+  // Effects that use the functions
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+  ```
+- **NEVER** define functions after `useEffect` hooks that use them
+- **ALWAYS** check for initialization errors when adding new functions
+**Severity:** Error
+**Applies to:** React component development
+
+### RULE-039: Real-Time Timer Integration Patterns
+- **ALWAYS** include current timer state in daily/weekly totals calculations
+- **ALWAYS** use real-time data for "Today Hours Tracked" and "This Week Hours Tracked" displays
+- **ALWAYS** dispatch timer updates every second when timer is running
+- **ALWAYS** include comprehensive timer data in custom events: `{ isRunning, projectId, currentSessionSeconds, today, weekOffset }`
+- **ALWAYS** use this pattern for timer integration:
+  ```typescript
+  // Calculate real-time totals including current timer
+  const getRealTimeTotals = (baseTotals) => {
+    if (isRunning && weekOffset === 0) {
+      const currentSessionSeconds = timerData.elapsedSeconds + localTime;
+      // Add to today's total
+      return addToTodayTotal(baseTotals, currentSessionSeconds);
+    }
+    return baseTotals;
+  };
+  
+  // Dispatch updates every second
+  useEffect(() => {
+    let interval;
+    if (isRunning) {
+      interval = setInterval(() => {
+        dispatchTimerUpdate();
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isRunning, dispatchTimerUpdate]);
+  ```
+- **ALWAYS** test real-time updates in both Timer component and Dashboard
+- **ALWAYS** ensure timer state is properly synchronized across components
+**Severity:** Warning
+**Applies to:** Timer and dashboard integration

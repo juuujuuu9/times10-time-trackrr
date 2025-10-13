@@ -447,6 +447,55 @@ export default function Timer() {
     }
   }, [timerData?.elapsedSeconds]);
 
+  // Dispatch real-time timer updates to dashboard
+  const dispatchTimerUpdate = useCallback(() => {
+    if (isRunning && timerData) {
+      const now = new Date();
+      const today = now.getDay();
+      const currentSessionSeconds = timerData.elapsedSeconds + localTime;
+      
+      // Dispatch event with real-time timer data for dashboard
+      window.dispatchEvent(new CustomEvent('timerRealTimeUpdate', {
+        detail: {
+          isRunning: true,
+          projectId: timerData.projectId,
+          currentSessionSeconds,
+          today,
+          weekOffset
+        }
+      }));
+    } else {
+      // Dispatch event when timer stops
+      window.dispatchEvent(new CustomEvent('timerRealTimeUpdate', {
+        detail: {
+          isRunning: false,
+          projectId: null,
+          currentSessionSeconds: 0,
+          today: new Date().getDay(),
+          weekOffset
+        }
+      }));
+    }
+  }, [isRunning, timerData, localTime, weekOffset]);
+
+  // Dispatch real-time updates when timer state changes
+  useEffect(() => {
+    dispatchTimerUpdate();
+  }, [dispatchTimerUpdate]);
+
+  // Dispatch real-time updates every second when timer is running
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isRunning) {
+      interval = setInterval(() => {
+        dispatchTimerUpdate();
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isRunning, dispatchTimerUpdate]);
+
 
 
 
@@ -1147,6 +1196,51 @@ export default function Timer() {
     return dayTotals;
   };
 
+  // Get real-time daily duration totals (including running timer)
+  const getRealTimeDailyDurationTotals = () => {
+    // Start with the base daily totals
+    const realTimeTotals = dailyDurationTotals.map(dayTotal => ({ ...dayTotal }));
+    
+    // If viewing current week and there's a running timer, add live time to today's total
+    if (weekOffset === 0 && isRunning && timerData) {
+      const now = new Date();
+      const today = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+      
+      // Calculate current session time
+      const currentSessionSeconds = timerData.elapsedSeconds + localTime;
+      
+      // Find today's total and add the current session time
+      const todayIndex = realTimeTotals.findIndex(day => day.dayOfWeek === today);
+      if (todayIndex !== -1) {
+        const newTotalSeconds = realTimeTotals[todayIndex].totalSeconds + currentSessionSeconds;
+        const hours = Math.floor(newTotalSeconds / 3600);
+        const minutes = Math.floor((newTotalSeconds % 3600) / 60);
+        
+        realTimeTotals[todayIndex] = {
+          dayOfWeek: today,
+          totalSeconds: newTotalSeconds,
+          hours,
+          minutes,
+          formatted: `${hours}h ${minutes}m`
+        };
+      } else {
+        // If no data exists for today, create it
+        const hours = Math.floor(currentSessionSeconds / 3600);
+        const minutes = Math.floor((currentSessionSeconds % 3600) / 60);
+        
+        realTimeTotals.push({
+          dayOfWeek: today,
+          totalSeconds: currentSessionSeconds,
+          hours,
+          minutes,
+          formatted: `${hours}h ${minutes}m`
+        });
+      }
+    }
+    
+    return realTimeTotals;
+  };
+
   // Organize tasks with current week entries by client
   const organizeTasksWithEntriesByClient = () => {
     const tasksWithEntries = getTasksWithCurrentWeekEntries();
@@ -1657,12 +1751,14 @@ export default function Timer() {
                 <div className="flex px-4 pb-3 text-xs text-gray-500">
                   <div className="table-column-separator w-80 flex-shrink-0 min-[888px]:w-80 min-[888px]:flex-shrink-0 max-[887px]:flex-1 max-[887px]:w-auto"></div>
                   {(() => {
-                    console.log('dailyDurationTotals state:', dailyDurationTotals);
-                    console.log('dailyDurationTotals.length:', dailyDurationTotals.length);
+                    // Use real-time daily duration totals (including current timer)
+                    const realTimeDailyTotals = getRealTimeDailyDurationTotals();
+                    console.log('realTimeDailyTotals state:', realTimeDailyTotals);
+                    console.log('realTimeDailyTotals.length:', realTimeDailyTotals.length);
                     
                     let totalSeconds = 0;
-                    const dayElements = dailyDurationTotals.length > 0 ? dailyDurationTotals.map((dayTotal, index) => {
-                      console.log('Rendering day total:', index, dayTotal);
+                    const dayElements = realTimeDailyTotals.length > 0 ? realTimeDailyTotals.map((dayTotal, index) => {
+                      console.log('Rendering real-time day total:', index, dayTotal);
                       totalSeconds += dayTotal.totalSeconds;
                       return (
                         <div key={index} className="table-column-separator flex-1 text-center hidden min-[888px]:block">

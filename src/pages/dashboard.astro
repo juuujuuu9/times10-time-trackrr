@@ -687,7 +687,7 @@ const user = await requireAuth('/')(Astro) as any;
       const todayStatsResponse = await fetch(`/api/reports/daily-duration-totals?userId=${encodeURIComponent(userId)}&startDate=${encodeURIComponent(startOfToday.toISOString())}&endDate=${encodeURIComponent(endOfToday.toISOString())}`);
       if (todayStatsResponse.ok) {
         const todayStatsData = await todayStatsResponse.json();
-        updateTodayStats(todayStatsData);
+        updateTodayStats(todayStatsData, true);
       }
 
       // Load weekly stats using the same API as Timer component
@@ -704,7 +704,7 @@ const user = await requireAuth('/')(Astro) as any;
       const statsResponse = await fetch(`/api/reports/daily-duration-totals?userId=${encodeURIComponent(userId)}&startDate=${encodeURIComponent(weekStart.toISOString())}&endDate=${encodeURIComponent(weekEnd.toISOString())}`);
       if (statsResponse.ok) {
         const statsData = await statsResponse.json();
-        updateWeeklyStats(statsData);
+        updateWeeklyStats(statsData, true);
       }
 
       // Start real-time updates for ongoing timers
@@ -1066,14 +1066,28 @@ const user = await requireAuth('/')(Astro) as any;
     timerUpdateIntervals = {};
   }
 
-  function updateTodayStats(stats: any) {
+  // Store current timer state for real-time updates
+  let currentTimerState: {
+    isRunning: boolean;
+    projectId: number | null;
+    currentSessionSeconds: number;
+    today: number;
+    weekOffset: number;
+  } | null = null;
+
+  function updateTodayStats(stats: any, includeCurrentTimer: boolean = false) {
     const todayHours = document.getElementById('todayHours');
 
     if (todayHours && stats.weekTotals) {
       // Get today's total from the weekTotals array
       const today = new Date();
       const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-      const todayTotal = stats.weekTotals[dayOfWeek]?.totalSeconds || 0;
+      let todayTotal = stats.weekTotals[dayOfWeek]?.totalSeconds || 0;
+      
+      // Add current timer time if it's running and we're viewing current week
+      if (includeCurrentTimer && currentTimerState && currentTimerState.isRunning && currentTimerState.weekOffset === 0) {
+        todayTotal += currentTimerState.currentSessionSeconds;
+      }
       
       // Convert seconds to hours for display
       const hoursFromSeconds = todayTotal / 3600;
@@ -1081,13 +1095,18 @@ const user = await requireAuth('/')(Astro) as any;
     }
   }
 
-  function updateWeeklyStats(stats: any) {
+  function updateWeeklyStats(stats: any, includeCurrentTimer: boolean = false) {
     const weeklyHours = document.getElementById('weeklyHours');
     const weeklyTitle = document.getElementById('weeklyTitle');
 
     if (weeklyHours && stats.weekTotals) {
       // Sum up all days in the week
-      const totalSeconds = stats.weekTotals.reduce((sum: number, day: any) => sum + (day.totalSeconds || 0), 0);
+      let totalSeconds = stats.weekTotals.reduce((sum: number, day: any) => sum + (day.totalSeconds || 0), 0);
+      
+      // Add current timer time if it's running and we're viewing current week
+      if (includeCurrentTimer && currentTimerState && currentTimerState.isRunning && currentTimerState.weekOffset === 0) {
+        totalSeconds += currentTimerState.currentSessionSeconds;
+      }
       
       // Convert seconds to hours for display
       const hoursFromSeconds = totalSeconds / 3600;
@@ -1146,7 +1165,7 @@ const user = await requireAuth('/')(Astro) as any;
         const todayStatsResponse = await fetch(`/api/reports/daily-duration-totals?userId=${encodeURIComponent(userId)}&startDate=${encodeURIComponent(startOfToday.toISOString())}&endDate=${encodeURIComponent(endOfToday.toISOString())}`);
         if (todayStatsResponse.ok) {
           const todayStatsData = await todayStatsResponse.json();
-          updateTodayStats(todayStatsData);
+          updateTodayStats(todayStatsData, true);
         }
 
         // Update weekly stats using the same API as Timer component
@@ -1163,7 +1182,7 @@ const user = await requireAuth('/')(Astro) as any;
         const statsResponse = await fetch(`/api/reports/daily-duration-totals?userId=${encodeURIComponent(userId)}&startDate=${encodeURIComponent(weekStart.toISOString())}&endDate=${encodeURIComponent(weekEnd.toISOString())}`);
         if (statsResponse.ok) {
           const statsData = await statsResponse.json();
-          updateWeeklyStats(statsData);
+          updateWeeklyStats(statsData, true);
         }
       } catch (error) {
         console.error('Error updating real-time stats:', error);
@@ -1346,6 +1365,56 @@ const user = await requireAuth('/')(Astro) as any;
   window.addEventListener('timerStopped', () => {
     // Reload dashboard data when a timer is stopped
     loadDashboardData();
+  });
+
+  // Listen for real-time timer updates
+  window.addEventListener('timerRealTimeUpdate', async (event: Event) => {
+    const customEvent = event as CustomEvent;
+    const timerData = customEvent.detail;
+    
+    // Update current timer state
+    currentTimerState = timerData;
+    
+    // Update today's stats with real-time timer data
+    if (currentTimerState && currentTimerState.isRunning) {
+      try {
+        // Get current stats and update with real-time data
+        const today = new Date();
+        const startOfToday = new Date(today);
+        startOfToday.setHours(0, 0, 0, 0);
+        const endOfToday = new Date(today);
+        endOfToday.setHours(23, 59, 59, 999);
+        
+        const userId = await getCurrentUserId();
+        const todayStatsResponse = await fetch(`/api/reports/daily-duration-totals?userId=${encodeURIComponent(userId)}&startDate=${encodeURIComponent(startOfToday.toISOString())}&endDate=${encodeURIComponent(endOfToday.toISOString())}`);
+        if (todayStatsResponse.ok) {
+          const stats = await todayStatsResponse.json();
+          updateTodayStats(stats, true);
+        }
+        
+        // Update weekly stats with real-time timer data
+        const now = new Date();
+        const dayOfWeek = now.getDay();
+        const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek;
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - daysToSubtract);
+        weekStart.setHours(0, 0, 0, 0);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        weekEnd.setHours(23, 59, 59, 999);
+        
+        const weeklyStatsResponse = await fetch(`/api/reports/daily-duration-totals?userId=${encodeURIComponent(userId)}&startDate=${encodeURIComponent(weekStart.toISOString())}&endDate=${encodeURIComponent(weekEnd.toISOString())}`);
+        if (weeklyStatsResponse.ok) {
+          const stats = await weeklyStatsResponse.json();
+          updateWeeklyStats(stats, true);
+        }
+      } catch (error) {
+        console.error('Error updating real-time stats:', error);
+      }
+    } else {
+      // Timer stopped, refresh data normally
+      loadDashboardData();
+    }
   });
 
   // Attach listeners for time entry changes (add/update/delete) once
