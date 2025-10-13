@@ -298,59 +298,38 @@ if (projectDetails) {
         </div>
       </div>
 
-      <!-- Quick Links -->
-      <div class="mb-6">
-        <h3 class="text-sm font-semibold text-gray-900 mb-3">Quick Links</h3>
-        <nav class="space-y-1">
-          <a href="#notes" class="flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-md">
-            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-            All Notes
-          </a>
-          <a href="#discussions" class="flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-md">
-            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-            </svg>
-            Discussions
-          </a>
-          <a href="#files" class="flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-md">
-            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-            </svg>
-            Files & Links
-          </a>
-          <a href="#activity" class="flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-md">
-            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-            </svg>
-            Activity
-          </a>
-        </nav>
-      </div>
 
       <!-- Filters -->
       <div>
         <h3 class="text-sm font-semibold text-gray-900 mb-3">Filters</h3>
         <div class="space-y-2">
-          <select class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option>Tag: All</option>
-            <option>Important</option>
-            <option>Meeting</option>
-            <option>Decision</option>
+          <select id="priorityFilter" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="all">Priority: All</option>
+            <option value="low">Low</option>
+            <option value="regular">Regular</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
           </select>
-          <select class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option>Author: Any</option>
-            {teamMembers.map((member: any) => (
-              <option>{member.name}</option>
-            ))}
+          <select id="statusFilter" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="all">Status: All</option>
+            <option value="pending">Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
           </select>
-          <select class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option>Date range</option>
-            <option>Today</option>
-            <option>This week</option>
-            <option>This month</option>
+          <select id="dueFilter" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="all">Due: All</option>
+            <option value="overdue">Overdue</option>
+            <option value="due_today">Due Today</option>
+            <option value="due_week">Due This Week</option>
+            <option value="due_month">Due This Month</option>
+            <option value="no_due_date">No Due Date</option>
           </select>
+          
+          <!-- Reset Filters Button -->
+          <button id="resetFilters" class="w-full px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-md transition-colors duration-200 border border-gray-300">
+            Reset Filters
+          </button>
         </div>
       </div>
     </div>
@@ -627,7 +606,15 @@ if (projectDetails) {
 })), projectDetailsData: projectDetails ? {
   id: projectDetails.id,
   name: projectDetails.name
-} : null }}>
+} : null, tasksData: projectTasks.map((task: any) => ({
+  id: task.id,
+  name: task.name,
+  description: task.description,
+  status: task.status,
+  priority: task.priority,
+  assignments: task.assignments || [],
+  createdAt: task.createdAt
+})) }}>
   // Add any client-side functionality here
   document.addEventListener('DOMContentLoaded', function() {
     const taskModal = document.getElementById('taskModal');
@@ -635,6 +622,13 @@ if (projectDetails) {
     const closeTaskModal = document.getElementById('closeTaskModal');
     const cancelTaskModal = document.getElementById('cancelTaskModal');
     const assigneeList = document.getElementById('assigneeList');
+    
+    // Filter elements
+    const priorityFilter = document.getElementById('priorityFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    const dueFilter = document.getElementById('dueFilter');
+    const resetFiltersBtn = document.getElementById('resetFilters');
+    const tasksTableBody = document.querySelector('tbody');
 
     if (!taskModal || !taskForm || !closeTaskModal || !cancelTaskModal || !assigneeList) {
       console.error('Required modal elements not found');
@@ -772,5 +766,99 @@ if (projectDetails) {
         alert('Failed to create task: ' + errorMessage);
       }
     });
+
+    // Filter functionality
+    function filterTasks() {
+      if (!tasksTableBody || !tasksData) return;
+
+      const priorityValue = priorityFilter?.value || 'all';
+      const statusValue = statusFilter?.value || 'all';
+      const dueValue = dueFilter?.value || 'all';
+
+      // Get all task rows (excluding the empty state row)
+      const taskRows = Array.from(tasksTableBody.children).filter(row => 
+        !row.querySelector('td[colspan]') // Exclude empty state row
+      );
+
+      let visibleCount = 0;
+
+      taskRows.forEach(row => {
+        const taskId = row.querySelector('a[href*="/task/"]')?.getAttribute('href')?.split('/').pop();
+        const task = tasksData.find(t => t.id.toString() === taskId);
+        
+        if (!task) {
+          row.style.display = 'none';
+          return;
+        }
+
+        let showTask = true;
+
+        // Priority filter
+        if (priorityValue !== 'all' && task.priority !== priorityValue) {
+          showTask = false;
+        }
+
+        // Status filter
+        if (statusValue !== 'all' && task.status !== statusValue) {
+          showTask = false;
+        }
+
+        // Due date filter (since we don't have due dates yet, this will show all for now)
+        if (dueValue !== 'all') {
+          // For now, show all tasks since we don't have due dates implemented
+          // This can be extended when due dates are added to the task model
+        }
+
+        if (showTask) {
+          row.style.display = '';
+          visibleCount++;
+        } else {
+          row.style.display = 'none';
+        }
+      });
+
+      // Show/hide empty state based on visible tasks
+      const emptyStateRow = tasksTableBody.querySelector('td[colspan]')?.closest('tr');
+      if (emptyStateRow) {
+        if (visibleCount === 0 && tasksData.length > 0) {
+          emptyStateRow.style.display = '';
+          emptyStateRow.querySelector('h3').textContent = 'No tasks match the current filters';
+          emptyStateRow.querySelector('p').textContent = 'Try adjusting your filter criteria to see more tasks.';
+        } else if (visibleCount === 0 && tasksData.length === 0) {
+          emptyStateRow.style.display = '';
+          emptyStateRow.querySelector('h3').textContent = projectDetailsData ? 'No collaboration tasks yet' : 'No project linked to this collaboration';
+          emptyStateRow.querySelector('p').textContent = projectDetailsData ? 'Create your first task to start collaborating with your team.' : 'Link this collaboration to a project to manage tasks.';
+        } else {
+          emptyStateRow.style.display = 'none';
+        }
+      }
+    }
+
+    // Add event listeners for filters
+    if (priorityFilter) {
+      priorityFilter.addEventListener('change', filterTasks);
+    }
+    if (statusFilter) {
+      statusFilter.addEventListener('change', filterTasks);
+    }
+    if (dueFilter) {
+      dueFilter.addEventListener('change', filterTasks);
+    }
+
+    // Reset filters functionality
+    if (resetFiltersBtn) {
+      resetFiltersBtn.addEventListener('click', function() {
+        // Reset all filters to "all"
+        if (priorityFilter) priorityFilter.value = 'all';
+        if (statusFilter) statusFilter.value = 'all';
+        if (dueFilter) dueFilter.value = 'all';
+        
+        // Apply the reset filters
+        filterTasks();
+      });
+    }
+
+    // Initial filter application
+    filterTasks();
   });
 </script>

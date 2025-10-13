@@ -87,15 +87,6 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.team_id, creator
         <h1 class="text-2xl font-bold text-gray-900">Collaboration Management</h1>
         <p class="text-gray-600">Create and manage collaborations for collaborative work</p>
       </div>
-      <button
-        id="createCollaborationBtn"
-        class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
-      >
-        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-        </svg>
-        Create Collaboration
-      </button>
     </div>
 
     {error ? (
@@ -134,15 +125,6 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.team_id, creator
               </div>
               <h3 class="text-lg font-medium text-gray-900 mb-2">No collaborations yet</h3>
               <p class="text-gray-600 mb-4">Create your first collaboration to get started with collaborative features.</p>
-              <button 
-                id="createFirstCollaborationBtn"
-                class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
-              >
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                </svg>
-                Create First Collaboration
-              </button>
             </div>
           ) : (
             <div class="space-y-4">
@@ -209,23 +191,7 @@ const creatorMap = new Map(teamCreators.map(creator => [creator.team_id, creator
 </AdminLayout>
 
 <script>
-  // Handle Create Collaboration button clicks
   document.addEventListener('DOMContentLoaded', function() {
-    const createCollaborationBtn = document.getElementById('createCollaborationBtn');
-    const createFirstCollaborationBtn = document.getElementById('createFirstCollaborationBtn');
-    
-    function handleCreateCollaboration() {
-      // Redirect to create collaboration page or show modal
-      window.location.href = '/admin/collaborations/create';
-    }
-    
-    if (createCollaborationBtn) {
-      createCollaborationBtn.addEventListener('click', handleCreateCollaboration);
-    }
-    
-    if (createFirstCollaborationBtn) {
-      createFirstCollaborationBtn.addEventListener('click', handleCreateCollaboration);
-    }
 
     // Handle Delete Collaboration button clicks
     const deleteButtons = document.querySelectorAll('.delete-collaboration-btn');
