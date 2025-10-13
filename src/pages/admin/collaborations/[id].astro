@@ -360,7 +360,24 @@ if (projectDetails) {
       <!-- Header -->
       <div class="flex justify-between gap-4 items-center mb-6">
         <div class="flex items-center flex-1">
-          <h1 class="text-2xl font-bold text-gray-900">Project Tasks</h1>
+          <!-- Breadcrumbs -->
+          <nav class="flex items-center space-x-2 text-sm">
+            <a href="/admin/collaborations" class="text-gray-500 hover:text-gray-700">Collaborations</a>
+            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+            {projectDetails ? (
+              <>
+                <span class="text-gray-900 font-medium">{projectDetails.client?.name || 'Unknown Client'}</span>
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+                <span class="text-gray-900 font-medium">{projectDetails.name}</span>
+              </>
+            ) : (
+              <span class="text-gray-900 font-medium">{(collaboration as any).name}</span>
+            )}
+          </nav>
         </div>
         <div class="flex items-center space-x-3">
           <button class="inline-flex items-center px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border border-gray-300 transition-all duration-200">
@@ -408,7 +425,9 @@ if (projectDetails) {
                         </div>
                       </div>
                       <div class="ml-4">
-                        <div class="text-sm font-medium text-gray-900">{task.name}</div>
+                        <a href={`/admin/collaborations/${collaborationId}/task/${task.id}`} class="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline">
+                          {task.name}
+                        </a>
                         {task.description && (
                           <div class="text-sm text-gray-500">{task.description}</div>
                         )}
