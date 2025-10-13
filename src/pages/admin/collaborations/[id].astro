@@ -279,13 +279,33 @@ if (projectDetails) {
         <div class="flex items-center">
           <div class="flex -space-x-2">
             {teamMembers.slice(0, 4).map((member: any, index: number) => (
-              <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 border-2 border-white">
+              <div 
+                class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 border-2 border-white relative group cursor-pointer"
+                title={member.name}
+              >
                 {member.name.charAt(0).toUpperCase()}
+                <!-- Tooltip -->
+                <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                  {member.name}
+                  <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                </div>
               </div>
             ))}
             {teamMembers.length > 4 && (
-              <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 border-2 border-white">
+              <div 
+                class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 border-2 border-white relative group cursor-pointer"
+                title={teamMembers.slice(4).map((member: any) => member.name).join(', ')}
+              >
                 +{teamMembers.length - 4}
+                <!-- Tooltip -->
+                <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                  <div class="flex flex-col space-y-1">
+                    {teamMembers.slice(4).map((member: any) => (
+                      <div class="whitespace-nowrap">{member.name}</div>
+                    ))}
+                  </div>
+                  <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                </div>
               </div>
             )}
           </div>
@@ -417,13 +437,33 @@ if (projectDetails) {
                       {task.assignments && task.assignments.length > 0 ? (
                         <div class="flex -space-x-2">
                           {task.assignments.slice(0, 3).map((assignment: any) => (
-                            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 border-2 border-white">
+                            <div 
+                              class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 border-2 border-white relative group cursor-pointer"
+                              title={assignment.user.name}
+                            >
                               {assignment.user.name.charAt(0).toUpperCase()}
+                              <!-- Tooltip -->
+                              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                                {assignment.user.name}
+                                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                              </div>
                             </div>
                           ))}
                           {task.assignments.length > 3 && (
-                            <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 border-2 border-white">
+                            <div 
+                              class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 border-2 border-white relative group cursor-pointer"
+                              title={task.assignments.slice(3).map((assignment: any) => assignment.user.name).join(', ')}
+                            >
                               +{task.assignments.length - 3}
+                              <!-- Tooltip -->
+                              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                                <div class="flex flex-col space-y-1">
+                                  {task.assignments.slice(3).map((assignment: any) => (
+                                    <div class="whitespace-nowrap">{assignment.user.name}</div>
+                                  ))}
+                                </div>
+                                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -757,8 +797,13 @@ if (projectDetails) {
             class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
           />
           <label for="assignee-${member.id}" class="flex items-center space-x-2 cursor-pointer">
-            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700">
+            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 relative group" title="${member.name}">
               ${member.name.charAt(0).toUpperCase()}
+              <!-- Tooltip -->
+              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                ${member.name}
+                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+              </div>
             </div>
             <div>
               <div class="text-sm font-medium text-gray-900">${member.name}</div>
@@ -779,8 +824,13 @@ if (projectDetails) {
         memberItem.className = 'flex items-center justify-between p-2 bg-gray-50 rounded-md';
         memberItem.innerHTML = `
           <div class="flex items-center space-x-3">
-            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700">
+            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 relative group" title="${member.name}">
               ${member.name.charAt(0).toUpperCase()}
+              <!-- Tooltip -->
+              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                ${member.name}
+                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+              </div>
             </div>
             <div>
               <div class="text-sm font-medium text-gray-900">${member.name}</div>
@@ -865,8 +915,13 @@ if (projectDetails) {
         
         userItem.innerHTML = `
           <div class="flex items-center space-x-3">
-            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700">
+            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 relative group" title="${user.name}">
               ${user.name.charAt(0).toUpperCase()}
+              <!-- Tooltip -->
+              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                ${user.name}
+                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+              </div>
             </div>
             <div>
               <div class="text-sm font-medium text-gray-900">${user.name}</div>
