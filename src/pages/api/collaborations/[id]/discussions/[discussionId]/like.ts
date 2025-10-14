@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro';
-import { db } from '../../../../../db';
-import { taskDiscussions, teamMembers } from '../../../../../db/schema';
+import { db } from '../../../../../../db';
+import { taskDiscussions, teamMembers } from '../../../../../../db/schema';
 import { eq, and } from 'drizzle-orm';
-import { getSessionUser } from '../../../../../utils/session';
+import { getSessionUser } from '../../../../../../utils/session';
 
 // POST /api/collaborations/[id]/discussions/[discussionId]/like - Like/unlike a discussion
 export const POST: APIRoute = async (context) => {
