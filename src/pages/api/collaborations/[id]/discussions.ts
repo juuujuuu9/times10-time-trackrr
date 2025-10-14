@@ -1,8 +1,9 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../../db';
-import { taskDiscussions, teams, teamMembers, users, projectTeams } from '../../../../db/schema';
+import { taskDiscussions, teams, teamMembers, users, projectTeams, tasks } from '../../../../db/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { getSessionUser } from '../../../../utils/session';
+import { NotificationService } from '../../../../services/notificationService';
 
 // GET /api/collaborations/[id]/discussions - Get discussions for a collaboration
 export const GET: APIRoute = async (context) => {
@@ -199,7 +200,8 @@ export const POST: APIRoute = async (context) => {
       taskId, 
       mediaUrl, 
       linkPreview, 
-      subtask 
+      subtask,
+      mentionedUsers = []
     } = body;
 
     if (!content || content.trim() === '') {
@@ -233,6 +235,32 @@ export const POST: APIRoute = async (context) => {
 
     if (!createdDiscussion) {
       throw new Error('Failed to retrieve created discussion');
+    }
+
+    // Send notifications for mentioned users
+    if (mentionedUsers && mentionedUsers.length > 0 && taskId) {
+      try {
+        // Get task details for notification
+        const task = await db.query.tasks.findFirst({
+          where: eq(tasks.id, parseInt(taskId)),
+          with: {
+            project: true
+          }
+        });
+
+        if (task) {
+          await NotificationService.createMentionNotifications(
+            mentionedUsers,
+            currentUser.name,
+            task.name,
+            createdDiscussion.id
+          );
+          console.log(`📧 Mention notifications sent to ${mentionedUsers.length} users`);
+        }
+      } catch (notificationError) {
+        console.error('Error sending mention notifications:', notificationError);
+        // Don't fail the entire operation if notifications fail
+      }
     }
 
     return new Response(JSON.stringify({

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import AddInsightModal from './AddInsightModal';
 
 interface User {
   id: number;
@@ -59,6 +60,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
   const [memberFilter, setMemberFilter] = useState<string>('all');
   const [timeFilter, setTimeFilter] = useState<string>('all');
   const [newComment, setNewComment] = useState<{ [postId: number]: string }>({});
+  const [showAddInsightModal, setShowAddInsightModal] = useState(false);
 
   // Load posts from API
   const loadPosts = useCallback(async () => {
@@ -136,6 +138,38 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       }
     } catch (error) {
       console.error('Error creating post:', error);
+    }
+  };
+
+  // Handle insight creation with mentions
+  const handleCreateInsight = async (content: string, mentionedUsers: User[]) => {
+    try {
+      const response = await fetch(`/api/collaborations/${collaborationId}/discussions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          taskId,
+          type: 'insight',
+          content,
+          mentionedUsers: mentionedUsers.map(user => user.id)
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        await loadPosts(); // Reload posts
+        // Dispatch custom event for real-time updates
+        window.dispatchEvent(new CustomEvent('taskStreamUpdate', {
+          detail: { taskId, collaborationId }
+        }));
+      } else {
+        console.error('Failed to create insight:', data.message);
+      }
+    } catch (error) {
+      console.error('Error creating insight:', error);
     }
   };
 
@@ -237,7 +271,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <button 
-            onClick={() => handleCreatePost('insight', 'New insight...')}
+            onClick={() => setShowAddInsightModal(true)}
             className="flex items-center justify-center space-x-3 px-6 py-4 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl transition-colors border border-blue-200"
           >
             <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -436,6 +470,15 @@ const TaskStream: React.FC<TaskStreamProps> = ({
           })
         )}
       </div>
+
+      {/* Add Insight Modal */}
+      <AddInsightModal
+        isOpen={showAddInsightModal}
+        onClose={() => setShowAddInsightModal(false)}
+        onSubmit={handleCreateInsight}
+        teamMembers={teamMembers}
+        currentUser={currentUser}
+      />
     </div>
   );
 };

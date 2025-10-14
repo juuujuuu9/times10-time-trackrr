@@ -1,0 +1,1066 @@
+{
+  "timestamp": "2025-10-14T20:33:44.168Z",
+  "tables": {
+    "clients": [
+      {
+        "id": 2,
+        "name": "FLERISH",
+        "created_by": 4,
+        "archived": false,
+        "created_at": "2025-09-25T03:38:28.659Z",
+        "updated_at": "2025-09-25T03:38:28.659Z"
+      },
+      {
+        "id": 4,
+        "name": "NIKE",
+        "created_by": 4,
+        "archived": false,
+        "created_at": "2025-09-25T03:38:29.219Z",
+        "updated_at": "2025-09-25T03:38:29.219Z"
+      },
+      {
+        "id": 5,
+        "name": "APPLE",
+        "created_by": 4,
+        "archived": false,
+        "created_at": "2025-09-25T03:38:29.405Z",
+        "updated_at": "2025-09-25T03:38:29.405Z"
+      },
+      {
+        "id": 6,
+        "name": "Adidas",
+        "created_by": 1,
+        "archived": false,
+        "created_at": "2025-09-25T03:41:53.998Z",
+        "updated_at": "2025-09-25T03:41:53.998Z"
+      },
+      {
+        "id": 7,
+        "name": "890 Capital",
+        "created_by": 4,
+        "archived": false,
+        "created_at": "2025-10-12T05:41:38.289Z",
+        "updated_at": "2025-10-12T05:41:38.289Z"
+      },
+      {
+        "id": 8,
+        "name": "Super Company",
+        "created_by": 4,
+        "archived": false,
+        "created_at": "2025-10-13T01:32:41.615Z",
+        "updated_at": "2025-10-13T01:32:41.615Z"
+      }
+    ],
+    "invitation_tokens": [],
+    "notifications": [],
+    "password_reset_tokens": [],
+    "project_teams": [
+      {
+        "project_id": 5,
+        "team_id": 11,
+        "assigned_by": 4,
+        "assigned_at": "2025-10-13T01:28:30.119Z"
+      },
+      {
+        "project_id": 8,
+        "team_id": 13,
+        "assigned_by": 4,
+        "assigned_at": "2025-10-13T01:32:53.530Z"
+      },
+      {
+        "project_id": 9,
+        "team_id": 15,
+        "assigned_by": 1,
+        "assigned_at": "2025-10-14T04:01:29.267Z"
+      }
+    ],
+    "projects": [
+      {
+        "id": 1,
+        "client_id": 2,
+        "name": "Time Tracking",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-09-25T03:38:28.718Z",
+        "updated_at": "2025-09-25T03:38:28.718Z"
+      },
+      {
+        "id": 3,
+        "client_id": 4,
+        "name": "Time Tracking",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-09-25T03:38:29.273Z",
+        "updated_at": "2025-09-25T03:38:29.273Z"
+      },
+      {
+        "id": 4,
+        "client_id": 5,
+        "name": "Time Tracking",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-09-25T03:38:29.451Z",
+        "updated_at": "2025-09-25T03:38:29.451Z"
+      },
+      {
+        "id": 6,
+        "client_id": 6,
+        "name": "D. Rose",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-09-25T03:41:54.095Z",
+        "updated_at": "2025-09-25T03:41:54.095Z"
+      },
+      {
+        "id": 2,
+        "client_id": 6,
+        "name": "Time Tracking",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-09-25T03:38:28.918Z",
+        "updated_at": "2025-09-25T03:38:28.918Z"
+      },
+      {
+        "id": 5,
+        "client_id": 6,
+        "name": "NIL Summit",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-09-25T03:39:53.356Z",
+        "updated_at": "2025-09-25T03:39:53.356Z"
+      },
+      {
+        "id": 7,
+        "client_id": 7,
+        "name": "Monday.com Forms",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-10-12T05:41:38.351Z",
+        "updated_at": "2025-10-12T05:41:38.351Z"
+      },
+      {
+        "id": 8,
+        "client_id": 8,
+        "name": "Rebranding",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-10-13T01:32:41.688Z",
+        "updated_at": "2025-10-13T01:32:41.688Z"
+      },
+      {
+        "id": 9,
+        "client_id": 7,
+        "name": "Website Development",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-10-14T04:01:21.111Z",
+        "updated_at": "2025-10-14T04:01:21.111Z"
+      }
+    ],
+    "sessions": [
+      {
+        "id": 1,
+        "user_id": 4,
+        "token": "3c6527aaba4cbf89618bc1562bf8b92d874a22871cc8863d756d3aa2a87c6e9d",
+        "expires_at": "2025-10-02T03:32:23.450Z",
+        "created_at": "2025-09-25T03:32:23.502Z"
+      },
+      {
+        "id": 2,
+        "user_id": 4,
+        "token": "7e9c0c4d177203c647a2ebd783989af15d2a64fb13e3e65342d3819acf436c1b",
+        "expires_at": "2025-10-02T03:35:22.303Z",
+        "created_at": "2025-09-25T03:35:22.338Z"
+      },
+      {
+        "id": 3,
+        "user_id": 3,
+        "token": "15fb368c9dbf16b365dff5392b8a9352833a067bd16d612a952a30468b896b67",
+        "expires_at": "2025-10-07T06:57:10.213Z",
+        "created_at": "2025-09-30T06:57:10.302Z"
+      },
+      {
+        "id": 4,
+        "user_id": 4,
+        "token": "2cc8f7008635dd403eaee7b15b21010496b22bef9cd8e130f8cc648d050f4389",
+        "expires_at": "2025-10-10T00:32:59.371Z",
+        "created_at": "2025-10-03T00:32:59.437Z"
+      },
+      {
+        "id": 11,
+        "user_id": 1,
+        "token": "7f31c60548cc511a52b616a8e60c817c7f60ede8a22e29bb81b02748727ec3e1",
+        "expires_at": "2025-10-21T00:07:14.621Z",
+        "created_at": "2025-10-14T00:07:14.670Z"
+      },
+      {
+        "id": 16,
+        "user_id": 3,
+        "token": "ae39b871887c2dea992a0332b3567866010e4063c5c38f5e295aed5c6db6e12b",
+        "expires_at": "2025-10-21T02:11:42.290Z",
+        "created_at": "2025-10-14T02:11:42.320Z"
+      }
+    ],
+    "slack_commands": [],
+    "slack_users": [],
+    "slack_workspaces": [],
+    "task_assignments": [
+      {
+        "task_id": 1,
+        "user_id": 4
+      },
+      {
+        "task_id": 2,
+        "user_id": 4
+      },
+      {
+        "task_id": 3,
+        "user_id": 4
+      },
+      {
+        "task_id": 4,
+        "user_id": 4
+      },
+      {
+        "task_id": 5,
+        "user_id": 1
+      },
+      {
+        "task_id": 5,
+        "user_id": 2
+      },
+      {
+        "task_id": 5,
+        "user_id": 3
+      },
+      {
+        "task_id": 5,
+        "user_id": 4
+      },
+      {
+        "task_id": 5,
+        "user_id": 5
+      },
+      {
+        "task_id": 6,
+        "user_id": 1
+      },
+      {
+        "task_id": 6,
+        "user_id": 2
+      },
+      {
+        "task_id": 6,
+        "user_id": 3
+      },
+      {
+        "task_id": 6,
+        "user_id": 4
+      },
+      {
+        "task_id": 6,
+        "user_id": 5
+      },
+      {
+        "task_id": 7,
+        "user_id": 1
+      },
+      {
+        "task_id": 7,
+        "user_id": 2
+      },
+      {
+        "task_id": 7,
+        "user_id": 3
+      },
+      {
+        "task_id": 7,
+        "user_id": 4
+      },
+      {
+        "task_id": 7,
+        "user_id": 5
+      },
+      {
+        "task_id": 8,
+        "user_id": 1
+      },
+      {
+        "task_id": 8,
+        "user_id": 2
+      },
+      {
+        "task_id": 8,
+        "user_id": 3
+      },
+      {
+        "task_id": 8,
+        "user_id": 4
+      },
+      {
+        "task_id": 8,
+        "user_id": 5
+      },
+      {
+        "task_id": 1,
+        "user_id": 1
+      },
+      {
+        "task_id": 1,
+        "user_id": 2
+      },
+      {
+        "task_id": 1,
+        "user_id": 3
+      },
+      {
+        "task_id": 1,
+        "user_id": 5
+      },
+      {
+        "task_id": 2,
+        "user_id": 1
+      },
+      {
+        "task_id": 2,
+        "user_id": 2
+      },
+      {
+        "task_id": 2,
+        "user_id": 3
+      },
+      {
+        "task_id": 2,
+        "user_id": 5
+      },
+      {
+        "task_id": 3,
+        "user_id": 1
+      },
+      {
+        "task_id": 3,
+        "user_id": 2
+      },
+      {
+        "task_id": 3,
+        "user_id": 3
+      },
+      {
+        "task_id": 3,
+        "user_id": 5
+      },
+      {
+        "task_id": 4,
+        "user_id": 1
+      },
+      {
+        "task_id": 4,
+        "user_id": 2
+      },
+      {
+        "task_id": 4,
+        "user_id": 3
+      },
+      {
+        "task_id": 4,
+        "user_id": 5
+      },
+      {
+        "task_id": 12,
+        "user_id": 5
+      },
+      {
+        "task_id": 13,
+        "user_id": 3
+      },
+      {
+        "task_id": 14,
+        "user_id": 3
+      },
+      {
+        "task_id": 15,
+        "user_id": 5
+      },
+      {
+        "task_id": 16,
+        "user_id": 1
+      },
+      {
+        "task_id": 16,
+        "user_id": 3
+      },
+      {
+        "task_id": 17,
+        "user_id": 3
+      },
+      {
+        "task_id": 11,
+        "user_id": 2
+      },
+      {
+        "task_id": 11,
+        "user_id": 3
+      },
+      {
+        "task_id": 21,
+        "user_id": 3
+      }
+    ],
+    "task_collaborations": [
+      {
+        "id": 1,
+        "task_id": 11,
+        "team_id": 13,
+        "created_by": 4,
+        "created_at": "2025-10-13T01:47:34.185Z"
+      },
+      {
+        "id": 2,
+        "task_id": 12,
+        "team_id": 11,
+        "created_by": 1,
+        "created_at": "2025-10-13T01:49:09.542Z"
+      }
+    ],
+    "task_discussions": [],
+    "task_files": [],
+    "task_links": [],
+    "task_notes": [],
+    "tasks": [
+      {
+        "id": 1,
+        "project_id": 1,
+        "name": "General",
+        "description": "General task for FLERISH",
+        "status": "active",
+        "priority": "regular",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-09-25T03:38:28.770Z",
+        "updated_at": "2025-09-25T03:38:28.770Z",
+        "due_date": null
+      },
+      {
+        "id": 2,
+        "project_id": 2,
+        "name": "General",
+        "description": "General task for ADIDAS",
+        "status": "active",
+        "priority": "regular",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-09-25T03:38:29.094Z",
+        "updated_at": "2025-09-25T03:38:29.094Z",
+        "due_date": null
+      },
+      {
+        "id": 3,
+        "project_id": 3,
+        "name": "General",
+        "description": "General task for NIKE",
+        "status": "active",
+        "priority": "regular",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-09-25T03:38:29.318Z",
+        "updated_at": "2025-09-25T03:38:29.318Z",
+        "due_date": null
+      },
+      {
+        "id": 4,
+        "project_id": 4,
+        "name": "General",
+        "description": "General task for APPLE",
+        "status": "active",
+        "priority": "regular",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-09-25T03:38:29.491Z",
+        "updated_at": "2025-09-25T03:38:29.491Z",
+        "due_date": null
+      },
+      {
+        "id": 8,
+        "project_id": 6,
+        "name": "D. Rose",
+        "description": "Work on D. Rose",
+        "status": "pending",
+        "priority": "regular",
+        "archived": false,
+        "is_system": true,
+        "created_at": "2025-09-25T03:42:09.978Z",
+        "updated_at": "2025-09-25T03:42:09.978Z",
+        "due_date": null
+      },
+      {
+        "id": 7,
+        "project_id": 6,
+        "name": "D. Rose",
+        "description": "Work on D. Rose",
+        "status": "pending",
+        "priority": "regular",
+        "archived": false,
+        "is_system": true,
+        "created_at": "2025-09-25T03:41:54.215Z",
+        "updated_at": "2025-09-25T03:41:54.215Z",
+        "due_date": null
+      },
+      {
+        "id": 5,
+        "project_id": 5,
+        "name": "NIL Summit",
+        "description": "Work on NIL Summit",
+        "status": "pending",
+        "priority": "regular",
+        "archived": false,
+        "is_system": true,
+        "created_at": "2025-09-25T03:39:53.622Z",
+        "updated_at": "2025-09-25T03:39:53.622Z",
+        "due_date": null
+      },
+      {
+        "id": 6,
+        "project_id": 5,
+        "name": "NIL Summit",
+        "description": "Work on NIL Summit",
+        "status": "in-progress",
+        "priority": "regular",
+        "archived": false,
+        "is_system": true,
+        "created_at": "2025-09-25T03:40:22.503Z",
+        "updated_at": "2025-09-25T03:40:22.503Z",
+        "due_date": null
+      },
+      {
+        "id": 9,
+        "project_id": 7,
+        "name": "General",
+        "description": "General time tracking for 890 Capital",
+        "status": "pending",
+        "priority": "regular",
+        "archived": false,
+        "is_system": true,
+        "created_at": "2025-10-12T05:41:38.398Z",
+        "updated_at": "2025-10-12T05:41:38.398Z",
+        "due_date": null
+      },
+      {
+        "id": 10,
+        "project_id": 8,
+        "name": "General",
+        "description": "General time tracking for Super Company",
+        "status": "pending",
+        "priority": "regular",
+        "archived": false,
+        "is_system": true,
+        "created_at": "2025-10-13T01:32:41.736Z",
+        "updated_at": "2025-10-13T01:32:41.736Z",
+        "due_date": null
+      },
+      {
+        "id": 12,
+        "project_id": 5,
+        "name": "testing",
+        "description": "sdfasdfslidkfjslkdf",
+        "status": "in_progress",
+        "priority": "high",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-10-13T01:49:09.347Z",
+        "updated_at": "2025-10-13T01:49:09.347Z",
+        "due_date": null
+      },
+      {
+        "id": 13,
+        "project_id": 7,
+        "name": "Regulart Task",
+        "description": "dsfadsf",
+        "status": "pending",
+        "priority": "urgent",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-10-13T01:52:14.156Z",
+        "updated_at": "2025-10-13T01:52:14.156Z",
+        "due_date": null
+      },
+      {
+        "id": 14,
+        "project_id": 7,
+        "name": "Crypto Alpha",
+        "description": "Design a form ",
+        "status": "pending",
+        "priority": "regular",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-10-14T01:42:22.082Z",
+        "updated_at": "2025-10-14T01:42:22.082Z",
+        "due_date": null
+      },
+      {
+        "id": 15,
+        "project_id": 9,
+        "name": "Figma Mockup",
+        "description": null,
+        "status": "pending",
+        "priority": "regular",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-10-14T04:02:11.476Z",
+        "updated_at": "2025-10-14T04:02:11.476Z",
+        "due_date": "2025-10-27T07:00:00.000Z"
+      },
+      {
+        "id": 16,
+        "project_id": 9,
+        "name": "Rebranding",
+        "description": "Renew the branding materials",
+        "status": "cancelled",
+        "priority": "urgent",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-10-14T04:04:37.498Z",
+        "updated_at": "2025-10-14T06:10:35.329Z",
+        "due_date": "2025-10-25T02:00:00.000Z"
+      },
+      {
+        "id": 17,
+        "project_id": 9,
+        "name": "McChicken Sanwich (Lunch Break)",
+        "description": "Go get yourself a sammich",
+        "status": "in_progress",
+        "priority": "high",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-10-14T06:20:43.057Z",
+        "updated_at": "2025-10-14T06:48:49.037Z",
+        "due_date": "2025-10-17T02:00:00.000Z"
+      },
+      {
+        "id": 11,
+        "project_id": 8,
+        "name": "Testing task assignments",
+        "description": "Test if users can see tasks in their timers when assigned a task",
+        "status": "in_progress",
+        "priority": "regular",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-10-13T01:47:33.977Z",
+        "updated_at": "2025-10-14T09:03:16.702Z",
+        "due_date": null
+      },
+      {
+        "id": 21,
+        "project_id": 9,
+        "name": "Get Nugg Sauce",
+        "description": "GO to the counter and grab 5",
+        "status": "pending",
+        "priority": "regular",
+        "archived": false,
+        "is_system": false,
+        "created_at": "2025-10-15T03:27:09.688Z",
+        "updated_at": "2025-10-15T03:27:09.688Z",
+        "due_date": "2025-10-24T02:00:00.000Z"
+      }
+    ],
+    "team_members": [
+      {
+        "team_id": 11,
+        "user_id": 5,
+        "role": "member",
+        "joined_at": "2025-10-13T01:28:30.070Z"
+      },
+      {
+        "team_id": 11,
+        "user_id": 1,
+        "role": "member",
+        "joined_at": "2025-10-13T01:28:30.070Z"
+      },
+      {
+        "team_id": 11,
+        "user_id": 3,
+        "role": "member",
+        "joined_at": "2025-10-13T01:28:30.070Z"
+      },
+      {
+        "team_id": 11,
+        "user_id": 4,
+        "role": "member",
+        "joined_at": "2025-10-13T01:28:30.070Z"
+      },
+      {
+        "team_id": 15,
+        "user_id": 2,
+        "role": "member",
+        "joined_at": "2025-10-14T05:19:21.533Z"
+      },
+      {
+        "team_id": 15,
+        "user_id": 5,
+        "role": "member",
+        "joined_at": "2025-10-14T05:19:21.533Z"
+      },
+      {
+        "team_id": 15,
+        "user_id": 1,
+        "role": "member",
+        "joined_at": "2025-10-14T05:19:21.533Z"
+      },
+      {
+        "team_id": 15,
+        "user_id": 6,
+        "role": "member",
+        "joined_at": "2025-10-14T05:19:21.533Z"
+      },
+      {
+        "team_id": 15,
+        "user_id": 3,
+        "role": "member",
+        "joined_at": "2025-10-14T05:19:21.533Z"
+      },
+      {
+        "team_id": 15,
+        "user_id": 4,
+        "role": "member",
+        "joined_at": "2025-10-14T05:19:21.533Z"
+      },
+      {
+        "team_id": 13,
+        "user_id": 2,
+        "role": "member",
+        "joined_at": "2025-10-14T07:16:48.561Z"
+      },
+      {
+        "team_id": 13,
+        "user_id": 5,
+        "role": "member",
+        "joined_at": "2025-10-14T07:16:48.561Z"
+      },
+      {
+        "team_id": 13,
+        "user_id": 1,
+        "role": "member",
+        "joined_at": "2025-10-14T07:16:48.561Z"
+      }
+    ],
+    "teams": [
+      {
+        "id": 11,
+        "name": "NIL Summit",
+        "description": null,
+        "created_by": 4,
+        "created_at": "2025-10-13T01:28:30.024Z",
+        "updated_at": "2025-10-13T01:28:30.024Z",
+        "archived": false
+      },
+      {
+        "id": 13,
+        "name": "Rebranding",
+        "description": null,
+        "created_by": 4,
+        "created_at": "2025-10-13T01:32:53.433Z",
+        "updated_at": "2025-10-13T01:32:53.433Z",
+        "archived": false
+      },
+      {
+        "id": 15,
+        "name": "Website Development",
+        "description": null,
+        "created_by": 1,
+        "created_at": "2025-10-14T04:01:29.159Z",
+        "updated_at": "2025-10-14T04:01:29.159Z",
+        "archived": false
+      }
+    ],
+    "time_entries": [
+      {
+        "id": 30,
+        "project_id": 4,
+        "user_id": 4,
+        "start_time": "2025-10-11T23:52:28.367Z",
+        "end_time": "2025-10-11T23:59:41.242Z",
+        "duration_manual": null,
+        "notes": null,
+        "created_at": "2025-10-11T23:52:28.629Z",
+        "updated_at": "2025-10-11T23:59:41.564Z"
+      },
+      {
+        "id": 31,
+        "project_id": 4,
+        "user_id": 1,
+        "start_time": "2025-10-14T00:52:52.121Z",
+        "end_time": "2025-10-14T02:04:59.568Z",
+        "duration_manual": null,
+        "notes": null,
+        "created_at": "2025-10-14T00:52:52.489Z",
+        "updated_at": "2025-10-14T02:05:00.373Z"
+      },
+      {
+        "id": 32,
+        "project_id": 7,
+        "user_id": 5,
+        "start_time": "2025-10-14T02:06:35.404Z",
+        "end_time": "2025-10-14T02:07:07.189Z",
+        "duration_manual": null,
+        "notes": null,
+        "created_at": "2025-10-14T02:06:35.830Z",
+        "updated_at": "2025-10-14T02:07:07.279Z"
+      },
+      {
+        "id": 33,
+        "project_id": 7,
+        "user_id": 3,
+        "start_time": "2025-10-14T02:11:48.638Z",
+        "end_time": "2025-10-14T02:14:39.862Z",
+        "duration_manual": null,
+        "notes": null,
+        "created_at": "2025-10-14T02:11:49.011Z",
+        "updated_at": "2025-10-14T02:14:39.957Z"
+      },
+      {
+        "id": 34,
+        "project_id": 7,
+        "user_id": 3,
+        "start_time": "2025-10-14T02:14:40.004Z",
+        "end_time": "2025-10-14T02:14:42.935Z",
+        "duration_manual": null,
+        "notes": null,
+        "created_at": "2025-10-14T02:14:40.285Z",
+        "updated_at": "2025-10-14T02:14:43.035Z"
+      },
+      {
+        "id": 35,
+        "project_id": 7,
+        "user_id": 3,
+        "start_time": "2025-10-14T02:16:34.221Z",
+        "end_time": "2025-10-14T02:17:55.012Z",
+        "duration_manual": null,
+        "notes": null,
+        "created_at": "2025-10-14T02:16:34.583Z",
+        "updated_at": "2025-10-14T02:17:55.108Z"
+      },
+      {
+        "id": 36,
+        "project_id": 7,
+        "user_id": 3,
+        "start_time": "2025-10-14T02:17:56.129Z",
+        "end_time": "2025-10-14T02:18:45.453Z",
+        "duration_manual": null,
+        "notes": null,
+        "created_at": "2025-10-14T02:17:56.294Z",
+        "updated_at": "2025-10-14T02:18:45.548Z"
+      },
+      {
+        "id": 38,
+        "project_id": 9,
+        "user_id": 3,
+        "start_time": null,
+        "end_time": null,
+        "duration_manual": 14400,
+        "notes": null,
+        "created_at": "2025-10-14T02:00:00.000Z",
+        "updated_at": "2025-10-14T06:22:28.784Z"
+      },
+      {
+        "id": 37,
+        "project_id": 7,
+        "user_id": 3,
+        "start_time": "2025-10-14T03:47:05.705Z",
+        "end_time": null,
+        "duration_manual": 7200,
+        "notes": null,
+        "created_at": "2025-10-14T03:47:05.916Z",
+        "updated_at": "2025-10-14T23:27:58.002Z"
+      },
+      {
+        "id": 39,
+        "project_id": 7,
+        "user_id": 3,
+        "start_time": null,
+        "end_time": null,
+        "duration_manual": 1800,
+        "notes": "Manual duration entry",
+        "created_at": "2025-10-15T02:00:00.000Z",
+        "updated_at": "2025-10-14T23:28:11.968Z"
+      },
+      {
+        "id": 21,
+        "project_id": 1,
+        "user_id": 1,
+        "start_time": "2025-10-02T01:33:00.000Z",
+        "end_time": null,
+        "duration_manual": 3600,
+        "notes": null,
+        "created_at": "2025-10-01T01:33:40.357Z",
+        "updated_at": "2025-10-11T23:32:01.483Z"
+      },
+      {
+        "id": 17,
+        "project_id": 4,
+        "user_id": 1,
+        "start_time": "2025-09-02T21:00:00.000Z",
+        "end_time": null,
+        "duration_manual": 6300,
+        "notes": "hyteh",
+        "created_at": "2025-09-30T23:32:29.212Z",
+        "updated_at": "2025-10-11T23:32:01.483Z"
+      },
+      {
+        "id": 22,
+        "project_id": 2,
+        "user_id": 1,
+        "start_time": "2025-09-30T19:00:00.000Z",
+        "end_time": null,
+        "duration_manual": 300,
+        "notes": "trh",
+        "created_at": "2025-10-01T02:32:19.631Z",
+        "updated_at": "2025-10-11T23:32:01.483Z"
+      },
+      {
+        "id": 23,
+        "project_id": 1,
+        "user_id": 1,
+        "start_time": "2025-09-29T22:00:00.000Z",
+        "end_time": null,
+        "duration_manual": 21960,
+        "notes": null,
+        "created_at": "2025-10-01T02:35:25.858Z",
+        "updated_at": "2025-10-11T23:32:01.483Z"
+      },
+      {
+        "id": 24,
+        "project_id": 5,
+        "user_id": 1,
+        "start_time": "2025-09-03T01:18:00.000Z",
+        "end_time": null,
+        "duration_manual": 2940,
+        "notes": "rthrt",
+        "created_at": "2025-10-03T01:18:59.068Z",
+        "updated_at": "2025-10-11T23:32:01.483Z"
+      },
+      {
+        "id": 27,
+        "project_id": 2,
+        "user_id": 1,
+        "start_time": "2025-10-03T09:01:00.000Z",
+        "end_time": "2025-10-03T09:05:00.000Z",
+        "duration_manual": 240,
+        "notes": null,
+        "created_at": "2025-10-03T09:01:03.850Z",
+        "updated_at": "2025-10-11T23:32:01.483Z"
+      },
+      {
+        "id": 26,
+        "project_id": 4,
+        "user_id": 1,
+        "start_time": "2025-10-03T05:51:07.852Z",
+        "end_time": null,
+        "duration_manual": 3600,
+        "notes": "The notes inputs will now have a compact appearance by default (5rem) but expand when the user wants to type, providing a clean, space-efficient interface while maintaining usability.",
+        "created_at": "2025-10-03T05:51:08.039Z",
+        "updated_at": "2025-10-11T23:32:01.483Z"
+      },
+      {
+        "id": 28,
+        "project_id": 6,
+        "user_id": 1,
+        "start_time": "2025-10-02T23:02:00.000Z",
+        "end_time": "2025-10-03T00:30:00.000Z",
+        "duration_manual": 5280,
+        "notes": null,
+        "created_at": "2025-10-03T09:26:10.261Z",
+        "updated_at": "2025-10-11T23:32:01.483Z"
+      },
+      {
+        "id": 25,
+        "project_id": 6,
+        "user_id": 1,
+        "start_time": "2025-10-02T11:42:00.000Z",
+        "end_time": null,
+        "duration_manual": 60,
+        "notes": null,
+        "created_at": "2025-10-03T02:42:17.291Z",
+        "updated_at": "2025-10-11T23:32:01.483Z"
+      },
+      {
+        "id": 20,
+        "project_id": 1,
+        "user_id": 1,
+        "start_time": "2025-10-02T01:40:00.000Z",
+        "end_time": null,
+        "duration_manual": 3600,
+        "notes": null,
+        "created_at": "2025-10-01T01:28:29.125Z",
+        "updated_at": "2025-10-11T23:32:01.483Z"
+      }
+    ],
+    "user_task_lists": [],
+    "users": [
+      {
+        "id": 2,
+        "email": "developer@times10.com",
+        "name": "Developer User",
+        "password": "$2b$12$3YZhOm4OtmbMb.0h7UQnkOmq3c3aPvVXeuo4Z4w7KeDnEC3R.yuSa",
+        "role": "developer",
+        "status": "active",
+        "pay_rate": "40.00",
+        "created_at": "2025-09-25T03:31:57.896Z",
+        "updated_at": "2025-09-25T03:31:57.896Z"
+      },
+      {
+        "id": 5,
+        "email": "user@test.com",
+        "name": "Team Member",
+        "password": "$2b$12$8htS2.CSG49l2KvqPDwlBeTRMR1/hw0jFHZFt8LDu5a.ufw21CF/S",
+        "role": "user",
+        "status": "active",
+        "pay_rate": "0.00",
+        "created_at": "2025-09-25T03:32:13.658Z",
+        "updated_at": "2025-09-25T03:37:42.771Z"
+      },
+      {
+        "id": 1,
+        "email": "admin@times10.com",
+        "name": "Admin User",
+        "password": "$2b$12$19PseN0voysbPKlveUws6OCAkaVErOrX.kV8vDNLwO12wLGXzb6Mq",
+        "role": "admin",
+        "status": "active",
+        "pay_rate": "50.00",
+        "created_at": "2025-09-25T03:31:57.528Z",
+        "updated_at": "2025-09-30T06:57:05.924Z"
+      },
+      {
+        "id": 6,
+        "email": "manager@times10.com",
+        "name": "Manager User",
+        "password": "$2b$12$F6I2GDL4q7EIiqHgGcfZj.QpOg.0QKyGl.zlFRfVkTbF2OOh9Lu6C",
+        "role": "manager",
+        "status": "active",
+        "pay_rate": "35.00",
+        "created_at": "2025-09-30T06:57:06.430Z",
+        "updated_at": "2025-09-30T06:57:06.430Z"
+      },
+      {
+        "id": 3,
+        "email": "user@times10.com",
+        "name": "Regular User",
+        "password": "$2b$12$xltp1XxLtQdqQFg/9Lhjsuoia9kTKqOYgqzFXjE2YtZGI3UZqGq0S",
+        "role": "user",
+        "status": "active",
+        "pay_rate": "25.00",
+        "created_at": "2025-09-25T03:31:58.204Z",
+        "updated_at": "2025-09-30T06:57:06.634Z"
+      },
+      {
+        "id": 4,
+        "email": "admin@test.com",
+        "name": "Admin",
+        "password": "$2b$12$..3lK9aYLMtc.s0HqZ6tOurCBHdowgK.8P/WjBcbby934ZEGhPp.i",
+        "role": "admin",
+        "status": "active",
+        "pay_rate": "30.00",
+        "created_at": "2025-09-25T03:32:13.299Z",
+        "updated_at": "2025-10-12T00:04:01.928Z"
+      }
+    ]
+  }
+}
