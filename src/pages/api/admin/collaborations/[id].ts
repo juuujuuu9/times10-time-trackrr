@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../../db/index';
-import { teams, teamMembers, projectTeams, taskCollaborations } from '../../../../db/schema';
+import { teams, teamMembers } from '../../../../db/schema';
 import { eq } from 'drizzle-orm';
 import { getSessionUser } from '../../../../utils/session';
 
@@ -91,23 +91,8 @@ export const DELETE: APIRoute = async (context) => {
     }
 
     // Delete in correct order to avoid foreign key constraints
-    console.log('Step 1: Deleting task collaborations...');
-    try {
-      await db.delete(taskCollaborations).where(eq(taskCollaborations.teamId, parsedTeamId));
-      console.log('Task collaborations deleted');
-    } catch (taskCollabError) {
-      console.error('Error deleting task collaborations:', taskCollabError);
-      throw taskCollabError;
-    }
-
-    console.log('Step 2: Deleting project teams...');
-    try {
-      await db.delete(projectTeams).where(eq(projectTeams.teamId, parsedTeamId));
-      console.log('Project teams deleted');
-    } catch (projectTeamError) {
-      console.error('Error deleting project teams:', projectTeamError);
-      throw projectTeamError;
-    }
+    // Note: With simplified schema, we only need to delete the team itself
+    // The direct relationships will be handled by CASCADE constraints
 
     console.log('Step 3: Deleting team members...');
     try {

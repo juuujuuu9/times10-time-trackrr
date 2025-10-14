@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../db/index';
-import { teams, teamMembers, projectTeams, taskCollaborations } from '../../db/schema';
+import { teams, teamMembers } from '../../db/schema';
 import { eq } from 'drizzle-orm';
 
 export const DELETE: APIRoute = async () => {
@@ -30,13 +30,8 @@ export const DELETE: APIRoute = async () => {
     console.log('Team found:', { id: team.id, name: team.name });
     
     // Delete in correct order to avoid foreign key constraints
-    console.log('Step 1: Deleting task collaborations...');
-    await db.delete(taskCollaborations).where(eq(taskCollaborations.teamId, teamId));
-    console.log('Task collaborations deleted');
-    
-    console.log('Step 2: Deleting project teams...');
-    await db.delete(projectTeams).where(eq(projectTeams.teamId, teamId));
-    console.log('Project teams deleted');
+    // Note: With simplified schema, we only need to delete the team itself
+    // The direct relationships will be handled by CASCADE constraints
     
     console.log('Step 3: Deleting team members...');
     await db.delete(teamMembers).where(eq(teamMembers.teamId, teamId));
