@@ -22,7 +22,7 @@ export const GET: APIRoute = async () => {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    console.log('POST /api/admin/tasks - Starting task creation');
+    console.log('POST /api/admin/tasks - Starting task creation - VERSION 2.0');
     const body = await request.json();
     console.log('POST /api/admin/tasks - Request body:', body);
     const { name, description, projectId, status, priority, dueDate } = body;
