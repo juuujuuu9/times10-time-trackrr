@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../db/index';
 import { clients, projects, tasks, users, taskAssignments } from '../../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { requireRole } from '../../utils/session';
 
 export const POST: APIRoute = async (context) => {
@@ -50,12 +50,13 @@ export const POST: APIRoute = async (context) => {
         console.log(`  ✅ Time Tracking project already exists for ${client.name}`);
         projectId = existingProject.id;
       } else {
-        // Create the "Time Tracking" project
-        const [newProject] = await db.insert(projects).values({
-          name: 'Time Tracking',
-          clientId: client.id,
-          isSystem: true,
-        }).returning();
+        // Create the "Time Tracking" project using raw SQL to avoid field mapping issues
+        const projectResult = await db.execute(sql`
+          INSERT INTO projects (name, client_id, is_system) 
+          VALUES ('Time Tracking', ${client.id}, true) 
+          RETURNING id, name, client_id, is_system
+        `);
+        const newProject = projectResult[0];
         
         projectId = newProject.id;
         createdProjects++;
@@ -75,13 +76,13 @@ export const POST: APIRoute = async (context) => {
         console.log(`  ✅ General task already exists for ${client.name}`);
         taskId = existingTask.id;
       } else {
-        // Create the "General" task
-        const [newTask] = await db.insert(tasks).values({
-          name: 'General',
-          projectId: projectId,
-          description: `General time tracking for ${client.name}`,
-          isSystem: true,
-        }).returning();
+        // Create the "General" task using raw SQL to avoid field mapping issues
+        const taskResult = await db.execute(sql`
+          INSERT INTO tasks (project_id, name, description, is_system) 
+          VALUES (${projectId}, 'General', ${`General time tracking for ${client.name}`}, true) 
+          RETURNING id, project_id, name, description, is_system
+        `);
+        const newTask = taskResult[0];
         
         taskId = newTask.id;
         createdTasks++;
