@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { teams, teamMembers, projects, projectTeams, users } from '../db/schema';
+import { teams, teamMembers, projects, users } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { userHasTeamAccessToProject, getUserTeamDashboards } from '../utils/teamAccess';
 import { TeamDashboardService } from '../services/TeamDashboardService';
@@ -73,20 +73,18 @@ async function testTeamAssignments() {
     // 3. Test project-team assignments
     console.log('\n🔍 Testing project-team assignments...');
     
-    // Check existing assignments
-    const existingAssignments = await db.query.projectTeams.findMany({
+    // Check existing assignments (using direct relationship)
+    const existingTeam = await db.query.teams.findFirst({
       where: and(
-        eq(projectTeams.projectId, project1.id),
-        eq(projectTeams.teamId, team1.id)
+        eq(teams.projectId, project1.id),
+        eq(teams.id, team1.id)
       )
     });
 
-    if (existingAssignments.length === 0) {
-      await db.insert(projectTeams).values({
-        projectId: project1.id,
-        teamId: team1.id,
-        assignedBy: user1.id
-      });
+    if (!existingTeam) {
+      await db.update(teams).set({
+        projectId: project1.id
+      }).where(eq(teams.id, team1.id));
       console.log(`✅ Assigned Team 1 to Project 1`);
     } else {
       console.log(`ℹ️  Team 1 already assigned to Project 1`);
