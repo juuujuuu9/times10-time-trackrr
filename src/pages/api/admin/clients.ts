@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db/index';
 import { clients, projects, tasks, users, taskAssignments } from '../../../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { getSessionUser } from '../../../utils/session';
 
 export const GET: APIRoute = async () => {
@@ -72,12 +72,21 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     console.log('Project created:', newProject[0]);
 
     // Create a "General" task for database purposes (not visible to users)
-    const generalTask = await db.insert(tasks).values({
-      name: 'General',
-      projectId: newProject[0].id,
+    console.log('Creating general task with data:', { 
+      name: 'General', 
+      projectId: newProject[0].id, 
       description: `General time tracking for ${trimmedName}`,
-      isSystem: true, // Mark as system-generated
-    }).returning();
+      isSystem: true 
+    });
+    
+    // Use raw SQL to avoid Drizzle field mapping issues
+    const generalTaskResult = await db.execute(sql`
+      INSERT INTO tasks (project_id, name, description, is_system) 
+      VALUES (${newProject[0].id}, 'General', ${`General time tracking for ${trimmedName}`}, true) 
+      RETURNING id, project_id, name, description, is_system
+    `);
+    
+    const generalTask = generalTaskResult;
 
     console.log('General task created for database purposes:', generalTask[0]);
 
