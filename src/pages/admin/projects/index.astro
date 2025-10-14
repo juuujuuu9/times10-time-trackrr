@@ -3009,7 +3009,7 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
           alert('Collaboration created successfully!');
           (window as any).closeStartCollabModal();
           // Redirect to the new collaboration page
-          window.location.href = `/admin/collaborations/${result.teamId}`;
+          window.location.href = `/admin/collaborations/${result.data.teamId}`;
         } else {
           const errorData = await response.json();
           alert(`Error creating collaboration: ${errorData.error || 'Unknown error'}`);
