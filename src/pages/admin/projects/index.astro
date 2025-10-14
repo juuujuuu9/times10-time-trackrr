@@ -2637,7 +2637,15 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
           return;
         }
         
+        // Disable the submit button to prevent double submission
+        const submitButton = createClientForm.querySelector('button[type="submit"]') as HTMLButtonElement;
+        if (submitButton) {
+          submitButton.disabled = true;
+          submitButton.textContent = 'Creating...';
+        }
+        
         try {
+          console.log('Submitting client creation request...');
           const response = await fetch('/api/admin/clients', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -2647,9 +2655,28 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
             }),
           });
           
+          console.log('Response status:', response.status);
+          
           if (response.ok) {
-            (window as any).closeCreateClientModal();
-            window.location.reload();
+            console.log('Client created successfully, closing modal...');
+            try {
+              // Close the modal
+              const modal = document.getElementById('createClientModal');
+              if (modal) {
+                modal.classList.add('hidden');
+                console.log('Modal closed successfully');
+              }
+              
+              // Show success message
+              alert('Client created successfully!');
+              
+              // Reload the page to show the new client
+              window.location.reload();
+            } catch (modalError) {
+              console.error('Error closing modal:', modalError);
+              // Still reload to show the new client
+              window.location.reload();
+            }
           } else {
             const errorData = await response.json();
             const errorMessage = errorData.error || 'Error creating client';
@@ -2659,6 +2686,12 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
         } catch (error) {
           console.error('Network error:', error);
           alert('Network error: Unable to connect to server. Please check your connection and try again.');
+        } finally {
+          // Re-enable the submit button
+          if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Create Client';
+          }
         }
       });
     }
