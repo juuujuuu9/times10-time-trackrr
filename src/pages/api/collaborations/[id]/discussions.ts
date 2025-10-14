@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../../db';
-import { taskDiscussions, teams, teamMembers, users, projectTeams, tasks } from '../../../../db/schema';
+import { taskDiscussions, teams, teamMembers, users, tasks } from '../../../../db/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { getSessionUser } from '../../../../utils/session';
 import { NotificationService } from '../../../../services/notificationService';
@@ -71,8 +71,9 @@ export const GET: APIRoute = async (context) => {
     } else {
       // Get all discussions for the collaboration by finding tasks linked to this team
       // First, get all projects linked to this team
-      const teamProjects = await db.query.projectTeams.findMany({
-        where: eq(projectTeams.teamId, collaborationId),
+      // Get project through direct team relationship
+      const team = await db.query.teams.findFirst({
+        where: eq(teams.id, collaborationId),
         with: {
           project: {
             with: {

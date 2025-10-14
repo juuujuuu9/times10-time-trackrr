@@ -1,7 +1,7 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { db } from '../../../db/index';
-import { projects, clients, tasks, timeEntries, projectTeams, teams } from '../../../db/schema';
+import { projects, clients, tasks, timeEntries, teams } from '../../../db/schema';
 import { count, sql, eq, and } from 'drizzle-orm';
 
 // Get all projects with client info first
@@ -23,15 +23,14 @@ const allProjects = await db
   ))
   .orderBy(sql`LOWER(${clients.name})`, sql`LOWER(${projects.name})`);
 
-// Get collaboration data (one per project max)
+// Get collaboration data (using direct relationship)
 const projectCollaborations = await db
   .select({
-    projectId: projectTeams.projectId,
-    collaborationId: projectTeams.teamId,
+    projectId: teams.projectId,
+    collaborationId: teams.id,
     collaborationName: teams.name,
   })
-  .from(projectTeams)
-  .leftJoin(teams, eq(projectTeams.teamId, teams.id))
+  .from(teams)
   .where(eq(teams.archived, false));
 
 // Create a map of project collaborations (1:1 relationship)

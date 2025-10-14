@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db';
-import { teams, teamMembers as teamMembersTable, projects, projectTeams } from '../../../db/schema';
+import { teams, teamMembers as teamMembersTable, projects } from '../../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getSessionUser } from '../../../utils/session';
 
@@ -58,8 +58,8 @@ export const POST: APIRoute = async (context) => {
       }
 
       // Check if project already has a collaboration (1:1 relationship)
-      const existingCollaboration = await db.query.projectTeams.findFirst({
-        where: eq(projectTeams.projectId, projectId)
+      const existingCollaboration = await db.query.teams.findFirst({
+        where: eq(teams.projectId, projectId)
       });
 
       if (existingCollaboration) {
@@ -106,14 +106,11 @@ export const POST: APIRoute = async (context) => {
       await db.insert(teamMembersTable).values(memberInserts);
     }
 
-    // Link to project if provided
+    // Link to project if provided (now handled by direct relationship in teams table)
     if (projectId) {
-      await db.insert(projectTeams).values({
-        projectId: projectId,
-        teamId: newTeam.id,
-        assignedBy: currentUser.id,
-        assignedAt: new Date()
-      });
+      await db.update(teams).set({
+        projectId: projectId
+      }).where(eq(teams.id, newTeam.id));
     }
 
     return new Response(JSON.stringify({
