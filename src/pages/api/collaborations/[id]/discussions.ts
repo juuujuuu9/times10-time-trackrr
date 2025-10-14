@@ -8,6 +8,8 @@ import { getSessionUser } from '../../../../utils/session';
 export const GET: APIRoute = async (context) => {
   try {
     const collaborationId = parseInt(context.params.id!);
+    const url = new URL(context.request.url);
+    const taskId = url.searchParams.get('taskId');
     
     if (!collaborationId || isNaN(collaborationId)) {
       return new Response(JSON.stringify({
@@ -49,48 +51,74 @@ export const GET: APIRoute = async (context) => {
       });
     }
 
-    // For now, return mock data since we don't have discussions linked to collaborations yet
-    // TODO: Implement proper discussion system for collaborations
-    const mockDiscussions = [
-      {
-        id: 1,
-        content: "Should we move the onboarding tooltip to appear after the user creates the first task?",
-        author: {
-          id: 1,
-          name: "Mark Chen",
-          email: "mark@example.com"
-        },
-        createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 hours ago
-        replies: [
-          {
-            id: 2,
-            content: "Yes, that reduces cognitive load on first run. Let's A/B test it this week.",
-            author: {
-              id: 2,
-              name: "Alex Rivera",
-              email: "alex@example.com"
-            },
-            createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
-            parentId: 1
+    // Get discussions from database
+    let discussions;
+    if (taskId) {
+      // Get discussions for a specific task
+      discussions = await db.query.taskDiscussions.findMany({
+        where: and(
+          eq(taskDiscussions.teamId, collaborationId),
+          eq(taskDiscussions.taskId, parseInt(taskId))
+        ),
+        with: {
+          author: true,
+          replies: {
+            with: {
+              author: true
+            }
           }
-        ]
-      },
-      {
-        id: 3,
-        content: "Sharing final icons for review.",
-        author: {
-          id: 3,
-          name: "Lina Gomez",
-          email: "lina@example.com"
         },
-        createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // Yesterday
-        replies: []
-      }
-    ];
+        orderBy: [desc(taskDiscussions.createdAt)]
+      });
+    } else {
+      // Get all discussions for the collaboration
+      discussions = await db.query.taskDiscussions.findMany({
+        where: eq(taskDiscussions.teamId, collaborationId),
+        with: {
+          author: true,
+          replies: {
+            with: {
+              author: true
+            }
+          }
+        },
+        orderBy: [desc(taskDiscussions.createdAt)]
+      });
+    }
+
+    // Transform the data to match the expected format
+    const formattedDiscussions = discussions.map(discussion => ({
+      id: discussion.id,
+      type: discussion.type || 'insight',
+      content: discussion.content,
+      author: {
+        id: discussion.author.id,
+        name: discussion.author.name,
+        email: discussion.author.email,
+        avatar: discussion.author.avatar
+      },
+      createdAt: discussion.createdAt.toISOString(),
+      likes: discussion.likes || 0,
+      comments: discussion.replies?.map((reply: any) => ({
+        id: reply.id,
+        content: reply.content,
+        author: {
+          id: reply.author.id,
+          name: reply.author.name,
+          email: reply.author.email,
+          avatar: reply.author.avatar
+        },
+        createdAt: reply.createdAt.toISOString(),
+        likes: reply.likes || 0
+      })) || [],
+      mediaUrl: discussion.mediaUrl,
+      linkPreview: discussion.linkPreview ? JSON.parse(discussion.linkPreview) : null,
+      subtask: discussion.subtask ? JSON.parse(discussion.subtask) : null
+    }));
 
     return new Response(JSON.stringify({
       success: true,
-      data: mockDiscussions
+      data: formattedDiscussions
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
@@ -154,37 +182,72 @@ export const POST: APIRoute = async (context) => {
     }
 
     const body = await context.request.json().catch(() => ({}));
-    const { content, parentId } = body;
+    const { 
+      content, 
+      type = 'insight', 
+      taskId, 
+      mediaUrl, 
+      linkPreview, 
+      subtask 
+    } = body;
 
     if (!content || content.trim() === '') {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Insight content is required'
+        error: 'Content is required'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    // For now, return success without actually creating the discussion
-    // TODO: Implement proper discussion creation system for collaborations
-    const newDiscussion = {
-      id: Date.now(), // Temporary ID
+    // Create the discussion in the database
+    const newDiscussion = await db.insert(taskDiscussions).values({
+      teamId: collaborationId,
+      taskId: taskId ? parseInt(taskId) : null,
+      authorId: currentUser.id,
+      type: type,
       content: content.trim(),
-      author: {
-        id: currentUser.id,
-        name: currentUser.name,
-        email: currentUser.email
-      },
+      mediaUrl: mediaUrl || null,
+      linkPreview: linkPreview ? JSON.stringify(linkPreview) : null,
+      subtask: subtask ? JSON.stringify(subtask) : null,
+      likes: 0,
       createdAt: new Date(),
-      parentId: parentId || null,
-      replies: []
-    };
+      updatedAt: new Date()
+    }).returning();
+
+    // Get the created discussion with author info
+    const createdDiscussion = await db.query.taskDiscussions.findFirst({
+      where: eq(taskDiscussions.id, (newDiscussion as any)[0].id),
+      with: {
+        author: true
+      }
+    });
+
+    if (!createdDiscussion) {
+      throw new Error('Failed to retrieve created discussion');
+    }
 
     return new Response(JSON.stringify({
       success: true,
-      data: newDiscussion,
-      message: parentId ? 'Reply created successfully' : 'Insight created successfully'
+      data: {
+        id: createdDiscussion.id,
+        type: createdDiscussion.type,
+        content: createdDiscussion.content,
+        author: {
+          id: createdDiscussion.author.id,
+          name: createdDiscussion.author.name,
+          email: createdDiscussion.author.email,
+          avatar: createdDiscussion.author.avatar
+        },
+        createdAt: createdDiscussion.createdAt.toISOString(),
+        likes: createdDiscussion.likes || 0,
+        comments: [],
+        mediaUrl: createdDiscussion.mediaUrl,
+        linkPreview: createdDiscussion.linkPreview ? JSON.parse(createdDiscussion.linkPreview) : null,
+        subtask: createdDiscussion.subtask ? JSON.parse(createdDiscussion.subtask) : null
+      },
+      message: 'Post created successfully'
     }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' }
