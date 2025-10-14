@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../../db';
-import { projectTeams, teams, users, projects } from '../../../../db/schema';
+import { teams, users, projects } from '../../../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getSessionUser } from '../../../../utils/session';
 
@@ -25,14 +25,13 @@ export const GET: APIRoute = async ({ params, request }) => {
         teamId: teams.id,
         teamName: teams.name,
         teamDescription: teams.description,
-        assignedAt: projectTeams.assignedAt,
+        assignedAt: teams.createdAt,
         assignedBy: users.name,
         assignedByEmail: users.email
       })
-      .from(projectTeams)
-      .innerJoin(teams, eq(projectTeams.teamId, teams.id))
-      .innerJoin(users, eq(projectTeams.assignedBy, users.id))
-      .where(eq(projectTeams.projectId, projectId));
+      .from(teams)
+      .innerJoin(users, eq(teams.createdBy, users.id))
+      .where(eq(teams.projectId, projectId));
 
     return new Response(JSON.stringify({
       success: true,
@@ -124,15 +123,15 @@ export const POST: APIRoute = async ({ params, request }) => {
       });
     }
 
-    // Check if assignment already exists
-    const existingAssignment = await db.query.projectTeams.findFirst({
+    // Check if assignment already exists (using direct relationship)
+    const existingTeam = await db.query.teams.findFirst({
       where: and(
-        eq(projectTeams.projectId, projectId),
-        eq(projectTeams.teamId, parseInt(teamId))
+        eq(teams.projectId, projectId),
+        eq(teams.id, parseInt(teamId))
       )
     });
 
-    if (existingAssignment) {
+    if (existingTeam) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Team is already assigned to this project'
@@ -142,16 +141,14 @@ export const POST: APIRoute = async ({ params, request }) => {
       });
     }
 
-    // Create the assignment
-    const newAssignment = await db.insert(projectTeams).values({
-      projectId,
-      teamId: parseInt(teamId),
-      assignedBy: currentUser.id
-    }).returning();
+    // Create the assignment (update team with project)
+    const updatedTeam = await db.update(teams).set({
+      projectId: projectId
+    }).where(eq(teams.id, parseInt(teamId))).returning();
 
     return new Response(JSON.stringify({
       success: true,
-      data: newAssignment[0],
+      data: updatedTeam[0],
       message: `Team "${team.name}" assigned to project "${project.name}"`
     }), {
       status: 201,
