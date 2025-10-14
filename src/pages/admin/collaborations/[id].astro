@@ -95,24 +95,34 @@ if (projectTeam?.project) {
   
   // Get tasks for this project (excluding system-generated "General" tasks)
   if (projectDetails) {
-    projectTasks = await db.query.tasks.findMany({
-      where: and(
-        eq(tasks.projectId, projectDetails.id),
-        eq(tasks.archived, false),
-        eq(tasks.isSystem, false) // Exclude system-generated tasks like "General"
-      ),
-      orderBy: [desc(tasks.createdAt)]
-    });
+    try {
+      projectTasks = await db.query.tasks.findMany({
+        where: and(
+          eq(tasks.projectId, projectDetails.id),
+          eq(tasks.archived, false),
+          eq(tasks.isSystem, false) // Exclude system-generated tasks like "General"
+        ),
+        orderBy: [desc(tasks.createdAt)]
+      });
+    } catch (error) {
+      console.log('Error fetching tasks for project:', projectDetails.id, error.message);
+      projectTasks = []; // Set empty array if query fails
+    }
     
     // Get task assignments separately
     for (const task of projectTasks) {
-      const assignments = await db.query.taskAssignments.findMany({
-        where: eq(taskAssignments.taskId, task.id),
-        with: {
-          user: true
-        }
-      });
-      task.assignments = assignments;
+      try {
+        const assignments = await db.query.taskAssignments.findMany({
+          where: eq(taskAssignments.taskId, task.id),
+          with: {
+            user: true
+          }
+        });
+        task.assignments = assignments;
+      } catch (error) {
+        console.log('Error fetching assignments for task:', task.id, error.message);
+        task.assignments = []; // Set empty array if query fails
+      }
     }
   }
 
