@@ -1,5 +1,6 @@
 ---
 import AdminLayout from '../../../../../layouts/AdminLayout.astro';
+import TaskStream from '../../../../../components/TaskStream.tsx';
 import { db } from '../../../../../db/index';
 import { teams, teamMembers as teamMembersTable, projects, clients, users, taskNotes, taskDiscussions, taskFiles, taskLinks, tasks, taskAssignments, projectTeams, timeEntries } from '../../../../../db/schema';
 import { eq, and, desc, count, sql } from 'drizzle-orm';
@@ -298,67 +299,20 @@ if (totalHours > 0) {
       </div>
 
       <!-- Main Stream Interface -->
-      <div 
-        id="task-stream-container" 
-        class="space-y-6"
-        data-task-id={taskId}
-        data-collaboration-id={collaborationId}
-        data-current-user={JSON.stringify({
-          id: currentUser.id,
-          name: currentUser.name,
-          email: currentUser.email,
-          avatar: (currentUser as any).avatar || ''
-        })}
-        data-team-members={JSON.stringify(teamMembers)}
-      >
-        <!-- Loading fallback -->
-        <div id="loading-fallback" class="text-center py-12">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p class="text-gray-500">Loading task stream...</p>
-        </div>
-        <!-- React component will be mounted here -->
+      <div class="space-y-6">
+        <TaskStream 
+          taskId={taskId}
+          collaborationId={collaborationId}
+          currentUser={{
+            id: currentUser.id,
+            name: currentUser.name,
+            email: currentUser.email,
+            avatar: (currentUser as any).avatar || ''
+          }}
+          teamMembers={teamMembers}
+          client:load
+        />
       </div>
     </div>
   </div>
 </AdminLayout>
-
-<script>
-  import TaskStream from '../../../../../components/TaskStream.tsx';
-  import { createRoot } from 'react-dom/client';
-  import React from 'react';
-
-  // Wait for DOM to be ready
-  document.addEventListener('DOMContentLoaded', () => {
-    // Get the container element
-    const container = document.getElementById('task-stream-container');
-    
-    console.log('Container found:', container);
-    console.log('Container dataset:', container?.dataset);
-    
-    if (container) {
-      // Create React root and render the component
-      const root = createRoot(container);
-      
-      // Prepare data for the React component
-      const taskStreamData = {
-        taskId: parseInt(container.dataset.taskId || '0'),
-        collaborationId: parseInt(container.dataset.collaborationId || '0'),
-        currentUser: JSON.parse(container.dataset.currentUser || '{}'),
-        teamMembers: JSON.parse(container.dataset.teamMembers || '[]')
-      };
-      
-      console.log('TaskStream data:', taskStreamData);
-      
-      // Remove loading fallback
-      const loadingFallback = container.querySelector('#loading-fallback');
-      if (loadingFallback) {
-        loadingFallback.remove();
-      }
-      
-      // Use React.createElement to properly create the component
-      root.render(React.createElement(TaskStream, taskStreamData));
-    } else {
-      console.error('Task stream container not found!');
-    }
-  });
-</script>
