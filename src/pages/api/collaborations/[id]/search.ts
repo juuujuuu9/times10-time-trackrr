@@ -10,7 +10,7 @@ export const GET: APIRoute = async (context) => {
     const collaborationId = parseInt(context.params.id!);
     const url = new URL(context.request.url);
     const query = url.searchParams.get('q') || '';
-    const type = url.searchParams.get('type') || 'all'; // all, notes, discussions, files, links
+    const type = url.searchParams.get('type') || 'all'; // all, notes, insights, files, links
     
     if (!collaborationId || isNaN(collaborationId)) {
       return new Response(JSON.stringify({
@@ -57,7 +57,7 @@ export const GET: APIRoute = async (context) => {
         success: true,
         data: {
           notes: [],
-          discussions: [],
+          insights: [],
           files: [],
           links: []
         }
@@ -89,7 +89,7 @@ export const GET: APIRoute = async (context) => {
         item.content.toLowerCase().includes(query.toLowerCase())
       ) : [],
       
-      discussions: type === 'all' || type === 'discussions' ? [
+      insights: type === 'all' || type === 'insights' ? [
         {
           id: 1,
           content: "Should we move the onboarding tooltip to appear after the user creates the first task?",
@@ -99,7 +99,7 @@ export const GET: APIRoute = async (context) => {
             email: "mark@example.com"
           },
           createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
-          type: 'discussion',
+          type: 'insight',
           relevanceScore: 0.8
         },
         {
@@ -112,7 +112,7 @@ export const GET: APIRoute = async (context) => {
           },
           createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000),
           parentId: 1,
-          type: 'discussion',
+          type: 'insight',
           relevanceScore: 0.7
         }
       ].filter(item => 
@@ -163,7 +163,7 @@ export const GET: APIRoute = async (context) => {
     // Sort all results by relevance score
     const allResults = [
       ...searchResults.notes,
-      ...searchResults.discussions,
+      ...searchResults.insights,
       ...searchResults.files,
       ...searchResults.links
     ].sort((a, b) => b.relevanceScore - a.relevanceScore);

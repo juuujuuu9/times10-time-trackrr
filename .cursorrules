@@ -214,6 +214,15 @@ This file defines how Cursor should interpret, enforce, and adapt to this projec
 **Severity:** Error
 **Applies to:** Production deployments
 
+### RULE-021: Frontend Terminology
+- **CRITICAL**: Never use "Discussions" in frontend text - use "Insights" instead
+- All user-facing text must use "Insights" for collaborative content
+- API responses and error messages must use "Insights" terminology
+- Search functionality must reference "insights" not "discussions"
+- Database schema names can remain as `taskDiscussions` for consistency
+**Severity:** Error
+**Applies to:** All frontend development and API responses
+
 ---
 
 ## Cursor Behavior Instructions

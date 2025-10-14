@@ -159,7 +159,7 @@ export const POST: APIRoute = async (context) => {
     if (!content || content.trim() === '') {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Discussion content is required'
+        error: 'Insight content is required'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -184,7 +184,7 @@ export const POST: APIRoute = async (context) => {
     return new Response(JSON.stringify({
       success: true,
       data: newDiscussion,
-      message: parentId ? 'Reply created successfully' : 'Discussion created successfully'
+      message: parentId ? 'Reply created successfully' : 'Insight created successfully'
     }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' }
