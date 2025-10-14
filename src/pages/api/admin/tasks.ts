@@ -49,13 +49,38 @@ export const POST: APIRoute = async ({ request }) => {
     
     // Get database URL from environment
     const databaseUrl = import.meta.env.DATABASE_URL || process.env.DATABASE_URL;
+    console.log('POST /api/admin/tasks - DATABASE_URL check:');
+    console.log('  - import.meta.env.DATABASE_URL:', import.meta.env.DATABASE_URL ? 'SET' : 'NOT SET');
+    console.log('  - process.env.DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
+    console.log('  - Final databaseUrl:', databaseUrl ? 'SET' : 'NOT SET');
+    
     if (!databaseUrl) {
-      throw new Error('DATABASE_URL environment variable is not set');
+      console.error('POST /api/admin/tasks - DATABASE_URL is not available in production environment');
+      throw new Error('DATABASE_URL environment variable is not set in production');
     }
     
     const sql = postgres(databaseUrl, { ssl: 'require', max: 1 });
     
     try {
+      // Debug: Check what database we're connected to
+      console.log('POST /api/admin/tasks - Testing database connection...');
+      const dbInfo = await sql`SELECT current_database(), current_user, version()`;
+      console.log('POST /api/admin/tasks - Connected to database:', dbInfo[0]);
+      
+      // Debug: Check if tasks table exists
+      const tableCheck = await sql`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'tasks'
+      `;
+      console.log('POST /api/admin/tasks - Tasks table exists:', tableCheck.length > 0);
+      
+      if (tableCheck.length === 0) {
+        console.error('POST /api/admin/tasks - Tasks table does not exist in this database!');
+        throw new Error('Tasks table does not exist in production database');
+      }
+      
       const newTask = await sql`
         INSERT INTO tasks (project_id, name, description, status, priority, due_date) 
         VALUES (${parseInt(projectId)}, ${name}, ${description || null}, ${status || 'pending'}, ${priority || 'regular'}, ${dueDate ? new Date(dueDate + 'T12:00:00') : null}) 
