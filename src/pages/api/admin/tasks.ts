@@ -43,14 +43,29 @@ export const POST: APIRoute = async ({ request }) => {
       dueDate: dueDate ? new Date(dueDate + 'T12:00:00') : null
     });
 
-    const newTask = await db.insert(tasks).values({
+    // Only include fields that we explicitly want to set
+    const taskData: any = {
       name,
-      description: description || null,
       projectId: parseInt(projectId),
-      status: status || 'pending',
-      priority: priority || 'regular',
-      dueDate: dueDate ? new Date(dueDate + 'T12:00:00') : null, // Set to noon to avoid timezone issues
-    }).returning();
+    };
+    
+    // Add optional fields only if they have values
+    if (description) {
+      taskData.description = description;
+    }
+    if (status) {
+      taskData.status = status;
+    }
+    if (priority) {
+      taskData.priority = priority;
+    }
+    if (dueDate) {
+      taskData.dueDate = new Date(dueDate + 'T12:00:00'); // Set to noon to avoid timezone issues
+    }
+    
+    console.log('POST /api/admin/tasks - Final task data:', taskData);
+    
+    const newTask = await db.insert(tasks).values(taskData).returning();
 
     console.log('POST /api/admin/tasks - Task created successfully:', newTask[0]);
     return new Response(JSON.stringify(newTask[0]), {
