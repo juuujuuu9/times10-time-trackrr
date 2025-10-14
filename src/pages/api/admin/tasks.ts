@@ -21,15 +21,27 @@ export const GET: APIRoute = async () => {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
+    console.log('POST /api/admin/tasks - Starting task creation');
     const body = await request.json();
+    console.log('POST /api/admin/tasks - Request body:', body);
     const { name, description, projectId, status, priority, dueDate } = body;
 
     if (!name || !projectId) {
+      console.log('POST /api/admin/tasks - Validation failed:', { name, projectId });
       return new Response(JSON.stringify({ error: 'Task name and project ID are required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
+
+    console.log('POST /api/admin/tasks - Attempting to insert task with data:', {
+      name,
+      description: description || null,
+      projectId: parseInt(projectId),
+      status: status || 'pending',
+      priority: priority || 'regular',
+      dueDate: dueDate ? new Date(dueDate + 'T12:00:00') : null
+    });
 
     const newTask = await db.insert(tasks).values({
       name,
@@ -40,14 +52,44 @@ export const POST: APIRoute = async ({ request }) => {
       dueDate: dueDate ? new Date(dueDate + 'T12:00:00') : null, // Set to noon to avoid timezone issues
     }).returning();
 
+    console.log('POST /api/admin/tasks - Task created successfully:', newTask[0]);
     return new Response(JSON.stringify(newTask[0]), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error creating task:', error);
-    return new Response(JSON.stringify({ error: 'Failed to create task' }), {
-      status: 500,
+    console.error('POST /api/admin/tasks - Error creating task:', error);
+    console.error('POST /api/admin/tasks - Error details:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('POST /api/admin/tasks - Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    
+    // Provide more detailed error information
+    let errorMessage = 'Failed to create task';
+    let statusCode = 500;
+    
+    if (error instanceof Error) {
+      if (error.message.includes('relation "tasks" does not exist')) {
+        errorMessage = 'Database table "tasks" does not exist. Please run database migration.';
+        statusCode = 500;
+      } else if (error.message.includes('relation "projects" does not exist')) {
+        errorMessage = 'Database table "projects" does not exist. Please run database migration.';
+        statusCode = 500;
+      } else if (error.message.includes('permission denied')) {
+        errorMessage = 'Database permission denied. Check database user permissions.';
+        statusCode = 500;
+      } else if (error.message.includes('connection')) {
+        errorMessage = 'Database connection failed. Check DATABASE_URL configuration.';
+        statusCode = 500;
+      } else {
+        errorMessage = error.message;
+      }
+    }
+    
+    return new Response(JSON.stringify({ 
+      error: errorMessage,
+      details: error instanceof Error ? error.message : 'Unknown error',
+      type: 'database_error'
+    }), {
+      status: statusCode,
       headers: { 'Content-Type': 'application/json' },
     });
   }
