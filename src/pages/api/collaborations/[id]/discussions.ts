@@ -1,16 +1,18 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../../db';
 import { taskDiscussions, teams, teamMembers, users, tasks } from '../../../../db/schema';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc, sql, inArray } from 'drizzle-orm';
 import { getSessionUser } from '../../../../utils/session';
 import { NotificationService } from '../../../../services/notificationService';
 
 // GET /api/collaborations/[id]/discussions - Get discussions for a collaboration
 export const GET: APIRoute = async (context) => {
   try {
+    console.log('🚀 GET /api/collaborations/[id]/discussions called');
     const collaborationId = parseInt(context.params.id!);
     const url = new URL(context.request.url);
     const taskId = url.searchParams.get('taskId');
+    console.log('📋 Request params:', { collaborationId, taskId });
     
     if (!collaborationId || isNaN(collaborationId)) {
       return new Response(JSON.stringify({
@@ -55,19 +57,28 @@ export const GET: APIRoute = async (context) => {
     // Get discussions from database
     let discussions: any[] = [];
     if (taskId) {
+      console.log('🔍 Fetching discussions for task ID:', taskId);
       // Get discussions for a specific task
       discussions = await db.query.taskDiscussions.findMany({
-        where: eq(taskDiscussions.taskId, parseInt(taskId)),
+        where: and(
+          eq(taskDiscussions.taskId, parseInt(taskId)),
+          eq(taskDiscussions.archived, false)
+        ),
         with: {
-          author: true,
-          replies: {
-            with: {
-              author: true
-            }
-          }
+          user: true
         },
         orderBy: [desc(taskDiscussions.createdAt)]
       });
+      console.log('📊 Found discussions for task:', discussions.length);
+      if (discussions.length > 0) {
+        console.log('Sample discussion:', {
+          id: discussions[0].id,
+          content: discussions[0].content,
+          taskId: discussions[0].taskId,
+          archived: discussions[0].archived,
+          user: discussions[0].user?.name || 'No user'
+        });
+      }
     } else {
       // Get all discussions for the collaboration by finding tasks linked to this team
       // First, get all projects linked to this team
@@ -84,50 +95,45 @@ export const GET: APIRoute = async (context) => {
       });
       
       // Extract all task IDs from the linked projects
-      const taskIds = teamProjects.flatMap((tp: any) => tp.project.tasks.map((task: any) => task.id));
+      const taskIds = (team as any)?.project?.tasks?.map((task: any) => task.id) || [];
       
       if (taskIds.length === 0) {
+        console.log('📊 No tasks found for team, returning empty discussions');
         discussions = [];
       } else {
+        console.log('📊 Found task IDs for team:', taskIds);
         // Get discussions for all tasks in this team's projects
         discussions = await db.query.taskDiscussions.findMany({
-          where: sql`${taskDiscussions.taskId} = ANY(${taskIds})`,
+          where: and(
+            inArray(taskDiscussions.taskId, taskIds),
+            eq(taskDiscussions.archived, false)
+          ),
           with: {
-            author: true,
-            replies: {
-              with: {
-                author: true
-              }
-            }
+            user: true
           },
           orderBy: [desc(taskDiscussions.createdAt)]
         });
+        console.log('📊 Found discussions for team tasks:', discussions.length);
       }
     }
 
     // Transform the data to match the expected format
     const formattedDiscussions = discussions.map(discussion => ({
       id: discussion.id,
+      type: 'insight', // Default type for discussions
       content: discussion.content,
       author: {
-        id: discussion.author.id,
-        name: discussion.author.name,
-        email: discussion.author.email,
-        avatar: discussion.author.avatar
+        id: discussion.user.id,
+        name: discussion.user.name,
+        email: discussion.user.email,
+        avatar: discussion.user.avatar
       },
       createdAt: discussion.createdAt.toISOString(),
-      comments: discussion.replies?.map((reply: any) => ({
-        id: reply.id,
-        content: reply.content,
-        author: {
-          id: reply.author.id,
-          name: reply.author.name,
-          email: reply.author.email,
-          avatar: reply.author.avatar
-        },
-        createdAt: reply.createdAt.toISOString()
-      })) || []
+      likes: 0, // Default likes count
+      comments: [] // TODO: Load replies separately if needed
     }));
+    
+    console.log('📤 Returning formatted discussions:', formattedDiscussions.length);
 
     return new Response(JSON.stringify({
       success: true,
@@ -138,10 +144,16 @@ export const GET: APIRoute = async (context) => {
     });
 
   } catch (error) {
-    console.error('Error fetching collaboration discussions:', error);
+    console.error('❌ Error fetching collaboration discussions:', error);
+    console.error('❌ Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace',
+      name: error instanceof Error ? error.name : 'Unknown error type'
+    });
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to fetch discussions'
+      error: 'Failed to fetch discussions',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

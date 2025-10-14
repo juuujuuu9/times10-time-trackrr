@@ -1,0 +1,78 @@
+{
+  "summary": {
+    "timestamp": "2025-10-14T23:14:26.643Z",
+    "local_tables": 20,
+    "prod_tables": 20,
+    "critical_differences": 3,
+    "warnings": 1
+  },
+  "differences": {
+    "tables": {
+      "missing_in_prod": [
+        "task_notes"
+      ],
+      "missing_in_local": [
+        "task_collaborations"
+      ],
+      "different_columns": {
+        "tasks": {
+          "missing_in_prod": [
+            "team_id"
+          ],
+          "missing_in_local": []
+        },
+        "teams": {
+          "column_definitions": [
+            {
+              "column": "project_id",
+              "differences": {
+                "is_nullable": {
+                  "local": "NO",
+                  "prod": "YES"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "different_constraints": {},
+      "different_indexes": {}
+    },
+    "sequences": {
+      "missing_in_prod": [
+        "task_notes_id_seq"
+      ],
+      "missing_in_local": [
+        "task_collaborations_id_seq"
+      ],
+      "different": {}
+    },
+    "functions": {
+      "missing_in_prod": [],
+      "missing_in_local": [],
+      "different": {}
+    },
+    "triggers": {
+      "missing_in_prod": [],
+      "missing_in_local": [],
+      "different": {}
+    }
+  },
+  "recommendations": [
+    {
+      "type": "CRITICAL",
+      "message": "Tables missing in production: task_notes",
+      "action": "Run database migrations to create missing tables"
+    },
+    {
+      "type": "WARNING",
+      "message": "Tables in production not in local: task_collaborations",
+      "action": "Update local schema or remove unused tables from production"
+    },
+    {
+      "type": "CRITICAL",
+      "message": "Tables with column differences: tasks, teams",
+      "action": "Review and sync column definitions between environments"
+    }
+  ]
+}

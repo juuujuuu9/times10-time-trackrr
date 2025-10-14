@@ -1,0 +1,63 @@
+{
+  "summary": {
+    "timestamp": "2025-10-14T23:16:41.185Z",
+    "local_tables": 20,
+    "prod_tables": 19,
+    "critical_differences": 2,
+    "warnings": 0
+  },
+  "differences": {
+    "tables": {
+      "missing_in_prod": [
+        "task_notes"
+      ],
+      "missing_in_local": [],
+      "different_columns": {
+        "teams": {
+          "column_definitions": [
+            {
+              "column": "project_id",
+              "differences": {
+                "is_nullable": {
+                  "local": "NO",
+                  "prod": "YES"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "different_constraints": {},
+      "different_indexes": {}
+    },
+    "sequences": {
+      "missing_in_prod": [
+        "task_notes_id_seq"
+      ],
+      "missing_in_local": [],
+      "different": {}
+    },
+    "functions": {
+      "missing_in_prod": [],
+      "missing_in_local": [],
+      "different": {}
+    },
+    "triggers": {
+      "missing_in_prod": [],
+      "missing_in_local": [],
+      "different": {}
+    }
+  },
+  "recommendations": [
+    {
+      "type": "CRITICAL",
+      "message": "Tables missing in production: task_notes",
+      "action": "Run database migrations to create missing tables"
+    },
+    {
+      "type": "CRITICAL",
+      "message": "Tables with column differences: teams",
+      "action": "Review and sync column definitions between environments"
+    }
+  ]
+}
