@@ -1,7 +1,7 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { db } from '../../../db/index';
-import { teams, teamMembers as teamMembersTable, projects, clients, users, taskNotes, taskDiscussions, taskFiles, taskLinks, tasks, taskAssignments, projectTeams, timeEntries } from '../../../db/schema';
+import { teams, teamMembers as teamMembersTable, projects, clients, users, taskNotes, taskDiscussions, taskFiles, taskLinks, tasks, taskAssignments, timeEntries } from '../../../db/schema';
 import { eq, and, desc, count, sql } from 'drizzle-orm';
 import { getSessionUser } from '../../../utils/session';
 
@@ -55,24 +55,19 @@ if (!collaboration) {
 let projectDetails: any = null;
 let projectTasks: any[] = [];
 
-// Try to find the linked project through project_teams table first
-const projectTeam = await db.query.projectTeams.findFirst({
-  where: eq(projectTeams.teamId, collaborationId),
-  with: {
-    project: {
-      with: {
-        client: true
-      }
+// Get project through direct team.project relationship
+if (collaboration.projectId) {
+  projectDetails = await db.query.projects.findFirst({
+    where: eq(projects.id, collaboration.projectId),
+    with: {
+      client: true
     }
-  }
-});
-
-if (projectTeam?.project) {
-  projectDetails = projectTeam.project;
-  console.log('Found linked project through project_teams:', {
-    id: projectDetails.id,
-    name: projectDetails.name,
-    client: projectDetails.client?.name
+  });
+  
+  console.log('Found linked project through direct relationship:', {
+    id: projectDetails?.id,
+    name: projectDetails?.name,
+    client: projectDetails?.client?.name
   });
 } else if (collaboration.name.includes(' - ')) {
   // Fallback: try to extract project name from collaboration name

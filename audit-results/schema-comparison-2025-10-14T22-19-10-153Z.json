@@ -1,0 +1,34 @@
+{
+  "summary": {
+    "timestamp": "2025-10-14T22:19:11.004Z",
+    "local_tables": 22,
+    "prod_tables": 22,
+    "critical_differences": 0,
+    "warnings": 0
+  },
+  "differences": {
+    "tables": {
+      "missing_in_prod": [],
+      "missing_in_local": [],
+      "different_columns": {},
+      "different_constraints": {},
+      "different_indexes": {}
+    },
+    "sequences": {
+      "missing_in_prod": [],
+      "missing_in_local": [],
+      "different": {}
+    },
+    "functions": {
+      "missing_in_prod": [],
+      "missing_in_local": [],
+      "different": {}
+    },
+    "triggers": {
+      "missing_in_prod": [],
+      "missing_in_local": [],
+      "different": {}
+    }
+  },
+  "recommendations": []
+}

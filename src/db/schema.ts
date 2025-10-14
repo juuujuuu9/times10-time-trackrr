@@ -48,6 +48,7 @@ export const projects = pgTable('projects', {
 export const tasks = pgTable('tasks', {
   id: serial('id').primaryKey(),
   projectId: integer('project_id').references(() => projects.id).notNull(),
+  teamId: integer('team_id').references(() => teams.id), // Direct team association
   name: varchar('name', { length: 255 }).notNull(),
   description: text('description'),
   status: varchar('status', { length: 50 }).notNull().default('pending'),
@@ -153,6 +154,7 @@ export const teams = pgTable('teams', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
   description: text('description'),
+  projectId: integer('project_id').references(() => projects.id).notNull(), // Direct project association
   createdBy: integer('created_by').references(() => users.id).notNull(),
   archived: boolean('archived').notNull().default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -169,24 +171,7 @@ export const teamMembers = pgTable('team_members', {
   pk: primaryKey(table.teamId, table.userId),
 }));
 
-// Project-Team assignments for collaborative features
-export const projectTeams = pgTable('project_teams', {
-  projectId: integer('project_id').references(() => projects.id).notNull(),
-  teamId: integer('team_id').references(() => teams.id).notNull(),
-  assignedAt: timestamp('assigned_at').defaultNow().notNull(),
-  assignedBy: integer('assigned_by').references(() => users.id).notNull(),
-}, (table) => ({
-  pk: primaryKey(table.projectId, table.teamId),
-}));
-
-// Task collaboration enhancements
-export const taskCollaborations = pgTable('task_collaborations', {
-  id: serial('id').primaryKey(),
-  taskId: integer('task_id').references(() => tasks.id).notNull(),
-  teamId: integer('team_id').references(() => teams.id).notNull(),
-  createdBy: integer('created_by').references(() => users.id).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+// Removed projectTeams and taskCollaborations - simplified to direct relationships
 
 // Task discussions/comments
 export const taskDiscussions = pgTable('task_discussions', {
@@ -263,7 +248,6 @@ export const usersRelations = relations(users, ({ many }) => ({
   userTaskLists: many(userTaskLists),
   teams: many(teams),
   teamMemberships: many(teamMembers),
-  taskCollaborations: many(taskCollaborations),
   taskDiscussions: many(taskDiscussions),
   taskFiles: many(taskFiles),
   taskLinks: many(taskLinks),
@@ -293,7 +277,7 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   }),
   tasks: many(tasks),
   timeEntries: many(timeEntries),
-  projectTeams: many(projectTeams),
+  teams: many(teams), // Direct relationship to teams
 }));
 
 export const tasksRelations = relations(tasks, ({ one, many }) => ({
@@ -301,8 +285,11 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
     fields: [tasks.projectId],
     references: [projects.id],
   }),
+  team: one(teams, {
+    fields: [tasks.teamId],
+    references: [teams.id],
+  }),
   taskAssignments: many(taskAssignments),
-  taskCollaborations: many(taskCollaborations),
   taskDiscussions: many(taskDiscussions),
   taskFiles: many(taskFiles),
   taskLinks: many(taskLinks),
@@ -367,9 +354,12 @@ export const teamsRelations = relations(teams, ({ one, many }) => ({
     fields: [teams.createdBy],
     references: [users.id],
   }),
+  project: one(projects, {
+    fields: [teams.projectId],
+    references: [projects.id],
+  }),
   members: many(teamMembers),
-  taskCollaborations: many(taskCollaborations),
-  projectTeams: many(projectTeams),
+  tasks: many(tasks), // Direct relationship to tasks
 }));
 
 export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
@@ -383,35 +373,7 @@ export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
   }),
 }));
 
-export const projectTeamsRelations = relations(projectTeams, ({ one }) => ({
-  project: one(projects, {
-    fields: [projectTeams.projectId],
-    references: [projects.id],
-  }),
-  team: one(teams, {
-    fields: [projectTeams.teamId],
-    references: [teams.id],
-  }),
-  assignedBy: one(users, {
-    fields: [projectTeams.assignedBy],
-    references: [users.id],
-  }),
-}));
-
-export const taskCollaborationsRelations = relations(taskCollaborations, ({ one }) => ({
-  task: one(tasks, {
-    fields: [taskCollaborations.taskId],
-    references: [tasks.id],
-  }),
-  team: one(teams, {
-    fields: [taskCollaborations.teamId],
-    references: [teams.id],
-  }),
-  creator: one(users, {
-    fields: [taskCollaborations.createdBy],
-    references: [users.id],
-  }),
-}));
+// Removed projectTeamsRelations and taskCollaborationsRelations - simplified to direct relationships
 
 export const taskDiscussionsRelations = relations(taskDiscussions, ({ one, many }) => ({
   task: one(tasks, {

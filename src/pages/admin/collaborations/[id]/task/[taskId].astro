@@ -2,7 +2,7 @@
 import AdminLayout from '../../../../../layouts/AdminLayout.astro';
 import TaskStream from '../../../../../components/TaskStream.tsx';
 import { db } from '../../../../../db/index';
-import { teams, teamMembers as teamMembersTable, projects, clients, users, taskNotes, taskDiscussions, taskFiles, taskLinks, tasks, taskAssignments, projectTeams, timeEntries } from '../../../../../db/schema';
+import { teams, teamMembers as teamMembersTable, projects, clients, users, taskNotes, taskDiscussions, taskFiles, taskLinks, tasks, taskAssignments, timeEntries } from '../../../../../db/schema';
 import { eq, and, desc, count, sql } from 'drizzle-orm';
 import { getSessionUser } from '../../../../../utils/session';
 

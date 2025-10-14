@@ -223,6 +223,26 @@ This file defines how Cursor should interpret, enforce, and adapt to this projec
 **Severity:** Error
 **Applies to:** All frontend development and API responses
 
+### RULE-022: Database Synchronization Workflow
+- **CRITICAL**: Always run `node comprehensive-db-audit.js` before making schema changes
+- Use `./sync-databases.sh` for quick local-to-production deployment
+- Use `./deploy-to-production.sh` for major schema changes requiring backups
+- Never deploy schema changes without running audit first
+- Always verify schemas are in sync before and after deployment
+- Keep audit results in `audit-results/` directory for tracking
+**Severity:** Error
+**Applies to:** All database schema changes and deployments
+
+### RULE-023: Database Deployment Safety
+- Always create production backup before major schema changes
+- Test schema changes locally before deploying to production
+- Use force mode (`--force`) only when absolutely necessary
+- Monitor application after deployment for any issues
+- Keep backup files safe for emergency rollback
+- Document any manual schema changes in deployment notes
+**Severity:** Error
+**Applies to:** All production database operations
+
 ---
 
 ## Cursor Behavior Instructions
@@ -317,6 +337,35 @@ When reviewing or suggesting code, ask:
 - Memoize all functions used in event handlers
 - Associate manual entries with correct dates via `createdAt`
 - Keep timer and manual entry logic separate
+
+### Database Synchronization Patterns
+- **CRITICAL**: Always run audit before schema changes: `node comprehensive-db-audit.js`
+- Quick sync for small changes: `./sync-databases.sh`
+- Full deployment for major changes: `./deploy-to-production.sh`
+- Pattern for schema change workflow:
+  ```bash
+  # 1. Make schema changes in src/db/schema.ts
+  # 2. Run audit to check current state
+  node comprehensive-db-audit.js
+  # 3. Deploy changes
+  ./sync-databases.sh
+  # 4. Verify deployment
+  node comprehensive-db-audit.js
+  ```
+
+### Database Deployment Anti-Patterns
+- ❌ Deploy schema changes without running audit first
+- ❌ Skip backup creation for major schema changes
+- ❌ Use force mode without understanding the impact
+- ❌ Deploy to production without testing locally first
+- ❌ Ignore audit warnings or critical differences
+
+### ✅ Database Deployment Best Practices
+- Always audit before and after deployment
+- Create backups for major changes
+- Test locally before production deployment
+- Monitor application after deployment
+- Keep audit results for tracking changes
 
 ---
 
