@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db/index';
 import { tasks } from '../../../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 export const GET: APIRoute = async () => {
   try {
@@ -43,32 +43,22 @@ export const POST: APIRoute = async ({ request }) => {
       dueDate: dueDate ? new Date(dueDate + 'T12:00:00') : null
     });
 
-    // Only include fields that we explicitly want to set
-    const taskData: any = {
-      name,
-      projectId: parseInt(projectId),
-    };
+    // Use raw SQL to avoid Drizzle default value issues
+    console.log('POST /api/admin/tasks - Using raw SQL insert to avoid Drizzle defaults issue');
     
-    // Add optional fields only if they have values
-    if (description) {
-      taskData.description = description;
-    }
-    if (status) {
-      taskData.status = status;
-    }
-    if (priority) {
-      taskData.priority = priority;
-    }
-    if (dueDate) {
-      taskData.dueDate = new Date(dueDate + 'T12:00:00'); // Set to noon to avoid timezone issues
-    }
+    const insertQuery = sql`
+      INSERT INTO tasks (project_id, name, description, status, priority, due_date) 
+      VALUES (${parseInt(projectId)}, ${name}, ${description || null}, ${status || 'pending'}, ${priority || 'regular'}, ${dueDate ? new Date(dueDate + 'T12:00:00') : null}) 
+      RETURNING id, project_id, name, description, status, priority, due_date, archived, is_system, created_at, updated_at
+    `;
     
-    console.log('POST /api/admin/tasks - Final task data:', taskData);
+    console.log('POST /api/admin/tasks - Using raw SQL query');
     
-    const newTask = await db.insert(tasks).values(taskData).returning();
+    const result = await db.execute(insertQuery);
+    const newTask = result.rows[0];
 
-    console.log('POST /api/admin/tasks - Task created successfully:', newTask[0]);
-    return new Response(JSON.stringify(newTask[0]), {
+    console.log('POST /api/admin/tasks - Task created successfully:', newTask);
+    return new Response(JSON.stringify(newTask), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
