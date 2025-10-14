@@ -1,0 +1,63 @@
+{
+  "summary": {
+    "timestamp": "2025-10-14T23:01:16.770Z",
+    "local_tables": 20,
+    "prod_tables": 22,
+    "critical_differences": 2,
+    "warnings": 2
+  },
+  "differences": {
+    "tables": {
+      "missing_in_prod": [],
+      "missing_in_local": [
+        "project_teams",
+        "task_collaborations"
+      ],
+      "different_columns": {
+        "tasks": {
+          "missing_in_prod": [
+            "team_id"
+          ],
+          "missing_in_local": []
+        },
+        "teams": {
+          "missing_in_prod": [
+            "project_id"
+          ],
+          "missing_in_local": []
+        }
+      },
+      "different_constraints": {},
+      "different_indexes": {}
+    },
+    "sequences": {
+      "missing_in_prod": [],
+      "missing_in_local": [
+        "task_collaborations_id_seq"
+      ],
+      "different": {}
+    },
+    "functions": {
+      "missing_in_prod": [],
+      "missing_in_local": [],
+      "different": {}
+    },
+    "triggers": {
+      "missing_in_prod": [],
+      "missing_in_local": [],
+      "different": {}
+    }
+  },
+  "recommendations": [
+    {
+      "type": "WARNING",
+      "message": "Tables in production not in local: project_teams, task_collaborations",
+      "action": "Update local schema or remove unused tables from production"
+    },
+    {
+      "type": "CRITICAL",
+      "message": "Tables with column differences: tasks, teams",
+      "action": "Review and sync column definitions between environments"
+    }
+  ]
+}

@@ -25,29 +25,52 @@ if (isNaN(collaborationId)) {
   return Astro.redirect('/admin/collaborations');
 }
 
-// Get collaboration details
-const collaboration = await db.query.teams.findFirst({
-  where: eq(teams.id, collaborationId),
-  with: {
-    creator: true,
-    members: {
-      with: {
-        user: true
+// Get collaboration details with error handling
+let collaboration: any = null;
+try {
+  console.log('🔍 DEBUG: Fetching collaboration with ID:', collaborationId);
+  
+  collaboration = await db.query.teams.findFirst({
+    where: eq(teams.id, collaborationId),
+    with: {
+      creator: true,
+      members: {
+        with: {
+          user: true
+        }
       }
     }
-  }
-});
+  });
+  
+  console.log('🔍 DEBUG: Collaboration query result:', {
+    found: !!collaboration,
+    id: collaboration?.id,
+    name: collaboration?.name
+  });
+  
+} catch (error) {
+  console.error('❌ DEBUG: Error fetching collaboration:', error);
+  console.error('❌ DEBUG: Error details:', {
+    message: error instanceof Error ? error.message : 'Unknown error',
+    collaborationId,
+    error
+  });
+  
+  // Redirect to collaborations list on database error
+  return Astro.redirect('/admin/collaborations');
+}
 
 // Debug: Log the collaboration data
-console.log('Collaboration data:', {
+console.log('🔍 DEBUG: Collaboration data:', {
   id: collaboration?.id,
-  name: (collaboration as any)?.name,
-  description: (collaboration as any)?.description,
-  creator: (collaboration as any)?.creator?.name,
-  memberCount: (collaboration as any)?.members?.length
+  name: collaboration?.name,
+  description: collaboration?.description,
+  creator: collaboration?.creator?.name,
+  memberCount: collaboration?.members?.length
 });
 
 if (!collaboration) {
+  console.log('⚠️  DEBUG: Collaboration not found, redirecting to collaborations list');
   return Astro.redirect('/admin/collaborations');
 }
 
@@ -55,8 +78,16 @@ if (!collaboration) {
 let projectDetails: any = null;
 let projectTasks: any[] = [];
 
+// Check if collaboration has projectId (handle missing column gracefully)
+const hasProjectId = collaboration && 'projectId' in collaboration && collaboration.projectId;
+console.log('Collaboration projectId check:', {
+  hasProjectId,
+  projectId: collaboration?.projectId,
+  collaborationKeys: collaboration ? Object.keys(collaboration) : []
+});
+
 // Get project through direct team.project relationship
-if (collaboration.projectId) {
+if (hasProjectId) {
   projectDetails = await db.query.projects.findFirst({
     where: eq(projects.id, collaboration.projectId),
     with: {
@@ -69,7 +100,7 @@ if (collaboration.projectId) {
     name: projectDetails?.name,
     client: projectDetails?.client?.name
   });
-} else if (collaboration.name.includes(' - ')) {
+} else if (collaboration && collaboration.name && collaboration.name.includes(' - ')) {
   // Fallback: try to extract project name from collaboration name
   const projectName = collaboration.name.split(' - ')[1];
   console.log('Looking for project with name:', projectName);
@@ -100,7 +131,7 @@ if (collaboration.projectId) {
         orderBy: [desc(tasks.createdAt)]
       });
     } catch (error) {
-      console.log('Error fetching tasks for project:', projectDetails.id, error.message);
+      console.log('Error fetching tasks for project:', projectDetails.id, error instanceof Error ? error.message : 'Unknown error');
       projectTasks = []; // Set empty array if query fails
     }
     
@@ -115,20 +146,32 @@ if (collaboration.projectId) {
         });
         task.assignments = assignments;
       } catch (error) {
-        console.log('Error fetching assignments for task:', task.id, error.message);
+        console.log('Error fetching assignments for task:', task.id, error instanceof Error ? error.message : 'Unknown error');
         task.assignments = []; // Set empty array if query fails
       }
     }
   }
 
-// Get team members
-const teamMembers = (collaboration as any).members.map((member: any) => ({
-  id: member.user.id,
-  name: member.user.name,
-  email: member.user.email,
-  role: member.role,
-  joinedAt: member.joinedAt
-}));
+// Get team members with error handling
+let teamMembers: any[] = [];
+try {
+  if (collaboration && collaboration.members && Array.isArray(collaboration.members)) {
+    teamMembers = collaboration.members.map((member: any) => ({
+      id: member.user?.id,
+      name: member.user?.name,
+      email: member.user?.email,
+      role: member.role,
+      joinedAt: member.joinedAt
+    }));
+    console.log('🔍 DEBUG: Team members mapped:', teamMembers.length, 'members');
+  } else {
+    console.log('⚠️  DEBUG: No members found for collaboration');
+    teamMembers = [];
+  }
+} catch (error) {
+  console.error('❌ DEBUG: Error mapping team members:', error);
+  teamMembers = [];
+}
 
 // Get recent notes (mock data for now - will be replaced with real data)
 const recentNotes = [
@@ -197,7 +240,7 @@ const recentLinks = [
 let totalTimeTracked = "0h";
 let dueDate = "No due date";
 
-if (projectDetails) {
+if (projectDetails && projectDetails.id) {
   // Get time entries for this project with same filters as dashboard
   const projectTimeEntries = await db.query.timeEntries.findMany({
     where: and(
@@ -1228,7 +1271,7 @@ if (projectDetails) {
 
     // Show modal
     function showTaskModal() {
-      if (!projectDetailsData) {
+      if (!projectDetailsData || !projectDetailsData.id) {
         showNotification('No project linked to this collaboration. Please link a project first.', 'warning');
         return;
       }
