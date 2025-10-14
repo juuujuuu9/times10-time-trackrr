@@ -147,6 +147,17 @@ export function useRealtimeTimer(pollInterval: number = 2000): UseRealtimeTimerR
         setTimerData(result.data);
         // Start polling when timer is active
         startPolling();
+        
+        // Dispatch timer started event for real-time updates
+        window.dispatchEvent(new CustomEvent('timerStarted', {
+          detail: {
+            timerId: result.data.id,
+            projectId: result.data.projectId,
+            timestamp: new Date().toISOString(),
+            source: 'useRealtimeTimer'
+          }
+        }));
+        
         return true;
       } else {
         console.log('❌ [REALTIME TIMER DEBUG] Timer start failed:', result.error);
@@ -190,6 +201,16 @@ export function useRealtimeTimer(pollInterval: number = 2000): UseRealtimeTimerR
       if (result.success) {
         setTimerData(null); // Clear timer data after stopping
         stopPolling(); // Stop polling when timer is stopped
+        
+        // Dispatch timer stopped event for real-time updates
+        window.dispatchEvent(new CustomEvent('timerStopped', {
+          detail: {
+            timerId: timerId,
+            timestamp: new Date().toISOString(),
+            source: 'useRealtimeTimer'
+          }
+        }));
+        
         return true;
       } else {
         setError(result.error || 'Failed to stop timer');
@@ -224,6 +245,16 @@ export function useRealtimeTimer(pollInterval: number = 2000): UseRealtimeTimerR
       if (result.success) {
         setTimerData(null); // Clear timer data after force stopping
         stopPolling(); // Stop polling when timer is force stopped
+        
+        // Dispatch timer stopped event for real-time updates
+        window.dispatchEvent(new CustomEvent('timerStopped', {
+          detail: {
+            timerId: timerId,
+            timestamp: new Date().toISOString(),
+            source: 'useRealtimeTimer-forceStop'
+          }
+        }));
+        
         return true;
       } else {
         setError(result.error || 'Failed to force stop timer');

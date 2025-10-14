@@ -1326,6 +1326,18 @@ if (projectDetails) {
             Remove
           </button>
         `;
+        
+        // Add direct event listener to the button
+        const removeButton = assigneeItem.querySelector('.remove-assignee-btn');
+        if (removeButton) {
+          removeButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const userId = this.getAttribute('data-user-id');
+            removeAssigneeFromTask(userId);
+          });
+        }
+        
         editCurrentAssignees.appendChild(assigneeItem);
       });
     }
@@ -1570,24 +1582,8 @@ if (projectDetails) {
           throw new Error(errorData.error || 'Failed to update task');
         }
 
-        // Update assignments
-        const currentAssigneeIds = currentEditAssignees.map(assignment => assignment.userId);
-        const assignResponse = await fetch('/api/admin/tasks/assign', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            taskId: currentEditTaskId,
-            userIds: currentAssigneeIds
-          })
-        });
-
-        if (!assignResponse.ok) {
-          const errorData = await assignResponse.json();
-          console.error('Failed to update assignments:', errorData.error);
-          // Don't throw here - task was updated successfully
-        }
+        // Note: Assignments are now handled immediately when users are added/removed
+        // No need to update assignments here since they're managed in real-time
 
         // Show success message and refresh page
         showNotification('Task updated successfully!', 'success');
@@ -1754,19 +1750,51 @@ if (projectDetails) {
       }
     }
 
-    function removeAssigneeFromTask(userId) {
+    async function removeAssigneeFromTask(userId) {
       const assignee = currentEditAssignees.find(a => a.userId === parseInt(userId));
       if (!assignee) return;
       
       if (confirm(`Are you sure you want to remove ${assignee.userName} from this task?`)) {
-        // Remove from current assignees
-        currentEditAssignees = currentEditAssignees.filter(a => a.userId !== parseInt(userId));
-        
-        // Update UI
-        populateEditCurrentAssignees();
-        
-        // Show success message
-        showNotification(`${assignee.userName} has been removed from the task!`, 'success');
+        try {
+          // Get current assignee IDs (excluding the one to remove)
+          const updatedUserIds = currentEditAssignees
+            .filter(a => a.userId !== parseInt(userId))
+            .map(a => a.userId);
+          
+          // Update assignments via API (this replaces ALL assignments)
+          const response = await fetch('/api/admin/tasks/assign', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              taskId: currentEditTaskId,
+              userIds: updatedUserIds
+            })
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to remove assignee');
+          }
+          
+          // Update local state
+          currentEditAssignees = currentEditAssignees.filter(a => a.userId !== parseInt(userId));
+          
+          // Update UI
+          populateEditCurrentAssignees();
+          
+          // Show success message
+          showNotification(`${assignee.userName} has been removed from the task!`, 'success');
+          
+        } catch (error) {
+          console.error('Error removing assignee:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+          showNotification('Failed to remove assignee: ' + errorMessage, 'error');
+          
+          // Reload current assignees to get the actual state from the server
+          await loadCurrentAssignees(currentEditTaskId);
+        }
       }
     }
 
@@ -1779,7 +1807,7 @@ if (projectDetails) {
       }
     });
 
-    function addAssigneeToTask(userId) {
+    async function addAssigneeToTask(userId) {
       // Get user data from container attributes
       const userContainer = document.querySelector(`#editSearchResults [data-user-id="${userId}"]`);
       if (!userContainer) return;
@@ -1787,24 +1815,55 @@ if (projectDetails) {
       const userName = userContainer.getAttribute('data-user-name');
       const userEmail = userContainer.getAttribute('data-user-email');
       
-      // Add to current assignees
-      const newAssignee = {
-        userId: parseInt(userId),
-        userName: userName,
-        userEmail: userEmail
-      };
-      currentEditAssignees.push(newAssignee);
-      
-      // Update UI
-      populateEditCurrentAssignees();
-      
-      // Reset search
-      editUserSearch.value = '';
-      editSearchResults.classList.add('hidden');
-      if (editSearchSpinner) editSearchSpinner.classList.add('hidden');
-      
-      // Show success message
-      showNotification(`${userName} has been added to the task!`, 'success');
+      try {
+        // Add to current assignees
+        const newAssignee = {
+          userId: parseInt(userId),
+          userName: userName,
+          userEmail: userEmail
+        };
+        currentEditAssignees.push(newAssignee);
+        
+        // Get the updated list of user IDs
+        const updatedUserIds = currentEditAssignees.map(a => a.userId);
+        
+        // Update assignments via API
+        const response = await fetch('/api/admin/tasks/assign', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            taskId: currentEditTaskId,
+            userIds: updatedUserIds
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to add assignee');
+        }
+        
+        // Update UI
+        populateEditCurrentAssignees();
+        
+        // Reset search
+        editUserSearch.value = '';
+        editSearchResults.classList.add('hidden');
+        if (editSearchSpinner) editSearchSpinner.classList.add('hidden');
+        
+        // Show success message
+        showNotification(`${userName} has been added to the task!`, 'success');
+        
+      } catch (error) {
+        console.error('Error adding assignee:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        showNotification('Failed to add assignee: ' + errorMessage, 'error');
+        
+        // Remove from local state if API call failed
+        currentEditAssignees = currentEditAssignees.filter(a => a.userId !== parseInt(userId));
+        populateEditCurrentAssignees();
+      }
     }
 
     // Save team changes

@@ -1367,6 +1367,14 @@ const user = await requireAuth('/')(Astro) as any;
     loadDashboardData();
   });
 
+  // Listen for timer data refresh events
+  window.addEventListener('timerDataRefreshed', (event: Event) => {
+    const customEvent = event as CustomEvent;
+    console.log('🔄 [DASHBOARD DEBUG] Timer data refreshed event received:', customEvent.detail);
+    // Reload dashboard data when timer data is refreshed
+    loadDashboardData();
+  });
+
   // Listen for real-time timer updates
   window.addEventListener('timerRealTimeUpdate', async (event: Event) => {
     const customEvent = event as CustomEvent;
@@ -2374,12 +2382,18 @@ const user = await requireAuth('/')(Astro) as any;
           submitButton.classList.add('bg-gray-800');
           saveButtonSpinner.classList.add('hidden');
           
+          // Dispatch custom event immediately to notify timer components
+          window.dispatchEvent(new CustomEvent('timeEntryAdded', {
+            detail: {
+              timestamp: new Date().toISOString(),
+              source: 'dashboard-modal'
+            }
+          }));
+          
           // Close modal and reload data after a brief delay
           setTimeout(() => {
             closeTimeEntryModal();
             loadDashboardData(); // Reload dashboard data to show new entry
-            // Dispatch custom event to notify timer components to refresh daily totals
-            window.dispatchEvent(new CustomEvent('timeEntryAdded'));
           }, 1000);
         } else {
           const errorData = await response.json();
@@ -2772,12 +2786,19 @@ const user = await requireAuth('/')(Astro) as any;
           submitButton.classList.add('bg-gray-800');
           saveButtonSpinner.classList.add('hidden');
           
+          // Dispatch custom event immediately to notify timer components
+          window.dispatchEvent(new CustomEvent('timeEntryUpdated', {
+            detail: {
+              timestamp: new Date().toISOString(),
+              source: 'dashboard-modal',
+              entryId: entryId.value
+            }
+          }));
+          
           // Close modal and reload data after a brief delay
           setTimeout(() => {
             closeEditTimeEntryModal();
             loadDashboardData(); // Reload dashboard data to show updated entry
-            // Dispatch custom event to notify timer components to refresh daily totals
-            window.dispatchEvent(new CustomEvent('timeEntryUpdated'));
           }, 1000);
         } else {
           const errorData = await response.json();
@@ -2816,11 +2837,18 @@ const user = await requireAuth('/')(Astro) as any;
         });
         
         if (response.ok) {
+          // Dispatch custom event immediately to notify timer components
+          window.dispatchEvent(new CustomEvent('timeEntryDeleted', {
+            detail: {
+              timestamp: new Date().toISOString(),
+              source: 'dashboard-modal',
+              entryId: entryId.value
+            }
+          }));
+          
           // Close modal and reload data
           closeEditTimeEntryModal();
           loadDashboardData(); // Reload dashboard data to reflect deletion
-          // Dispatch custom event to notify timer components to refresh daily totals
-          window.dispatchEvent(new CustomEvent('timeEntryDeleted'));
         } else {
           const errorData = await response.json();
           alert(`Error deleting time entry: ${errorData.error || 'Unknown error'}`);
@@ -3047,6 +3075,15 @@ const user = await requireAuth('/')(Astro) as any;
                 }
               }
               
+              // Dispatch custom event immediately to notify timer components
+              window.dispatchEvent(new CustomEvent('timeEntryUpdated', {
+                detail: {
+                  timestamp: new Date().toISOString(),
+                  source: 'dashboard-inline-edit',
+                  entryId: entryId
+                }
+              }));
+              
               // Reload dashboard data to refresh recent entries table and stats
               console.log('Time input updated, refreshing dashboard...');
               loadDashboardData();
@@ -3231,6 +3268,15 @@ const user = await requireAuth('/')(Astro) as any;
               if (editBtn) {
                 editBtn.setAttribute('data-entry', JSON.stringify(result.data));
               }
+              
+              // Dispatch custom event immediately to notify timer components
+              window.dispatchEvent(new CustomEvent('timeEntryUpdated', {
+                detail: {
+                  timestamp: new Date().toISOString(),
+                  source: 'dashboard-inline-duration-edit',
+                  entryId: entryId
+                }
+              }));
               
               // Reload dashboard data to refresh recent entries table and stats
               console.log('Duration input updated, refreshing dashboard...');

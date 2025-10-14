@@ -427,6 +427,61 @@ export default function Timer() {
     }
   }, [timerData, tasks]);
 
+  // Track previous timer state to detect changes
+  const [prevTimerData, setPrevTimerData] = useState<TimerData | null>(null);
+  const [prevIsRunning, setPrevIsRunning] = useState<boolean>(false);
+
+  // Dispatch events when timer state changes
+  useEffect(() => {
+    const timerStarted = !prevTimerData && timerData && isRunning;
+    const timerStopped = prevTimerData && !timerData;
+    const timerChanged = prevTimerData && timerData && prevTimerData.id !== timerData.id;
+
+    if (timerStarted) {
+      console.log('🔄 [TIMER DEBUG] Timer started - dispatching timerStarted event');
+      window.dispatchEvent(new CustomEvent('timerStarted', {
+        detail: {
+          timerId: timerData.id,
+          projectId: timerData.projectId,
+          timestamp: new Date().toISOString(),
+          source: 'Timer-component'
+        }
+      }));
+    } else if (timerStopped) {
+      console.log('🔄 [TIMER DEBUG] Timer stopped - dispatching timerStopped event');
+      window.dispatchEvent(new CustomEvent('timerStopped', {
+        detail: {
+          timerId: prevTimerData.id,
+          projectId: prevTimerData.projectId,
+          timestamp: new Date().toISOString(),
+          source: 'Timer-component'
+        }
+      }));
+    } else if (timerChanged) {
+      console.log('🔄 [TIMER DEBUG] Timer changed - dispatching timerStopped and timerStarted events');
+      window.dispatchEvent(new CustomEvent('timerStopped', {
+        detail: {
+          timerId: prevTimerData.id,
+          projectId: prevTimerData.projectId,
+          timestamp: new Date().toISOString(),
+          source: 'Timer-component'
+        }
+      }));
+      window.dispatchEvent(new CustomEvent('timerStarted', {
+        detail: {
+          timerId: timerData.id,
+          projectId: timerData.projectId,
+          timestamp: new Date().toISOString(),
+          source: 'Timer-component'
+        }
+      }));
+    }
+
+    // Update previous state
+    setPrevTimerData(timerData);
+    setPrevIsRunning(isRunning);
+  }, [timerData, isRunning, prevTimerData, prevIsRunning]);
+
   // Local time counter for smooth display
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -540,11 +595,21 @@ export default function Timer() {
     loadTasks();
     loadDailyDurationTotals();
     loadTaskDailyTotals();
+    
+    // Dispatch a general data refresh event for other components
+    window.dispatchEvent(new CustomEvent('timerDataRefreshed', {
+      detail: {
+        timestamp: new Date().toISOString(),
+        source: 'Timer-component',
+        reason: 'timeEntryChanged'
+      }
+    }));
   }, [loadTasks, loadDailyDurationTotals, loadTaskDailyTotals]);
 
   // Listen for timer events to refresh timer state and daily totals
   useEffect(() => {
     const handleTimerStopped = () => {
+      console.log('🔄 [TIMER DEBUG] Timer stopped event received - refreshing all data');
       // Refresh timer state immediately when timer is stopped from elsewhere
       refreshTimer();
       // Also refresh tasks and daily duration totals
@@ -554,6 +619,7 @@ export default function Timer() {
     };
 
     const handleTimerStarted = () => {
+      console.log('🔄 [TIMER DEBUG] Timer started event received - refreshing all data');
       // Refresh timer state when timer is started from elsewhere
       refreshTimer();
       // Also refresh tasks and daily duration totals (in case of manual entries)
@@ -562,18 +628,31 @@ export default function Timer() {
       loadTaskDailyTotals();
     };
 
+    // Enhanced time entry change handler with comprehensive logging
+    const handleTimeEntryChangedEnhanced = (event: CustomEvent) => {
+      console.log('🔄 [TIMER DEBUG] Time entry change event received:', event.type, event.detail);
+      handleTimeEntryChanged();
+    };
+
+    // Listen for all time entry related events
     window.addEventListener('timerStopped', handleTimerStopped);
     window.addEventListener('timerStarted', handleTimerStarted);
-    window.addEventListener('timeEntryAdded', handleTimeEntryChanged);
-    window.addEventListener('timeEntryUpdated', handleTimeEntryChanged);
-    window.addEventListener('timeEntryDeleted', handleTimeEntryChanged);
+    window.addEventListener('timeEntryAdded', handleTimeEntryChangedEnhanced);
+    window.addEventListener('timeEntryUpdated', handleTimeEntryChangedEnhanced);
+    window.addEventListener('timeEntryDeleted', handleTimeEntryChangedEnhanced);
+    
+    // Listen for additional events that might affect time tracking
+    window.addEventListener('taskDeleted', handleTimeEntryChangedEnhanced);
+    window.addEventListener('projectUpdated', handleTimeEntryChangedEnhanced);
     
     return () => {
       window.removeEventListener('timerStopped', handleTimerStopped);
       window.removeEventListener('timerStarted', handleTimerStarted);
-      window.removeEventListener('timeEntryAdded', handleTimeEntryChanged);
-      window.removeEventListener('timeEntryUpdated', handleTimeEntryChanged);
-      window.removeEventListener('timeEntryDeleted', handleTimeEntryChanged);
+      window.removeEventListener('timeEntryAdded', handleTimeEntryChangedEnhanced);
+      window.removeEventListener('timeEntryUpdated', handleTimeEntryChangedEnhanced);
+      window.removeEventListener('timeEntryDeleted', handleTimeEntryChangedEnhanced);
+      window.removeEventListener('taskDeleted', handleTimeEntryChangedEnhanced);
+      window.removeEventListener('projectUpdated', handleTimeEntryChangedEnhanced);
     };
   }, [refreshTimer, handleTimeEntryChanged]);
 
