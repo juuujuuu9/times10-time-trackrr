@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../../db';
-import { taskDiscussions, teams, teamMembers, users } from '../../../../db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { taskDiscussions, teams, teamMembers, users, projectTeams } from '../../../../db/schema';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { getSessionUser } from '../../../../utils/session';
 
 // GET /api/collaborations/[id]/discussions - Get discussions for a collaboration
@@ -52,14 +52,11 @@ export const GET: APIRoute = async (context) => {
     }
 
     // Get discussions from database
-    let discussions;
+    let discussions: any[] = [];
     if (taskId) {
       // Get discussions for a specific task
       discussions = await db.query.taskDiscussions.findMany({
-        where: and(
-          eq(taskDiscussions.teamId, collaborationId),
-          eq(taskDiscussions.taskId, parseInt(taskId))
-        ),
+        where: eq(taskDiscussions.taskId, parseInt(taskId)),
         with: {
           author: true,
           replies: {
@@ -71,25 +68,44 @@ export const GET: APIRoute = async (context) => {
         orderBy: [desc(taskDiscussions.createdAt)]
       });
     } else {
-      // Get all discussions for the collaboration
-      discussions = await db.query.taskDiscussions.findMany({
-        where: eq(taskDiscussions.teamId, collaborationId),
+      // Get all discussions for the collaboration by finding tasks linked to this team
+      // First, get all projects linked to this team
+      const teamProjects = await db.query.projectTeams.findMany({
+        where: eq(projectTeams.teamId, collaborationId),
         with: {
-          author: true,
-          replies: {
+          project: {
             with: {
-              author: true
+              tasks: true
             }
           }
-        },
-        orderBy: [desc(taskDiscussions.createdAt)]
+        }
       });
+      
+      // Extract all task IDs from the linked projects
+      const taskIds = teamProjects.flatMap((tp: any) => tp.project.tasks.map((task: any) => task.id));
+      
+      if (taskIds.length === 0) {
+        discussions = [];
+      } else {
+        // Get discussions for all tasks in this team's projects
+        discussions = await db.query.taskDiscussions.findMany({
+          where: sql`${taskDiscussions.taskId} = ANY(${taskIds})`,
+          with: {
+            author: true,
+            replies: {
+              with: {
+                author: true
+              }
+            }
+          },
+          orderBy: [desc(taskDiscussions.createdAt)]
+        });
+      }
     }
 
     // Transform the data to match the expected format
     const formattedDiscussions = discussions.map(discussion => ({
       id: discussion.id,
-      type: discussion.type || 'insight',
       content: discussion.content,
       author: {
         id: discussion.author.id,
@@ -98,7 +114,6 @@ export const GET: APIRoute = async (context) => {
         avatar: discussion.author.avatar
       },
       createdAt: discussion.createdAt.toISOString(),
-      likes: discussion.likes || 0,
       comments: discussion.replies?.map((reply: any) => ({
         id: reply.id,
         content: reply.content,
@@ -108,12 +123,8 @@ export const GET: APIRoute = async (context) => {
           email: reply.author.email,
           avatar: reply.author.avatar
         },
-        createdAt: reply.createdAt.toISOString(),
-        likes: reply.likes || 0
-      })) || [],
-      mediaUrl: discussion.mediaUrl,
-      linkPreview: discussion.linkPreview ? JSON.parse(discussion.linkPreview) : null,
-      subtask: discussion.subtask ? JSON.parse(discussion.subtask) : null
+        createdAt: reply.createdAt.toISOString()
+      })) || []
     }));
 
     return new Response(JSON.stringify({
@@ -203,15 +214,11 @@ export const POST: APIRoute = async (context) => {
 
     // Create the discussion in the database
     const newDiscussion = await db.insert(taskDiscussions).values({
-      teamId: collaborationId,
       taskId: taskId ? parseInt(taskId) : null,
-      authorId: currentUser.id,
-      type: type,
+      userId: currentUser.id,
       content: content.trim(),
-      mediaUrl: mediaUrl || null,
-      linkPreview: linkPreview ? JSON.stringify(linkPreview) : null,
-      subtask: subtask ? JSON.stringify(subtask) : null,
-      likes: 0,
+      parentId: null,
+      archived: false,
       createdAt: new Date(),
       updatedAt: new Date()
     }).returning();
@@ -232,7 +239,6 @@ export const POST: APIRoute = async (context) => {
       success: true,
       data: {
         id: createdDiscussion.id,
-        type: createdDiscussion.type,
         content: createdDiscussion.content,
         author: {
           id: createdDiscussion.author.id,
@@ -241,11 +247,7 @@ export const POST: APIRoute = async (context) => {
           avatar: createdDiscussion.author.avatar
         },
         createdAt: createdDiscussion.createdAt.toISOString(),
-        likes: createdDiscussion.likes || 0,
-        comments: [],
-        mediaUrl: createdDiscussion.mediaUrl,
-        linkPreview: createdDiscussion.linkPreview ? JSON.parse(createdDiscussion.linkPreview) : null,
-        subtask: createdDiscussion.subtask ? JSON.parse(createdDiscussion.subtask) : null
+        comments: []
       },
       message: 'Post created successfully'
     }), {

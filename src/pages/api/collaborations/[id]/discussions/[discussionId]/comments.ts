@@ -63,12 +63,9 @@ export const POST: APIRoute = async (context) => {
       });
     }
 
-    // Verify the discussion exists and belongs to this collaboration
+    // Verify the discussion exists
     const discussion = await db.query.taskDiscussions.findFirst({
-      where: and(
-        eq(taskDiscussions.id, discussionId),
-        eq(taskDiscussions.teamId, collaborationId)
-      )
+      where: eq(taskDiscussions.id, discussionId)
     });
 
     if (!discussion) {
@@ -83,20 +80,18 @@ export const POST: APIRoute = async (context) => {
 
     // Create the comment (as a reply to the discussion)
     const newComment = await db.insert(taskDiscussions).values({
-      teamId: collaborationId,
       taskId: discussion.taskId,
-      authorId: currentUser.id,
-      type: 'comment',
+      userId: currentUser.id,
       content: content.trim(),
       parentId: discussionId,
-      likes: 0,
+      archived: false,
       createdAt: new Date(),
       updatedAt: new Date()
     }).returning();
 
     // Get the created comment with author info
     const createdComment = await db.query.taskDiscussions.findFirst({
-      where: eq(taskDiscussions.id, newComment[0].id),
+      where: eq(taskDiscussions.id, (newComment as any)[0].id),
       with: {
         author: true
       }
