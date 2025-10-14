@@ -421,23 +421,25 @@ if (projectDetails) {
               {projectTasks.length > 0 ? projectTasks.map((task: any) => (
                 <tr class="hover:bg-gray-50">
                   <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center">
-                      <a href={`/admin/collaborations/${collaborationId}/task/${task.id}`} class="flex-shrink-0 h-10 w-10 hover:bg-gray-200 rounded-full transition-colors duration-200">
-                        <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                          <svg class="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                          </svg>
+                    <a href={`/admin/collaborations/${collaborationId}/task/${task.id}`} class="block hover:bg-gray-50 rounded-md p-2 -m-2 transition-colors duration-200">
+                      <div class="flex items-center">
+                        <div class="flex-shrink-0 h-10 w-10">
+                          <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                            <svg class="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                            </svg>
+                          </div>
                         </div>
-                      </a>
-                      <div class="ml-4">
-                        <a href={`/admin/collaborations/${collaborationId}/task/${task.id}`} class="text-sm font-medium text-gray-900 hover:text-gray-700 hover:underline">
-                          {task.name}
-                        </a>
-                        {task.description && (
-                          <div class="text-sm text-gray-500 max-w-xs truncate" title={task.description}>{task.description}</div>
-                        )}
+                        <div class="ml-4">
+                          <div class="text-sm font-medium text-gray-900">
+                            {task.name}
+                          </div>
+                          {task.description && (
+                            <div class="text-sm text-gray-500 max-w-xs truncate" title={task.description}>{task.description}</div>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    </a>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
                     <div class="flex items-center">
