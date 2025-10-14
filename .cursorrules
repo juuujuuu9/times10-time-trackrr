@@ -1,236 +1,220 @@
 # .cursorrules
 
-ruleset: 1.0.0
+ruleset: 2.0.0
 
 ## Meta-Directive
 This file defines how Cursor should interpret, enforce, and adapt to this project's evolving codebase. Cursor must treat this as a living contract that reflects actual development patterns.
 
 ## Core Principles
-- Explicit > implicit
-- Determinism > magic  
-- Local clarity > global cleverness
-- **Simple > clever: Choose the most straightforward solution**
-- **Minimal > maximal: Solve the immediate problem, not hypothetical futures**
-- **Direct > abstracted: Avoid premature optimization and over-engineering**
-- Enforce conventions through inline diagnostics and autofix suggestions
-- Reference rules by ID (RULE-###) in all completions and refactors
+- **Simplicity First**: Choose the most straightforward solution that works
+- **Explicit > implicit**: Make intentions clear through code
+- **Local clarity > global cleverness**: Optimize for readability
+- **Production-ready**: All code must be deployable and maintainable
+- **Rule compliance**: Reference rules by ID (RULE-###) in all completions
 
-## Simplicity Mandate
+## Rule Hierarchy & Conflict Resolution
 
-### Default to Minimal Solutions
-- Solve the actual problem at hand, not imagined edge cases
-- Add complexity only when justified by real requirements
-- Prefer boring, proven patterns over novel approaches
-- Question every abstraction: "Does this add value now?"
-
-### Anti-Bloat Checklist
-Before suggesting code, verify:
-- ✓ Is this the simplest approach that works?
-- ✓ Can this be solved with existing tools/patterns?
-- ✓ Am I adding layers that aren't needed yet?
-- ✓ Would a junior developer understand this in 6 months?
-
-### Red Flags to Avoid
-- Generic wrappers around single-use functions
-- Premature abstraction of logic used once
-- Complex inheritance hierarchies
-- Over-engineered state management for simple data
-- Dependency injection where direct imports suffice
-- Configuration systems for static values
-- Middleware for operations that could be inline
-
-### When to Add Complexity
-Only introduce abstractions when:
-1. Pattern appears ≥3 times across codebase
-2. Complexity reduces cognitive load (not just lines of code)
-3. Change frequency justifies the indirection
-4. Team explicitly requests the pattern
-
-## Active Learning Protocol
-
-### 1. Pattern Recognition
-- Scan repo on initialization to infer architecture, stack, and conventions
-- Monitor for repeated patterns (≥3 occurrences across distinct files)
-- Detect anti-patterns and rule violations
-- **Flag over-engineered solutions and suggest simplifications**
-- Propose rule additions when stable patterns emerge
-- Suggest rule refinement when violations are frequent and justified
-
-### 2. Auto-Documentation
-- Maintain `/cursor-guides/` directory with:
-  - `RULE-###.md` for each rule (rationale, examples, cross-references)
-  - `index.json` manifest linking rule IDs to files
-  - `audit.log` for all rule modifications
-- Generate documentation automatically when rules change
-- Include code examples from actual project files
-- **Document why simple solutions were chosen over complex alternatives**
-
-### 3. Enforcement Mechanism
-- Provide inline diagnostics for rule violations
-- Show rule references in completion tooltips
-- Suggest autofixes with rule context
-- Flag critical violations that should block commits
-- **Warn when solutions introduce unnecessary complexity**
-
-## Rule Hierarchy
-
-### FOUNDATIONAL (RULE-000): Simplicity First - Error
+### 1. FOUNDATIONAL (RULE-001): Simplicity First - Warning
 - **OVERRIDES**: All other rules when they conflict with simplicity
 - **PRINCIPLE**: The simplest solution that works is always preferred
+- **APPLICATION**: When rules conflict, choose the simpler approach
 
-### ARCHITECTURAL (RULE-001-012): Code Quality - Error/Warning  
-- **FOLLOWS**: RULE-000 (Simplicity First)
-- **COVERS**: TypeScript, Structure, Styling, Framework, Validation, State, Accessibility, Performance, Security, Workflow, Dependencies
+### 2. ARCHITECTURAL (RULE-002-010): Code Quality - Error/Warning
+- **FOLLOWS**: RULE-001 (Simplicity First)
+- **COVERS**: TypeScript, Structure, Security, Performance, Accessibility
 
-### DOMAIN-SPECIFIC: Time Tracking Application Logic - Warning
-- **FOLLOWS**: RULE-000 (Simplicity First)
-- **COVERS**: Manual duration entries, timezone handling, API patterns, database queries
+### 3. DOMAIN-SPECIFIC (RULE-011-015): Application Logic - Warning
+- **FOLLOWS**: RULE-001 (Simplicity First)
+- **COVERS**: Time tracking, database operations, API patterns
 
-### OPERATIONAL (RULE-DB-001-002): Production Safety - Error
-- **FOLLOWS**: RULE-000 (Simplicity First)
-- **COVERS**: Database schema management, environment configuration
+### 4. OPERATIONAL (RULE-016-020): Production Safety - Error
+- **FOLLOWS**: RULE-001 (Simplicity First)
+- **COVERS**: Database management, deployment, debugging
 
-### TIMEZONE (RULE-TZ-001-003): Timezone Safety - Error/Warning
-- **FOLLOWS**: RULE-000 (Simplicity First)
-- **COVERS**: Date handling, manual entries, utility usage
+---
 
-## Project Rules
+## Core Rules
 
-### RULE-000: Simplicity First
+### RULE-001: Simplicity First
 - Choose the most direct path to solve the problem
 - Avoid speculative generalization
 - Refactor toward simplicity, not complexity
 - Delete code more often than you add it
-- Inline small abstractions that obscure rather than clarify
-**Severity:** Error  
+- **When in doubt, choose the simpler solution**
+**Severity:** Warning (guiding principle)
 **Applies to:** All code suggestions and refactors
 
-### RULE-001: TypeScript Configuration
+### RULE-002: TypeScript Configuration
 - Strict mode enabled
 - No `any` type usage
 - Prefer explicit return types for exported functions
-- **Avoid complex generic gymnastics; use simple unions/intersections**
+- Use simple unions/intersections over complex generics
 **Severity:** Error
+**Applies to:** All TypeScript code
 
-### RULE-002: Project Structure  
+### RULE-003: Project Structure
 - Organize by feature, not file type
 - Use path aliases (`@/`, `@components/`, etc.)
 - Keep related code colocated
-- **Flat structure > deep nesting; avoid folder hierarchies beyond 3 levels**
+- Flat structure > deep nesting (max 3 levels)
 **Severity:** Warning
+**Applies to:** File organization
 
-### RULE-003: Styling Standards
-- Tailwind utilities are default
-- No inline `style` props
-- Use design tokens for spacing/colors
-- **Compose utilities inline; avoid @apply unless truly repetitive (≥5 uses)**
+### RULE-004: Code Quality Standards
+- Functions max 50 lines without clear reason
+- Files max 300 lines
+- Nesting depth max 4 levels
+- Cyclomatic complexity max 10
+- Use semantic HTML first, ARIA when insufficient
 **Severity:** Warning
+**Applies to:** All code
 
-### RULE-004: Font Handling
-- Omit `"Satoshi Variable"` references
-- Map `"Lexend Mega"` → `.font-lexend-mega` class
-- Map `"Roboto"` → `.font-roboto` class  
-- Expand CSS variables manually
-- Add `/* VAR_NEEDED:<name> */` comment if variable is unresolved
-**Severity:** Error
-
-### RULE-005: Framework Architecture
-- Keep Astro pages minimal (routing/layout only)
-- Extract logic into typed modules/components
-- Share stateful logic through explicit imports
-- **No framework wrappers or abstract base classes; use composition**
-**Severity:** Warning
-
-### RULE-006: Data Validation
-- Validate all external data with Zod or schema guards
-- No unvalidated API responses or user input
-- Type guards for runtime checks
-- **Simple schemas only; avoid complex transforms unless necessary**
-**Severity:** Error
-
-### RULE-007: State Management
-- Prefer server-side caching over global stores
-- Use explicit state hydration patterns
-- Document state dependencies
-- **Start with component state; introduce stores only when sharing across ≥3 components**
-**Severity:** Warning
-
-### RULE-008: Accessibility
-- Enforce keyboard navigation support
-- Include ARIA attributes where semantic HTML insufficient
-- Test focus management in interactive components
-- **Use semantic HTML first; ARIA only when HTML semantics are insufficient**
-**Severity:** Error
-
-### RULE-009: Performance
-- Optimize all images before commit
-- Limit client-side hydration (`client:load` sparingly)
-- Lazy load heavy components
-- **Measure before optimizing; avoid speculative performance code**
-**Severity:** Warning
-
-### RULE-010: Security
+### RULE-005: Security Requirements
 - No secrets in client-side code
 - Use parameterized queries only (no string concatenation)
 - Sanitize user-generated content
-- **Use framework/library security features; avoid custom crypto/auth**
+- Use framework security features, avoid custom crypto/auth
 **Severity:** Error
+**Applies to:** All security-sensitive code
 
-### RULE-011: Development Workflow
+### RULE-006: Performance Guidelines
+- Optimize images before commit
+- Limit client-side hydration (`client:load` sparingly)
+- Lazy load heavy components
+- Measure before optimizing; avoid speculative performance code
+**Severity:** Warning
+**Applies to:** Performance-critical code
+
+### RULE-007: Accessibility Standards
+- Enforce keyboard navigation support
+- Include ARIA attributes where semantic HTML insufficient
+- Test focus management in interactive components
+- Use semantic HTML first; ARIA only when HTML semantics insufficient
+**Severity:** Error
+**Applies to:** All user-facing code
+
+### RULE-008: Testing Requirements
+- Write tests for behavior, not implementation
+- Avoid brittle tests that break with refactoring
+- Test critical user flows
+- Include edge cases for time-sensitive features
+**Severity:** Warning
+**Applies to:** All feature development
+
+### RULE-009: Documentation Standards
+- Document complex business logic
+- Include "why" explanations for non-obvious decisions
+- Keep README files current
+- Document API endpoints with examples
+**Severity:** Warning
+**Applies to:** All code and features
+
+### RULE-010: Deployment Safety
 - Use conventional commits (feat:, fix:, docs:, etc.)
 - Include "Rule Impact: RULE-###" in PR descriptions when relevant
-- Update tests when changing rule-enforced patterns
-- **Write tests for behavior, not implementation; avoid brittle tests**
-**Severity:** Warning
-
-### RULE-012: Dependency Management
-- Justify every new dependency
-- Prefer platform/framework features over libraries
-- Remove unused dependencies immediately
-- **Ask: "Can I write this in 20 lines instead of importing a package?"**
-**Severity:** Warning
-
-### RULE-013: No Mock Data for Missing APIs
-- **NEVER** create mock data, placeholder data, or generated fake data when API endpoints are missing
-- **ALWAYS** ask the user if they want to create the missing API endpoint instead
-- **ALWAYS** identify what data should come from the database and suggest the proper API structure
-- **ALWAYS** show loading states or "Feature not implemented" messages rather than fake data
-- **ALWAYS** provide clear guidance on what API endpoint needs to be created
+- Test in staging before production
+- Verify database migrations before deployment
 **Severity:** Error
+**Applies to:** All deployments
 
-### RULE-DB-001: Database Schema Management
-- **ALWAYS** run comprehensive schema audits before and after migrations
-- **ALWAYS** verify all expected tables exist in production
-- **ALWAYS** check foreign key constraints and indexes
-- **ALWAYS** validate data integrity before applying schema changes
-- **ALWAYS** create environment-agnostic audit scripts
-- **ALWAYS** compare localhost vs production schemas before deployments
-- **ALWAYS** fix data integrity issues before applying schema changes
-- **ALWAYS** handle orphaned records that violate foreign key constraints
-- **ALWAYS** use `drizzle-kit push --force` for production schema updates
-- **ALWAYS** verify migration success with comprehensive checks
-- **ALWAYS** create rollback procedures for critical migrations
-- **ALWAYS** use production database URLs for critical schema operations
-- **ALWAYS** create comprehensive audit reports with findings
-- **ALWAYS** provide step-by-step fix procedures
-- **ALWAYS** include success verification in all database operations
-- **ALWAYS** document the impact of schema changes on application functionality
-- **ALWAYS** ensure all collaborative feature tables are present in production
-- **ALWAYS** verify foreign key relationships for collaborative tables
-- **ALWAYS** check that collaborative features work without 500 errors
-- **ALWAYS** include collaborative table validation in schema audits
-- **ALWAYS** provide clear guidance on missing collaborative functionality
+---
+
+## Domain-Specific Rules
+
+### RULE-011: Date/Time Handling
+- **CRITICAL**: Manual duration entries MUST have `startTime: null` and `endTime: null`
+- Use `createdAt` field for date association with manual entries, not `startTime`
+- Always use local date components for date construction to avoid timezone issues
+- Never use `toISOString().split('T')[0]` for date strings
+- Use timezone utilities from `src/utils/timezoneUtils.ts`
+**Severity:** Error
+**Applies to:** All date/time operations
+
+### RULE-012: Database Operations
+- Always run schema audits before and after migrations
+- Verify all expected tables exist in production
+- Check foreign key constraints and indexes
+- Validate data integrity before applying schema changes
+- Use `drizzle-kit push --force` for production schema updates
+- Delete in dependency order: child tables first, then parent tables
 **Severity:** Error
 **Applies to:** All database operations
 
-### RULE-DB-002: Database Environment Management
-- **ALWAYS** use environment-specific database URLs for audits
-- **ALWAYS** create environment-agnostic audit scripts
-- **ALWAYS** document database connection patterns in scripts
-- **ALWAYS** provide clear error messages for missing environment variables
-- **ALWAYS** include database URL validation in audit scripts
+### RULE-013: API Design
+- Always return consistent error response format
+- Include success/error status in responses
+- Use `projectId` as primary field name, support `taskId` for backward compatibility
+- Never create mock data when API endpoints are missing
+- Always ask: "Would you like me to create the missing API endpoint?"
+**Severity:** Error
+**Applies to:** All API development
+
+### RULE-014: Error Handling
+- Use try-catch blocks for all async operations
+- Provide user-friendly error messages
+- Log detailed errors to console for debugging
+- Handle both network errors and application errors
+- Distinguish between user errors and system errors
+**Severity:** Error
+**Applies to:** All async operations
+
+### RULE-015: Real-time Features
+- Implement real-time updates using custom events for cross-component communication
+- Clean up event listeners in `useEffect` cleanup functions
+- Include comprehensive data in custom events to avoid additional API calls
+- Test real-time updates across different components
+- Include fallback mechanisms when real-time updates fail
 **Severity:** Warning
-**Applies to:** Database environment configuration
+**Applies to:** Real-time feature development
+
+---
+
+## Operational Rules
+
+### RULE-016: Debugging Practices
+- Add comprehensive logging to API calls during development
+- Use distinctive console log prefixes for easy filtering
+- Remove debug logs before production deployment
+- Test database connections before performing operations
+- Create minimal test endpoints to isolate issues
+**Severity:** Warning
+**Applies to:** Development and debugging
+
+### RULE-017: Code Review Standards
+- Verify refactor maintains rule compliance
+- Flag rules that would be violated by proposed changes
+- Suggest rule-aligned alternative approaches
+- Prioritize clarity over cleverness in all refactors
+- Remove unnecessary indirection and abstraction layers
+**Severity:** Warning
+**Applies to:** All code reviews
+
+### RULE-018: Dependency Management
+- Justify every new dependency
+- Prefer platform/framework features over libraries
+- Remove unused dependencies immediately
+- Ask: "Can I write this in 20 lines instead of importing a package?"
+**Severity:** Warning
+**Applies to:** Package management
+
+### RULE-019: Environment Configuration
+- Use environment-specific database URLs for audits
+- Create environment-agnostic audit scripts
+- Provide clear error messages for missing environment variables
+- Test in multiple environments before production
+**Severity:** Warning
+**Applies to:** Environment setup
+
+### RULE-020: Production Readiness
+- All code must be deployable without manual intervention
+- Include comprehensive error handling for missing tables
+- Test error states in production environments
+- Verify all collaborative features work without 500 errors
+- Document the impact of schema changes on application functionality
+**Severity:** Error
+**Applies to:** Production deployments
+
+---
 
 ## Cursor Behavior Instructions
 
@@ -238,17 +222,15 @@ Only introduce abstractions when:
 - Always check completion against active rules
 - Annotate suggestions with relevant rule IDs
 - Prefer rule-compliant alternatives over raw suggestions
-- **Default to the simplest approach that satisfies requirements**
-- **Avoid suggesting abstractions, helpers, or utilities for single-use code**
-- **RULE-013: Never suggest mock data; always ask about creating missing API endpoints**
+- Default to the simplest approach that satisfies requirements
+- Never suggest mock data; always ask about creating missing API endpoints
 
 ### Refactoring
 - Verify refactor maintains rule compliance
 - Flag rules that would be violated by proposed changes
 - Suggest rule-aligned alternative approaches
-- **Prioritize clarity over cleverness in all refactors**
-- **Remove unnecessary indirection and abstraction layers**
-- **Inline small functions that are only called once**
+- Prioritize clarity over cleverness in all refactors
+- Remove unnecessary indirection and abstraction layers
 
 ### Problem-Solving Approach
 1. Understand the immediate requirement (not future possibilities)
@@ -264,61 +246,14 @@ When reviewing or suggesting code, ask:
 - "Will this be obvious to someone new in 6 months?"
 - "Can I delete code instead of adding it?"
 
-### Rule Updates
-1. Detect pattern requiring new rule
-2. Draft rule with ID, description, severity
-3. Generate `/cursor-guides/RULE-###.md` with examples
-4. Update `index.json` and `audit.log`
-5. Present proposal to developer for approval
-6. **Include simplicity analysis: Why this rule prevents bloat**
-
-### Audit Log Format
-
-[YYYY-MM-DD HH:MM] ACTION: RULE-### | DESCRIPTION | AUTHOR
-
-## Integration Points
-
-### CI/CD
-- `scripts/rules-check.ts` validates compliance
-- `.github/workflows/rules.yml` runs on PR
-- Critical rule violations block merge
-
-### Documentation Sync
-- Rules changes trigger docs regeneration
-- Examples pulled from real project code
-- Cross-references maintained automatically
-- **Include "simple vs. complex" comparison examples**
-
-## Evolution Protocol
-1. New patterns emerge → Cursor proposes rule
-2. Rule violations spike → Cursor suggests refinement  
-3. Rules unused for 90 days → Cursor flags for deprecation
-4. Deprecated rules stay in history (never deleted)
-5. **Complexity detected → Cursor suggests simplification and documents rationale**
-
-## Complexity Warnings
-Cursor will flag and suggest alternatives for:
-- Functions longer than 50 lines without clear reason
-- Files longer than 300 lines
-- Nesting depth > 4 levels
-- Cyclomatic complexity > 10
-- Abstractions used only once
-- More than 2 layers of indirection to accomplish a task
-
 ---
 
-# Time Tracking App - Specific Rules
+## Time Tracking App - Specific Patterns
 
-## Manual Duration Entry Patterns
-
-### Critical Rule: Manual Duration Entries
-- **ALWAYS** set `startTime: null` and `endTime: null` for manual duration entries
-- **NEVER** set `startTime` and `endTime` to date ranges for manual entries
-- Manual entries should only have `durationManual` field populated
-- Use `createdAt` for date association, not `startTime`
-
-### API Endpoint Patterns
-- When creating manual duration entries, use this pattern:
+### Manual Duration Entry Patterns
+- **CRITICAL**: Manual duration entries MUST have `startTime: null` and `endTime: null`
+- Use `createdAt` field for date association, not `startTime`
+- Pattern for manual entry creation:
   ```typescript
   const newEntry = {
     userId,
@@ -340,53 +275,14 @@ Cursor will flag and suggest alternatives for:
      OR (durationManual IS NOT NULL)
   ```
 
-## React Component Patterns
+### React Component Patterns
+- Always wrap data loading functions with `useCallback` and proper dependencies
+- Always memoize event handlers to prevent infinite re-renders
+- Always dispatch custom events after successful API calls
+- Always use local date components for date construction to avoid timezone issues
 
-### Event Handler Dependencies
-- **ALWAYS** wrap data loading functions with `useCallback` and proper dependencies
-- **ALWAYS** memoize event handlers to prevent infinite re-renders
-- Pattern:
-  ```typescript
-  const loadData = useCallback(async () => {
-    // loading logic
-  }, [dependency1, dependency2]);
-  
-  const handleDataChange = useCallback(() => {
-    loadData();
-  }, [loadData]);
-  ```
-
-### Data Refresh Patterns
-- **ALWAYS** dispatch custom events after successful API calls
-- **ALWAYS** call both direct refresh AND event-based refresh
-- Pattern:
-  ```typescript
-  // Direct refresh (immediate)
-  await loadData();
-  
-  // Event-based refresh (backup)
-  setTimeout(() => {
-    window.dispatchEvent(new CustomEvent('dataUpdated'));
-  }, 100);
-  ```
-
-### Date Handling Patterns
-- **ALWAYS** use local date components for date construction to avoid timezone issues
-- **NEVER** rely on `toISOString().split('T')[0]` for date strings
-- Pattern:
-  ```typescript
-  const year = targetDate.getFullYear();
-  const month = targetDate.getMonth() + 1;
-  const day = targetDate.getDate();
-  const dateString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-  ```
-
-## API Response Patterns
-
-### Consistent Error Handling
-- **ALWAYS** return consistent error response format
-- **ALWAYS** include success/error status in responses
-- Pattern:
+### API Response Patterns
+- Always return consistent error response format:
   ```typescript
   return new Response(JSON.stringify({
     success: true/false,
@@ -399,824 +295,34 @@ Cursor will flag and suggest alternatives for:
   });
   ```
 
-### Validation Patterns
-- **ALWAYS** validate required fields at the start of API handlers
-- **ALWAYS** use consistent field names (projectId vs taskId)
-- **ALWAYS** support backward compatibility with legacy field names
+### Common Anti-Patterns to Avoid
+- ❌ Set `startTime` and `endTime` for manual duration entries
+- ❌ Use `toISOString()` for date string construction
+- ❌ Forget to memoize functions used in `useCallback` dependencies
+- ❌ Create manual entries without proper date association
+- ❌ Mix timer-based and manual entry logic
 
-## Database Migration Patterns
-
-### Schema Changes
-- **ALWAYS** create migration scripts for data fixes
-- **ALWAYS** verify fixes with count queries
-- **ALWAYS** test migrations on development data first
-
-### Data Consistency
-- **ALWAYS** check for data inconsistencies after schema changes
-- **ALWAYS** provide both SQL and API-based fix options
-- **ALWAYS** include verification steps in migration scripts
-
-## Testing Patterns
-
-### Manual Testing Checklist
-- [ ] Test manual duration entries save with correct date
-- [ ] Test manual entries display as `--:-- --:--` for start/stop times
-- [ ] Test daily totals update immediately after manual entry
-- [ ] Test week navigation preserves correct dates
-- [ ] Test both create and update operations for manual entries
-
-### Debug Patterns
-- **ALWAYS** add console logs for date calculations
-- **ALWAYS** log API request/response data for debugging
-- **ALWAYS** verify database state after operations
-
-## Common Anti-Patterns to Avoid
-
-### ❌ DON'T
-- Set `startTime` and `endTime` for manual duration entries
-- Use `toISOString()` for date string construction
-- Forget to memoize functions used in `useCallback` dependencies
-- Create manual entries without proper date association
-- Mix timer-based and manual entry logic
-
-### ✅ DO
+### ✅ Best Practices
 - Use `null` for start/end times on manual entries
 - Use local date components for date strings
 - Memoize all functions used in event handlers
 - Associate manual entries with correct dates via `createdAt`
 - Keep timer and manual entry logic separate
 
-## Time Entry Types
-
-### Timer-Based Entries
-- Have `startTime` and `endTime` populated
-- Have `durationManual: null`
-- Duration calculated from `endTime - startTime`
-
-### Manual Duration Entries  
-- Have `startTime: null` and `endTime: null`
-- Have `durationManual` populated
-- Use `createdAt` for date association
-
-### Ongoing Timer Entries
-- Have `startTime` populated, `endTime: null`
-- Have `durationManual: null`
-- Duration calculated from `NOW() - startTime`
-
-## Event System Patterns
-
-### Custom Events
-- `timerStarted` - When a timer begins
-- `timerStopped` - When a timer ends
-- `timeEntryAdded` - When a new entry is created
-- `timeEntryUpdated` - When an entry is modified
-- `timeEntryDeleted` - When an entry is removed
-
-### Event Handling
-- Always add event listeners in `useEffect` with cleanup
-- Always remove event listeners in cleanup function
-- Use consistent event names across components
-- Dispatch events after successful API operations
-
-## Date Calculation Patterns
-
-### Week Navigation
-- Use `computeWeekRange(offset)` for week calculations
-- Sunday = 0, Monday = 1, ..., Saturday = 6
-- Always use local timezone for date calculations
-- Store week start/end dates in component state
-
-### Day of Week Mapping
-- Map dayOfWeek (0-6) to actual dates using selectedWeekStart
-- Use `selectedWeekStart.getDate() + dayOfWeek` for target date
-- Always construct date strings manually to avoid timezone issues
-
-## Component State Management
-
-### Loading States
-- Use separate loading states for different operations
-- Show loading indicators during API calls
-- Disable inputs during loading states
-- Provide user feedback for all operations
-
-### Error Handling
-- Show user-friendly error messages
-- Log detailed errors to console
-- Provide retry mechanisms where appropriate
-- Handle network errors gracefully
-
-## API Design Patterns
-
-### Consistent Field Names
-- Use `projectId` as primary field name
-- Support `taskId` for backward compatibility
-- Always validate required fields
-- Use consistent parameter naming
-
-### Response Format
-- Always include `success` boolean
-- Include descriptive `message` field
-- Return `data` object with results
-- Include `error` field for failures
-- Use appropriate HTTP status codes
-
-### Missing API Endpoint Protocol (RULE-013)
-- **NEVER** create mock data when API endpoints are missing
-- **ALWAYS** ask: "Would you like me to create the missing API endpoint for [specific functionality]?"
-- **ALWAYS** identify the required data structure and database relationships
-- **ALWAYS** suggest the proper API endpoint path and implementation
-- **ALWAYS** show loading states or "Feature not implemented" instead of fake data
-- **ALWAYS** provide clear guidance on what needs to be built
-
-## Database Query Patterns
-
-### Time Entry Queries
-- Always join with users, projects, and clients tables
-- Filter out archived records
-- Use proper date filtering for manual vs timer entries
-- Include calculated duration fields
-
-### Duration Calculations
-- Use SQL CASE statements for duration logic
-- Handle both manual and timer-based entries
-- Exclude ongoing timers from completed entry queries
-- Use proper timezone handling in queries
-
-## Timezone Issue Prevention Patterns
-
-### RULE-TZ-001: Timezone-Safe Date Handling
-- **ALWAYS** use local date components for date construction to avoid timezone issues
-- **ALWAYS** use the timezone utilities from `src/utils/timezoneUtils.ts`
-- **NEVER** use `toISOString().split('T')[0]` for date strings
-- **NEVER** use `new Date(dateString)` for date construction in production
-- **ALWAYS** construct dates using this proven pattern:
-  ```typescript
-  const date = new Date(entry.startTime || entry.createdAt);
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  return new Date(year, month - 1, day, 0, 0, 0, 0);
-  ```
-**Severity:** Error
-**Applies to:** All date/time operations
-
-### RULE-TZ-002: Manual Duration Entry Patterns
-- **CRITICAL**: Manual duration entries MUST have `startTime: null` and `endTime: null`
-- **ALWAYS** use `createdAt` field for date association with manual entries, not `startTime`
-- **ALWAYS** check entry type before date operations:
-  ```typescript
-  const isManualDurationEntry = entry.durationManual && !entry.startTime && !entry.endTime;
-  ```
-- **ALWAYS** use this pattern for manual entry date updates:
-  ```typescript
-  if (isManualDurationEntry) {
-    const taskDate = new Date(entry.createdAt);
-    const year = taskDate.getFullYear();
-    const month = taskDate.getMonth() + 1;
-    const day = taskDate.getDate();
-    const newCreatedAt = new Date(year, month - 1, day, 12, 0, 0, 0);
-    updateData.createdAt = newCreatedAt.toISOString();
-  }
-  ```
-**Severity:** Error
-**Applies to:** Manual duration entries
-
-### RULE-TZ-003: Timezone Utilities Usage
-- **ALWAYS** import and use timezone utilities from `src/utils/timezoneUtils.ts`
-- **ALWAYS** use `formatTimeForDisplay()` for time display
-- **ALWAYS** use `createTaskDateTime()` for creating time entries
-- **ALWAYS** use `getDateComponents()` for date component extraction
-- **ALWAYS** use `getTodayString()` for today's date in YYYY-MM-DD format
-**Severity:** Warning
-**Applies to:** All timezone-sensitive operations
-
-## Data Migration Patterns
-
-### Fixing Existing Data Issues
-- **ALWAYS** create API endpoints to fix existing data issues
-- **ALWAYS** provide both detection and fix functionality
-- **ALWAYS** include verification steps in fix scripts
-- Pattern for manual duration entry fixes:
-  ```typescript
-  // Find problematic entries
-  const problematicEntries = await db
-    .select()
-    .from(timeEntries)
-    .where(
-      and(
-        isNotNull(timeEntries.durationManual),
-        isNotNull(timeEntries.startTime)  // This is the problem
-      )
-    );
-  
-  // Fix them
-  await db
-    .update(timeEntries)
-    .set({
-      startTime: null,
-      endTime: null,
-      updatedAt: new Date()
-    })
-    .where(/* same condition */);
-  ```
-
-## Service Layer Patterns
-
-### Time Entry Service Consistency
-- **ALWAYS** ensure service layer follows the same patterns as API endpoints
-- **ALWAYS** check service layer when fixing API endpoint issues
-- **ALWAYS** maintain consistency between different creation paths (API vs Service)
-
-### Multiple Creation Paths
-- Manual duration entries can be created via:
-  - `/api/time-entries/duration` (duration editing)
-  - `/api/admin/time-entries` (admin creation)
-  - `TimeEntryService.createTimeEntry()` (service layer)
-- **ALWAYS** ensure all paths follow the same manual entry patterns
-- **ALWAYS** test all creation paths when fixing manual entry issues
-
-## Debugging and Investigation Patterns
-
-### Timezone Issue Investigation
-- **ALWAYS** check both creation logic AND display logic when investigating date issues
-- **ALWAYS** examine all code paths that create manual duration entries
-- **ALWAYS** verify that manual entries use `createdAt` for date association, not `startTime`
-- **ALWAYS** check service layer consistency when fixing API issues
-
-### Production Issue Debugging
-- **ALWAYS** create migration scripts for data fixes
-- **ALWAYS** provide API endpoints for fixing existing data
-- **ALWAYS** include verification steps in fix operations
-- **ALWAYS** test fixes on development data before production
-
-### Code Search Patterns
-- Use `grep` to find all instances of problematic patterns
-- Search for `durationManual` to find all manual entry logic
-- Search for `startTime.*targetDate` to find timezone issues
-- Check both API endpoints and service layers for consistency
-
-## Date Editing Patterns
-
-### Manual Duration Entry Date Updates
-- **CRITICAL**: Manual duration entries use `createdAt` for date association, not `startTime`
-- **ALWAYS** check entry type before updating dates in date picker logic
-- **ALWAYS** handle both timer-based and manual duration entries differently
-- Pattern for date change logic:
-  ```typescript
-  // Check if this is a manual duration entry
-  const isManualDurationEntry = currentEntry.durationManual && !currentEntry.startTime && !currentEntry.endTime;
-  
-  if (isManualDurationEntry) {
-    // For manual duration entries, update createdAt
-    const newCreatedAt = new Date(year, month - 1, day, 12, 0, 0, 0);
-    updateData.createdAt = newCreatedAt.toISOString();
-  } else {
-    // For timer-based entries, update startTime and endTime
-    if (currentEntry.startTime) {
-      // Update startTime logic
-    }
-    if (currentEntry.endTime) {
-      // Update endTime logic
-    }
-  }
-  ```
-
-### Date Picker Implementation
-- **ALWAYS** test date picker functionality for both entry types
-- **ALWAYS** ensure manual duration entries can have their dates changed
-- **ALWAYS** verify that date changes persist correctly in the database
-- **ALWAYS** check that date changes update the correct field (createdAt vs startTime)
-
-### Service Layer Date Updates
-- **ALWAYS** support `createdAt` updates in UpdateTimeEntryRequest interface
-- **ALWAYS** handle `createdAt` field in service layer update methods
-- **ALWAYS** ensure API endpoints can accept and process `createdAt` updates
-
-## Database Schema Audit & Migration Patterns
-
-### RULE-DB-001: Database Schema Management
-- **ALWAYS** run comprehensive schema audits before and after migrations
-- **ALWAYS** verify all expected tables exist in production
-- **ALWAYS** check foreign key constraints and indexes
-- **ALWAYS** validate data integrity before applying schema changes
-- **ALWAYS** create environment-agnostic audit scripts
-- **ALWAYS** compare localhost vs production schemas before deployments
-- **ALWAYS** fix data integrity issues before applying schema changes
-- **ALWAYS** handle orphaned records that violate foreign key constraints
-- **ALWAYS** use `drizzle-kit push --force` for production schema updates
-- **ALWAYS** verify migration success with comprehensive checks
-- **ALWAYS** create rollback procedures for critical migrations
-- **ALWAYS** use production database URLs for critical schema operations
-- **ALWAYS** create comprehensive audit reports with findings
-- **ALWAYS** provide step-by-step fix procedures
-- **ALWAYS** include success verification in all database operations
-- **ALWAYS** document the impact of schema changes on application functionality
-- **ALWAYS** ensure all collaborative feature tables are present in production
-- **ALWAYS** verify foreign key relationships for collaborative tables
-- **ALWAYS** check that collaborative features work without 500 errors
-- **ALWAYS** include collaborative table validation in schema audits
-- **ALWAYS** provide clear guidance on missing collaborative functionality
-**Severity:** Error
-**Applies to:** All database operations
-
-### RULE-DB-002: Database Environment Management
-- **ALWAYS** use environment-specific database URLs for audits
-- **ALWAYS** create environment-agnostic audit scripts
-- **ALWAYS** document database connection patterns in scripts
-- **ALWAYS** provide clear error messages for missing environment variables
-- **ALWAYS** include database URL validation in audit scripts
-**Severity:** Warning
-**Applies to:** Database environment configuration
-
-## Database Audit Script Patterns
-
-### Schema Audit Script Structure
-- **ALWAYS** create environment-agnostic audit scripts
-- **ALWAYS** include table existence checks
-- **ALWAYS** verify foreign key constraints
-- **ALWAYS** check indexes and performance optimizations
-- **ALWAYS** provide comprehensive summary reports
-- **ALWAYS** include specific recommendations for fixes
-
-### Migration Script Patterns
-- **ALWAYS** create scripts that can fix data integrity issues
-- **ALWAYS** provide both detection and remediation functionality
-- **ALWAYS** include verification steps in all fix scripts
-- **ALWAYS** test migrations on development data first
-- **ALWAYS** create rollback procedures for critical changes
-
-### Production Database Patterns
-- **ALWAYS** use the correct production database URL for operations
-- **ALWAYS** verify schema changes with comprehensive audits
-- **ALWAYS** document the impact of schema changes on application functionality
-- **ALWAYS** provide clear success/failure indicators
-- **ALWAYS** include troubleshooting guidance for common issues
-
-## Database Schema Audit Checklist
-
-### Pre-Migration Checklist
-- [ ] Run comprehensive schema audit
-- [ ] Identify missing tables and constraints
-- [ ] Check for data integrity issues
-- [ ] Fix orphaned records
-- [ ] Verify foreign key relationships
-
-### Post-Migration Checklist
-- [ ] Verify all expected tables exist
-- [ ] Check all foreign key constraints
-- [ ] Validate all indexes are present
-- [ ] Test collaborative features functionality
-- [ ] Confirm no 500 errors on related pages
-
-### Database Environment Patterns
-- **ALWAYS** use environment-specific database URLs
-- **ALWAYS** create scripts that work across environments
-- **ALWAYS** provide clear error messages for configuration issues
-- **ALWAYS** include database connection validation
-- **ALWAYS** document environment setup requirements
-
-## Debugging Patterns from Production Issues
-
-### RULE-021: Production vs Local Environment Debugging
-- **ALWAYS** check if production database has same schema as local
-- **ALWAYS** verify environment variables are correctly set in production
-- **ALWAYS** test database connections before assuming schema issues
-- **ALWAYS** create environment-specific debugging endpoints
-- **ALWAYS** document differences between local and production environments
-**Severity:** Error
-
-### RULE-022: Database Migration Debugging
-- **ALWAYS** check if migration actually ran successfully
-- **ALWAYS** verify tables exist after migration claims success
-- **ALWAYS** test database queries directly when migrations fail
-- **ALWAYS** create manual table creation scripts as backup
-- **ALWAYS** include table existence verification in all migrations
-**Severity:** Error
-
-### RULE-023: Error Handling for Missing Database Tables
-- **ALWAYS** create graceful error handling for missing tables
-- **ALWAYS** show helpful error messages instead of 500 errors
-- **ALWAYS** provide clear guidance on how to fix missing tables
-- **ALWAYS** test error states in production environments
-- **ALWAYS** include table existence checks in critical pages
-**Severity:** Error
-
-### RULE-024: Collaborative Features Database Patterns
-- **ALWAYS** ensure teams and team_members tables exist before using collaborative features
-- **ALWAYS** verify foreign key constraints are properly set
-- **ALWAYS** test collaborative features in production after schema changes
-- **ALWAYS** include collaborative table validation in deployment checks
-- **ALWAYS** provide clear error messages when collaborative tables are missing
-**Severity:** Error
-
-### RULE-025: Database Deletion Patterns
-- **ALWAYS** identify and delete all foreign key dependencies before deleting parent records
-- **ALWAYS** delete in the correct order: child tables first, then parent tables
-- **ALWAYS** check for foreign key constraints when deleting records with relationships
-- **ALWAYS** include comprehensive error handling for foreign key constraint violations
-- **ALWAYS** test deletion operations with existing data to verify constraint handling
-- **ALWAYS** document the deletion order for complex entities with multiple relationships
-**Severity:** Error
-**Applies to:** All database deletion operations
-
-### RULE-026: API Endpoint Debugging Patterns
-- **ALWAYS** add comprehensive logging to API endpoints during development
-- **ALWAYS** test database connections before performing operations
-- **ALWAYS** include step-by-step logging for complex operations
-- **ALWAYS** create minimal test endpoints to isolate issues
-- **ALWAYS** log both success and failure paths with detailed error information
-- **ALWAYS** remove debug logging before production deployment
-**Severity:** Warning
-**Applies to:** API endpoint development and debugging
-
-### RULE-027: Foreign Key Constraint Handling
-- **ALWAYS** map out all foreign key relationships before implementing deletion
-- **ALWAYS** include all related tables in deletion operations (project_teams, task_collaborations, team_members, etc.)
-- **ALWAYS** delete in dependency order: most dependent first, least dependent last
-- **ALWAYS** handle foreign key constraint violations gracefully with clear error messages
-- **ALWAYS** verify deletion order matches database schema relationships
-**Severity:** Error
-**Applies to:** Database operations with foreign key relationships
-
-### RULE-028: API Route Import Path Patterns
-- **ALWAYS** verify import paths are correct for API routes based on their depth in the file structure
-- **ALWAYS** use relative paths that match the actual file location (../../../../ for 4 levels deep)
-- **ALWAYS** test import paths by checking if the API endpoint can be reached
-- **ALWAYS** include import path validation in API endpoint development
-**Severity:** Error
-**Applies to:** API route development
-
-### RULE-029: Authentication Context Patterns
-- **ALWAYS** pass the full context object to getSessionUser, not just request
-- **ALWAYS** use context.params for URL parameters in API routes
-- **ALWAYS** test authentication in API endpoints with proper context handling
-- **ALWAYS** verify user permissions before performing destructive operations
-**Severity:** Error
-**Applies to:** API authentication and authorization
-
-### RULE-030: Astro Client-Side Data Injection Patterns
-- **ALWAYS** use `define:vars` directive for passing server-side data to client-side scripts
-- **NEVER** use `JSON.parse()` on data already serialized by Astro's template system
-- **ALWAYS** avoid variable name conflicts between server-side and client-side variables
-- **ALWAYS** use different variable names for client-side data (e.g., `teamMembersData` vs `teamMembers`)
-- **ALWAYS** use this pattern for data injection:
-  ```astro
-  <script define:vars={{ clientData: serverData.map(item => ({...})) }}>
-    // Use clientData directly, no JSON.parse needed
-  </script>
-  ```
-- **NEVER** use template literals with `JSON.stringify()` in script tags
-- **ALWAYS** handle null/undefined server data gracefully in client scripts
-**Severity:** Error
-**Applies to:** Astro client-side scripting
-
-### RULE-031: Modal Implementation Patterns
-- **ALWAYS** include proper null checks for all DOM elements in modal scripts
-- **ALWAYS** use semantic HTML structure for modals (form, labels, proper input types)
-- **ALWAYS** implement both click-outside-to-close and escape-key-to-close functionality
-- **ALWAYS** reset form state when closing modals
-- **ALWAYS** validate required fields before submission
-- **ALWAYS** provide user feedback for all operations (success/error messages)
-- **ALWAYS** use this pattern for modal DOM element access:
-  ```javascript
-  const modal = document.getElementById('modalId');
-  if (!modal) {
-    console.error('Modal element not found');
-    return;
-  }
-  ```
-- **ALWAYS** implement form reset on modal close:
-  ```javascript
-  function hideModal() {
-    modal.classList.add('hidden');
-    form.reset(); // Always reset form state
-  }
-  ```
-**Severity:** Warning
-**Applies to:** Modal implementations
-
-### RULE-032: API Integration Patterns
-- **ALWAYS** use existing API endpoints when available instead of creating new ones
-- **ALWAYS** check for existing API patterns before implementing new functionality
-- **ALWAYS** maintain consistency with existing API response formats
-- **ALWAYS** handle both success and failure cases in API calls
-- **ALWAYS** provide fallback behavior when secondary API calls fail
-- **ALWAYS** use this pattern for API integration:
-  ```javascript
-  // Primary operation
-  const response = await fetch('/api/primary-endpoint', {...});
-  if (!response.ok) throw new Error('Primary operation failed');
-  
-  // Secondary operation (don't fail if this fails)
-  try {
-    await fetch('/api/secondary-endpoint', {...});
-  } catch (error) {
-    console.error('Secondary operation failed:', error);
-    // Continue execution - don't throw
-  }
-  ```
-- **ALWAYS** search existing API endpoints before creating new ones
-- **ALWAYS** maintain backward compatibility with existing API patterns
-**Severity:** Warning
-**Applies to:** API integrations
-
-### RULE-033: TypeScript in Astro Scripts
-- **NEVER** use TypeScript syntax in regular `<script>` tags in Astro files
-- **ALWAYS** use plain JavaScript for client-side scripts in Astro
-- **ALWAYS** use proper type checking through runtime validation instead of compile-time types
-- **ALWAYS** handle type safety through proper null checks and validation
-- **ALWAYS** use this pattern for type safety:
-  ```javascript
-  // ❌ Don't use TypeScript syntax in Astro scripts
-  const element = document.getElementById('id') as HTMLElement | null;
-  
-  // ✅ Use runtime validation instead
-  const element = document.getElementById('id');
-  if (!element) {
-    console.error('Element not found');
-    return;
-  }
-  // Now element is guaranteed to exist
-  ```
-- **ALWAYS** use `instanceof` checks for type validation in client-side code
-- **ALWAYS** provide fallback values for potentially undefined data
-**Severity:** Error
-**Applies to:** Astro client-side scripting
-
-### RULE-034: Form Validation Patterns
-- **ALWAYS** validate required fields at the start of form submission
-- **ALWAYS** provide clear error messages for validation failures
-- **ALWAYS** disable form submission during API calls to prevent double-submission
-- **ALWAYS** show loading states during form submission
-- **ALWAYS** reset form state after successful submission
-- **ALWAYS** use this pattern for form validation:
-  ```javascript
-  form.addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    // Validate required fields
-    const requiredFields = ['name', 'email'];
-    for (const field of requiredFields) {
-      if (!formData.get(field)) {
-        alert(`${field} is required`);
-        return;
-      }
-    }
-    
-    // Disable form during submission
-    submitButton.disabled = true;
-    submitButton.textContent = 'Creating...';
-    
-    try {
-      await fetch('/api/endpoint', {...});
-      form.reset();
-      hideModal();
-    } catch (error) {
-      alert('Error: ' + error.message);
-    } finally {
-      submitButton.disabled = false;
-      submitButton.textContent = 'Submit';
-    }
-  });
-  ```
-- **ALWAYS** provide visual feedback for form state changes
-- **ALWAYS** handle form reset on both success and modal close
-**Severity:** Warning
-**Applies to:** Form implementations
-
-### RULE-035: Error Handling in Client-Side Code
-- **ALWAYS** use try-catch blocks for all async operations
-- **ALWAYS** provide user-friendly error messages
-- **ALWAYS** log detailed errors to console for debugging
-- **ALWAYS** handle both network errors and application errors
-- **ALWAYS** provide fallback behavior when operations fail
-- **ALWAYS** use this pattern for error handling:
-  ```javascript
-  try {
-    const response = await fetch('/api/endpoint', {...});
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Request failed');
-    }
-    const data = await response.json();
-    // Success handling
-  } catch (error) {
-    console.error('Operation failed:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    alert('Failed: ' + errorMessage);
-  }
-  ```
-- **ALWAYS** distinguish between user errors and system errors
-- **ALWAYS** provide actionable error messages to users
-- **ALWAYS** log technical details for debugging while showing user-friendly messages
-**Severity:** Error
-**Applies to:** All client-side async operations
-
-### RULE-036: React Hook Declaration Order
-- **ALWAYS** declare all `useCallback` and `useMemo` functions before any `useEffect` hooks that use them
-- **ALWAYS** group hook declarations in this order: state, callbacks, effects, other hooks
-- **ALWAYS** ensure function dependencies are available before use in `useEffect` dependencies
-- **ALWAYS** use this pattern for hook organization:
-  ```typescript
-  // 1. State declarations
-  const [state, setState] = useState();
-  
-  // 2. Callback functions (useCallback)
-  const handleSomething = useCallback(() => {
-    // implementation
-  }, [dependencies]);
-  
-  // 3. Effect hooks (useEffect)
-  useEffect(() => {
-    handleSomething();
-  }, [handleSomething]);
-  ```
-- **NEVER** use functions in `useEffect` dependencies before they are declared
-- **ALWAYS** check for "Cannot access before initialization" errors when organizing hooks
-**Severity:** Error
-**Applies to:** React component development
-
-### RULE-037: Real-Time Data Integration Patterns
-- **ALWAYS** implement real-time updates using custom events for cross-component communication
-- **ALWAYS** use `window.dispatchEvent(new CustomEvent('eventName', { detail: data }))` for broadcasting
-- **ALWAYS** use `window.addEventListener('eventName', handler)` for receiving updates
-- **ALWAYS** clean up event listeners in `useEffect` cleanup functions
-- **ALWAYS** include comprehensive data in custom events to avoid additional API calls
-- **ALWAYS** use this pattern for real-time updates:
-  ```typescript
-  // Dispatch updates
-  const dispatchUpdate = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('dataUpdated', {
-      detail: { isRunning, currentData, timestamp: Date.now() }
-    }));
-  }, [isRunning, currentData]);
-  
-  // Listen for updates
-  useEffect(() => {
-    const handleUpdate = (event: CustomEvent) => {
-      const { isRunning, currentData } = event.detail;
-      // Update local state
-    };
-    
-    window.addEventListener('dataUpdated', handleUpdate);
-    return () => window.removeEventListener('dataUpdated', handleUpdate);
-  }, []);
-  ```
-- **ALWAYS** test real-time updates across different components
-- **ALWAYS** include fallback mechanisms when real-time updates fail
-**Severity:** Warning
-**Applies to:** Real-time feature development
-
-### RULE-038: Function Definition Order in React Components
-- **ALWAYS** define all functions before they are used in `useEffect` dependencies
-- **ALWAYS** group function definitions by purpose: data loading, event handlers, utility functions
-- **ALWAYS** use `useCallback` for functions used in `useEffect` dependencies
-- **ALWAYS** ensure proper dependency arrays in `useCallback` to prevent infinite re-renders
-- **ALWAYS** use this pattern for function organization:
-  ```typescript
-  // Data loading functions
-  const loadData = useCallback(async () => {
-    // implementation
-  }, [dependencies]);
-  
-  // Event handlers
-  const handleEvent = useCallback(() => {
-    // implementation
-  }, [dependencies]);
-  
-  // Effects that use the functions
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-  ```
-- **NEVER** define functions after `useEffect` hooks that use them
-- **ALWAYS** check for initialization errors when adding new functions
-**Severity:** Error
-**Applies to:** React component development
-
-### RULE-039: Real-Time Timer Integration Patterns
-- **ALWAYS** include current timer state in daily/weekly totals calculations
-- **ALWAYS** use real-time data for "Today Hours Tracked" and "This Week Hours Tracked" displays
-- **ALWAYS** dispatch timer updates every second when timer is running
-- **ALWAYS** include comprehensive timer data in custom events: `{ isRunning, projectId, currentSessionSeconds, today, weekOffset }`
-- **ALWAYS** use this pattern for timer integration:
-  ```typescript
-  // Calculate real-time totals including current timer
-  const getRealTimeTotals = (baseTotals) => {
-    if (isRunning && weekOffset === 0) {
-      const currentSessionSeconds = timerData.elapsedSeconds + localTime;
-      // Add to today's total
-      return addToTodayTotal(baseTotals, currentSessionSeconds);
-    }
-    return baseTotals;
-  };
-  
-  // Dispatch updates every second
-  useEffect(() => {
-    let interval;
-    if (isRunning) {
-      interval = setInterval(() => {
-        dispatchTimerUpdate();
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isRunning, dispatchTimerUpdate]);
-  ```
-- **ALWAYS** test real-time updates in both Timer component and Dashboard
-- **ALWAYS** ensure timer state is properly synchronized across components
-**Severity:** Warning
-**Applies to:** Timer and dashboard integration
-
-### RULE-040: Date Input Timezone Safety Patterns
-- **ALWAYS** append `'T12:00:00'` to date strings before creating Date objects to avoid timezone shifts
-- **ALWAYS** use `new Date(dateString + 'T12:00:00')` for date inputs from forms
-- **ALWAYS** display dates using UTC timezone formatting to ensure consistency
-- **ALWAYS** use this pattern for date storage:
-  ```typescript
-  // ❌ DON'T - causes timezone shifts
-  dueDate: dueDate ? new Date(dueDate) : null,
-  
-  // ✅ DO - prevents timezone issues
-  dueDate: dueDate ? new Date(dueDate + 'T12:00:00') : null,
-  ```
-- **ALWAYS** use UTC timezone for date display:
-  ```typescript
-  new Date(task.dueDate).toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: '2-digit', 
-    day: '2-digit',
-    timeZone: 'UTC'
-  })
-  ```
-- **ALWAYS** normalize dates to UTC for filtering comparisons
-**Severity:** Error
-**Applies to:** All date input handling and storage
-
-### RULE-041: Database Schema Evolution Patterns
-- **ALWAYS** add new fields to schema.ts first, then use `drizzle-kit push --force` for migrations
-- **ALWAYS** update both POST and PUT API endpoints when adding new fields to entities
-- **ALWAYS** update client-side data injection when adding new fields to display
-- **ALWAYS** update form handling JavaScript when adding new input fields
-- **ALWAYS** test the complete flow: schema → API → form → display → filtering
-- **ALWAYS** use this pattern for schema evolution:
-  ```typescript
-  // 1. Update schema.ts
-  dueDate: timestamp('due_date'),
-  
-  // 2. Run migration
-  npx drizzle-kit push --force
-  
-  // 3. Update API endpoints (POST and PUT)
-  dueDate: dueDate ? new Date(dueDate + 'T12:00:00') : null,
-  
-  // 4. Update form handling
-  dueDate: formData.get('dueDate') || null,
-  
-  // 5. Update display logic
-  {task.dueDate ? new Date(task.dueDate).toLocaleDateString(...) : 'No due date'}
-  ```
-**Severity:** Error
-**Applies to:** Database schema changes and feature additions
-
-### RULE-042: Form Field Integration Patterns
-- **ALWAYS** add form fields in logical order: required fields first, optional fields after
-- **ALWAYS** use semantic HTML input types (`type="date"` for dates, `type="email"` for emails)
-- **ALWAYS** include proper labels and accessibility attributes
-- **ALWAYS** validate required fields before form submission
-- **ALWAYS** handle optional fields gracefully (use `|| null` for optional values)
-- **ALWAYS** update both the form HTML and the JavaScript form handling together
-- **ALWAYS** use this pattern for form integration:
-  ```html
-  <!-- Form field -->
-  <input type="date" id="taskDueDate" name="dueDate" />
-  
-  <!-- JavaScript handling -->
-  const taskData = {
-    dueDate: formData.get('dueDate') || null,
-    // other fields...
-  };
-  ```
-**Severity:** Warning
-**Applies to:** Form implementations and field additions
-
-### RULE-043: Client-Side Filter Implementation Patterns
-- **ALWAYS** implement filtering logic that works with actual data, not mock data
-- **ALWAYS** handle date comparisons with proper timezone normalization
-- **ALWAYS** provide fallback behavior when filters don't match any data
-- **ALWAYS** update both the filter UI and the filtering logic together
-- **ALWAYS** test filters with real data scenarios (overdue, due today, etc.)
-- **ALWAYS** use this pattern for date filtering:
-  ```javascript
-  const normalizeDate = (date) => {
-    const normalized = new Date(date);
-    normalized.setHours(12, 0, 0, 0); // Set to noon UTC
-    return normalized;
-  };
-  
-  // Use normalized dates for comparisons
-  if (normalizeDate(taskDueDate) >= today) {
-    showTask = false;
-  }
-  ```
-**Severity:** Warning
-**Applies to:** Client-side filtering implementations
+---
+
+## Rule Updates Protocol
+1. Detect pattern requiring new rule
+2. Draft rule with ID, description, severity
+3. Present proposal to developer for approval
+4. Update documentation when rules change
+5. Include simplicity analysis: Why this rule prevents bloat
+
+## Complexity Warnings
+Cursor will flag and suggest alternatives for:
+- Functions longer than 50 lines without clear reason
+- Files longer than 300 lines
+- Nesting depth > 4 levels
+- Cyclomatic complexity > 10
+- Abstractions used only once
+- More than 2 layers of indirection to accomplish a task
