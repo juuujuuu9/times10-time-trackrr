@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { db } from '../../../db/index';
 import { tasks } from '../../../db/schema';
 import { eq, sql } from 'drizzle-orm';
+import postgres from 'postgres';
 
 export const GET: APIRoute = async () => {
   try {
@@ -43,25 +44,32 @@ export const POST: APIRoute = async ({ request }) => {
       dueDate: dueDate ? new Date(dueDate + 'T12:00:00') : null
     });
 
-    // Use raw SQL to avoid Drizzle default value issues
-    console.log('POST /api/admin/tasks - Using raw SQL insert to avoid Drizzle defaults issue');
+    // Use direct postgres connection to avoid Drizzle issues
+    console.log('POST /api/admin/tasks - Using direct postgres connection');
     
-    const insertQuery = sql`
-      INSERT INTO tasks (project_id, name, description, status, priority, due_date) 
-      VALUES (${parseInt(projectId)}, ${name}, ${description || null}, ${status || 'pending'}, ${priority || 'regular'}, ${dueDate ? new Date(dueDate + 'T12:00:00') : null}) 
-      RETURNING id, project_id, name, description, status, priority, due_date, archived, is_system, created_at, updated_at
-    `;
+    // Get database URL from environment
+    const databaseUrl = import.meta.env.DATABASE_URL || process.env.DATABASE_URL;
+    if (!databaseUrl) {
+      throw new Error('DATABASE_URL environment variable is not set');
+    }
     
-    console.log('POST /api/admin/tasks - Using raw SQL query');
+    const sql = postgres(databaseUrl, { ssl: 'require', max: 1 });
     
-    const result = await db.execute(insertQuery);
-    const newTask = result.rows[0];
-
-    console.log('POST /api/admin/tasks - Task created successfully:', newTask);
-    return new Response(JSON.stringify(newTask), {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    try {
+      const newTask = await sql`
+        INSERT INTO tasks (project_id, name, description, status, priority, due_date) 
+        VALUES (${parseInt(projectId)}, ${name}, ${description || null}, ${status || 'pending'}, ${priority || 'regular'}, ${dueDate ? new Date(dueDate + 'T12:00:00') : null}) 
+        RETURNING id, project_id, name, description, status, priority, due_date, archived, is_system, created_at, updated_at
+      `;
+      
+      console.log('POST /api/admin/tasks - Task created successfully:', newTask[0]);
+      return new Response(JSON.stringify(newTask[0]), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } finally {
+      await sql.end();
+    }
   } catch (error) {
     console.error('POST /api/admin/tasks - Error creating task:', error);
     console.error('POST /api/admin/tasks - Error details:', error instanceof Error ? error.message : 'Unknown error');
