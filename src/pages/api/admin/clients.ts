@@ -54,6 +54,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const trimmedProjectName = projectName.trim();
 
     // Create the client
+    console.log('Creating client with data:', { name: trimmedName, createdBy: user.id });
     const newClient = await db.insert(clients).values({
       name: trimmedName,
       createdBy: user.id,
