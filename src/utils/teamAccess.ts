@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { projectTeams, teamMembers, teams, projects } from '../db/schema';
+import { teamMembers, teams, projects } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 
 /**
@@ -16,11 +16,10 @@ export async function userHasTeamAccessToProject(userId: number, projectId: numb
         teamId: teams.id,
         teamName: teams.name
       })
-      .from(projectTeams)
-      .innerJoin(teamMembers, eq(projectTeams.teamId, teamMembers.teamId))
-      .innerJoin(teams, eq(projectTeams.teamId, teams.id))
+      .from(teams)
+      .innerJoin(teamMembers, eq(teams.id, teamMembers.teamId))
       .where(and(
-        eq(projectTeams.projectId, projectId),
+        eq(teams.projectId, projectId),
         eq(teamMembers.userId, userId)
       ))
       .limit(1);
@@ -48,10 +47,9 @@ export async function getUserTeamProjects(userId: number) {
         teamName: teams.name,
         userRole: teamMembers.role
       })
-      .from(projectTeams)
-      .innerJoin(teamMembers, eq(projectTeams.teamId, teamMembers.teamId))
-      .innerJoin(teams, eq(projectTeams.teamId, teams.id))
-      .innerJoin(projects, eq(projectTeams.projectId, projects.id))
+      .from(teams)
+      .innerJoin(teamMembers, eq(teams.id, teamMembers.teamId))
+      .innerJoin(projects, eq(teams.projectId, projects.id))
       .where(and(
         eq(teamMembers.userId, userId),
         eq(projects.archived, false)
@@ -144,11 +142,10 @@ export async function userIsTeamLeadForProject(userId: number, projectId: number
         teamId: teams.id,
         teamName: teams.name
       })
-      .from(projectTeams)
-      .innerJoin(teamMembers, eq(projectTeams.teamId, teamMembers.teamId))
-      .innerJoin(teams, eq(projectTeams.teamId, teams.id))
+      .from(teams)
+      .innerJoin(teamMembers, eq(teams.id, teamMembers.teamId))
       .where(and(
-        eq(projectTeams.projectId, projectId),
+        eq(teams.projectId, projectId),
         eq(teamMembers.userId, userId),
         eq(teamMembers.role, 'lead')
       ))

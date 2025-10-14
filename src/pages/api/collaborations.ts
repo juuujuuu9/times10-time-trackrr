@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../db';
-import { teams, teamMembers as teamMembersTable, projects, projectTeams, clients } from '../../db/schema';
+import { teams, teamMembers as teamMembersTable, projects, clients } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getSessionUser } from '../../utils/session';
 
@@ -36,8 +36,7 @@ export const GET: APIRoute = async (context) => {
       })
       .from(teams)
       .innerJoin(teamMembersTable, eq(teamMembersTable.teamId, teams.id))
-      .leftJoin(projectTeams, eq(projectTeams.teamId, teams.id))
-      .leftJoin(projects, eq(projects.id, projectTeams.projectId))
+      .leftJoin(projects, eq(projects.id, teams.projectId))
       .leftJoin(clients, eq(clients.id, projects.clientId))
       .where(and(
         eq(teamMembersTable.userId, currentUser.id),
@@ -192,13 +191,10 @@ export const POST: APIRoute = async (context) => {
       console.log('No team members to add');
     }
 
-    // Create the project-team assignment
-    await db.insert(projectTeams).values({
-      projectId: projectId,
-      teamId: collaborationId,
-      assignedBy: currentUser.id,
-      assignedAt: new Date()
-    });
+    // Update team with project assignment (direct relationship)
+    await db.update(teams).set({
+      projectId: projectId
+    }).where(eq(teams.id, collaborationId));
 
     return new Response(JSON.stringify({
       success: true,
