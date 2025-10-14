@@ -47,11 +47,11 @@ try {
       t.created_at, 
       t.updated_at, 
       t.archived,
+      t.project_id,
       c.id as client_id,
       c.name as client_name
     FROM teams t
-    LEFT JOIN project_teams pt ON t.id = pt.team_id
-    LEFT JOIN projects p ON pt.project_id = p.id
+    LEFT JOIN projects p ON t.project_id = p.id
     LEFT JOIN clients c ON p.client_id = c.id
     WHERE t.archived = false 
     ORDER BY c.name ASC, t.created_at DESC
