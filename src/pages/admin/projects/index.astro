@@ -51,9 +51,6 @@ const projectsWithCollaborations = allProjects.map(project => ({
   collaborationName: collaborationMap.get(project.id)?.collaborationName || null,
 }));
 
-// Debug: Log collaboration data
-console.log('DEBUG: Projects with collaborations:', projectsWithCollaborations.filter(p => p.collaborationId).map(p => ({ id: p.id, name: p.name, collabId: p.collaborationId })));
-
 // Add default values for taskCount and totalHours to avoid complex queries
 const projectStats = projectsWithCollaborations.map((project) => ({
   ...project,
@@ -3025,5 +3022,3 @@ const allClients = await db.select().from(clients).where(eq(clients.archived, fa
     });
   </script>
 </AdminLayout> // Cache bust: Tue Oct 14 12:59:56 PDT 2025
-// Force complete rebuild: $(date +%s)
-// This should fix the team ID 4 redirect issue
