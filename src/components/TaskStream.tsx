@@ -65,25 +65,32 @@ const TaskStream: React.FC<TaskStreamProps> = ({
   // Load posts from API
   const loadPosts = useCallback(async () => {
     try {
-      console.log('Loading posts for collaboration:', collaborationId, 'task:', taskId);
+      console.log('🔄 Loading posts for collaboration:', collaborationId, 'task:', taskId);
       setLoading(true);
       const url = `/api/collaborations/${collaborationId}/discussions?taskId=${taskId}`;
-      console.log('Fetching from URL:', url);
+      console.log('🌐 Fetching from URL:', url);
       
       const response = await fetch(url);
-      console.log('API response status:', response.status);
+      console.log('📡 API response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       
       const data = await response.json();
-      console.log('API response data:', data);
+      console.log('📊 API response data:', data);
       
       if (data.success) {
-        setPosts(data.data || []);
-        console.log('Posts loaded:', data.data?.length || 0);
+        const newPosts = data.data || [];
+        setPosts(newPosts);
+        console.log('✅ Posts loaded successfully:', newPosts.length, 'posts');
       } else {
-        console.error('Failed to load posts:', data.message);
+        console.error('❌ Failed to load posts:', data.message);
+        alert('Failed to load posts: ' + (data.message || 'Unknown error'));
       }
     } catch (error) {
-      console.error('Error loading posts:', error);
+      console.error('❌ Error loading posts:', error);
+      alert('Error loading posts: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -144,6 +151,24 @@ const TaskStream: React.FC<TaskStreamProps> = ({
   // Handle insight creation with mentions
   const handleCreateInsight = async (content: string, mentionedUsers: User[]) => {
     try {
+      // Optimistically add the insight to the UI immediately
+      const optimisticInsight = {
+        id: Date.now(), // Temporary ID
+        type: 'insight' as const,
+        content,
+        author: {
+          id: currentUser.id,
+          name: currentUser.name,
+          email: currentUser.email,
+          avatar: currentUser.avatar || ''
+        },
+        createdAt: new Date().toISOString(),
+        likes: 0,
+        comments: []
+      };
+      
+      setPosts(prevPosts => [optimisticInsight, ...prevPosts]);
+      
       const response = await fetch(`/api/collaborations/${collaborationId}/discussions`, {
         method: 'POST',
         headers: {
@@ -160,16 +185,24 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       const data = await response.json();
       
       if (data.success) {
-        await loadPosts(); // Reload posts
+        console.log('✅ Insight created successfully, reloading posts...');
+        // Reload posts to get the latest data with the real ID
+        await loadPosts();
         // Dispatch custom event for real-time updates
         window.dispatchEvent(new CustomEvent('taskStreamUpdate', {
           detail: { taskId, collaborationId }
         }));
       } else {
-        console.error('Failed to create insight:', data.message);
+        console.error('❌ Failed to create insight:', data.error || data.message);
+        // Remove the optimistic update on failure
+        setPosts(prevPosts => prevPosts.filter(post => post.id !== optimisticInsight.id));
+        alert('Failed to create insight: ' + (data.error || data.message || 'Unknown error'));
       }
     } catch (error) {
-      console.error('Error creating insight:', error);
+      console.error('❌ Error creating insight:', error);
+      // Remove the optimistic update on error
+      setPosts(prevPosts => prevPosts.filter(post => post.id !== Date.now()));
+      alert('Error creating insight: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
@@ -329,13 +362,14 @@ const TaskStream: React.FC<TaskStreamProps> = ({
             const typeStyle = getTypeStyling(post.type);
             
             return (
-              <div key={post.id} className="bg-white rounded-xl border border-gray-200 p-4">
+              <div key={post.id} className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-start space-x-3">
-                  <div className={`w-10 h-10 ${typeStyle.bg} rounded-full flex items-center justify-center text-sm font-medium ${typeStyle.text} flex-shrink-0`}>
-                    {getUserInitials(post.author)}
-                  </div>
+                  
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-2">
+                      <div className={`w-10 h-10 ${typeStyle.bg} rounded-full flex items-center justify-center text-sm font-medium ${typeStyle.text} flex-shrink-0`}>
+                        {getUserInitials(post.author)}
+                      </div>
                       <span className="font-medium text-gray-900">{post.author.name}</span>
                       <span className="text-sm text-gray-500">{formatTimeAgo(post.createdAt)}</span>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${typeStyle.bg} ${typeStyle.text}`}>
@@ -343,7 +377,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                       </span>
                     </div>
                     
-                    <p className="text-gray-700 mb-3">{post.content}</p>
+                    <p className="text-gray-700 mb-6 mt-6 text-lg ">{post.content}</p>
                     
                     {/* Media Preview */}
                     {post.mediaUrl && (

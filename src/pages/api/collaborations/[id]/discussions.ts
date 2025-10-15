@@ -134,6 +134,13 @@ export const GET: APIRoute = async (context) => {
     }));
     
     console.log('📤 Returning formatted discussions:', formattedDiscussions.length);
+    if (formattedDiscussions.length > 0) {
+      console.log('📋 Sample formatted discussion:', {
+        id: formattedDiscussions[0].id,
+        content: formattedDiscussions[0].content,
+        author: formattedDiscussions[0].author?.name || 'No author'
+      });
+    }
 
     return new Response(JSON.stringify({
       success: true,
@@ -228,8 +235,27 @@ export const POST: APIRoute = async (context) => {
     }
 
     // Create the discussion in the database
-    const newDiscussion = await db.insert(taskDiscussions).values({
+    console.log('💾 Creating discussion with data:', {
       taskId: taskId ? parseInt(taskId) : null,
+      userId: currentUser.id,
+      content: content.trim(),
+      parentId: null,
+      archived: false
+    });
+    
+    // Ensure taskId is provided since it's required in the schema
+    if (!taskId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Task ID is required for creating discussions'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    const newDiscussion = await db.insert(taskDiscussions).values({
+      taskId: parseInt(taskId),
       userId: currentUser.id,
       content: content.trim(),
       parentId: null,
@@ -237,6 +263,8 @@ export const POST: APIRoute = async (context) => {
       createdAt: new Date(),
       updatedAt: new Date()
     }).returning();
+    
+    console.log('✅ Discussion created:', newDiscussion);
 
     // Get the created discussion with author info
     const createdDiscussion = await db.query.taskDiscussions.findFirst({
@@ -297,10 +325,16 @@ export const POST: APIRoute = async (context) => {
     });
 
   } catch (error) {
-    console.error('Error creating discussion:', error);
+    console.error('❌ Error creating discussion:', error);
+    console.error('❌ Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
+    });
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to create discussion'
+      error: 'Failed to create discussion',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
