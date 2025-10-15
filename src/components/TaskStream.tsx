@@ -62,6 +62,47 @@ const TaskStream: React.FC<TaskStreamProps> = ({
   const [newComment, setNewComment] = useState<{ [postId: number]: string }>({});
   const [showAddInsightModal, setShowAddInsightModal] = useState(false);
 
+  // Notification banners (in-DOM)
+  // NOTE: Search for "Notification banners (in-DOM)" to find this system quickly.
+  const [notifications, setNotifications] = useState<{ id: number; type: 'success' | 'error'; text: string }[]>([]);
+  const addNotification = useCallback((type: 'success' | 'error', text: string) => {
+    const id = Date.now();
+    setNotifications(prev => [...prev, { id, type, text }]);
+    window.setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }, 4000);
+  }, []);
+  const dismissNotification = (id: number) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  // Deletion confirmation (in-DOM)
+  // NOTE: Search for "Deletion confirmation (in-DOM)" to find this system quickly.
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const requestDeletePost = (postId: number) => {
+    setPendingDeleteId(postId);
+  };
+  const cancelDeletePost = () => setPendingDeleteId(null);
+
+  // Inline post messages (per-post)
+  // NOTE: Search for "Inline post messages (per-post)" to find this system quickly.
+  const [postMessages, setPostMessages] = useState<{ [postId: number]: { type: 'success' | 'error'; text: string } | undefined }>({});
+  const setInlinePostMessage = (postId: number, type: 'success' | 'error', text: string, autoHideMs = 3000) => {
+    setPostMessages(prev => ({ ...prev, [postId]: { type, text } }));
+    if (autoHideMs > 0) {
+      window.setTimeout(() => {
+        setPostMessages(prev => {
+          const next = { ...prev };
+          delete next[postId];
+          return next;
+        });
+      }, autoHideMs);
+    }
+  };
+
+  // Track deletion in progress to hide trash icon while deleting
+  const [deletingPostId, setDeletingPostId] = useState<number | null>(null);
+
   // Load posts from API
   const loadPosts = useCallback(async () => {
     try {
@@ -86,11 +127,11 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         console.log('✅ Posts loaded successfully:', newPosts.length, 'posts');
       } else {
         console.error('❌ Failed to load posts:', data.message);
-        alert('Failed to load posts: ' + (data.message || 'Unknown error'));
+        addNotification('error', 'Failed to load posts: ' + (data.message || 'Unknown error'));
       }
     } catch (error) {
       console.error('❌ Error loading posts:', error);
-      alert('Error loading posts: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      addNotification('error', 'Error loading posts: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -196,13 +237,13 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         console.error('❌ Failed to create insight:', data.error || data.message);
         // Remove the optimistic update on failure
         setPosts(prevPosts => prevPosts.filter(post => post.id !== optimisticInsight.id));
-        alert('Failed to create insight: ' + (data.error || data.message || 'Unknown error'));
+        addNotification('error', 'Failed to create insight: ' + (data.error || data.message || 'Unknown error'));
       }
     } catch (error) {
       console.error('❌ Error creating insight:', error);
       // Remove the optimistic update on error
       setPosts(prevPosts => prevPosts.filter(post => post.id !== Date.now()));
-      alert('Error creating insight: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      addNotification('error', 'Error creating insight: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
@@ -254,6 +295,46 @@ const TaskStream: React.FC<TaskStreamProps> = ({
     }
   };
 
+  // Handle delete post
+  const handleDeletePost = async (postId: number) => {
+    const target = posts.find(p => p.id === postId);
+    if (!target) return;
+    // Hide inline controls immediately after user confirms delete
+    setPendingDeleteId(null);
+
+    // Keep page position; show inline success first, then remove after a delay
+    const previousPosts = posts;
+    setInlinePostMessage(postId, 'success', 'Deleting...');
+
+    try {
+      const response = await fetch(`/api/collaborations/${collaborationId}/discussions/${postId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || data.message || 'Failed to delete');
+      }
+      // Notify others
+      window.dispatchEvent(new CustomEvent('taskStreamUpdate', {
+        detail: { taskId, collaborationId }
+      }));
+      setInlinePostMessage(postId, 'success', 'Post deleted');
+      // Remove the post shortly after showing success so layout doesn't jump immediately
+      window.setTimeout(() => {
+        setPosts(prev => prev.filter(p => p.id !== postId));
+        if (deletingPostId === postId) setDeletingPostId(null);
+      }, 500);
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      // Keep list as-is and show inline error
+      setPosts(previousPosts);
+      setInlinePostMessage(postId, 'error', 'Failed to delete post.');
+      if (deletingPostId === postId) setDeletingPostId(null);
+    }
+    setPendingDeleteId(null);
+  };
+
   // Filter posts based on current filters
   const filteredPosts = posts.filter(post => {
     if (filter !== 'all' && post.type !== filter) return false;
@@ -300,6 +381,32 @@ const TaskStream: React.FC<TaskStreamProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Notification banners (in-DOM) */}
+      {/* NOTE: Search for "Notification banners (in-DOM)" to find this system quickly. */}
+      <div
+        role="status"
+        aria-live="polite"
+        className="space-y-2"
+      >
+        {notifications.map(n => (
+          <div
+            key={n.id}
+            className={`flex items-start justify-between rounded-md px-4 py-2 border ${n.type === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-800'}`}
+          >
+            <span className="text-sm">{n.text}</span>
+            <button
+              onClick={() => dismissNotification(n.id)}
+              className="ml-4 text-xs opacity-70 hover:opacity-100"
+              title="Dismiss"
+              aria-label="Dismiss notification"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Moved per-post deletion confirmation inline under each post */}
       {/* Post Creation Area */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -362,19 +469,23 @@ const TaskStream: React.FC<TaskStreamProps> = ({
             const typeStyle = getTypeStyling(post.type);
             
             return (
-              <div key={post.id} className="bg-white rounded-xl border border-gray-200 p-6">
+              <div key={post.id} className="bg-white rounded-xl border border-gray-200 p-4 pt-4 relative">
                 <div className="flex items-start space-x-3">
                   
                   <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <div className={`w-10 h-10 ${typeStyle.bg} rounded-full flex items-center justify-center text-sm font-medium ${typeStyle.text} flex-shrink-0`}>
-                        {getUserInitials(post.author)}
+                    <div className="flex items-start space-x-2 mb-2 justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className={`w-10 h-10 ${typeStyle.bg} rounded-full flex items-center justify-center text-sm font-medium ${typeStyle.text} flex-shrink-0`}>
+                          {getUserInitials(post.author)}
+                        </div>
+                        <span className="font-medium text-gray-900">{post.author.name}</span>
+                        <span className="text-sm text-gray-500">{formatTimeAgo(post.createdAt)}</span>
                       </div>
-                      <span className="font-medium text-gray-900">{post.author.name}</span>
-                      <span className="text-sm text-gray-500">{formatTimeAgo(post.createdAt)}</span>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${typeStyle.bg} ${typeStyle.text}`}>
-                        {typeStyle.icon} {post.type.charAt(0).toUpperCase() + post.type.slice(1)}
-                      </span>
+                      <div className="flex items-center space-x-2">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${typeStyle.bg} ${typeStyle.text}`}>
+                          {typeStyle.icon} {post.type.charAt(0).toUpperCase() + post.type.slice(1)}
+                        </span>
+                      </div>
                     </div>
                     
                     <p className="text-gray-700 mb-6 mt-6 text-lg ">{post.content}</p>
@@ -457,6 +568,13 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                       </button>
                     </div>
                     
+                    {/* Inline post messages (per-post) */}
+                    {postMessages[post.id] && (
+                      <div className={`mt-3 rounded-md px-3 py-2 text-sm border ${postMessages[post.id]?.type === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-800'}`}>
+                        {postMessages[post.id]?.text}
+                      </div>
+                    )}
+
                     {/* Comments */}
                     {post.comments && post.comments.length > 0 && (
                       <div className="mt-4 space-y-3">
@@ -499,6 +617,43 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                     )}
                   </div>
                 </div>
+                {post.author.id === currentUser.id && (
+                  <div className="absolute bottom-3 right-3 flex items-center space-x-2">
+                    {pendingDeleteId === post.id ? (
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={cancelDeletePost}
+                          className="px-2 py-0.5 text-xs rounded border border-gray-300 text-gray-700 hover:bg-gray-100"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => {
+                            setDeletingPostId(post.id);
+                            handleDeletePost(post.id);
+                          }}
+                          className="px-2 py-0.5 text-xs rounded border border-red-600 bg-red-600 text-white hover:bg-red-700"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ) : (
+                      deletingPostId !== post.id ? (
+                      <button
+                        type="button"
+                        aria-label="Delete post"
+                        title="Delete post"
+                        onClick={() => requestDeletePost(post.id)}
+                        className="text-gray-400 hover:text-red-600 transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                      </button>
+                      ) : null
+                    )}
+                  </div>
+                )}
               </div>
             );
           })
