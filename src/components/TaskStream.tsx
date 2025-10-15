@@ -107,6 +107,11 @@ const TaskStream: React.FC<TaskStreamProps> = ({
   // Track per-post reply composer visibility
   const [replyOpen, setReplyOpen] = useState<{ [postId: number]: boolean }>({});
 
+  // Function to close all reply inputs
+  const closeAllReplyInputs = useCallback(() => {
+    setReplyOpen({});
+  }, []);
+
   const handleReplyClick = (item: { id: number; author: User }) => {
     const authorHandle = getUserMentionHandle(item.author);
     const mentionPrefix = `@${authorHandle} `;
@@ -158,6 +163,22 @@ const TaskStream: React.FC<TaskStreamProps> = ({
   useEffect(() => {
     loadPosts();
   }, [loadPosts]);
+
+  // Handle click outside to close reply inputs
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      // Check if click is outside any reply input
+      if (!target.closest('.reply-input-container')) {
+        closeAllReplyInputs();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [closeAllReplyInputs]);
 
   // Listen for real-time updates
   useEffect(() => {
@@ -285,6 +306,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       
       if (data.success) {
         setNewComment(prev => ({ ...prev, [targetId]: '' }));
+        setReplyOpen(prev => ({ ...prev, [targetId]: false })); // Close the reply input
         await loadPosts(); // Reload posts
       } else {
         console.error('Failed to create comment:', data.message);
@@ -334,34 +356,6 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       if (deletingPostId === postId) setDeletingPostId(null);
     }
     setPendingDeleteId(null);
-  };
-
-  // Handle delete comment
-  const handleDeleteComment = async (commentId: number) => {
-    try {
-      const response = await fetch(`/api/collaborations/${collaborationId}/discussions/${commentId}/comments`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        // Reload posts to get updated comments
-        await loadPosts();
-        // Dispatch custom event for real-time updates
-        window.dispatchEvent(new CustomEvent('taskStreamUpdate', {
-          detail: { taskId, collaborationId }
-        }));
-        addNotification('success', 'Comment deleted successfully');
-      } else {
-        console.error('Failed to delete comment:', data.message);
-        addNotification('error', 'Failed to delete comment: ' + (data.message || 'Unknown error'));
-      }
-    } catch (error) {
-      console.error('Error deleting comment:', error);
-      addNotification('error', 'Error deleting comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    }
   };
 
   // Filter posts based on current filters
@@ -649,6 +643,33 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                         </button>
                       )}
                     </div>
+
+                    {/* Reply input for top-level posts */}
+                    {replyOpen[post.id] && (
+                      <div className="mt-4 reply-input-container">
+                        <div className="flex items-start space-x-3">
+                          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 flex-shrink-0">
+                            {getUserInitials(currentUser)}
+                          </div>
+                          <div className="flex-1 flex items-center space-x-2">
+                            <input
+                              type="text"
+                              placeholder="Write a reply..."
+                              value={newComment[post.id] || ''}
+                              onChange={(e) => setNewComment(prev => ({ ...prev, [post.id]: e.target.value }))}
+                              onKeyDown={(e) => e.key === 'Enter' && handleSubmitComment(post.id)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            />
+                            <button
+                              onClick={() => handleSubmitComment(post.id)}
+                              className="px-3 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
+                            >
+                              Post
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     
                     {/* Inline post messages (per-post) */}
                     {postMessages[post.id] && (
@@ -660,7 +681,9 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                     {/* Comments */}
                     {post.comments && post.comments.length > 0 && (
                       <div className="mt-4 space-y-4">
-                        {post.comments.map((comment) => (
+                        {post.comments
+                          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                          .map((comment) => (
                           <div key={comment.id} className="relative flex items-start space-x-3">
                             {/* <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 flex-shrink-0 mt-0.5">
                               {getUserInitials(comment.author)}
@@ -681,21 +704,41 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                     Reply
                                   </button>
                                 )}
-                                {comment.author.id === currentUser.id && (
-                                  <button
-                                    onClick={() => handleDeleteComment(comment.id)}
-                                    className="hover:text-red-600 transition-colors"
-                                    title="Delete comment"
-                                  >
-                                    Delete
-                                  </button>
-                                )}
                               </div>
+
+                              {/* Comment Input (visible only when Reply opened for this comment) */}
+                              {replyOpen[comment.id] && (
+                                <div className="mt-2 reply-input-container">
+                                  <div className="flex items-start space-x-3">
+                                    <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 flex-shrink-0">
+                                      {getUserInitials(currentUser)}
+                                    </div>
+                                    <div className="flex-1 flex items-center space-x-2">
+                                      <input 
+                                        type="text" 
+                                        placeholder="Write a reply..." 
+                                        value={newComment[comment.id] || ''}
+                                        onChange={(e) => setNewComment(prev => ({ ...prev, [comment.id]: e.target.value }))}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleSubmitComment(comment.id)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                      />
+                                      <button
+                                        onClick={() => handleSubmitComment(comment.id)}
+                                        className="px-3 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
+                                      >
+                                        Post
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
 
                               {/* Child replies (second level only) */}
                               {comment.replies && comment.replies.length > 0 && (
                                 <div className="mt-3 space-y-3">
-                                  {comment.replies.map((child) => (
+                                  {comment.replies
+                                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                                    .map((child) => (
                                     <div key={child.id} className="flex items-start space-x-3">
                                       {/* <div className="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center text-[10px] font-medium text-gray-600 flex-shrink-0 mt-0.5">
                                         {getUserInitials(child.author)}
@@ -706,80 +749,15 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                           <span className="text-xs text-gray-500">{formatTimeAgo(child.createdAt)}</span>
                                         </div>
                                         <p className="text-gray-700 text-sm">{renderContentWithMentions(child.content)}</p>
-                                        {/* Delete button for child replies */}
-                                        {child.author.id === currentUser.id && (
-                                          <div className="mt-2">
-                                            <button
-                                              onClick={() => handleDeleteComment(child.id)}
-                                              className="text-xs text-gray-600 hover:text-red-600 transition-colors"
-                                              title="Delete reply"
-                                            >
-                                              Delete
-                                            </button>
-                                          </div>
-                                        )}
+                                        {/* No Reply button for second-level to avoid deeper nesting */}
                                       </div>
                                     </div>
                                   ))}
                                 </div>
                               )}
-
-                              {/* Comment Input (visible only when Reply opened for this comment) */}
-                              {replyOpen[comment.id] && (
-                                <div className="mt-2 flex items-start space-x-3">
-                                  <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 flex-shrink-0">
-                                    {getUserInitials(currentUser)}
-                                  </div>
-                                  <div className="flex-1 flex items-center space-x-2">
-                                    <input 
-                                      type="text" 
-                                      placeholder="Write a reply..." 
-                                      value={newComment[comment.id] || ''}
-                                      onChange={(e) => setNewComment(prev => ({ ...prev, [comment.id]: e.target.value }))}
-                                      onKeyPress={(e) => e.key === 'Enter' && handleSubmitComment(comment.id)}
-                                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                                    />
-                                    <button
-                                      onClick={() => handleSubmitComment(comment.id)}
-                                      className="px-3 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
-                                    >
-                                      Post
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
                             </div>
                           </div>
                         ))}
-                        
-                        
-                      </div>
-                    )}
-
-                    {/* Standalone reply input when there are no comments yet */}
-                    {(!post.comments || post.comments.length === 0) && replyOpen[post.id] && (
-                      <div className="mt-4">
-                        <div className="flex items-start space-x-3">
-                          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 flex-shrink-0">
-                            {getUserInitials(currentUser)}
-                          </div>
-                          <div className="flex-1 flex items-center space-x-2">
-                            <input
-                              type="text"
-                              placeholder="Write a reply..."
-                              value={newComment[post.id] || ''}
-                              onChange={(e) => setNewComment(prev => ({ ...prev, [post.id]: e.target.value }))}
-                              onKeyPress={(e) => e.key === 'Enter' && handleSubmitComment(post.id)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                            />
-                            <button
-                              onClick={() => handleSubmitComment(post.id)}
-                              className="px-3 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
-                            >
-                              Post
-                            </button>
-                          </div>
-                        </div>
                       </div>
                     )}
                   </div>
