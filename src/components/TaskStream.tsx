@@ -4,6 +4,8 @@ import AddInsightModal from './AddInsightModal';
 import AddMediaModal from './AddMediaModal';
 import LinkDropModal from './LinkDropModal';
 import LinkPreview from './LinkPreview';
+import SubtaskModal from './SubtaskModal';
+import SubtaskCard from './SubtaskCard';
 
 interface User {
   id: number;
@@ -29,12 +31,13 @@ interface Post {
     url: string;
     image?: string;
   };
-  subtask?: {
-    id: number;
-    title: string;
-    description: string;
-    status: string;
-  };
+  subtasks?: {
+    id: string;
+    name: string;
+    priority: 'low' | 'medium' | 'high';
+    assignee?: string;
+    dueDate?: string;
+  }[];
 }
 
 interface Comment {
@@ -70,6 +73,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
   const [showAddInsightModal, setShowAddInsightModal] = useState(false);
   const [showAddMediaModal, setShowAddMediaModal] = useState(false);
   const [showLinkDropModal, setShowLinkDropModal] = useState(false);
+  const [showSubtaskModal, setShowSubtaskModal] = useState(false);
 
   // Notification banners (in-DOM)
   // NOTE: Search for "Notification banners (in-DOM)" to find this system quickly.
@@ -486,6 +490,79 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       // Remove the optimistic update on error
       setPosts(prevPosts => prevPosts.filter(post => post.id !== Date.now()));
       addNotification('error', 'Error sharing link: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
+  // Handle subtask creation
+  const handleCreateSubtasks = async (subtasks: { name: string; priority: 'low' | 'medium' | 'high'; assignee?: string; dueDate?: string }[]) => {
+    try {
+      // Optimistically add the subtasks to the UI immediately
+      const optimisticSubtasks = {
+        id: Date.now(), // Temporary ID
+        type: 'subtask' as const,
+        content: `Created ${subtasks.length} subtask${subtasks.length !== 1 ? 's' : ''}`,
+        author: currentUser,
+        createdAt: new Date().toISOString(),
+        likes: 0,
+        comments: [],
+        subtasks: subtasks.map((subtask, index) => ({
+          id: `temp-${Date.now()}-${index}`,
+          name: subtask.name,
+          priority: subtask.priority,
+          assignee: subtask.assignee,
+          dueDate: subtask.dueDate
+        }))
+      };
+
+      // Add optimistic update
+      setPosts(prevPosts => [optimisticSubtasks, ...prevPosts]);
+
+      const discussionData = {
+        type: 'subtask',
+        content: `Created ${subtasks.length} subtask${subtasks.length !== 1 ? 's' : ''}`,
+        taskId: taskId,
+        subtaskData: {
+          subtasks: subtasks.map((subtask, index) => ({
+            id: `temp-${Date.now()}-${index}`,
+            name: subtask.name,
+            priority: subtask.priority,
+            assignee: subtask.assignee,
+            dueDate: subtask.dueDate
+          }))
+        }
+      };
+
+      const response = await fetch(`/api/collaborations/${collaborationId}/discussions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(discussionData),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('✅ Subtasks created successfully, reloading posts...');
+        // Reload posts to get the latest data with the real ID
+        await loadPosts();
+        // Dispatch custom event for real-time updates
+        window.dispatchEvent(new CustomEvent('taskStreamUpdate', {
+          detail: { taskId, collaborationId }
+        }));
+        addNotification('success', `${subtasks.length} subtask${subtasks.length !== 1 ? 's' : ''} created successfully!`);
+      } else {
+        console.error('❌ Failed to create subtasks:', data.error || data.message);
+        // Remove the optimistic update on failure
+        setPosts(prevPosts => prevPosts.filter(post => post.id !== optimisticSubtasks.id));
+        addNotification('error', 'Failed to create subtasks: ' + (data.error || data.message || 'Unknown error'));
+      }
+      
+    } catch (error) {
+      console.error('❌ Error creating subtasks:', error);
+      // Remove the optimistic update on error
+      setPosts(prevPosts => prevPosts.filter(post => post.id !== Date.now()));
+      addNotification('error', 'Error creating subtasks: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
@@ -1169,7 +1246,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
           </button>
           
           <button 
-            onClick={() => handleCreatePost('subtask', 'Creating subtask...')}
+            onClick={() => setShowSubtaskModal(true)}
             className="flex items-center justify-center space-x-3 px-6 py-4 bg-green-50 hover:bg-green-100 text-green-700 rounded-xl transition-colors border border-green-200"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1357,21 +1434,10 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                       </div>
                     )}
                     
-                    {/* Subtask Preview */}
-                    {post.subtask && (
-                      <div className="bg-gray-50 rounded-lg p-3 mb-3">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-4 h-4 border-2 border-gray-300 rounded flex items-center justify-center">
-                            <svg className="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                          </div>
-                          <span className="font-medium text-gray-900">{post.subtask.title}</span>
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                            {post.subtask.status}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-600 mt-1">{post.subtask.description}</p>
+                    {/* Subtasks Display */}
+                    {post.subtasks && post.subtasks.length > 0 && (
+                      <div className="mb-3">
+                        <SubtaskCard subtasks={post.subtasks} />
                       </div>
                     )}
                     
@@ -1648,6 +1714,13 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         onAddLink={handleCreateLink}
         teamMembers={teamMembers}
         currentUser={currentUser}
+      />
+
+      {/* Subtask Modal */}
+      <SubtaskModal
+        isOpen={showSubtaskModal}
+        onClose={() => setShowSubtaskModal(false)}
+        onCreateSubtasks={handleCreateSubtasks}
       />
     </div>
   );
