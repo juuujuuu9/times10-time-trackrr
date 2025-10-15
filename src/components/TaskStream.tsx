@@ -37,6 +37,7 @@ interface Comment {
   author: User;
   createdAt: string;
   likes: number;
+  replies?: Comment[];
 }
 
 interface TaskStreamProps {
@@ -102,6 +103,23 @@ const TaskStream: React.FC<TaskStreamProps> = ({
 
   // Track deletion in progress to hide trash icon while deleting
   const [deletingPostId, setDeletingPostId] = useState<number | null>(null);
+
+  // Track per-post reply composer visibility
+  const [replyOpen, setReplyOpen] = useState<{ [postId: number]: boolean }>({});
+
+  const handleReplyClick = (item: { id: number; author: User }) => {
+    const authorHandle = getUserMentionHandle(item.author);
+    const mentionPrefix = `@${authorHandle} `;
+    setReplyOpen(prev => ({ ...prev, [item.id]: true }));
+    setNewComment(prev => {
+      const existing = prev[item.id] || '';
+      // Ensure the content starts with the mention to the author
+      const nextValue = existing.startsWith(mentionPrefix)
+        ? existing
+        : `${mentionPrefix}${existing.replace(/^@\w+\s+/, '')}`;
+      return { ...prev, [item.id]: nextValue };
+    });
+  };
 
   // Load posts from API
   const loadPosts = useCallback(async () => {
@@ -248,12 +266,12 @@ const TaskStream: React.FC<TaskStreamProps> = ({
   };
 
   // Handle comment submission
-  const handleSubmitComment = async (postId: number) => {
-    const commentContent = newComment[postId];
+  const handleSubmitComment = async (targetId: number) => {
+    const commentContent = newComment[targetId];
     if (!commentContent?.trim()) return;
 
     try {
-      const response = await fetch(`/api/collaborations/${collaborationId}/discussions/${postId}/comments`, {
+      const response = await fetch(`/api/collaborations/${collaborationId}/discussions/${targetId}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -266,7 +284,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       const data = await response.json();
       
       if (data.success) {
-        setNewComment(prev => ({ ...prev, [postId]: '' }));
+        setNewComment(prev => ({ ...prev, [targetId]: '' }));
         await loadPosts(); // Reload posts
       } else {
         console.error('Failed to create comment:', data.message);
@@ -276,24 +294,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
     }
   };
 
-  // Handle like
-  const handleLike = async (postId: number) => {
-    try {
-      const response = await fetch(`/api/collaborations/${collaborationId}/discussions/${postId}/like`, {
-        method: 'POST',
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        await loadPosts(); // Reload posts
-      } else {
-        console.error('Failed to like post:', data.message);
-      }
-    } catch (error) {
-      console.error('Error liking post:', error);
-    }
-  };
+  // (Like action removed)
 
   // Handle delete post
   const handleDeletePost = async (postId: number) => {
@@ -608,27 +609,17 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                     
                     {/* Post Actions */}
                     <div className="flex items-center space-x-4 text-sm text-gray-600">
-                      <button 
-                        onClick={() => handleLike(post.id)}
-                        className="flex items-center space-x-1 hover:text-blue-600 transition-colors"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-                        </svg>
-                        <span>{post.likes}</span>
-                      </button>
-                      <button className="flex items-center space-x-1 hover:text-blue-600 transition-colors">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-                        </svg>
-                        <span>Reply</span>
-                      </button>
-                      <button className="flex items-center space-x-1 hover:text-blue-600 transition-colors">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
-                        </svg>
-                        <span>Share</span>
-                      </button>
+                      {!replyOpen[post.id] && (
+                        <button
+                          onClick={() => handleReplyClick(post)}
+                          className="flex items-center space-x-1 hover:text-blue-600 transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                          </svg>
+                          <span>Reply</span>
+                        </button>
+                      )}
                     </div>
                     
                     {/* Inline post messages (per-post) */}
@@ -640,47 +631,112 @@ const TaskStream: React.FC<TaskStreamProps> = ({
 
                     {/* Comments */}
                     {post.comments && post.comments.length > 0 && (
-                      <div className="mt-4 space-y-3">
+                      <div className="mt-4 space-y-4">
                         {post.comments.map((comment) => (
-                          <div key={comment.id} className="flex items-start space-x-3">
-                            <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 flex-shrink-0">
+                          <div key={comment.id} className="relative flex items-start space-x-3">
+                            {/* <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 flex-shrink-0 mt-0.5">
                               {getUserInitials(comment.author)}
-                            </div>
-                            <div className="flex-1">
+                            </div> */}
+                            <div className="flex-1 bg-gray-50 border border-gray-200 rounded-lg p-3">
                               <div className="flex items-center space-x-2 mb-1">
                                 <span className="font-medium text-gray-900 text-sm">{comment.author.name}</span>
                                 <span className="text-xs text-gray-500">{formatTimeAgo(comment.createdAt)}</span>
                               </div>
                               <p className="text-gray-700 text-sm">{renderContentWithMentions(comment.content)}</p>
+                              {/* First-level comment actions: enable Reply for first-level only */}
                               <div className="flex items-center space-x-3 mt-2 text-xs text-gray-600">
-                                <button className="hover:text-blue-600 transition-colors">Like</button>
-                                <button className="hover:text-blue-600 transition-colors">Reply</button>
+                                {!replyOpen[comment.id] && (
+                                  <button
+                                    onClick={() => handleReplyClick({ id: comment.id, author: comment.author })}
+                                    className="hover:text-blue-600 transition-colors"
+                                  >
+                                    Reply
+                                  </button>
+                                )}
                               </div>
+
+                              {/* Child replies (second level only) */}
+                              {comment.replies && comment.replies.length > 0 && (
+                                <div className="mt-3 space-y-3">
+                                  {comment.replies.map((child) => (
+                                    <div key={child.id} className="flex items-start space-x-3">
+                                      {/* <div className="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center text-[10px] font-medium text-gray-600 flex-shrink-0 mt-0.5">
+                                        {getUserInitials(child.author)}
+                                      </div> */}
+                                      <div className="flex-1 bg-white border border-gray-200 rounded-lg p-3">
+                                        <div className="flex items-center space-x-2 mb-1">
+                                          <span className="font-medium text-gray-900 text-sm">{child.author.name}</span>
+                                          <span className="text-xs text-gray-500">{formatTimeAgo(child.createdAt)}</span>
+                                        </div>
+                                        <p className="text-gray-700 text-sm">{renderContentWithMentions(child.content)}</p>
+                                        {/* No Reply button for second-level to avoid deeper nesting */}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Comment Input (visible only when Reply opened for this comment) */}
+                              {replyOpen[comment.id] && (
+                                <div className="mt-2 flex items-start space-x-3">
+                                  <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 flex-shrink-0">
+                                    {getUserInitials(currentUser)}
+                                  </div>
+                                  <div className="flex-1 flex items-center space-x-2">
+                                    <input 
+                                      type="text" 
+                                      placeholder="Write a reply..." 
+                                      value={newComment[comment.id] || ''}
+                                      onChange={(e) => setNewComment(prev => ({ ...prev, [comment.id]: e.target.value }))}
+                                      onKeyPress={(e) => e.key === 'Enter' && handleSubmitComment(comment.id)}
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                    />
+                                    <button
+                                      onClick={() => handleSubmitComment(comment.id)}
+                                      className="px-3 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
+                                    >
+                                      Post
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
                         ))}
                         
-                        {/* Comment Input */}
+                        
+                      </div>
+                    )}
+
+                    {/* Standalone reply input when there are no comments yet */}
+                    {(!post.comments || post.comments.length === 0) && replyOpen[post.id] && (
+                      <div className="mt-4">
                         <div className="flex items-start space-x-3">
                           <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 flex-shrink-0">
                             {getUserInitials(currentUser)}
                           </div>
-                          <div className="flex-1">
-                            <input 
-                              type="text" 
-                              placeholder="Write a reply..." 
+                          <div className="flex-1 flex items-center space-x-2">
+                            <input
+                              type="text"
+                              placeholder="Write a reply..."
                               value={newComment[post.id] || ''}
                               onChange={(e) => setNewComment(prev => ({ ...prev, [post.id]: e.target.value }))}
                               onKeyPress={(e) => e.key === 'Enter' && handleSubmitComment(post.id)}
                               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                             />
+                            <button
+                              onClick={() => handleSubmitComment(post.id)}
+                              className="px-3 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
+                            >
+                              Post
+                            </button>
                           </div>
                         </div>
                       </div>
                     )}
                   </div>
                 </div>
-                {post.author.id === currentUser.id && (
+                {post.author.id === currentUser.id && !replyOpen[post.id] && (
                   <div className="absolute bottom-3 right-3 flex items-center space-x-2">
                     {pendingDeleteId === post.id ? (
                       <div className="flex items-center space-x-2">

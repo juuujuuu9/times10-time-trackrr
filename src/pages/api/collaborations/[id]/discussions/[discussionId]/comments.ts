@@ -89,11 +89,11 @@ export const POST: APIRoute = async (context) => {
       updatedAt: new Date()
     }).returning();
 
-    // Get the created comment with author info
+    // Get the created comment with user info
     const createdComment = await db.query.taskDiscussions.findFirst({
       where: eq(taskDiscussions.id, (newComment as any)[0].id),
       with: {
-        author: true
+        user: true
       }
     });
 
@@ -107,10 +107,10 @@ export const POST: APIRoute = async (context) => {
         id: createdComment.id,
         content: createdComment.content,
         author: {
-          id: createdComment.author.id,
-          name: createdComment.author.name,
-          email: createdComment.author.email,
-          avatar: createdComment.author.avatar
+          id: createdComment.user.id,
+          name: createdComment.user.name,
+          email: createdComment.user.email,
+          avatar: createdComment.user.avatar
         },
         createdAt: createdComment.createdAt.toISOString(),
         likes: createdComment.likes || 0

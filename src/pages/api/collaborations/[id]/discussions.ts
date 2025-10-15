@@ -58,7 +58,7 @@ export const GET: APIRoute = async (context) => {
     let discussions: any[] = [];
     if (taskId) {
       console.log('🔍 Fetching discussions for task ID:', taskId);
-      // Get discussions for a specific task
+      // Get discussions for a specific task (flat list: parents and replies)
       discussions = await db.query.taskDiscussions.findMany({
         where: and(
           eq(taskDiscussions.taskId, parseInt(taskId)),
@@ -102,7 +102,7 @@ export const GET: APIRoute = async (context) => {
         discussions = [];
       } else {
         console.log('📊 Found task IDs for team:', taskIds);
-        // Get discussions for all tasks in this team's projects
+        // Get discussions for all tasks in this team's projects (flat list)
         discussions = await db.query.taskDiscussions.findMany({
           where: and(
             inArray(taskDiscussions.taskId, taskIds),
@@ -117,21 +117,71 @@ export const GET: APIRoute = async (context) => {
       }
     }
 
-    // Transform the data to match the expected format
-    const formattedDiscussions = discussions.map(discussion => ({
-      id: discussion.id,
-      type: 'insight', // Default type for discussions
-      content: discussion.content,
-      author: {
-        id: discussion.user.id,
-        name: discussion.user.name,
-        email: discussion.user.email,
-        avatar: discussion.user.avatar
-      },
-      createdAt: discussion.createdAt.toISOString(),
-      likes: 0, // Default likes count
-      comments: [] // TODO: Load replies separately if needed
-    }));
+    // Build threaded structure: top-level posts with nested replies in comments[]
+    const byParent: Record<string, any[]> = {};
+    for (const d of discussions) {
+      const key = d.parentId ? String(d.parentId) : 'root';
+      if (!byParent[key]) byParent[key] = [];
+      byParent[key].push(d);
+    }
+
+    // Only top-level posts (parentId == null) are feed items
+    const parents = byParent['root'] || [];
+
+    // Sort parents newest first (already DESC), and comments oldest first for readability
+    const formattedDiscussions = parents.map(parent => {
+      const replies = (byParent[String(parent.id)] || []).sort((a, b) => (
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      ));
+
+      const formattedReplies = replies.map(reply => {
+        const childReplies = (byParent[String(reply.id)] || []).sort((a, b) => (
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        ));
+
+        const formattedChildReplies = childReplies.map(child => ({
+          id: child.id,
+          content: child.content,
+          author: {
+            id: child.user.id,
+            name: child.user.name,
+            email: child.user.email,
+            avatar: child.user.avatar
+          },
+          createdAt: child.createdAt.toISOString(),
+          likes: 0
+        }));
+
+        return {
+          id: reply.id,
+          content: reply.content,
+          author: {
+            id: reply.user.id,
+            name: reply.user.name,
+            email: reply.user.email,
+            avatar: reply.user.avatar
+          },
+          createdAt: reply.createdAt.toISOString(),
+          likes: 0,
+          replies: formattedChildReplies
+        };
+      });
+
+      return {
+        id: parent.id,
+        type: 'insight',
+        content: parent.content,
+        author: {
+          id: parent.user.id,
+          name: parent.user.name,
+          email: parent.user.email,
+          avatar: parent.user.avatar
+        },
+        createdAt: parent.createdAt.toISOString(),
+        likes: 0,
+        comments: formattedReplies
+      };
+    });
     
     console.log('📤 Returning formatted discussions:', formattedDiscussions.length);
     if (formattedDiscussions.length > 0) {
