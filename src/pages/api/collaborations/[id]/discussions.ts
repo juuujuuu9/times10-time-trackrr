@@ -259,9 +259,8 @@ export const POST: APIRoute = async (context) => {
       userId: currentUser.id,
       content: content.trim(),
       parentId: null,
-      archived: false,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      archived: false
+      // createdAt and updatedAt will be set automatically by defaultNow()
     }).returning();
     
     console.log('✅ Discussion created:', newDiscussion);
@@ -270,7 +269,7 @@ export const POST: APIRoute = async (context) => {
     const createdDiscussion = await db.query.taskDiscussions.findFirst({
       where: eq(taskDiscussions.id, (newDiscussion as any)[0].id),
       with: {
-        author: true
+        user: true
       }
     });
 
@@ -310,10 +309,10 @@ export const POST: APIRoute = async (context) => {
         id: createdDiscussion.id,
         content: createdDiscussion.content,
         author: {
-          id: createdDiscussion.author.id,
-          name: createdDiscussion.author.name,
-          email: createdDiscussion.author.email,
-          avatar: createdDiscussion.author.avatar
+          id: createdDiscussion.user.id,
+          name: createdDiscussion.user.name,
+          email: createdDiscussion.user.email,
+          avatar: createdDiscussion.user.avatar
         },
         createdAt: createdDiscussion.createdAt.toISOString(),
         comments: []
