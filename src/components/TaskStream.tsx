@@ -371,6 +371,69 @@ const TaskStream: React.FC<TaskStreamProps> = ({
     return styles[type as keyof typeof styles] || styles.insight;
   };
 
+  // Compute the standard mention handle for a user (matches composer behavior)
+  const getUserMentionHandle = (user: User): string => {
+    const nameParts = user.name.split(' ').filter(Boolean);
+    if (nameParts.length >= 2) {
+      const firstName = nameParts[0];
+      const lastName = nameParts[nameParts.length - 1];
+      return `${firstName}${lastName.charAt(0)}`;
+    }
+    return user.name;
+  };
+
+  // Render text with @mentions; highlight mentions that target the current viewer
+  const [prefillContent, setPrefillContent] = useState<string | undefined>(undefined);
+  const [prefillMentionedUsers, setPrefillMentionedUsers] = useState<User[] | undefined>(undefined);
+
+  const handleMentionClick = (handle: string) => {
+    const target = teamMembers.find(u => getUserMentionHandle(u).toLowerCase() === handle.toLowerCase());
+    if (!target) return;
+    if (target.id === currentUser.id) return; // ignore clicks on self mentions
+    const contentSeed = `@${getUserMentionHandle(target)} `;
+    setPrefillContent(contentSeed);
+    setPrefillMentionedUsers([target]);
+    setShowAddInsightModal(true);
+  };
+
+  const renderContentWithMentions = (text: string): React.ReactNode => {
+    const viewerHandle = getUserMentionHandle(currentUser);
+    const parts: React.ReactNode[] = [];
+    const mentionRegex = /@([A-Za-z0-9_]+)/g;
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = mentionRegex.exec(text)) !== null) {
+      const matchStart = match.index;
+      const matchEnd = matchStart + match[0].length;
+      if (matchStart > lastIndex) {
+        parts.push(text.slice(lastIndex, matchStart));
+      }
+      const handle = match[1];
+      const isViewer = handle.toLowerCase() === viewerHandle.toLowerCase();
+      parts.push(
+        isViewer ? (
+          <span key={`m-${matchStart}`} className="font-bold text-red-600">@{handle}</span>
+        ) : (
+          <button
+            key={`m-${matchStart}`}
+            type="button"
+            onClick={() => handleMentionClick(handle)}
+            className="font-semibold text-gray-800"
+            title={`Mention ${handle}`}
+          >
+            @{handle}
+          </button>
+        )
+      );
+      lastIndex = matchEnd;
+    }
+    if (lastIndex < text.length) {
+      parts.push(text.slice(lastIndex));
+    }
+    return parts;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -432,7 +495,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
             </svg>
-            <span className="font-semibold">Add Media</span>
+            <span className="font-semibold">Upload Media</span>
           </button>
           
           <button 
@@ -488,7 +551,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                       </div>
                     </div>
                     
-                    <p className="text-gray-700 mb-6 mt-6 text-lg ">{post.content}</p>
+                    <p className="text-gray-700 mb-6 mt-6 text-lg ">{renderContentWithMentions(post.content)}</p>
                     
                     {/* Media Preview */}
                     {post.mediaUrl && (
@@ -588,7 +651,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                 <span className="font-medium text-gray-900 text-sm">{comment.author.name}</span>
                                 <span className="text-xs text-gray-500">{formatTimeAgo(comment.createdAt)}</span>
                               </div>
-                              <p className="text-gray-700 text-sm">{comment.content}</p>
+                              <p className="text-gray-700 text-sm">{renderContentWithMentions(comment.content)}</p>
                               <div className="flex items-center space-x-3 mt-2 text-xs text-gray-600">
                                 <button className="hover:text-blue-600 transition-colors">Like</button>
                                 <button className="hover:text-blue-600 transition-colors">Reply</button>
@@ -667,6 +730,8 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         onSubmit={handleCreateInsight}
         teamMembers={teamMembers}
         currentUser={currentUser}
+        initialContent={prefillContent}
+        initialMentionedUsers={prefillMentionedUsers}
       />
     </div>
   );

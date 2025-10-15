@@ -13,6 +13,8 @@ interface AddInsightModalProps {
   onSubmit: (content: string, mentionedUsers: User[]) => void;
   teamMembers: User[];
   currentUser: User;
+  initialContent?: string;
+  initialMentionedUsers?: User[];
 }
 
 const AddInsightModal: React.FC<AddInsightModalProps> = ({
@@ -20,7 +22,9 @@ const AddInsightModal: React.FC<AddInsightModalProps> = ({
   onClose,
   onSubmit,
   teamMembers,
-  currentUser
+  currentUser,
+  initialContent,
+  initialMentionedUsers
 }) => {
   const [content, setContent] = useState('');
   const [showMentions, setShowMentions] = useState(false);
@@ -121,10 +125,22 @@ const AddInsightModal: React.FC<AddInsightModalProps> = ({
 
   // Focus textarea when modal opens
   useEffect(() => {
-    if (isOpen && textareaRef.current) {
-      textareaRef.current.focus();
+    if (isOpen) {
+      // Seed initial content/mentions if provided
+      if (initialContent !== undefined) {
+        setContent(initialContent);
+      }
+      if (initialMentionedUsers !== undefined) {
+        setMentionedUsers(initialMentionedUsers);
+      }
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        // Move caret to end
+        const end = (initialContent ?? content).length;
+        textareaRef.current.setSelectionRange(end, end);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, initialContent, initialMentionedUsers]);
 
   if (!isOpen) return null;
 
