@@ -28,3 +28,6 @@ pnpm-debug.log*
 .env.local
 .vercel
 .env*.local
+
+# uploaded files
+public/uploads/

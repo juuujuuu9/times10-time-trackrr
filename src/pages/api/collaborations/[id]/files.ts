@@ -151,75 +151,73 @@ export const POST: APIRoute = async (context) => {
       });
     }
 
-    const body = await context.request.json().catch(() => ({}));
-    const { type, title, url, description, filename, fileSize, mimeType } = body;
-
-    if (type === 'link') {
-      if (!title || !url) {
+    // Check if this is a file upload (multipart/form-data) or JSON data
+    const contentType = context.request.headers.get('content-type') || '';
+    
+    if (contentType.includes('multipart/form-data')) {
+      // Handle file upload
+      const formData = await context.request.formData();
+      const file = formData.get('file') as File;
+      
+      if (!file) {
         return new Response(JSON.stringify({
           success: false,
-          error: 'Title and URL are required for links'
+          error: 'No file provided'
         }), {
           status: 400,
           headers: { 'Content-Type': 'application/json' }
         });
       }
 
-      // For now, return success without actually creating the link
-      // TODO: Implement proper link creation system for collaborations
-      const newLink = {
-        id: Date.now(), // Temporary ID
-        title: title.trim(),
-        url: url.trim(),
-        description: description || '',
-        type: 'link',
-        author: {
-          id: currentUser.id,
-          name: currentUser.name,
-          email: currentUser.email
-        },
-        createdAt: new Date()
-      };
-
-      return new Response(JSON.stringify({
-        success: true,
-        data: newLink,
-        message: 'Link added successfully'
-      }), {
-        status: 201,
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-    } else if (type === 'file') {
-      if (!filename) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Filename is required for files'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+      // Create uploads directory if it doesn't exist
+      const uploadsDir = './public/uploads';
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
       }
 
-      // For now, return success without actually creating the file
-      // TODO: Implement proper file upload system for collaborations
-      const newFile = {
-        id: Date.now(), // Temporary ID
-        name: filename,
-        type: 'file',
-        author: {
-          id: currentUser.id,
-          name: currentUser.name,
-          email: currentUser.email
-        },
-        createdAt: new Date(),
-        size: fileSize || 'Unknown',
-        mimeType: mimeType || 'application/octet-stream'
-      };
+      // Generate unique filename
+      const timestamp = Date.now();
+      const fileExtension = path.extname(file.name);
+      const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const filePath = path.join(uploadsDir, fileName);
+      
+      // Save file to disk
+      const arrayBuffer = await file.arrayBuffer();
+      fs.writeFileSync(filePath, Buffer.from(arrayBuffer));
+      
+      // Get taskId from form data or use a default
+      const taskIdParam = formData.get('taskId') as string;
+      const taskId = taskIdParam ? parseInt(taskIdParam) : 1; // Default to 1 if not provided
+      
+      // Create file record in database
+      const newFile = await db.insert(taskFiles).values({
+        taskId: taskId,
+        userId: currentUser.id,
+        filename: file.name,
+        filePath: `/uploads/${fileName}`,
+        fileSize: file.size,
+        mimeType: file.type,
+        archived: false
+      }).returning();
 
       return new Response(JSON.stringify({
         success: true,
-        data: newFile,
+        data: {
+          id: newFile[0].id,
+          name: file.name,
+          url: `/uploads/${fileName}`,
+          size: file.size,
+          mimeType: file.type,
+          author: {
+            id: currentUser.id,
+            name: currentUser.name,
+            email: currentUser.email
+          },
+          createdAt: new Date()
+        },
         message: 'File uploaded successfully'
       }), {
         status: 201,
@@ -227,13 +225,91 @@ export const POST: APIRoute = async (context) => {
       });
 
     } else {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid type. Must be "file" or "link"'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      // Handle JSON data (links or other data)
+      const body = await context.request.json().catch(() => ({}));
+      const { type, title, url, description, filename, fileSize, mimeType } = body;
+
+      if (type === 'link') {
+        if (!title || !url) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Title and URL are required for links'
+          }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        // For now, return success without actually creating the link
+        // TODO: Implement proper link creation system for collaborations
+        const newLink = {
+          id: Date.now(), // Temporary ID
+          title: title.trim(),
+          url: url.trim(),
+          description: description || '',
+          type: 'link',
+          author: {
+            id: currentUser.id,
+            name: currentUser.name,
+            email: currentUser.email
+          },
+          createdAt: new Date()
+        };
+
+        return new Response(JSON.stringify({
+          success: true,
+          data: newLink,
+          message: 'Link added successfully'
+        }), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+      } else if (type === 'file') {
+        if (!filename) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Filename is required for files'
+          }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        // For now, return success without actually creating the file
+        // TODO: Implement proper file upload system for collaborations
+        const newFile = {
+          id: Date.now(), // Temporary ID
+          name: filename,
+          type: 'file',
+          author: {
+            id: currentUser.id,
+            name: currentUser.name,
+            email: currentUser.email
+          },
+          createdAt: new Date(),
+          size: fileSize || 'Unknown',
+          mimeType: mimeType || 'application/octet-stream'
+        };
+
+        return new Response(JSON.stringify({
+          success: true,
+          data: newFile,
+          message: 'File uploaded successfully'
+        }), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+      } else {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Invalid type. Must be "file" or "link"'
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
     }
 
   } catch (error) {

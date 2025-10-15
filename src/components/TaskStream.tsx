@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import JSZip from 'jszip';
 import AddInsightModal from './AddInsightModal';
 import AddMediaModal from './AddMediaModal';
 
@@ -110,10 +111,36 @@ const TaskStream: React.FC<TaskStreamProps> = ({
 
   // Track per-post reply composer visibility
   const [replyOpen, setReplyOpen] = useState<{ [postId: number]: boolean }>({});
+  
+  // Track editing state
+  const [editingPostId, setEditingPostId] = useState<number | null>(null);
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+  const [editContent, setEditContent] = useState<string>('');
 
   // Function to close all reply inputs
   const closeAllReplyInputs = useCallback(() => {
     setReplyOpen({});
+  }, []);
+
+  // Function to start editing a post
+  const startEditingPost = useCallback((postId: number, currentContent: string) => {
+    setEditingPostId(postId);
+    setEditingCommentId(null);
+    setEditContent(currentContent);
+  }, []);
+
+  // Function to start editing a comment
+  const startEditingComment = useCallback((commentId: number, currentContent: string) => {
+    setEditingCommentId(commentId);
+    setEditingPostId(null);
+    setEditContent(currentContent);
+  }, []);
+
+  // Function to cancel editing
+  const cancelEditing = useCallback(() => {
+    setEditingPostId(null);
+    setEditingCommentId(null);
+    setEditContent('');
   }, []);
 
   const handleReplyClick = (item: { id: number; author: User }) => {
@@ -300,22 +327,14 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         
-        // Upload file using the files endpoint
-        const fileData = {
-          type: 'file',
-          title: file.name,
-          filename: file.name,
-          fileSize: file.size,
-          mimeType: file.type,
-          description: content || `Uploaded file: ${file.name}`
-        };
+        // Upload file using FormData
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('taskId', taskId.toString());
 
         const fileResponse = await fetch(`/api/collaborations/${collaborationId}/files`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(fileData),
+          body: formData, // No Content-Type header needed for FormData
         });
 
         const fileResult = await fileResponse.json();
@@ -324,7 +343,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
           throw new Error(fileResult.error || `Failed to upload file: ${file.name}`);
         }
 
-        uploadedFiles.push(fileResult.data.url || fileResult.data.name);
+        uploadedFiles.push(fileResult.data.url);
         fileNames.push(file.name);
       }
 
@@ -429,6 +448,96 @@ const TaskStream: React.FC<TaskStreamProps> = ({
 
   // (Like action removed)
 
+  // Handle file download
+  const handleDownloadFile = async (url: string, filename?: string) => {
+    try {
+      // If the URL is a relative path (starts with /), it's a local file
+      if (url.startsWith('/')) {
+        // Create a temporary anchor element to trigger download
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename || 'file';
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        // For external URLs, fetch the file first to ensure it's accessible
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch file: ${response.statusText}`);
+        }
+        
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = filename || 'file';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up the object URL
+        window.URL.revokeObjectURL(downloadUrl);
+      }
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      addNotification('error', 'Failed to download file: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
+  // Handle download all files as ZIP
+  const handleDownloadAll = async (urls: string[], filenames?: string[]) => {
+    try {
+      addNotification('success', 'Creating ZIP archive...');
+      
+      const zip = new JSZip();
+      
+      // Fetch all files and add them to the ZIP
+      for (let i = 0; i < urls.length; i++) {
+        const url = urls[i];
+        const filename = filenames?.[i] || getFilename(url) || `file_${i + 1}`;
+        
+        try {
+          // Fetch the file
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch ${filename}: ${response.statusText}`);
+          }
+          
+          const blob = await response.blob();
+          
+          // Add file to ZIP
+          zip.file(filename, blob);
+        } catch (error) {
+          console.error(`Error fetching file ${filename}:`, error);
+          // Continue with other files even if one fails
+        }
+      }
+      
+      // Generate the ZIP file
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      
+      // Create download link
+      const downloadUrl = window.URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `media_files_${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up
+      window.URL.revokeObjectURL(downloadUrl);
+      
+      addNotification('success', 'ZIP file downloaded successfully!');
+    } catch (error) {
+      console.error('Error creating ZIP file:', error);
+      addNotification('error', 'Failed to create ZIP file: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
   // Handle delete post
   const handleDeletePost = async (postId: number) => {
     const target = posts.find(p => p.id === postId);
@@ -469,6 +578,107 @@ const TaskStream: React.FC<TaskStreamProps> = ({
     setPendingDeleteId(null);
   };
 
+  // Handle delete comment
+  const handleDeleteComment = async (commentId: number, postId: number) => {
+    try {
+      const response = await fetch(`/api/collaborations/${collaborationId}/discussions/${commentId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        // Remove comment from UI
+        setPosts(prevPosts => 
+          prevPosts.map(post => 
+            post.id === postId 
+              ? { ...post, comments: post.comments.filter(c => c.id !== commentId) }
+              : post
+          )
+        );
+        addNotification('success', 'Comment deleted successfully');
+        
+        // Dispatch custom event for real-time updates
+        window.dispatchEvent(new CustomEvent('taskStreamUpdate', {
+          detail: { taskId, collaborationId }
+        }));
+      } else {
+        throw new Error(data.error || 'Failed to delete comment');
+      }
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      addNotification('error', 'Failed to delete comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
+  // Handle edit comment
+  const handleEditComment = async (commentId: number, newContent: string, postId: number) => {
+    try {
+      const response = await fetch(`/api/collaborations/${collaborationId}/discussions/${commentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: newContent })
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update comment in UI
+        setPosts(prevPosts => 
+          prevPosts.map(post => 
+            post.id === postId 
+              ? { 
+                  ...post, 
+                  comments: post.comments.map(c => 
+                    c.id === commentId 
+                      ? { ...c, content: newContent, updatedAt: new Date().toISOString() }
+                      : c
+                  )
+                }
+              : post
+          )
+        );
+        addNotification('success', 'Comment updated successfully');
+        
+        // Dispatch custom event for real-time updates
+        window.dispatchEvent(new CustomEvent('taskStreamUpdate', {
+          detail: { taskId, collaborationId }
+        }));
+      } else {
+        throw new Error(data.error || 'Failed to update comment');
+      }
+    } catch (error) {
+      console.error('Error updating comment:', error);
+      addNotification('error', 'Failed to update comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
+  // Handle save edit
+  const handleSaveEdit = async () => {
+    if (!editContent.trim()) {
+      addNotification('error', 'Content cannot be empty');
+      return;
+    }
+
+    try {
+      if (editingPostId) {
+        await handleEditComment(editingPostId, editContent.trim(), editingPostId);
+        cancelEditing();
+      } else if (editingCommentId) {
+        // Find the post that contains this comment
+        const postWithComment = posts.find(post => 
+          post.comments.some(comment => comment.id === editingCommentId)
+        );
+        if (postWithComment) {
+          await handleEditComment(editingCommentId, editContent.trim(), postWithComment.id);
+          cancelEditing();
+        }
+      }
+    } catch (error) {
+      console.error('Error saving edit:', error);
+      addNotification('error', 'Failed to save changes');
+    }
+  };
+
   // Filter posts based on current filters
   const filteredPosts = posts.filter(post => {
     if (filter !== 'all' && post.type !== filter) return false;
@@ -507,8 +717,8 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         )
       },
       media: { 
-        bg: 'bg-purple-100', 
-        text: 'text-purple-800', 
+        bg: 'bg-red-100', 
+        text: 'text-red-800', 
         icon: (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -516,8 +726,8 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         )
       },
       link: { 
-        bg: 'bg-orange-100', 
-        text: 'text-orange-800', 
+        bg: 'bg-yellow-100', 
+        text: 'text-yellow-800', 
         icon: (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -571,7 +781,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
     return docExtensions.includes(getFileExtension(url));
   };
 
-  const getFilename = (url: string) => {
+  const getFilename = (url: string): string => {
     return url.split('/').pop() || 'Media File';
   };
 
@@ -684,7 +894,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
     
     if (isPdfFile(url)) {
       return (
-        <svg className="w-5 h-5 text-red-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg className="w-5 h-5 text-orange-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M4 4C4 3.44772 4.44772 3 5 3H14H14.5858C14.851 3 15.1054 3.10536 15.2929 3.29289L19.7071 7.70711C19.8946 7.89464 20 8.149 20 8.41421V20C20 20.5523 19.5523 21 19 21H5C4.44772 21 4 20.5523 4 20V4Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           <path d="M20 8H15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           <path d="M11.5 13H11V17H11.5C12.6046 17 13.5 16.1046 13.5 15C13.5 13.8954 12.6046 13 11.5 13Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -867,7 +1077,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
           
           <button 
             onClick={() => setShowAddMediaModal(true)}
-            className="flex items-center justify-center space-x-3 px-6 py-4 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-xl transition-colors border border-purple-200"
+            className="flex items-center justify-center space-x-3 px-6 py-4 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl transition-colors border border-red-200"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
@@ -877,7 +1087,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
           
           <button 
             onClick={() => handleCreatePost('link', 'Sharing link...')}
-            className="flex items-center justify-center space-x-3 px-6 py-4 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-xl transition-colors border border-orange-200"
+            className="flex items-center justify-center space-x-3 px-6 py-4 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 rounded-xl transition-colors border border-yellow-200"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
@@ -909,7 +1119,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
             const typeStyle = getTypeStyling(post.type);
             
             return (
-              <div key={post.id} className="bg-white rounded-xl border border-gray-200 p-4 pt-4 relative">
+              <div key={post.id} className={`bg-white rounded-xl border border-gray-200 p-4 pt-4 relative ${post.author.id === currentUser.id && post.comments && post.comments.length > 0 ? 'pb-12' : ''}`}>
                 <div className="flex items-start space-x-3">
                   
                   <div className="flex-1">
@@ -928,35 +1138,88 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                       </div>
                     </div>
                     
-                    <p className="text-gray-700 mb-6 mt-6 text-lg ">{renderContentWithMentions(post.content)}</p>
+                    {/* Only show content if it's not the default "Uploaded X file(s)" text for media posts */}
+                    {!(post.type === 'media' && post.content.match(/^Uploaded \d+ file/)) && (
+                      editingPostId === post.id ? (
+                        // Edit mode for post
+                        <div className="mb-6 mt-6">
+                          <textarea
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            rows={3}
+                            placeholder="Edit your post..."
+                          />
+                          <div className="flex items-center space-x-2 mt-2">
+                            <button
+                              onClick={handleSaveEdit}
+                              className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={cancelEditing}
+                              className="px-3 py-1 text-sm bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-gray-700 mb-6 mt-6 text-lg ">{renderContentWithMentions(post.content)}</p>
+                      )
+                    )}
                     
                     {/* Media Files List */}
                     {post.mediaUrl && (
-                      <div className="mb-3">
+                      <div className={`mb-3 ${!(post.type === 'media' && post.content.match(/^Uploaded \d+ file/)) && post.content && post.content.trim() ? '' : 'mt-4'}`}>
                         {/* Multiple Files */}
                         {post.mediaUrls && post.mediaUrls.length > 1 && (
                           <div className="bg-gray-100 rounded-lg p-4">
-                            <div className="flex items-center space-x-3 mb-3">
-                              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                                <svg className="w-6 h-6 text-purple-600" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <g clipPath="url(#clip0_901_1141)">
-                                    <path d="M12 13H15M12 16H20M12 20H20M12 24H20M21 7V2C21 1.447 20.553 1 20 1H2C1.447 1 1 1.447 1 2V24C1 24 1 25 2 25H3M26 27H30C30.553 27 31 26.553 31 26V4C31 3.447 30.553 3 30 3H24M26 30C26 30.553 25.553 31 25 31H7C6.447 31 6 30.553 6 30V8C6 7.447 6.447 7 7 7H25C25.553 7 26 7.447 26 8V30Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center space-x-3">
+                                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                                  <svg className="w-6 h-6 text-red-600" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <g clipPath="url(#clip0_901_1141)">
+                                      <path d="M12 13H15M12 16H20M12 20H20M12 24H20M21 7V2C21 1.447 20.553 1 20 1H2C1.447 1 1 1.447 1 2V24C1 24 1 25 2 25H3M26 27H30C30.553 27 31 26.553 31 26V4C31 3.447 30.553 3 30 3H24M26 30C26 30.553 25.553 31 25 31H7C6.447 31 6 30.553 6 30V8C6 7.447 6.447 7 7 7H25C25.553 7 26 7.447 26 8V30Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    </g>
+                                    <defs>
+                                      <clipPath id="clip0_901_1141">
+                                        <rect width="32" height="32" fill="white" />
+                                      </clipPath>
+                                    </defs>
+                                  </svg>
+                                </div>
+                                <div>
+                                  <div className="font-medium text-gray-900">{post.mediaUrls.length} files uploaded</div>
+                                  <div className="text-sm text-gray-500">Multiple media files</div>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => post.mediaUrls && handleDownloadAll(post.mediaUrls, post.fileNames || [])}
+                                className="flex items-center space-x-2 px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
+                              >
+                                <svg className="w-4 h-4" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+                                  <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
+                                  <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g>
+                                  <g id="SVGRepo_iconCarrier">
+                                    <title>cloud-download-solid</title>
+                                    <g id="Layer_2" data-name="Layer 2">
+                                      <g id="invisible_box" data-name="invisible box">
+                                        <rect width="48" height="48" fill="none"></rect>
+                                      </g>
+                                      <g id="icons_Q2" data-name="icons Q2">
+                                        <path d="M40.5,21.8a9.1,9.1,0,0,0-3.4-6.5A9.8,9.8,0,0,0,29.6,13,12.5,12.5,0,0,0,19.5,7a11.6,11.6,0,0,0-8.9,4,12.4,12.4,0,0,0-3.2,8.4,11.8,11.8,0,0,0-5.2,8.2A11.5,11.5,0,0,0,5.3,37.8,12.4,12.4,0,0,0,14,41H34.5c7.7,0,11.3-5.1,11.5-9.9A10,10,0,0,0,40.5,21.8Zm-8.2,8.7-6.9,6.9a1.9,1.9,0,0,1-2.8,0l-6.9-6.9a2.2,2.2,0,0,1-.4-2.7,2,2,0,0,1,3.1-.2L22,31.2V20a2,2,0,0,1,4,0V31.2l3.6-3.6a2,2,0,0,1,3.1.2A2.2,2.2,0,0,1,32.3,30.5Z"></path>
+                                      </g>
+                                    </g>
                                   </g>
-                                  <defs>
-                                    <clipPath id="clip0_901_1141">
-                                      <rect width="32" height="32" fill="white" />
-                                    </clipPath>
-                                  </defs>
                                 </svg>
-                              </div>
-                              <div>
-                                <div className="font-medium text-gray-900">{post.mediaUrls.length} files uploaded</div>
-                                <div className="text-sm text-gray-500">Multiple media files</div>
-                              </div>
+                                <span>Download all as ZIP</span>
+                              </button>
                             </div>
                             <div className="space-y-2">
                               {post.mediaUrls.map((url: string, index: number) => (
-                                <div key={index} className="bg-white rounded-lg p-3 border border-gray-200 flex items-center space-x-3">
+                                <div key={index} className="bg-white rounded-lg p-3 border border-gray-200 flex items-center space-x-3 hover:bg-gray-50 transition-colors">
                                   <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
                                     {getFileIconSvg(url)}
                                   </div>
@@ -966,6 +1229,15 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                     </div>
                                     <div className="text-xs text-gray-500">{getFileTypeLabel(url)}</div>
                                   </div>
+                                  <button
+                                    onClick={() => handleDownloadFile(url, post.fileNames?.[index] || getFilename(url) || 'file')}
+                                    className="flex items-center space-x-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors"
+                                  >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    <span>Download</span>
+                                  </button>
                                 </div>
                               ))}
                             </div>
@@ -975,14 +1247,25 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                         {/* Single File */}
                         {(!post.mediaUrls || post.mediaUrls.length === 1) && (
                           <div className="bg-gray-100 rounded-lg p-4">
-                            <div className="flex items-center space-x-3">
-                              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                                {getFileIconSvg(post.mediaUrl)}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center">
+                                  {getFileIconSvg(post.mediaUrl)}
+                                </div>
+                                <div>
+                                  <div className="font-medium text-gray-900">{getFilename(post.mediaUrl)}</div>
+                                  <div className="text-sm text-gray-500">{getFileTypeLabel(post.mediaUrl)}</div>
+                                </div>
                               </div>
-                              <div>
-                                <div className="font-medium text-gray-900">{getFilename(post.mediaUrl)}</div>
-                                <div className="text-sm text-gray-500">{getFileTypeLabel(post.mediaUrl)}</div>
-                              </div>
+                              <button
+                                onClick={() => post.mediaUrl && handleDownloadFile(post.mediaUrl, getFilename(post.mediaUrl) || 'file')}
+                                className="flex items-center space-x-2 px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <span>Download</span>
+                              </button>
                             </div>
                           </div>
                         )}
@@ -1026,19 +1309,36 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                     )}
                     
                     {/* Post Actions */}
-                    <div className="flex items-center space-x-4 text-sm text-gray-600">
-                      {!replyOpen[post.id] && (
-                        <button
-                          onClick={() => handleReplyClick(post)}
-                          className="flex items-center space-x-1 hover:text-blue-600 transition-colors"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-                          </svg>
-                          <span>Reply</span>
-                        </button>
-                      )}
-                    </div>
+                    {editingPostId !== post.id && (
+                      <div className="flex items-center space-x-4 text-sm text-gray-600">
+                        {post.author.id === currentUser.id ? (
+                          // User's own post - show Edit button only if there's meaningful content
+                          post.content && 
+                          post.content.trim() && 
+                          !(post.type === 'media' && post.content.match(/^Uploaded \d+ file/)) && (
+                            <button
+                              onClick={() => startEditingPost(post.id, post.content)}
+                              className="hover:underline transition-all text-gray-600"
+                            >
+                              Edit
+                            </button>
+                          )
+                        ) : (
+                          // Other user's post - show Reply button
+                          !replyOpen[post.id] && (
+                            <button
+                              onClick={() => handleReplyClick(post)}
+                              className="flex items-center space-x-1 hover:underline transition-all"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                              </svg>
+                              <span>Reply</span>
+                            </button>
+                          )
+                        )}
+                      </div>
+                    )}
 
                     {/* Reply input for top-level posts */}
                     {replyOpen[post.id] && (
@@ -1058,7 +1358,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                             />
                             <button
                               onClick={() => handleSubmitComment(post.id)}
-                              className="px-3 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
+                              className="px-3 py-2 text-sm rounded bg-gray-600 text-white hover:bg-gray-700"
                             >
                               Post
                             </button>
@@ -1089,18 +1389,71 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                 <span className="font-medium text-gray-900 text-sm">{comment.author.name}</span>
                                 <span className="text-xs text-gray-500">{formatTimeAgo(comment.createdAt)}</span>
                               </div>
-                              <p className="text-gray-700 text-sm">{renderContentWithMentions(comment.content)}</p>
-                              {/* First-level comment actions: enable Reply for first-level only */}
-                              <div className="flex items-center space-x-3 mt-2 text-xs text-gray-600">
-                                {!replyOpen[comment.id] && (
-                                  <button
-                                    onClick={() => handleReplyClick({ id: comment.id, author: comment.author })}
-                                    className="hover:text-blue-600 transition-colors"
-                                  >
-                                    Reply
-                                  </button>
-                                )}
-                              </div>
+                              {editingCommentId === comment.id ? (
+                                // Edit mode for comment
+                                <div className="mb-2">
+                                  <textarea
+                                    value={editContent}
+                                    onChange={(e) => setEditContent(e.target.value)}
+                                    className="w-full p-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    rows={2}
+                                    placeholder="Edit your comment..."
+                                  />
+                                  <div className="flex items-center space-x-2 mt-1">
+                                    <button
+                                      onClick={handleSaveEdit}
+                                      className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                                    >
+                                      Save
+                                    </button>
+                                    <button
+                                      onClick={cancelEditing}
+                                      className="px-2 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="text-gray-700 text-sm">{renderContentWithMentions(comment.content)}</p>
+                              )}
+                              {/* Comment actions: Reply for others, Edit/Delete for own comments */}
+                              {editingCommentId !== comment.id && (
+                                <div className="flex items-center space-x-3 mt-2 text-xs text-gray-600">
+                                  {comment.author.id === currentUser.id ? (
+                                    // User's own comment - show Edit and Delete buttons
+                                    <div className="flex items-center space-x-2">
+                                      <button
+                                        onClick={() => startEditingComment(comment.id, comment.content)}
+                                        className="hover:underline transition-all text-gray-600"
+                                      >
+                                        Edit
+                                      </button>
+                                      <span className="text-gray-300">|</span>
+                                      <button
+                                        onClick={() => {
+                                          if (confirm('Are you sure you want to delete this comment?')) {
+                                            handleDeleteComment(comment.id, post.id);
+                                          }
+                                        }}
+                                        className="hover:underline transition-all text-gray-600"
+                                      >
+                                        Delete
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    // Other user's comment - show Reply button
+                                    !replyOpen[comment.id] && (
+                                      <button
+                                        onClick={() => handleReplyClick({ id: comment.id, author: comment.author })}
+                                        className="hover:underline transition-all"
+                                      >
+                                        Reply
+                                      </button>
+                                    )
+                                  )}
+                                </div>
+                              )}
 
                               {/* Comment Input (visible only when Reply opened for this comment) */}
                               {replyOpen[comment.id] && (
@@ -1120,7 +1473,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                       />
                                       <button
                                         onClick={() => handleSubmitComment(comment.id)}
-                                        className="px-3 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
+                                        className="px-3 py-2 text-sm rounded bg-gray-600 text-white hover:bg-gray-700"
                                       >
                                         Post
                                       </button>
