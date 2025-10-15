@@ -336,6 +336,34 @@ const TaskStream: React.FC<TaskStreamProps> = ({
     setPendingDeleteId(null);
   };
 
+  // Handle delete comment
+  const handleDeleteComment = async (commentId: number) => {
+    try {
+      const response = await fetch(`/api/collaborations/${collaborationId}/discussions/${commentId}/comments`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Reload posts to get updated comments
+        await loadPosts();
+        // Dispatch custom event for real-time updates
+        window.dispatchEvent(new CustomEvent('taskStreamUpdate', {
+          detail: { taskId, collaborationId }
+        }));
+        addNotification('success', 'Comment deleted successfully');
+      } else {
+        console.error('Failed to delete comment:', data.message);
+        addNotification('error', 'Failed to delete comment: ' + (data.message || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      addNotification('error', 'Error deleting comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
   // Filter posts based on current filters
   const filteredPosts = posts.filter(post => {
     if (filter !== 'all' && post.type !== filter) return false;
@@ -653,6 +681,15 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                     Reply
                                   </button>
                                 )}
+                                {comment.author.id === currentUser.id && (
+                                  <button
+                                    onClick={() => handleDeleteComment(comment.id)}
+                                    className="hover:text-red-600 transition-colors"
+                                    title="Delete comment"
+                                  >
+                                    Delete
+                                  </button>
+                                )}
                               </div>
 
                               {/* Child replies (second level only) */}
@@ -669,7 +706,18 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                           <span className="text-xs text-gray-500">{formatTimeAgo(child.createdAt)}</span>
                                         </div>
                                         <p className="text-gray-700 text-sm">{renderContentWithMentions(child.content)}</p>
-                                        {/* No Reply button for second-level to avoid deeper nesting */}
+                                        {/* Delete button for child replies */}
+                                        {child.author.id === currentUser.id && (
+                                          <div className="mt-2">
+                                            <button
+                                              onClick={() => handleDeleteComment(child.id)}
+                                              className="text-xs text-gray-600 hover:text-red-600 transition-colors"
+                                              title="Delete reply"
+                                            >
+                                              Delete
+                                            </button>
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
                                   ))}
