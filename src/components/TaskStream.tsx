@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import JSZip from 'jszip';
 import AddInsightModal from './AddInsightModal';
 import AddMediaModal from './AddMediaModal';
+import LinkDropModal from './LinkDropModal';
+import LinkPreview from './LinkPreview';
 
 interface User {
   id: number;
@@ -67,6 +69,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
   const [newComment, setNewComment] = useState<{ [postId: number]: string }>({});
   const [showAddInsightModal, setShowAddInsightModal] = useState(false);
   const [showAddMediaModal, setShowAddMediaModal] = useState(false);
+  const [showLinkDropModal, setShowLinkDropModal] = useState(false);
 
   // Notification banners (in-DOM)
   // NOTE: Search for "Notification banners (in-DOM)" to find this system quickly.
@@ -413,6 +416,76 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       // Remove the optimistic update on error
       setPosts(prevPosts => prevPosts.filter(post => post.id !== Date.now()));
       addNotification('error', 'Error uploading media: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
+  // Handle link creation
+  const handleCreateLink = async (linkData: { url: string; title?: string; description?: string; image?: string; domain?: string }, content: string, mentionedUsers: User[]) => {
+    try {
+      // Optimistically add the link to the UI immediately
+      const optimisticLink = {
+        id: Date.now(), // Temporary ID
+        type: 'link' as const,
+        content: content || `Sharing: ${linkData.title || linkData.url}`,
+        author: currentUser,
+        createdAt: new Date().toISOString(),
+        likes: 0,
+        comments: [],
+        linkPreview: {
+          title: linkData.title || '',
+          description: linkData.description || '',
+          url: linkData.url,
+          image: linkData.image
+        }
+      };
+
+      // Add optimistic update
+      setPosts(prevPosts => [optimisticLink, ...prevPosts]);
+
+      const discussionData = {
+        type: 'link',
+        content: content || `Sharing: ${linkData.title || linkData.url}`,
+        taskId: taskId,
+        linkPreview: {
+          title: linkData.title || '',
+          description: linkData.description || '',
+          url: linkData.url,
+          image: linkData.image
+        },
+        mentionedUsers: mentionedUsers.map(user => user.id)
+      };
+
+      const response = await fetch(`/api/collaborations/${collaborationId}/discussions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(discussionData),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('✅ Link shared successfully, reloading posts...');
+        // Reload posts to get the latest data with the real ID
+        await loadPosts();
+        // Dispatch custom event for real-time updates
+        window.dispatchEvent(new CustomEvent('taskStreamUpdate', {
+          detail: { taskId, collaborationId }
+        }));
+        addNotification('success', 'Link shared successfully!');
+      } else {
+        console.error('❌ Failed to create link discussion:', data.error || data.message);
+        // Remove the optimistic update on failure
+        setPosts(prevPosts => prevPosts.filter(post => post.id !== optimisticLink.id));
+        addNotification('error', 'Failed to share link: ' + (data.error || data.message || 'Unknown error'));
+      }
+      
+    } catch (error) {
+      console.error('❌ Error sharing link:', error);
+      // Remove the optimistic update on error
+      setPosts(prevPosts => prevPosts.filter(post => post.id !== Date.now()));
+      addNotification('error', 'Error sharing link: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
@@ -1086,7 +1159,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
           </button>
           
           <button 
-            onClick={() => handleCreatePost('link', 'Sharing link...')}
+            onClick={() => setShowLinkDropModal(true)}
             className="flex items-center justify-center space-x-3 px-6 py-4 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 rounded-xl transition-colors border border-yellow-200"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1274,19 +1347,13 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                     
                     {/* Link Preview */}
                     {post.linkPreview && (
-                      <div className="border border-gray-200 rounded-lg p-4 mb-3 hover:bg-gray-50 transition-colors cursor-pointer">
-                        <div className="flex items-start space-x-3">
-                          <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
-                            </svg>
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-medium text-gray-900 mb-1">{post.linkPreview.title}</h4>
-                            <p className="text-sm text-gray-600 mb-2">{post.linkPreview.description}</p>
-                            <span className="text-xs text-gray-500">{new URL(post.linkPreview.url).hostname}</span>
-                          </div>
-                        </div>
+                      <div className="mb-3 max-w-[375px] w-full">
+                        <LinkPreview
+                          url={post.linkPreview.url}
+                          title={post.linkPreview.title}
+                          description={post.linkPreview.description}
+                          image={post.linkPreview.image}
+                        />
                       </div>
                     )}
                     
@@ -1570,6 +1637,15 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         isOpen={showAddMediaModal}
         onClose={() => setShowAddMediaModal(false)}
         onSubmit={handleCreateMedia}
+        teamMembers={teamMembers}
+        currentUser={currentUser}
+      />
+
+      {/* Link Drop Modal */}
+      <LinkDropModal
+        isOpen={showLinkDropModal}
+        onClose={() => setShowLinkDropModal(false)}
+        onAddLink={handleCreateLink}
         teamMembers={teamMembers}
         currentUser={currentUser}
       />
