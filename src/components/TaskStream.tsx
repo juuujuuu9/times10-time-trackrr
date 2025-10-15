@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import AddInsightModal from './AddInsightModal';
+import AddMediaModal from './AddMediaModal';
 
 interface User {
   id: number;
@@ -17,6 +18,8 @@ interface Post {
   likes: number;
   comments: Comment[];
   mediaUrl?: string;
+  mediaUrls?: string[]; // For multiple files
+  fileNames?: string[]; // For multiple file names
   linkPreview?: {
     title: string;
     description: string;
@@ -62,6 +65,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
   const [timeFilter, setTimeFilter] = useState<string>('all');
   const [newComment, setNewComment] = useState<{ [postId: number]: string }>({});
   const [showAddInsightModal, setShowAddInsightModal] = useState(false);
+  const [showAddMediaModal, setShowAddMediaModal] = useState(false);
 
   // Notification banners (in-DOM)
   // NOTE: Search for "Notification banners (in-DOM)" to find this system quickly.
@@ -286,6 +290,113 @@ const TaskStream: React.FC<TaskStreamProps> = ({
     }
   };
 
+  // Handle media upload with mentions
+  const handleCreateMedia = async (content: string, files: File[], mentionedUsers: User[]) => {
+    try {
+      const uploadedFiles: string[] = [];
+      const fileNames: string[] = [];
+
+      // Process each file
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        
+        // Upload file using the files endpoint
+        const fileData = {
+          type: 'file',
+          title: file.name,
+          filename: file.name,
+          fileSize: file.size,
+          mimeType: file.type,
+          description: content || `Uploaded file: ${file.name}`
+        };
+
+        const fileResponse = await fetch(`/api/collaborations/${collaborationId}/files`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(fileData),
+        });
+
+        const fileResult = await fileResponse.json();
+        
+        if (!fileResult.success) {
+          throw new Error(fileResult.error || `Failed to upload file: ${file.name}`);
+        }
+
+        uploadedFiles.push(fileResult.data.url || fileResult.data.name);
+        fileNames.push(file.name);
+      }
+
+      // Create a single post with all uploaded files
+      const combinedContent = content || `Uploaded ${files.length} file${files.length !== 1 ? 's' : ''}`;
+      
+      // Create optimistic post for all files
+      const optimisticMedia = {
+        id: Date.now(), // Temporary ID
+        type: 'media' as const,
+        content: combinedContent,
+        author: {
+          id: currentUser.id,
+          name: currentUser.name,
+          email: currentUser.email,
+          avatar: currentUser.avatar || ''
+        },
+        createdAt: new Date().toISOString(),
+        likes: 0,
+        comments: [],
+        mediaUrl: uploadedFiles[0], // Use first file as primary media URL
+        mediaUrls: uploadedFiles, // Store all URLs for multiple file display
+        fileNames: fileNames // Store all filenames for display
+      };
+      
+      setPosts(prevPosts => [optimisticMedia, ...prevPosts]);
+
+      // Create a single discussion post for all files
+      const discussionData = {
+        taskId: taskId.toString(),
+        type: 'media',
+        content: combinedContent,
+        mediaUrl: uploadedFiles[0], // Primary media URL
+        mediaUrls: uploadedFiles, // All media URLs
+        fileNames: fileNames, // All file names
+        mentionedUsers: mentionedUsers.map(user => user.id)
+      };
+
+      const response = await fetch(`/api/collaborations/${collaborationId}/discussions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(discussionData),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('✅ Media files uploaded successfully, reloading posts...');
+        // Reload posts to get the latest data with the real ID
+        await loadPosts();
+        // Dispatch custom event for real-time updates
+        window.dispatchEvent(new CustomEvent('taskStreamUpdate', {
+          detail: { taskId, collaborationId }
+        }));
+        addNotification('success', `${files.length} file${files.length !== 1 ? 's' : ''} uploaded successfully!`);
+      } else {
+        console.error('❌ Failed to create media discussion:', data.error || data.message);
+        // Remove the optimistic update on failure
+        setPosts(prevPosts => prevPosts.filter(post => post.id !== optimisticMedia.id));
+        addNotification('error', 'Failed to create media discussion: ' + (data.error || data.message || 'Unknown error'));
+      }
+      
+    } catch (error) {
+      console.error('❌ Error uploading media:', error);
+      // Remove the optimistic update on error
+      setPosts(prevPosts => prevPosts.filter(post => post.id !== Date.now()));
+      addNotification('error', 'Error uploading media: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
   // Handle comment submission
   const handleSubmitComment = async (targetId: number) => {
     const commentContent = newComment[targetId];
@@ -386,12 +497,255 @@ const TaskStream: React.FC<TaskStreamProps> = ({
   // Get type-specific styling
   const getTypeStyling = (type: string) => {
     const styles = {
-      insight: { bg: 'bg-blue-100', text: 'text-blue-800', icon: '💡' },
-      media: { bg: 'bg-purple-100', text: 'text-purple-800', icon: '📎' },
-      link: { bg: 'bg-orange-100', text: 'text-orange-800', icon: '🔗' },
-      subtask: { bg: 'bg-green-100', text: 'text-green-800', icon: '✅' }
+      insight: { 
+        bg: 'bg-blue-100', 
+        text: 'text-blue-800', 
+        icon: (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+          </svg>
+        )
+      },
+      media: { 
+        bg: 'bg-purple-100', 
+        text: 'text-purple-800', 
+        icon: (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        )
+      },
+      link: { 
+        bg: 'bg-orange-100', 
+        text: 'text-orange-800', 
+        icon: (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+          </svg>
+        )
+      },
+      subtask: { 
+        bg: 'bg-green-100', 
+        text: 'text-green-800', 
+        icon: (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+          </svg>
+        )
+      }
     };
     return styles[type as keyof typeof styles] || styles.insight;
+  };
+
+  // Helper functions for media type detection
+  const getFileExtension = (url: string) => {
+    return url.split('.').pop()?.toLowerCase() || '';
+  };
+
+  const isImageFile = (url: string) => {
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico', 'psd', 'tiff', 'tif', 'raw', 'heic', 'heif'];
+    return imageExtensions.includes(getFileExtension(url));
+  };
+
+  const isVideoFile = (url: string) => {
+    const videoExtensions = ['mp4', 'webm', 'mov', 'avi', 'mkv', 'flv', 'wmv', 'm4v', '3gp', 'ogv', 'mpg', 'mpeg', 'm2v'];
+    return videoExtensions.includes(getFileExtension(url));
+  };
+
+  const isAudioFile = (url: string) => {
+    const audioExtensions = ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'wma', 'opus', 'aiff', 'au', 'ra', 'ram'];
+    return audioExtensions.includes(getFileExtension(url));
+  };
+
+  const isPdfFile = (url: string) => {
+    return getFileExtension(url) === 'pdf';
+  };
+
+  const isCodeFile = (url: string) => {
+    const codeExtensions = ['js', 'ts', 'jsx', 'tsx', 'py', 'html', 'css', 'scss', 'json', 'xml', 'sql', 'php', 'rb', 'go', 'rs', 'cpp', 'c', 'java', 'swift', 'kt', 'dart', 'vue', 'svelte', 'r', 'scala', 'clj', 'hs', 'ml', 'fs', 'vb', 'cs', 'sh', 'bash', 'zsh', 'fish', 'ps1', 'bat', 'cmd'];
+    return codeExtensions.includes(getFileExtension(url));
+  };
+
+  const isDocumentFile = (url: string) => {
+    const docExtensions = ['doc', 'docx', 'txt', 'rtf', 'odt', 'pages', 'xls', 'xlsx', 'ppt', 'pptx', 'key', 'numbers', 'csv', 'tsv', 'md', 'rst', 'tex', 'latex'];
+    return docExtensions.includes(getFileExtension(url));
+  };
+
+  const getFilename = (url: string) => {
+    return url.split('/').pop() || 'Media File';
+  };
+
+  const getFileIcon = (url: string) => {
+    const extension = getFileExtension(url);
+    
+    // Special cases for specific file types
+    if (extension === 'psd') return '🎨';
+    if (extension === 'ai') return '🎨';
+    if (extension === 'sketch') return '🎨';
+    if (extension === 'figma') return '🎨';
+    if (extension === 'xd') return '🎨';
+    if (extension === 'zip') return '📦';
+    if (extension === 'rar') return '📦';
+    if (extension === '7z') return '📦';
+    if (extension === 'tar') return '📦';
+    if (extension === 'gz') return '📦';
+    if (extension === 'exe') return '⚙️';
+    if (extension === 'dmg') return '💿';
+    if (extension === 'iso') return '💿';
+    
+    // General categories
+    if (isImageFile(url)) return '🖼️';
+    if (isVideoFile(url)) return '🎥';
+    if (isAudioFile(url)) return '🎵';
+    if (isPdfFile(url)) return '📄';
+    if (isCodeFile(url)) return '💻';
+    if (isDocumentFile(url)) return '📝';
+    
+    return '📎';
+  };
+
+  const getFileIconSvg = (url: string) => {
+    const extension = getFileExtension(url);
+    
+    // Special cases for specific file types
+    if (extension === 'psd' || extension === 'ai' || extension === 'sketch' || extension === 'figma' || extension === 'xd') {
+      return (
+        <svg className="w-5 h-5 text-purple-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M5.57489 2.07403C5.83474 2.19892 6 2.4617 6 2.75001C6 3.57985 6.31211 4.05763 6.70313 4.63948L6.73156 4.68175C7.0641 5.17579 7.5 5.8234 7.5 6.75001C7.5 7.69552 7.02282 8.52959 6.29615 9.02452C6.48733 9.1848 6.65672 9.38248 6.80225 9.61803C7.27801 10.388 7.5 11.5645 7.5 13.2549C7.5 14.967 7.27003 17.023 6.89541 18.6644C6.70914 19.4806 6.47843 20.2335 6.20272 20.7994C6.06598 21.08 5.89948 21.3541 5.69217 21.5685C5.48714 21.7804 5.17035 22.0049 4.75 22.0049C4.32965 22.0049 4.01286 21.7804 3.80783 21.5685C3.60052 21.3541 3.43402 21.08 3.29728 20.7994C3.02157 20.2335 2.79086 19.4806 2.60459 18.6644C2.22997 17.023 2 14.967 2 13.2549C2 11.5645 2.22199 10.388 2.69775 9.61803C2.84328 9.38248 3.01267 9.1848 3.20385 9.02452C2.47718 8.52959 2 7.69552 2 6.75001C2 6.38181 2.00034 5.74889 2.38341 4.93168C2.75829 4.13192 3.47066 3.21301 4.78148 2.16436C5.00661 1.98425 5.31504 1.94914 5.57489 2.07403Z" fill="currentColor" />
+          <path d="M9.99994 14.917C9.46162 14.8267 8.94761 14.6647 8.46806 14.4412C8.48904 14.0349 8.49994 13.637 8.49994 13.2549C8.49994 12.8491 8.48793 12.461 8.46151 12.0915C8.90465 12.4558 9.4275 12.7266 9.99994 12.874V10.5C9.99994 9.67157 10.6715 9 11.4999 9H14.9999C14.9999 6.79086 13.2091 5 10.9999 5C10.0146 5 9.11251 5.35626 8.4154 5.94699C8.24173 5.13337 7.83957 4.53662 7.58275 4.15554L7.54248 4.09572C8.51976 3.40549 9.7125 3 10.9999 3C14.3136 3 16.9999 5.68629 16.9999 9H20.4999C21.3284 9 21.9999 9.67157 21.9999 10.5V19.5C21.9999 20.3284 21.3284 21 20.4999 21H11.4999C10.6715 21 9.99994 20.3284 9.99994 19.5V14.917ZM11.9999 14.917V19H19.9999V11H16.6585C15.9423 13.0265 14.1683 14.5533 11.9999 14.917ZM14.4648 11H11.9999V12.874C13.0508 12.6035 13.9345 11.9168 14.4648 11Z" fill="currentColor" />
+        </svg>
+      );
+    }
+    
+    if (extension === 'zip' || extension === 'rar' || extension === '7z' || extension === 'tar' || extension === 'gz') {
+      return (
+        <svg className="w-5 h-5 text-orange-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 20V4C2 3.44772 2.44772 3 3 3H8.44792C8.79153 3 9.11108 3.17641 9.29416 3.46719L10.5947 5.53281C10.7778 5.82359 11.0974 6 11.441 6H21C21.5523 6 22 6.44772 22 7V20C22 20.5523 21.5523 21 21 21H3C2.44772 21 2 20.5523 2 20Z" stroke="currentColor" strokeWidth="2" />
+          <rect x="14" y="7" width="2" height="2" fill="currentColor" />
+          <rect x="16" y="9" width="2" height="2" fill="currentColor" />
+          <rect x="14" y="11" width="2" height="2" fill="currentColor" />
+          <rect x="16" y="13" width="2" height="2" fill="currentColor" />
+          <rect x="14" y="15" width="2" height="2" fill="currentColor" />
+          <rect x="16" y="17" width="2" height="2" fill="currentColor" />
+          <rect x="14" y="17" width="2" height="2" fill="currentColor" />
+        </svg>
+      );
+    }
+    
+    if (extension === 'exe') {
+      return (
+        <svg className="w-5 h-5 text-blue-600" fill="currentColor" height="200px" width="200px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" xmlSpace="preserve">
+          <path d="M438.187,101.427L339.872,3.124c-2-2-4.712-3.124-7.541-3.124H103.978C85.622,0,70.687,14.934,70.687,33.291v445.419 c0,18.356,14.934,33.291,33.292,33.291h304.042c18.357,0,33.292-14.934,33.292-33.291V108.97 C441.311,106.141,440.188,103.427,438.187,101.427z M404.893,98.305l-0.002-0.002h-61.893V36.417l-0.003-0.004L404.893,98.305z M419.978,478.709c0,6.594-5.364,11.957-11.957,11.957H103.978c-6.594,0-11.958-5.363-11.958-11.957V33.291 c0.001-6.594,5.365-11.957,11.958-11.957h217.685v87.636c0,5.89,4.777,10.667,10.667,10.667h87.648V478.709z" />
+          <path d="M308.683,161.287c-3.828,4.477-3.302,11.211,1.177,15.039l53.481,45.723l-53.481,45.723 c-4.478,3.828-5.004,10.561-1.177,15.039c2.11,2.467,5.101,3.736,8.112,3.736c2.452,0,4.916-0.841,6.926-2.559l62.963-53.83 c2.371-2.026,3.735-4.989,3.735-8.108c0-3.119-1.364-6.081-3.734-8.108l-62.963-53.83 C319.246,156.282,312.51,156.809,308.683,161.287z" />
+          <path d="M195.204,286.546c3.01,0,6.003-1.267,8.112-3.735c3.828-4.477,3.302-11.211-1.177-15.039l-53.481-45.723l53.481-45.723 c4.478-3.828,5.004-10.561,1.177-15.039c-3.827-4.478-10.562-5.006-15.039-1.177l-62.963,53.83 c-2.371,2.026-3.735,4.989-3.735,8.108c0,3.119,1.364,6.081,3.735,8.108l62.963,53.83 C190.287,285.706,192.751,286.546,195.204,286.546z" />
+          <path d="M229.031,304.897c1.096,0.357,2.21,0.527,3.305,0.527c4.494,0,8.674-2.864,10.141-7.367l47.333-145.409 c1.824-5.602-1.239-11.622-6.841-13.444c-5.602-1.825-11.622,1.239-13.444,6.841l-47.333,145.409 C220.366,297.054,223.43,303.074,229.031,304.897z" />
+          <path d="M306.198,346.416c0-5.89-4.777-10.667-10.667-10.667H187.733c-5.89,0-10.667,4.776-10.667,10.667 s4.777,10.667,10.667,10.667h107.798C301.421,357.083,306.198,352.306,306.198,346.416z" />
+          <path d="M146.933,335.749H145.6c-5.89,0-10.667,4.776-10.667,10.667s4.777,10.667,10.667,10.667h1.333 c5.89,0,10.667-4.777,10.667-10.667S152.823,335.749,146.933,335.749z" />
+          <path d="M366.399,383.749H207.466c-5.89,0-10.667,4.776-10.667,10.667s4.777,10.667,10.667,10.667h158.933 c5.89,0,10.667-4.777,10.667-10.667S372.29,383.749,366.399,383.749z" />
+          <path d="M302.399,431.749h-94.933c-5.89,0-10.667,4.776-10.667,10.667s4.777,10.667,10.667,10.667h94.933 c5.89,0,10.667-4.777,10.667-10.667S308.29,431.749,302.399,431.749z" />
+        </svg>
+      );
+    }
+    
+    if (extension === 'dmg' || extension === 'iso') {
+      return (
+        <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 64 64" data-name="Material Expand" id="Material_Expand" xmlns="http://www.w3.org/2000/svg">
+          <path d="M54,2H10A2,2,0,0,0,8,4V60a2,2,0,0,0,2,2H54a2,2,0,0,0,2-2V4A2,2,0,0,0,54,2ZM52,14H36V6H52ZM16,6v4h4V6h4v4h4V6h4v8H12V6ZM12,58V26h4V22H12V18H52v4H48v4h4V50H48v4h4v4Z" />
+          <path d="M32,22A15.973,15.973,0,0,0,19.377,47.8l-3.791,3.791,2.828,2.828,3.791-3.791A15.991,15.991,0,1,0,32,22Zm0,28a11.922,11.922,0,0,1-6.942-2.23l3.356-3.356-2.828-2.828L22.23,44.942A11.988,11.988,0,1,1,32,50Z" />
+          <rect height="4" width="4" x="30" y="36" />
+        </svg>
+      );
+    }
+    
+    // General categories
+    if (isImageFile(url)) {
+      return (
+        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      );
+    }
+    
+    if (isVideoFile(url)) {
+      return (
+        <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+      );
+    }
+    
+    if (isAudioFile(url)) {
+      return (
+        <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+        </svg>
+      );
+    }
+    
+    if (isPdfFile(url)) {
+      return (
+        <svg className="w-5 h-5 text-red-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 4C4 3.44772 4.44772 3 5 3H14H14.5858C14.851 3 15.1054 3.10536 15.2929 3.29289L19.7071 7.70711C19.8946 7.89464 20 8.149 20 8.41421V20C20 20.5523 19.5523 21 19 21H5C4.44772 21 4 20.5523 4 20V4Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path d="M20 8H15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M11.5 13H11V17H11.5C12.6046 17 13.5 16.1046 13.5 15C13.5 13.8954 12.6046 13 11.5 13Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M15.5 17V13L17.5 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M16 15H17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M7 17L7 15.5M7 15.5L7 13L7.75 13C8.44036 13 9 13.5596 9 14.25V14.25C9 14.9404 8.44036 15.5 7.75 15.5H7Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    }
+    
+    if (isCodeFile(url)) {
+      return (
+        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+        </svg>
+      );
+    }
+    
+    if (isDocumentFile(url)) {
+      return (
+        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      );
+    }
+    
+    // Generic file icon
+    return (
+      <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    );
+  };
+
+  const getFileTypeLabel = (url: string) => {
+    const extension = getFileExtension(url);
+    
+    // Special cases for specific file types
+    if (extension === 'psd') return 'Photoshop file';
+    if (extension === 'ai') return 'Illustrator file';
+    if (extension === 'sketch') return 'Sketch file';
+    if (extension === 'figma') return 'Figma file';
+    if (extension === 'xd') return 'Adobe XD file';
+    if (extension === 'zip') return 'ZIP archive';
+    if (extension === 'rar') return 'RAR archive';
+    if (extension === '7z') return '7-Zip archive';
+    if (extension === 'tar') return 'TAR archive';
+    if (extension === 'gz') return 'GZIP archive';
+    if (extension === 'exe') return 'Executable file';
+    if (extension === 'dmg') return 'Disk image';
+    if (extension === 'iso') return 'ISO image';
+    
+    // General categories
+    if (isImageFile(url)) return 'Image file';
+    if (isVideoFile(url)) return 'Video file';
+    if (isAudioFile(url)) return 'Audio file';
+    if (isPdfFile(url)) return 'PDF document';
+    if (isCodeFile(url)) return 'Code file';
+    if (isDocumentFile(url)) return 'Document';
+    
+    return 'File';
   };
 
   // Compute the standard mention handle for a user (matches composer behavior)
@@ -512,7 +866,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
           </button>
           
           <button 
-            onClick={() => handleCreatePost('media', 'Uploading media...')}
+            onClick={() => setShowAddMediaModal(true)}
             className="flex items-center justify-center space-x-3 px-6 py-4 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-xl transition-colors border border-purple-200"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -576,20 +930,62 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                     
                     <p className="text-gray-700 mb-6 mt-6 text-lg ">{renderContentWithMentions(post.content)}</p>
                     
-                    {/* Media Preview */}
+                    {/* Media Files List */}
                     {post.mediaUrl && (
-                      <div className="bg-gray-100 rounded-lg p-4 mb-3">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                            <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                            </svg>
+                      <div className="mb-3">
+                        {/* Multiple Files */}
+                        {post.mediaUrls && post.mediaUrls.length > 1 && (
+                          <div className="bg-gray-100 rounded-lg p-4">
+                            <div className="flex items-center space-x-3 mb-3">
+                              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <svg className="w-6 h-6 text-purple-600" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <g clipPath="url(#clip0_901_1141)">
+                                    <path d="M12 13H15M12 16H20M12 20H20M12 24H20M21 7V2C21 1.447 20.553 1 20 1H2C1.447 1 1 1.447 1 2V24C1 24 1 25 2 25H3M26 27H30C30.553 27 31 26.553 31 26V4C31 3.447 30.553 3 30 3H24M26 30C26 30.553 25.553 31 25 31H7C6.447 31 6 30.553 6 30V8C6 7.447 6.447 7 7 7H25C25.553 7 26 7.447 26 8V30Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                  </g>
+                                  <defs>
+                                    <clipPath id="clip0_901_1141">
+                                      <rect width="32" height="32" fill="white" />
+                                    </clipPath>
+                                  </defs>
+                                </svg>
+                              </div>
+                              <div>
+                                <div className="font-medium text-gray-900">{post.mediaUrls.length} files uploaded</div>
+                                <div className="text-sm text-gray-500">Multiple media files</div>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              {post.mediaUrls.map((url: string, index: number) => (
+                                <div key={index} className="bg-white rounded-lg p-3 border border-gray-200 flex items-center space-x-3">
+                                  <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
+                                    {getFileIconSvg(url)}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-sm font-medium text-gray-900 truncate">
+                                      {post.fileNames?.[index] || getFilename(url)}
+                                    </div>
+                                    <div className="text-xs text-gray-500">{getFileTypeLabel(url)}</div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                          <div>
-                            <div className="font-medium text-gray-900">Media File</div>
-                            <div className="text-sm text-gray-500">Uploaded file</div>
+                        )}
+
+                        {/* Single File */}
+                        {(!post.mediaUrls || post.mediaUrls.length === 1) && (
+                          <div className="bg-gray-100 rounded-lg p-4">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                {getFileIconSvg(post.mediaUrl)}
+                              </div>
+                              <div>
+                                <div className="font-medium text-gray-900">{getFilename(post.mediaUrl)}</div>
+                                <div className="text-sm text-gray-500">{getFileTypeLabel(post.mediaUrl)}</div>
+                              </div>
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                     )}
                     
@@ -814,6 +1210,15 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         currentUser={currentUser}
         initialContent={prefillContent}
         initialMentionedUsers={prefillMentionedUsers}
+      />
+
+      {/* Add Media Modal */}
+      <AddMediaModal
+        isOpen={showAddMediaModal}
+        onClose={() => setShowAddMediaModal(false)}
+        onSubmit={handleCreateMedia}
+        teamMembers={teamMembers}
+        currentUser={currentUser}
       />
     </div>
   );

@@ -146,7 +146,7 @@ export const GET: APIRoute = async (context) => {
             id: child.user.id,
             name: child.user.name,
             email: child.user.email,
-            avatar: child.user.avatar
+            avatar: ''
           },
           createdAt: child.createdAt.toISOString(),
           likes: 0
@@ -159,7 +159,7 @@ export const GET: APIRoute = async (context) => {
             id: reply.user.id,
             name: reply.user.name,
             email: reply.user.email,
-            avatar: reply.user.avatar
+            avatar: ''
           },
           createdAt: reply.createdAt.toISOString(),
           likes: 0,
@@ -167,19 +167,62 @@ export const GET: APIRoute = async (context) => {
         };
       });
 
+      // Parse JSON fields safely
+      let linkPreview = null;
+      let subtask = null;
+      let mediaUrls = null;
+      let fileNames = null;
+      
+      if (parent.linkPreview) {
+        try {
+          linkPreview = JSON.parse(parent.linkPreview);
+        } catch (e) {
+          console.warn('Failed to parse linkPreview:', e);
+        }
+      }
+      
+      if (parent.subtaskData) {
+        try {
+          subtask = JSON.parse(parent.subtaskData);
+        } catch (e) {
+          console.warn('Failed to parse subtaskData:', e);
+        }
+      }
+
+      if (parent.mediaUrls) {
+        try {
+          mediaUrls = JSON.parse(parent.mediaUrls);
+        } catch (e) {
+          console.warn('Failed to parse mediaUrls:', e);
+        }
+      }
+
+      if (parent.fileNames) {
+        try {
+          fileNames = JSON.parse(parent.fileNames);
+        } catch (e) {
+          console.warn('Failed to parse fileNames:', e);
+        }
+      }
+
       return {
         id: parent.id,
-        type: 'insight',
+        type: parent.type || 'insight',
         content: parent.content,
         author: {
           id: parent.user.id,
           name: parent.user.name,
           email: parent.user.email,
-          avatar: parent.user.avatar
+          avatar: ''
         },
         createdAt: parent.createdAt.toISOString(),
         likes: 0,
-        comments: formattedReplies
+        comments: formattedReplies,
+        mediaUrl: parent.mediaUrl,
+        mediaUrls: mediaUrls,
+        fileNames: fileNames,
+        linkPreview: linkPreview,
+        subtask: subtask
       };
     });
     
@@ -269,6 +312,8 @@ export const POST: APIRoute = async (context) => {
       type = 'insight', 
       taskId, 
       mediaUrl, 
+      mediaUrls,
+      fileNames,
       linkPreview, 
       subtask,
       mentionedUsers = []
@@ -309,6 +354,12 @@ export const POST: APIRoute = async (context) => {
       userId: currentUser.id,
       content: content.trim(),
       parentId: null,
+      type: type,
+      mediaUrl: mediaUrl || null,
+      mediaUrls: mediaUrls ? JSON.stringify(mediaUrls) : null,
+      fileNames: fileNames ? JSON.stringify(fileNames) : null,
+      linkPreview: linkPreview ? JSON.stringify(linkPreview) : null,
+      subtaskData: subtask ? JSON.stringify(subtask) : null,
       archived: false
       // createdAt and updatedAt will be set automatically by defaultNow()
     }).returning();
@@ -362,7 +413,7 @@ export const POST: APIRoute = async (context) => {
           id: createdDiscussion.user.id,
           name: createdDiscussion.user.name,
           email: createdDiscussion.user.email,
-          avatar: createdDiscussion.user.avatar
+          avatar: ''
         },
         createdAt: createdDiscussion.createdAt.toISOString(),
         comments: []

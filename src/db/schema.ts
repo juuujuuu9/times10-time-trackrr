@@ -179,7 +179,13 @@ export const taskDiscussions = pgTable('task_discussions', {
   taskId: integer('task_id').references(() => tasks.id).notNull(),
   userId: integer('user_id').references(() => users.id).notNull(),
   content: text('content').notNull(),
-  parentId: integer('parent_id').references(() => taskDiscussions.id), // For replies
+  parentId: integer('parent_id'), // For replies - will be set up in relations
+  type: varchar('type', { length: 50 }).notNull().default('insight'), // Post type: insight, media, link, subtask
+  mediaUrl: varchar('media_url', { length: 500 }), // URL for media files
+  mediaUrls: text('media_urls'), // JSON array of media URLs for multiple files
+  fileNames: text('file_names'), // JSON array of file names for multiple files
+  linkPreview: text('link_preview'), // JSON string for link preview data
+  subtaskData: text('subtask_data'), // JSON string for subtask data
   archived: boolean('archived').notNull().default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -387,8 +393,11 @@ export const taskDiscussionsRelations = relations(taskDiscussions, ({ one, many 
   parent: one(taskDiscussions, {
     fields: [taskDiscussions.parentId],
     references: [taskDiscussions.id],
+    relationName: "taskDiscussions_parentId_taskDiscussions_id"
   }),
-  replies: many(taskDiscussions),
+  replies: many(taskDiscussions, {
+    relationName: "taskDiscussions_parentId_taskDiscussions_id"
+  }),
 }));
 
 export const taskFilesRelations = relations(taskFiles, ({ one }) => ({
