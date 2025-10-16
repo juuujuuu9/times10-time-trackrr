@@ -545,7 +545,7 @@ const allUsers = await db.select().from(users).orderBy(users.name);
             // Show success message
             const successMessage = document.createElement('div');
             successMessage.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-            successMessage.textContent = 'Task deleted successfully. All user assignments and time entries have been removed.';
+            successMessage.textContent = 'Task deleted successfully. All user assignments, discussions, files, links, and notes have been removed. Time entries remain valid for the project.';
             document.body.appendChild(successMessage);
             
             // Remove success message after 3 seconds

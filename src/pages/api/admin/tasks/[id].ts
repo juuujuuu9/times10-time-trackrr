@@ -1,61 +1,172 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../../db/index';
-import { tasks, taskAssignments, timeEntries } from '../../../../db/schema';
+import { tasks, taskAssignments, timeEntries, sessions, taskDiscussions, taskFiles, taskLinks, taskNotes } from '../../../../db/schema';
 import { eq } from 'drizzle-orm';
+import { getSessionUser } from '../../../../utils/session';
 
 export const prerender = false;
 
-export const DELETE: APIRoute = async ({ params }) => {
+export const DELETE: APIRoute = async (context) => {
   try {
-    const { id } = params;
+    console.log('DELETE task API called');
+    
+    // Test database connection
+    console.log('Testing database connection...');
+    try {
+      await db.query.tasks.findFirst();
+      console.log('Database connection successful');
+    } catch (dbError) {
+      console.error('Database connection failed:', dbError);
+      return new Response(JSON.stringify({
+        success: false,
+        message: 'Database connection failed',
+        error: dbError instanceof Error ? dbError.message : 'Unknown database error'
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Get current user and verify admin access
+    console.log('Getting session user...');
+    const currentUser = await getSessionUser(context);
+    console.log('Current user:', currentUser ? { id: currentUser.id, role: currentUser.role } : 'null');
+    
+    if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'developer')) {
+      console.log('Unauthorized access - user role:', currentUser?.role);
+      return new Response(JSON.stringify({
+        success: false,
+        message: 'Unauthorized access',
+        error: 'Insufficient permissions'
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const { id } = context.params;
 
     if (!id) {
-      return new Response(JSON.stringify({ error: 'Task ID is required' }), {
+      return new Response(JSON.stringify({ 
+        success: false,
+        error: 'Task ID is required' 
+      }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
     const taskId = parseInt(id);
-
-    // First, remove all user assignments from the task
-    await db
-      .delete(taskAssignments)
-      .where(eq(taskAssignments.taskId, taskId));
-
-    // Delete all time entries for this task since we can't have orphaned time entries
-    // due to foreign key constraints
-    await db
-      .delete(timeEntries)
-      .where(eq(timeEntries.taskId, taskId));
-
-    // Finally, delete the task
-    const deletedTask = await db
-      .delete(tasks)
-      .where(eq(tasks.id, taskId))
-      .returning();
-
-    if (deletedTask.length === 0) {
-      return new Response(JSON.stringify({ error: 'Task not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
+    console.log('Task ID from params:', taskId);
+    
+    if (isNaN(taskId)) {
+      return new Response(JSON.stringify({
+        success: false,
+        message: 'Invalid task ID format',
+        error: 'Task ID must be a valid number'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    // Return response with task deletion event data
-    return new Response(JSON.stringify({ 
-      message: 'Task deleted successfully. All user assignments and time entries have been removed.',
-      deletedTaskId: taskId,
-      deletedTaskName: deletedTask[0].name
+    // Check if task exists
+    console.log('Checking if task exists...');
+    const existingTask = await db.query.tasks.findFirst({
+      where: eq(tasks.id, taskId)
+    });
+    console.log('Existing task:', existingTask ? { id: existingTask.id, name: existingTask.name } : 'null');
+
+    if (!existingTask) {
+      return new Response(JSON.stringify({
+        success: false,
+        message: 'Task not found',
+        error: 'Task does not exist'
+      }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Delete in correct order to avoid foreign key constraints
+    console.log('Step 1: Deleting task assignments...');
+    try {
+      const deletedAssignments = await db.delete(taskAssignments).where(eq(taskAssignments.taskId, taskId)).returning();
+      console.log('Task assignments deleted:', deletedAssignments.length);
+    } catch (assignmentError) {
+      console.error('Error deleting task assignments:', assignmentError);
+      throw assignmentError;
+    }
+
+    console.log('Step 2: Deleting task discussions...');
+    try {
+      const deletedDiscussions = await db.delete(taskDiscussions).where(eq(taskDiscussions.taskId, taskId)).returning();
+      console.log('Task discussions deleted:', deletedDiscussions.length);
+    } catch (discussionError) {
+      console.error('Error deleting task discussions:', discussionError);
+      throw discussionError;
+    }
+
+    console.log('Step 3: Deleting task files...');
+    try {
+      const deletedFiles = await db.delete(taskFiles).where(eq(taskFiles.taskId, taskId)).returning();
+      console.log('Task files deleted:', deletedFiles.length);
+    } catch (fileError) {
+      console.error('Error deleting task files:', fileError);
+      throw fileError;
+    }
+
+    console.log('Step 4: Deleting task links...');
+    try {
+      const deletedLinks = await db.delete(taskLinks).where(eq(taskLinks.taskId, taskId)).returning();
+      console.log('Task links deleted:', deletedLinks.length);
+    } catch (linkError) {
+      console.error('Error deleting task links:', linkError);
+      throw linkError;
+    }
+
+    console.log('Step 5: Deleting task notes...');
+    try {
+      const deletedNotes = await db.delete(taskNotes).where(eq(taskNotes.taskId, taskId)).returning();
+      console.log('Task notes deleted:', deletedNotes.length);
+    } catch (noteError) {
+      console.error('Error deleting task notes:', noteError);
+      throw noteError;
+    }
+
+    console.log('Step 6: Skipping time entries deletion...');
+    console.log('Note: Time entries are project-level, not task-level. They will remain valid for the project.');
+
+    console.log('Step 7: Deleting task...');
+    try {
+      const deletedTask = await db.delete(tasks).where(eq(tasks.id, taskId)).returning();
+      console.log('Task deleted successfully:', deletedTask.length);
+    } catch (taskError) {
+      console.error('Error deleting task:', taskError);
+      throw taskError;
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
+      message: 'Task deleted successfully. All user assignments, discussions, files, links, and notes have been removed. Time entries remain valid for the project.',
+      data: {
+        deletedTaskId: taskId,
+        deletedTaskName: existingTask.name
+      }
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' }
     });
+
   } catch (error) {
     console.error('Error deleting task:', error);
-    return new Response(JSON.stringify({ error: 'Failed to delete task' }), {
+    return new Response(JSON.stringify({
+      success: false,
+      message: 'Internal server error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 }; 
