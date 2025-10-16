@@ -6,6 +6,7 @@ import LinkDropModal from './LinkDropModal';
 import LinkPreview from './LinkPreview';
 import SubtaskModal from './SubtaskModal';
 import SubtaskCard from './SubtaskCard';
+import CentralizedSubtaskTable from './CentralizedSubtaskTable';
 
 interface User {
   id: number;
@@ -829,8 +830,24 @@ const TaskStream: React.FC<TaskStreamProps> = ({
     }
   };
 
+  // Extract all subtasks from posts
+  const getAllSubtasks = useCallback(() => {
+    const allSubtasks: any[] = [];
+    posts.forEach(post => {
+      if (post.subtasks && post.subtasks.length > 0) {
+        allSubtasks.push(...post.subtasks);
+      }
+    });
+    return allSubtasks;
+  }, [posts]);
+
   // Filter posts based on current filters
   const filteredPosts = posts.filter(post => {
+    // Hide subtask posts from the feed
+    if (post.type === 'subtask') {
+      return false;
+    }
+
     if (filter !== 'all' && post.type !== filter) return false;
     if (memberFilter !== 'all' && post.author.id.toString() !== memberFilter) return false;
     // Add time filtering logic here
@@ -1205,6 +1222,9 @@ const TaskStream: React.FC<TaskStreamProps> = ({
           </div>
         ))}
       </div>
+
+      {/* Centralized Subtask Table */}
+      <CentralizedSubtaskTable subtasks={getAllSubtasks()} />
 
       {/* Moved per-post deletion confirmation inline under each post */}
       {/* Post Creation Area */}
