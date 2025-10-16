@@ -184,9 +184,12 @@ export const GET: APIRoute = async (context) => {
       if (parent.subtaskData) {
         try {
           subtask = JSON.parse(parent.subtaskData);
+          console.log('📋 Parsed subtask data for discussion', parent.id, ':', subtask);
         } catch (e) {
           console.warn('Failed to parse subtaskData:', e);
         }
+      } else {
+        console.log('📋 No subtaskData found for discussion', parent.id);
       }
 
       if (parent.mediaUrls) {
@@ -307,6 +310,7 @@ export const POST: APIRoute = async (context) => {
     }
 
     const body = await context.request.json().catch(() => ({}));
+    console.log('📥 Received request body:', body);
     const { 
       content, 
       type = 'insight', 
@@ -319,6 +323,8 @@ export const POST: APIRoute = async (context) => {
       subtaskData,
       mentionedUsers = []
     } = body;
+    
+    console.log('📋 Extracted subtask data:', { subtask, subtaskData });
 
     if (!content || content.trim() === '') {
       return new Response(JSON.stringify({
