@@ -57,9 +57,9 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({ subta
   return (
     <div className={`bg-white border border-gray-200 rounded-lg overflow-hidden mb-6 ${className}`}>
       {/* Header */}
-      <div className="px-4 py-3 bg-gray-100 border-b border-gray-200">
+      <div className="px-4 py-3 bg-white border-b border-gray-200">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-700">TASKS</h3>
+          <h3 className="text-md font-semibold text-gray-700">SUBTASKS</h3>
           <span className="text-sm text-gray-500">
             {subtasks.length} subtask{subtasks.length !== 1 ? 's' : ''}
           </span>
@@ -69,13 +69,12 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({ subta
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-100">
+          <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide">TASK</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide">NAME</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide">ASSIGNEE</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide">DUE</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide">PRIORITY</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide">STATUS</th>
             </tr>
           </thead>
           <tbody>
