@@ -222,7 +222,7 @@ export const GET: APIRoute = async (context) => {
         mediaUrls: mediaUrls,
         fileNames: fileNames,
         linkPreview: linkPreview,
-        subtask: subtask
+        subtasks: subtask
       };
     });
     
@@ -316,6 +316,7 @@ export const POST: APIRoute = async (context) => {
       fileNames,
       linkPreview, 
       subtask,
+      subtaskData,
       mentionedUsers = []
     } = body;
 
@@ -359,7 +360,7 @@ export const POST: APIRoute = async (context) => {
       mediaUrls: mediaUrls ? JSON.stringify(mediaUrls) : null,
       fileNames: fileNames ? JSON.stringify(fileNames) : null,
       linkPreview: linkPreview ? JSON.stringify(linkPreview) : null,
-      subtaskData: subtask ? JSON.stringify(subtask) : null,
+      subtaskData: (subtask || subtaskData) ? JSON.stringify(subtask || subtaskData) : null,
       archived: false
       // createdAt and updatedAt will be set automatically by defaultNow()
     }).returning();

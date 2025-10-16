@@ -118,18 +118,7 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Subtasks Table */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900">Subtasks</h3>
-                <button
-                  type="button"
-                  onClick={addSubtask}
-                  className="flex items-center space-x-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add Subtask</span>
-                </button>
-              </div>
-
+              
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
@@ -138,7 +127,6 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
                       <th className="text-left py-3 px-4 font-medium text-gray-700">Priority</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-700">Assignee</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-700">Due Date</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-700 w-12"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -196,6 +184,17 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
                     ))}
                   </tbody>
                 </table>
+              </div>
+              <div className="flex items-center justify-end w-full">
+                {/* <h3 className="text-lg font-medium text-gray-900">Subtasks</h3> */}
+                 <button
+                   type="button"
+                   onClick={addSubtask}
+                   className="flex items-center space-x-2 px-3 py-2 bg-white border border-green-600 text-green-600 rounded-lg hover:bg-green-50 transition-colors"
+                 >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Subtask</span>
+                </button>
               </div>
             </div>
           </form>
