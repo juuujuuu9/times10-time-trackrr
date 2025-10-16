@@ -1,5 +1,5 @@
-import React from 'react';
-import { FileText, User, Calendar } from 'lucide-react';
+import React, { useState } from 'react';
+import { FileText, User, Calendar, Check } from 'lucide-react';
 
 interface Subtask {
   id: string;
@@ -15,6 +15,20 @@ interface CentralizedSubtaskTableProps {
 }
 
 const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({ subtasks, className = '' }) => {
+  const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set());
+
+  const toggleTaskCompletion = (taskId: string) => {
+    setCompletedTasks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId);
+      } else {
+        newSet.add(taskId);
+      }
+      return newSet;
+    });
+  };
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high':
@@ -82,12 +96,22 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({ subta
               <tr key={subtask.id} className="border-b border-gray-200 bg-white">
                 <td className="py-3 px-4">
                   <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                      <FileText className="w-4 h-4 text-gray-600" />
-                    </div>
-                    <div>
+                    <button
+                      onClick={() => toggleTaskCompletion(subtask.id)}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 ${
+                        completedTasks.has(subtask.id)
+                          ? 'bg-green-500 text-white'
+                          : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                      }`}
+                    >
+                      {completedTasks.has(subtask.id) ? (
+                        <Check className="w-4 h-4" />
+                      ) : (
+                        <div className="w-4 h-4 rounded-full border-2 border-current"></div>
+                      )}
+                    </button>
+                    <div className={`${completedTasks.has(subtask.id) ? 'line-through text-gray-500' : ''}`}>
                       <div className="font-medium text-gray-900">{subtask.name}</div>
-                      <div className="text-sm text-gray-500">Subtask for main task</div>
                     </div>
                   </div>
                 </td>
@@ -113,11 +137,6 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({ subta
                 <td className="py-3 px-4">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(subtask.priority)}`}>
                     {getPriorityLabel(subtask.priority)}
-                  </span>
-                </td>
-                <td className="py-3 px-4">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-gray-600 bg-gray-50">
-                    Pending
                   </span>
                 </td>
               </tr>
