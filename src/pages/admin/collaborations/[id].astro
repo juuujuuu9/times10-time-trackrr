@@ -467,8 +467,9 @@ if (projectDetails && projectDetails.id) {
                       <div class="flex items-center">
                         <div class="flex-shrink-0 h-10 w-10">
                           <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                            <svg class="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                            <svg class="h-5 w-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M5 22h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2h-2a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1H5c-1.103 0-2 .897-2 2v15c0 1.103.897 2 2 2zM5 5h2v2h10V5h2v15H5V5z"></path>
+                              <path d="m11 13.586-1.793-1.793-1.414 1.414L11 16.414l5.207-5.207-1.414-1.414z"></path>
                             </svg>
                           </div>
                         </div>
@@ -523,13 +524,24 @@ if (projectDetails && projectDetails.id) {
                       )}
                     </div>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-US', { 
-                      year: 'numeric', 
-                      month: '2-digit', 
-                      day: '2-digit',
-                      timeZone: 'UTC'
-                    }) : 'No due date'}
+                  <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    {task.dueDate ? (() => {
+                      const dueDate = new Date(task.dueDate);
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      dueDate.setHours(0, 0, 0, 0);
+                      const isOverdue = dueDate < today && task.status !== 'completed';
+                      return (
+                        <span class={isOverdue ? 'text-red-600 font-medium' : 'text-gray-500'}>
+                          {dueDate.toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: '2-digit', 
+                            day: '2-digit',
+                            timeZone: 'UTC'
+                          })}
+                        </span>
+                      );
+                    })() : <span class="text-gray-500">No due date</span>}
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
                     <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
