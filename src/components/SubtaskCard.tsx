@@ -45,6 +45,19 @@ const SubtaskCard: React.FC<SubtaskCardProps> = ({ subtasks, className = '' }) =
     }
   };
 
+  const isOverdue = (dueDate: string) => {
+    try {
+      const today = new Date();
+      const due = new Date(dueDate);
+      // Set time to start of day for accurate comparison
+      today.setHours(0, 0, 0, 0);
+      due.setHours(0, 0, 0, 0);
+      return due < today;
+    } catch {
+      return false;
+    }
+  };
+
   if (!subtasks || subtasks.length === 0) {
     return null;
   }
@@ -100,8 +113,10 @@ const SubtaskCard: React.FC<SubtaskCardProps> = ({ subtasks, className = '' }) =
                 <td className="py-3 px-4">
                   {subtask.dueDate ? (
                     <div className="flex items-center space-x-2">
-                      <Calendar className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm text-gray-700">{formatDate(subtask.dueDate)}</span>
+                      <Calendar className={`w-4 h-4 ${isOverdue(subtask.dueDate) ? 'text-red-500' : 'text-gray-400'}`} />
+                      <span className={`text-sm ${isOverdue(subtask.dueDate) ? 'text-red-600 font-medium' : 'text-gray-700'}`}>
+                        {formatDate(subtask.dueDate)}
+                      </span>
                     </div>
                   ) : (
                     <span className="text-sm text-gray-400">No due date</span>

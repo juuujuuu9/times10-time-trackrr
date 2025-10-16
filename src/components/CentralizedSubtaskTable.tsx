@@ -64,6 +64,19 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({ subta
     }
   };
 
+  const isOverdue = (dueDate: string) => {
+    try {
+      const today = new Date();
+      const due = new Date(dueDate);
+      // Set time to start of day for accurate comparison
+      today.setHours(0, 0, 0, 0);
+      due.setHours(0, 0, 0, 0);
+      return due < today;
+    } catch {
+      return false;
+    }
+  };
+
   if (!subtasks || subtasks.length === 0) {
     return null;
   }
@@ -73,10 +86,12 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({ subta
       {/* Header */}
       <div className="px-4 py-3 bg-white border-b border-gray-200">
         <div className="flex items-center justify-between">
-          <h3 className="text-md font-semibold text-gray-700">SUBTASKS</h3>
-          <span className="text-sm text-gray-500">
-            {subtasks.length} subtask{subtasks.length !== 1 ? 's' : ''}
-          </span>
+          <div className="flex items-center space-x-2">
+            <h3 className="text-md font-semibold text-gray-700">SUBTASKS</h3>
+            <span className="text-xs text-gray-500 uppercase tracking-wide italic">
+              Check them off as you go!
+            </span>
+          </div>          
         </div>
       </div>
 
@@ -129,7 +144,9 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({ subta
                 </td>
                 <td className="py-3 px-4">
                   {subtask.dueDate ? (
-                    <span className="text-sm text-gray-900">{formatDate(subtask.dueDate)}</span>
+                    <span className={`text-sm ${isOverdue(subtask.dueDate) ? 'text-red-600 font-medium' : 'text-gray-900'}`}>
+                      {formatDate(subtask.dueDate)}
+                    </span>
                   ) : (
                     <span className="text-sm text-gray-400">No due date</span>
                   )}
