@@ -113,7 +113,7 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
           <div className="flex items-center space-x-2">
             <h3 className="text-md font-semibold text-gray-700">SUBTASKS</h3>
             <span className="text-xs text-gray-500 uppercase tracking-wide italic">
-              Check them off as you go!
+              Check them off as you complete them!
             </span>
           </div>          
         </div>

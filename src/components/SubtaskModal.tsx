@@ -137,44 +137,44 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
                   <tbody>
                     {subtasks.map((subtask, index) => (
                       <tr key={subtask.id} className="border-b border-gray-100">
-                        <td className="py-3 px-4">
+                        <td className="py-0 px-0">
                           <input
                             type="text"
                             value={subtask.name}
                             onChange={(e) => updateSubtask(subtask.id, 'name', e.target.value)}
                             placeholder="Subtask name"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                            className="w-full px-3 py-3 border border-t-0 border-l-0 border-b-0 border-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
                           />
                         </td>
-                        <td className="py-3 px-4">
+                        <td className="py-0 px-0">
                           <select
                             value={subtask.priority}
                             onChange={(e) => updateSubtask(subtask.id, 'priority', e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                            className="w-full px-3 py-3 border border-t-0 border-l-0 border-b-0 border-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
                           >
                             <option value="low">Low</option>
                             <option value="medium">Medium</option>
                             <option value="high">High</option>
                           </select>
                         </td>
-                        <td className="py-3 px-4">
+                        <td className="py-0 px-0">
                           <input
                             type="text"
                             value={subtask.assignee}
                             onChange={(e) => updateSubtask(subtask.id, 'assignee', e.target.value)}
                             placeholder="Assignee"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                            className="w-full px-3 py-3 border border-t-0 border-l-0 border-b-0 border-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
                           />
                         </td>
-                        <td className="py-3 px-4">
+                        <td className="py-0 px-0">
                           <input
                             type="date"
                             value={subtask.dueDate}
                             onChange={(e) => updateSubtask(subtask.id, 'dueDate', e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                            className="w-full px-3 py-3 border border-t-0 border-b-0 border-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
                           />
                         </td>
-                        <td className="py-3 px-4">
+                        <td className="py-0 px-4">
                           {subtasks.length > 1 && (
                             <button
                               type="button"

@@ -1317,7 +1317,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
             </svg>
-            <span className="font-semibold">Upload Media</span>
+            <span className="font-semibold">Upload Files</span>
           </button>
           
           <button 
@@ -1354,7 +1354,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
             const typeStyle = getTypeStyling(post.type);
             
             return (
-              <div key={post.id} className={`bg-white rounded-xl border border-gray-200 p-4 pt-4 relative ${post.author.id === currentUser.id && post.comments && post.comments.length > 0 ? 'pb-12' : ''}`}>
+              <div key={post.id} className={`bg-white rounded-xl border border-gray-200 p-4 pt-4 relative ${post.author.id === currentUser.id && post.comments && post.comments.length > 0 ? 'pb-12' : ''} ${post.author.id === currentUser.id && post.type === 'media' ? (post.comments && post.comments.length > 0 ? 'pb-12' : 'pb-8') : ''}`}>
                 <div className="flex items-start space-x-3">
                   
                   <div className="flex-1">
@@ -1368,7 +1368,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                       </div>
                       <div className="flex items-center space-x-2">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${typeStyle.bg} ${typeStyle.text}`}>
-                          {typeStyle.icon} {post.type.charAt(0).toUpperCase() + post.type.slice(1)}
+                          {typeStyle.icon} {post.type === 'media' ? 'Files' : post.type.charAt(0).toUpperCase() + post.type.slice(1)}
                         </span>
                       </div>
                     </div>
