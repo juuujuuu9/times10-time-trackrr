@@ -78,6 +78,13 @@
       "when": 1757975430564,
       "tag": "0013_add_collaborative_features",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1760588026744,
+      "tag": "0011_acoustic_sunspot",
+      "breakpoints": true
     }
   ]
 }

@@ -213,7 +213,27 @@ export const PUT: APIRoute = async (context) => {
     }
 
     const body = await context.request.json().catch(() => ({}));
-    const { content } = body;
+    const { content, subtaskData } = body;
+
+    // Handle subtask completion updates
+    if (subtaskData) {
+      // Update subtask data in the discussion
+      await db
+        .update(taskDiscussions)
+        .set({ 
+          subtaskData: JSON.stringify(subtaskData),
+          updatedAt: new Date() 
+        })
+        .where(eq(taskDiscussions.id, discussionId));
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Subtask completion updated successfully'
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
     if (!content || content.trim() === '') {
       return new Response(JSON.stringify({
@@ -225,7 +245,7 @@ export const PUT: APIRoute = async (context) => {
       });
     }
 
-    // Update the discussion
+    // Update the discussion content
     await db
       .update(taskDiscussions)
       .set({ 

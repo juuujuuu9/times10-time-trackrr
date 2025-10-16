@@ -7,26 +7,50 @@ interface Subtask {
   priority: 'low' | 'medium' | 'high';
   assignee?: string;
   dueDate?: string;
+  completed?: boolean;
 }
 
 interface CentralizedSubtaskTableProps {
   subtasks: Subtask[];
   className?: string;
+  collaborationId?: number;
+  taskId?: number;
+  onSubtaskUpdate?: (subtaskId: string, completed: boolean) => void;
 }
 
-const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({ subtasks, className = '' }) => {
-  const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set());
+const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({ 
+  subtasks, 
+  className = '', 
+  collaborationId, 
+  taskId, 
+  onSubtaskUpdate 
+}) => {
+  const [updatingTasks, setUpdatingTasks] = useState<Set<string>>(new Set());
 
-  const toggleTaskCompletion = (taskId: string) => {
-    setCompletedTasks(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(taskId)) {
-        newSet.delete(taskId);
-      } else {
-        newSet.add(taskId);
+  const toggleTaskCompletion = async (subtaskId: string) => {
+    const subtask = subtasks.find(s => s.id === subtaskId);
+    if (!subtask) return;
+
+    const newCompleted = !subtask.completed;
+    
+    // Show loading state
+    setUpdatingTasks(prev => new Set(prev).add(subtaskId));
+
+    try {
+      // Call the parent's update function if provided
+      if (onSubtaskUpdate) {
+        await onSubtaskUpdate(subtaskId, newCompleted);
       }
-      return newSet;
-    });
+    } catch (error) {
+      console.error('Error updating subtask completion:', error);
+    } finally {
+      // Remove loading state
+      setUpdatingTasks(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(subtaskId);
+        return newSet;
+      });
+    }
   };
 
   const getPriorityColor = (priority: string) => {
@@ -113,19 +137,22 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({ subta
                   <div className="flex items-center space-x-3">
                     <button
                       onClick={() => toggleTaskCompletion(subtask.id)}
+                      disabled={updatingTasks.has(subtask.id)}
                       className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 ${
-                        completedTasks.has(subtask.id)
+                        subtask.completed
                           ? 'bg-green-500 text-white'
                           : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                      }`}
+                      } ${updatingTasks.has(subtask.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      {completedTasks.has(subtask.id) ? (
+                      {updatingTasks.has(subtask.id) ? (
+                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                      ) : subtask.completed ? (
                         <Check className="w-4 h-4" />
                       ) : (
                         <div className="w-4 h-4 rounded-full border-2 border-current"></div>
                       )}
                     </button>
-                    <div className={`${completedTasks.has(subtask.id) ? 'line-through text-gray-500' : ''}`}>
+                    <div className={`${subtask.completed ? 'line-through text-gray-500' : ''}`}>
                       <div className="font-medium text-gray-900">{subtask.name}</div>
                     </div>
                   </div>
@@ -133,10 +160,10 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({ subta
                 <td className="py-3 px-4">
                   {subtask.assignee ? (
                     <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm font-medium text-gray-700">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${subtask.completed ? 'bg-gray-100 text-gray-400' : 'bg-gray-200 text-gray-700'}`}>
                         {subtask.assignee.charAt(0).toUpperCase()}
                       </div>
-                      <span className="text-sm text-gray-700">{subtask.assignee}</span>
+                      <span className={`text-sm ${subtask.completed ? 'text-gray-400' : 'text-gray-700'}`}>{subtask.assignee}</span>
                     </div>
                   ) : (
                     <span className="text-sm text-gray-400">Unassigned</span>
@@ -144,7 +171,7 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({ subta
                 </td>
                 <td className="py-3 px-4">
                   {subtask.dueDate ? (
-                    <span className={`text-sm ${isOverdue(subtask.dueDate) ? 'text-red-600 font-medium' : 'text-gray-900'}`}>
+                    <span className={`text-sm ${subtask.completed ? 'text-gray-400' : isOverdue(subtask.dueDate) ? 'text-red-600 font-medium' : 'text-gray-900'}`}>
                       {formatDate(subtask.dueDate)}
                     </span>
                   ) : (
@@ -152,7 +179,7 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({ subta
                   )}
                 </td>
                 <td className="py-3 px-4">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(subtask.priority)}`}>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${subtask.completed ? 'text-gray-400 bg-gray-100' : getPriorityColor(subtask.priority)}`}>
                     {getPriorityLabel(subtask.priority)}
                   </span>
                 </td>

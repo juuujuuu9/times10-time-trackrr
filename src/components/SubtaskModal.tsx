@@ -7,6 +7,7 @@ interface Subtask {
   priority: 'low' | 'medium' | 'high';
   assignee?: string;
   dueDate?: string;
+  completed?: boolean;
 }
 
 interface SubtaskModalProps {
@@ -22,7 +23,8 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
       name: '',
       priority: 'medium',
       assignee: '',
-      dueDate: ''
+      dueDate: '',
+      completed: false
     }
   ]);
 
@@ -32,7 +34,8 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
       name: '',
       priority: 'medium',
       assignee: '',
-      dueDate: ''
+      dueDate: '',
+      completed: false
     };
     setSubtasks(prev => [...prev, newSubtask]);
   }, []);
@@ -73,7 +76,8 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
       name: '',
       priority: 'medium',
       assignee: '',
-      dueDate: ''
+      dueDate: '',
+      completed: false
     }]);
     onClose();
   }, [subtasks, onCreateSubtasks, onClose]);
@@ -84,7 +88,8 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
       name: '',
       priority: 'medium',
       assignee: '',
-      dueDate: ''
+      dueDate: '',
+      completed: false
     }]);
     onClose();
   }, [onClose]);

@@ -38,6 +38,7 @@ interface Post {
     priority: 'low' | 'medium' | 'high';
     assignee?: string;
     dueDate?: string;
+    completed?: boolean;
   }[];
 }
 
@@ -494,6 +495,63 @@ const TaskStream: React.FC<TaskStreamProps> = ({
     }
   };
 
+  // Handle subtask completion update
+  const handleSubtaskUpdate = async (subtaskId: string, completed: boolean) => {
+    try {
+      // Find the discussion that contains this subtask
+      const discussionWithSubtask = posts.find(post => 
+        post.subtasks && post.subtasks.some(subtask => subtask.id === subtaskId)
+      );
+
+      if (!discussionWithSubtask) {
+        console.error('Discussion with subtask not found');
+        return;
+      }
+
+      // Update the subtask in the discussion's subtaskData
+      const updatedSubtasks = discussionWithSubtask.subtasks?.map(subtask => 
+        subtask.id === subtaskId ? { ...subtask, completed } : subtask
+      ) || [];
+
+      // Update the discussion in the database
+      const response = await fetch(`/api/collaborations/${collaborationId}/discussions/${discussionWithSubtask.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          subtaskData: {
+            subtasks: updatedSubtasks
+          }
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update the local state
+        setPosts(prevPosts => 
+          prevPosts.map(post => 
+            post.id === discussionWithSubtask.id 
+              ? { ...post, subtasks: updatedSubtasks }
+              : post
+          )
+        );
+        
+        // Dispatch custom event for real-time updates
+        window.dispatchEvent(new CustomEvent('taskStreamUpdate', {
+          detail: { taskId, collaborationId }
+        }));
+      } else {
+        console.error('Failed to update subtask:', data.error || data.message);
+        addNotification('error', 'Failed to update subtask: ' + (data.error || data.message || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error updating subtask:', error);
+      addNotification('error', 'Error updating subtask: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
   // Handle subtask creation
   const handleCreateSubtasks = async (subtasks: { name: string; priority: 'low' | 'medium' | 'high'; assignee?: string; dueDate?: string }[]) => {
     try {
@@ -511,7 +569,8 @@ const TaskStream: React.FC<TaskStreamProps> = ({
           name: subtask.name,
           priority: subtask.priority,
           assignee: subtask.assignee,
-          dueDate: subtask.dueDate
+          dueDate: subtask.dueDate,
+          completed: false
         }))
       };
 
@@ -528,7 +587,8 @@ const TaskStream: React.FC<TaskStreamProps> = ({
             name: subtask.name,
             priority: subtask.priority,
             assignee: subtask.assignee,
-            dueDate: subtask.dueDate
+            dueDate: subtask.dueDate,
+            completed: false
           }))
         }
       };
@@ -1224,7 +1284,12 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       </div>
 
       {/* Centralized Subtask Table */}
-      <CentralizedSubtaskTable subtasks={getAllSubtasks()} />
+      <CentralizedSubtaskTable 
+        subtasks={getAllSubtasks()} 
+        collaborationId={collaborationId}
+        taskId={taskId}
+        onSubtaskUpdate={handleSubtaskUpdate}
+      />
 
       {/* Moved per-post deletion confirmation inline under each post */}
       {/* Post Creation Area */}

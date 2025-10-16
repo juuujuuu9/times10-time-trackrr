@@ -1,0 +1,3473 @@
+{
+  "environment": "production",
+  "timestamp": "2025-10-16T02:17:04.087Z",
+  "tables": {
+    "clients": {
+      "table_name": "clients",
+      "table_type": "BASE TABLE",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "nextval('clients_id_seq'::regclass)",
+          "ordinal_position": 1,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "name",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 2,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "created_by",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 3,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 4,
+          "udt_name": "timestamp"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 5,
+          "udt_name": "timestamp"
+        },
+        {
+          "column_name": "archived",
+          "data_type": "boolean",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "false",
+          "ordinal_position": 6,
+          "udt_name": "bool"
+        }
+      ]
+    },
+    "invitation_tokens": {
+      "table_name": "invitation_tokens",
+      "table_type": "BASE TABLE",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "nextval('invitation_tokens_id_seq'::regclass)",
+          "ordinal_position": 1,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "email",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 2,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "token",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 3,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "expires_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 4,
+          "udt_name": "timestamp"
+        },
+        {
+          "column_name": "used",
+          "data_type": "boolean",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "false",
+          "ordinal_position": 5,
+          "udt_name": "bool"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 6,
+          "udt_name": "timestamp"
+        }
+      ]
+    },
+    "notifications": {
+      "table_name": "notifications",
+      "table_type": "BASE TABLE",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "nextval('notifications_id_seq'::regclass)",
+          "ordinal_position": 1,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "user_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 2,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "type",
+          "data_type": "character varying",
+          "character_maximum_length": 50,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 3,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "title",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 4,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "message",
+          "data_type": "text",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 5,
+          "udt_name": "text"
+        },
+        {
+          "column_name": "related_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 6,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "related_type",
+          "data_type": "character varying",
+          "character_maximum_length": 50,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 7,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "read",
+          "data_type": "boolean",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "false",
+          "ordinal_position": 8,
+          "udt_name": "bool"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 9,
+          "udt_name": "timestamp"
+        }
+      ]
+    },
+    "password_reset_tokens": {
+      "table_name": "password_reset_tokens",
+      "table_type": "BASE TABLE",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "nextval('password_reset_tokens_id_seq'::regclass)",
+          "ordinal_position": 1,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "user_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 2,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "token",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 3,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "expires_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 4,
+          "udt_name": "timestamp"
+        },
+        {
+          "column_name": "used",
+          "data_type": "boolean",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "false",
+          "ordinal_position": 5,
+          "udt_name": "bool"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 6,
+          "udt_name": "timestamp"
+        }
+      ]
+    },
+    "projects": {
+      "table_name": "projects",
+      "table_type": "BASE TABLE",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "nextval('projects_id_seq'::regclass)",
+          "ordinal_position": 1,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "client_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 2,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "name",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 3,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 4,
+          "udt_name": "timestamp"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 5,
+          "udt_name": "timestamp"
+        },
+        {
+          "column_name": "archived",
+          "data_type": "boolean",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "false",
+          "ordinal_position": 6,
+          "udt_name": "bool"
+        },
+        {
+          "column_name": "is_system",
+          "data_type": "boolean",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "false",
+          "ordinal_position": 7,
+          "udt_name": "bool"
+        }
+      ]
+    },
+    "sessions": {
+      "table_name": "sessions",
+      "table_type": "BASE TABLE",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "nextval('sessions_id_seq'::regclass)",
+          "ordinal_position": 1,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "user_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 2,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "token",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 3,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "expires_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 4,
+          "udt_name": "timestamp"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 5,
+          "udt_name": "timestamp"
+        }
+      ]
+    },
+    "slack_commands": {
+      "table_name": "slack_commands",
+      "table_type": "BASE TABLE",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "nextval('slack_commands_id_seq'::regclass)",
+          "ordinal_position": 1,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "command",
+          "data_type": "character varying",
+          "character_maximum_length": 100,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 2,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "slack_user_id",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 3,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "workspace_id",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 4,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "channel_id",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 5,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "text",
+          "data_type": "text",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 6,
+          "udt_name": "text"
+        },
+        {
+          "column_name": "response",
+          "data_type": "text",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 7,
+          "udt_name": "text"
+        },
+        {
+          "column_name": "success",
+          "data_type": "boolean",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "true",
+          "ordinal_position": 8,
+          "udt_name": "bool"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 9,
+          "udt_name": "timestamp"
+        }
+      ]
+    },
+    "slack_users": {
+      "table_name": "slack_users",
+      "table_type": "BASE TABLE",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "nextval('slack_users_id_seq'::regclass)",
+          "ordinal_position": 1,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "user_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 2,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "slack_user_id",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 3,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "workspace_id",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 4,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "slack_username",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 5,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "slack_email",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 6,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "access_token",
+          "data_type": "character varying",
+          "character_maximum_length": 1000,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 7,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 8,
+          "udt_name": "timestamp"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 9,
+          "udt_name": "timestamp"
+        }
+      ]
+    },
+    "slack_workspaces": {
+      "table_name": "slack_workspaces",
+      "table_type": "BASE TABLE",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "nextval('slack_workspaces_id_seq'::regclass)",
+          "ordinal_position": 1,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "workspace_id",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 2,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "workspace_name",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 3,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "access_token",
+          "data_type": "character varying",
+          "character_maximum_length": 1000,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 4,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "bot_user_id",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 5,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "bot_access_token",
+          "data_type": "character varying",
+          "character_maximum_length": 1000,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 6,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 7,
+          "udt_name": "timestamp"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 8,
+          "udt_name": "timestamp"
+        }
+      ]
+    },
+    "task_assignments": {
+      "table_name": "task_assignments",
+      "table_type": "BASE TABLE",
+      "columns": [
+        {
+          "column_name": "task_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 1,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "user_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 2,
+          "udt_name": "int4"
+        }
+      ]
+    },
+    "task_discussions": {
+      "table_name": "task_discussions",
+      "table_type": "BASE TABLE",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "nextval('task_discussions_id_seq'::regclass)",
+          "ordinal_position": 1,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "task_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 2,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "user_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 3,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "content",
+          "data_type": "text",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 4,
+          "udt_name": "text"
+        },
+        {
+          "column_name": "parent_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 5,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "archived",
+          "data_type": "boolean",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "false",
+          "ordinal_position": 6,
+          "udt_name": "bool"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 7,
+          "udt_name": "timestamp"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 8,
+          "udt_name": "timestamp"
+        },
+        {
+          "column_name": "type",
+          "data_type": "character varying",
+          "character_maximum_length": 50,
+          "is_nullable": "NO",
+          "column_default": "'insight'::character varying",
+          "ordinal_position": 9,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "media_url",
+          "data_type": "character varying",
+          "character_maximum_length": 500,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 10,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "media_urls",
+          "data_type": "text",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 11,
+          "udt_name": "text"
+        },
+        {
+          "column_name": "file_names",
+          "data_type": "text",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 12,
+          "udt_name": "text"
+        },
+        {
+          "column_name": "link_preview",
+          "data_type": "text",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 13,
+          "udt_name": "text"
+        },
+        {
+          "column_name": "subtask_data",
+          "data_type": "text",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 14,
+          "udt_name": "text"
+        }
+      ]
+    },
+    "task_files": {
+      "table_name": "task_files",
+      "table_type": "BASE TABLE",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "nextval('task_files_id_seq'::regclass)",
+          "ordinal_position": 1,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "task_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 2,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "user_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 3,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "filename",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 4,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "file_path",
+          "data_type": "character varying",
+          "character_maximum_length": 500,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 5,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "file_size",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 6,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "mime_type",
+          "data_type": "character varying",
+          "character_maximum_length": 100,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 7,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "archived",
+          "data_type": "boolean",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "false",
+          "ordinal_position": 8,
+          "udt_name": "bool"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 9,
+          "udt_name": "timestamp"
+        }
+      ]
+    },
+    "task_links": {
+      "table_name": "task_links",
+      "table_type": "BASE TABLE",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "nextval('task_links_id_seq'::regclass)",
+          "ordinal_position": 1,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "task_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 2,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "user_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 3,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "title",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 4,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "url",
+          "data_type": "character varying",
+          "character_maximum_length": 500,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 5,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "description",
+          "data_type": "text",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 6,
+          "udt_name": "text"
+        },
+        {
+          "column_name": "archived",
+          "data_type": "boolean",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "false",
+          "ordinal_position": 7,
+          "udt_name": "bool"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 8,
+          "udt_name": "timestamp"
+        }
+      ]
+    },
+    "task_notes": {
+      "table_name": "task_notes",
+      "table_type": "BASE TABLE",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "nextval('task_notes_id_seq'::regclass)",
+          "ordinal_position": 1,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "task_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 2,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "user_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 3,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "title",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 4,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "content",
+          "data_type": "text",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 5,
+          "udt_name": "text"
+        },
+        {
+          "column_name": "is_private",
+          "data_type": "boolean",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "false",
+          "ordinal_position": 6,
+          "udt_name": "bool"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 7,
+          "udt_name": "timestamp"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 8,
+          "udt_name": "timestamp"
+        },
+        {
+          "column_name": "archived",
+          "data_type": "boolean",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "false",
+          "ordinal_position": 9,
+          "udt_name": "bool"
+        }
+      ]
+    },
+    "tasks": {
+      "table_name": "tasks",
+      "table_type": "BASE TABLE",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "nextval('tasks_id_seq'::regclass)",
+          "ordinal_position": 1,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "project_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 2,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "name",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 3,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "description",
+          "data_type": "text",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 4,
+          "udt_name": "text"
+        },
+        {
+          "column_name": "status",
+          "data_type": "character varying",
+          "character_maximum_length": 50,
+          "is_nullable": "NO",
+          "column_default": "'pending'::character varying",
+          "ordinal_position": 5,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 6,
+          "udt_name": "timestamp"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 7,
+          "udt_name": "timestamp"
+        },
+        {
+          "column_name": "archived",
+          "data_type": "boolean",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "false",
+          "ordinal_position": 8,
+          "udt_name": "bool"
+        },
+        {
+          "column_name": "priority",
+          "data_type": "character varying",
+          "character_maximum_length": 20,
+          "is_nullable": "NO",
+          "column_default": "'regular'::character varying",
+          "ordinal_position": 9,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "is_system",
+          "data_type": "boolean",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "false",
+          "ordinal_position": 10,
+          "udt_name": "bool"
+        },
+        {
+          "column_name": "due_date",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 11,
+          "udt_name": "timestamp"
+        },
+        {
+          "column_name": "team_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 12,
+          "udt_name": "int4"
+        }
+      ]
+    },
+    "team_members": {
+      "table_name": "team_members",
+      "table_type": "BASE TABLE",
+      "columns": [
+        {
+          "column_name": "team_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 1,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "user_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 2,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "role",
+          "data_type": "character varying",
+          "character_maximum_length": 50,
+          "is_nullable": "NO",
+          "column_default": "'member'::character varying",
+          "ordinal_position": 3,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "joined_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 4,
+          "udt_name": "timestamp"
+        }
+      ]
+    },
+    "teams": {
+      "table_name": "teams",
+      "table_type": "BASE TABLE",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "nextval('teams_id_seq'::regclass)",
+          "ordinal_position": 1,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "name",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 2,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "description",
+          "data_type": "text",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 3,
+          "udt_name": "text"
+        },
+        {
+          "column_name": "created_by",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 4,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 5,
+          "udt_name": "timestamp"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 6,
+          "udt_name": "timestamp"
+        },
+        {
+          "column_name": "archived",
+          "data_type": "boolean",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "false",
+          "ordinal_position": 7,
+          "udt_name": "bool"
+        },
+        {
+          "column_name": "project_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 8,
+          "udt_name": "int4"
+        }
+      ]
+    },
+    "time_entries": {
+      "table_name": "time_entries",
+      "table_type": "BASE TABLE",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "nextval('time_entries_id_seq'::regclass)",
+          "ordinal_position": 1,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "project_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 2,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "user_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 3,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "start_time",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 4,
+          "udt_name": "timestamp"
+        },
+        {
+          "column_name": "end_time",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 5,
+          "udt_name": "timestamp"
+        },
+        {
+          "column_name": "duration_manual",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 6,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "notes",
+          "data_type": "text",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null,
+          "ordinal_position": 7,
+          "udt_name": "text"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 8,
+          "udt_name": "timestamp"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 9,
+          "udt_name": "timestamp"
+        }
+      ]
+    },
+    "user_task_lists": {
+      "table_name": "user_task_lists",
+      "table_type": "BASE TABLE",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "nextval('user_task_lists_id_seq'::regclass)",
+          "ordinal_position": 1,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "user_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 2,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "task_id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 3,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 4,
+          "udt_name": "timestamp"
+        }
+      ]
+    },
+    "users": {
+      "table_name": "users",
+      "table_type": "BASE TABLE",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "integer",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "nextval('users_id_seq'::regclass)",
+          "ordinal_position": 1,
+          "udt_name": "int4"
+        },
+        {
+          "column_name": "email",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 2,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "name",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 3,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "role",
+          "data_type": "character varying",
+          "character_maximum_length": 50,
+          "is_nullable": "NO",
+          "column_default": "'user'::character varying",
+          "ordinal_position": 4,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 5,
+          "udt_name": "timestamp"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()",
+          "ordinal_position": 6,
+          "udt_name": "timestamp"
+        },
+        {
+          "column_name": "status",
+          "data_type": "character varying",
+          "character_maximum_length": 50,
+          "is_nullable": "NO",
+          "column_default": "'active'::character varying",
+          "ordinal_position": 7,
+          "udt_name": "varchar"
+        },
+        {
+          "column_name": "pay_rate",
+          "data_type": "numeric",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": "0.00",
+          "ordinal_position": 8,
+          "udt_name": "numeric"
+        },
+        {
+          "column_name": "password",
+          "data_type": "character varying",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null,
+          "ordinal_position": 9,
+          "udt_name": "varchar"
+        }
+      ]
+    }
+  },
+  "indexes": {
+    "clients": [
+      {
+        "indexname": "clients_pkey",
+        "indexdef": "CREATE UNIQUE INDEX clients_pkey ON public.clients USING btree (id)"
+      }
+    ],
+    "invitation_tokens": [
+      {
+        "indexname": "invitation_tokens_pkey",
+        "indexdef": "CREATE UNIQUE INDEX invitation_tokens_pkey ON public.invitation_tokens USING btree (id)"
+      },
+      {
+        "indexname": "invitation_tokens_token_unique",
+        "indexdef": "CREATE UNIQUE INDEX invitation_tokens_token_unique ON public.invitation_tokens USING btree (token)"
+      }
+    ],
+    "notifications": [
+      {
+        "indexname": "notifications_pkey",
+        "indexdef": "CREATE UNIQUE INDEX notifications_pkey ON public.notifications USING btree (id)"
+      }
+    ],
+    "password_reset_tokens": [
+      {
+        "indexname": "password_reset_tokens_pkey",
+        "indexdef": "CREATE UNIQUE INDEX password_reset_tokens_pkey ON public.password_reset_tokens USING btree (id)"
+      },
+      {
+        "indexname": "password_reset_tokens_token_unique",
+        "indexdef": "CREATE UNIQUE INDEX password_reset_tokens_token_unique ON public.password_reset_tokens USING btree (token)"
+      }
+    ],
+    "projects": [
+      {
+        "indexname": "projects_pkey",
+        "indexdef": "CREATE UNIQUE INDEX projects_pkey ON public.projects USING btree (id)"
+      }
+    ],
+    "sessions": [
+      {
+        "indexname": "sessions_pkey",
+        "indexdef": "CREATE UNIQUE INDEX sessions_pkey ON public.sessions USING btree (id)"
+      },
+      {
+        "indexname": "sessions_token_unique",
+        "indexdef": "CREATE UNIQUE INDEX sessions_token_unique ON public.sessions USING btree (token)"
+      }
+    ],
+    "slack_commands": [
+      {
+        "indexname": "slack_commands_pkey",
+        "indexdef": "CREATE UNIQUE INDEX slack_commands_pkey ON public.slack_commands USING btree (id)"
+      }
+    ],
+    "slack_users": [
+      {
+        "indexname": "slack_users_pkey",
+        "indexdef": "CREATE UNIQUE INDEX slack_users_pkey ON public.slack_users USING btree (id)"
+      }
+    ],
+    "slack_workspaces": [
+      {
+        "indexname": "slack_workspaces_pkey",
+        "indexdef": "CREATE UNIQUE INDEX slack_workspaces_pkey ON public.slack_workspaces USING btree (id)"
+      },
+      {
+        "indexname": "slack_workspaces_workspace_id_unique",
+        "indexdef": "CREATE UNIQUE INDEX slack_workspaces_workspace_id_unique ON public.slack_workspaces USING btree (workspace_id)"
+      }
+    ],
+    "task_assignments": [
+      {
+        "indexname": "task_assignments_task_id_user_id_pk",
+        "indexdef": "CREATE UNIQUE INDEX task_assignments_task_id_user_id_pk ON public.task_assignments USING btree (task_id, user_id)"
+      }
+    ],
+    "task_discussions": [
+      {
+        "indexname": "task_discussions_pkey",
+        "indexdef": "CREATE UNIQUE INDEX task_discussions_pkey ON public.task_discussions USING btree (id)"
+      }
+    ],
+    "task_files": [
+      {
+        "indexname": "task_files_pkey",
+        "indexdef": "CREATE UNIQUE INDEX task_files_pkey ON public.task_files USING btree (id)"
+      }
+    ],
+    "task_links": [
+      {
+        "indexname": "task_links_pkey",
+        "indexdef": "CREATE UNIQUE INDEX task_links_pkey ON public.task_links USING btree (id)"
+      }
+    ],
+    "task_notes": [
+      {
+        "indexname": "task_notes_pkey",
+        "indexdef": "CREATE UNIQUE INDEX task_notes_pkey ON public.task_notes USING btree (id)"
+      }
+    ],
+    "tasks": [
+      {
+        "indexname": "tasks_pkey",
+        "indexdef": "CREATE UNIQUE INDEX tasks_pkey ON public.tasks USING btree (id)"
+      }
+    ],
+    "team_members": [
+      {
+        "indexname": "team_members_team_id_user_id_pk",
+        "indexdef": "CREATE UNIQUE INDEX team_members_team_id_user_id_pk ON public.team_members USING btree (team_id, user_id)"
+      }
+    ],
+    "teams": [
+      {
+        "indexname": "teams_pkey",
+        "indexdef": "CREATE UNIQUE INDEX teams_pkey ON public.teams USING btree (id)"
+      }
+    ],
+    "time_entries": [
+      {
+        "indexname": "time_entries_pkey",
+        "indexdef": "CREATE UNIQUE INDEX time_entries_pkey ON public.time_entries USING btree (id)"
+      }
+    ],
+    "user_task_lists": [
+      {
+        "indexname": "user_task_lists_pkey",
+        "indexdef": "CREATE UNIQUE INDEX user_task_lists_pkey ON public.user_task_lists USING btree (id)"
+      }
+    ],
+    "users": [
+      {
+        "indexname": "users_email_unique",
+        "indexdef": "CREATE UNIQUE INDEX users_email_unique ON public.users USING btree (email)"
+      },
+      {
+        "indexname": "users_pkey",
+        "indexdef": "CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)"
+      }
+    ]
+  },
+  "constraints": {
+    "clients": [
+      {
+        "constraint_name": "2200_32941_1_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32941_2_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32941_3_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32941_4_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32941_5_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32941_6_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "clients_created_by_users_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "created_by",
+        "foreign_table_name": "users",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      },
+      {
+        "constraint_name": "clients_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "id",
+        "foreign_table_name": "clients",
+        "foreign_column_name": "id",
+        "delete_rule": null,
+        "update_rule": null
+      }
+    ],
+    "invitation_tokens": [
+      {
+        "constraint_name": "2200_73730_1_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_73730_2_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_73730_3_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_73730_4_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_73730_5_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_73730_6_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "invitation_tokens_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "id",
+        "foreign_table_name": "invitation_tokens",
+        "foreign_column_name": "id",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "invitation_tokens_token_unique",
+        "constraint_type": "UNIQUE",
+        "column_name": "token",
+        "foreign_table_name": "invitation_tokens",
+        "foreign_column_name": "token",
+        "delete_rule": null,
+        "update_rule": null
+      }
+    ],
+    "notifications": [
+      {
+        "constraint_name": "2200_212993_1_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_212993_2_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_212993_3_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_212993_4_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_212993_5_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_212993_8_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_212993_9_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "notifications_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "id",
+        "foreign_table_name": "notifications",
+        "foreign_column_name": "id",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "notifications_user_id_users_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "user_id",
+        "foreign_table_name": "users",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      }
+    ],
+    "password_reset_tokens": [
+      {
+        "constraint_name": "2200_147457_1_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_147457_2_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_147457_3_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_147457_4_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_147457_5_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_147457_6_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "password_reset_tokens_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "id",
+        "foreign_table_name": "password_reset_tokens",
+        "foreign_column_name": "id",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "password_reset_tokens_token_unique",
+        "constraint_type": "UNIQUE",
+        "column_name": "token",
+        "foreign_table_name": "password_reset_tokens",
+        "foreign_column_name": "token",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "password_reset_tokens_user_id_users_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "user_id",
+        "foreign_table_name": "users",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      }
+    ],
+    "projects": [
+      {
+        "constraint_name": "2200_32950_1_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32950_2_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32950_3_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32950_4_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32950_5_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32950_6_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32950_7_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "projects_client_id_clients_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "client_id",
+        "foreign_table_name": "clients",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      },
+      {
+        "constraint_name": "projects_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "id",
+        "foreign_table_name": "projects",
+        "foreign_column_name": "id",
+        "delete_rule": null,
+        "update_rule": null
+      }
+    ],
+    "sessions": [
+      {
+        "constraint_name": "2200_65537_1_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_65537_2_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_65537_3_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_65537_4_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_65537_5_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "sessions_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "id",
+        "foreign_table_name": "sessions",
+        "foreign_column_name": "id",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "sessions_token_unique",
+        "constraint_type": "UNIQUE",
+        "column_name": "token",
+        "foreign_table_name": "sessions",
+        "foreign_column_name": "token",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "sessions_user_id_users_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "user_id",
+        "foreign_table_name": "users",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      }
+    ],
+    "slack_commands": [
+      {
+        "constraint_name": "2200_106498_1_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_106498_2_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_106498_3_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_106498_4_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_106498_5_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_106498_8_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_106498_9_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "slack_commands_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "id",
+        "foreign_table_name": "slack_commands",
+        "foreign_column_name": "id",
+        "delete_rule": null,
+        "update_rule": null
+      }
+    ],
+    "slack_users": [
+      {
+        "constraint_name": "2200_106509_1_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_106509_2_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_106509_3_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_106509_4_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_106509_8_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_106509_9_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "slack_users_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "id",
+        "foreign_table_name": "slack_users",
+        "foreign_column_name": "id",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "slack_users_user_id_users_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "user_id",
+        "foreign_table_name": "users",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      }
+    ],
+    "slack_workspaces": [
+      {
+        "constraint_name": "2200_106520_1_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_106520_2_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_106520_3_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_106520_4_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_106520_7_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_106520_8_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "slack_workspaces_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "id",
+        "foreign_table_name": "slack_workspaces",
+        "foreign_column_name": "id",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "slack_workspaces_workspace_id_unique",
+        "constraint_type": "UNIQUE",
+        "column_name": "workspace_id",
+        "foreign_table_name": "slack_workspaces",
+        "foreign_column_name": "workspace_id",
+        "delete_rule": null,
+        "update_rule": null
+      }
+    ],
+    "task_assignments": [
+      {
+        "constraint_name": "2200_32958_1_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32958_2_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "task_assignments_task_id_tasks_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "task_id",
+        "foreign_table_name": "tasks",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      },
+      {
+        "constraint_name": "task_assignments_task_id_user_id_pk",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "user_id",
+        "foreign_table_name": "task_assignments",
+        "foreign_column_name": "user_id",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "task_assignments_task_id_user_id_pk",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "task_id",
+        "foreign_table_name": "task_assignments",
+        "foreign_column_name": "task_id",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "task_assignments_task_id_user_id_pk",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "task_id",
+        "foreign_table_name": "task_assignments",
+        "foreign_column_name": "user_id",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "task_assignments_task_id_user_id_pk",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "user_id",
+        "foreign_table_name": "task_assignments",
+        "foreign_column_name": "task_id",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "task_assignments_user_id_users_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "user_id",
+        "foreign_table_name": "users",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      }
+    ],
+    "task_discussions": [
+      {
+        "constraint_name": "2200_213018_1_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_213018_2_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_213018_3_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_213018_4_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_213018_6_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_213018_7_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_213018_8_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_213018_9_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "task_discussions_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "id",
+        "foreign_table_name": "task_discussions",
+        "foreign_column_name": "id",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "task_discussions_task_id_tasks_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "task_id",
+        "foreign_table_name": "tasks",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      },
+      {
+        "constraint_name": "task_discussions_user_id_users_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "user_id",
+        "foreign_table_name": "users",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      }
+    ],
+    "task_files": [
+      {
+        "constraint_name": "2200_213030_1_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_213030_2_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_213030_3_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_213030_4_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_213030_5_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_213030_8_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_213030_9_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "task_files_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "id",
+        "foreign_table_name": "task_files",
+        "foreign_column_name": "id",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "task_files_task_id_tasks_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "task_id",
+        "foreign_table_name": "tasks",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      },
+      {
+        "constraint_name": "task_files_user_id_users_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "user_id",
+        "foreign_table_name": "users",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      }
+    ],
+    "task_links": [
+      {
+        "constraint_name": "2200_213041_1_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_213041_2_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_213041_3_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_213041_4_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_213041_5_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_213041_7_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_213041_8_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "task_links_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "id",
+        "foreign_table_name": "task_links",
+        "foreign_column_name": "id",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "task_links_task_id_tasks_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "task_id",
+        "foreign_table_name": "tasks",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      },
+      {
+        "constraint_name": "task_links_user_id_users_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "user_id",
+        "foreign_table_name": "users",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      }
+    ],
+    "task_notes": [
+      {
+        "constraint_name": "2200_229394_1_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_229394_2_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_229394_3_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_229394_5_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_229394_6_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_229394_7_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_229394_8_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_229394_9_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "task_notes_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "id",
+        "foreign_table_name": "task_notes",
+        "foreign_column_name": "id",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "task_notes_task_id_tasks_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "task_id",
+        "foreign_table_name": "tasks",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      },
+      {
+        "constraint_name": "task_notes_user_id_users_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "user_id",
+        "foreign_table_name": "users",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      }
+    ],
+    "tasks": [
+      {
+        "constraint_name": "2200_32964_10_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32964_1_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32964_2_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32964_3_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32964_5_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32964_6_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32964_7_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32964_8_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32964_9_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "tasks_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "id",
+        "foreign_table_name": "tasks",
+        "foreign_column_name": "id",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "tasks_project_id_projects_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "project_id",
+        "foreign_table_name": "projects",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      },
+      {
+        "constraint_name": "tasks_team_id_teams_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "team_id",
+        "foreign_table_name": "teams",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      }
+    ],
+    "team_members": [
+      {
+        "constraint_name": "2200_204812_1_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_204812_2_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_204812_3_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_204812_4_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "team_members_team_id_teams_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "team_id",
+        "foreign_table_name": "teams",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      },
+      {
+        "constraint_name": "team_members_team_id_user_id_pk",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "team_id",
+        "foreign_table_name": "team_members",
+        "foreign_column_name": "team_id",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "team_members_team_id_user_id_pk",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "user_id",
+        "foreign_table_name": "team_members",
+        "foreign_column_name": "user_id",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "team_members_team_id_user_id_pk",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "user_id",
+        "foreign_table_name": "team_members",
+        "foreign_column_name": "team_id",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "team_members_team_id_user_id_pk",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "team_id",
+        "foreign_table_name": "team_members",
+        "foreign_column_name": "user_id",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "team_members_user_id_users_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "user_id",
+        "foreign_table_name": "users",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      }
+    ],
+    "teams": [
+      {
+        "constraint_name": "2200_204801_1_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_204801_2_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_204801_4_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_204801_5_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_204801_6_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_204801_7_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_204801_8_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "teams_created_by_users_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "created_by",
+        "foreign_table_name": "users",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      },
+      {
+        "constraint_name": "teams_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "id",
+        "foreign_table_name": "teams",
+        "foreign_column_name": "id",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "teams_project_id_projects_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "project_id",
+        "foreign_table_name": "projects",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      }
+    ],
+    "time_entries": [
+      {
+        "constraint_name": "2200_32976_1_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32976_2_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32976_3_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32976_8_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32976_9_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "time_entries_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "id",
+        "foreign_table_name": "time_entries",
+        "foreign_column_name": "id",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "time_entries_project_id_projects_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "project_id",
+        "foreign_table_name": "projects",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      },
+      {
+        "constraint_name": "time_entries_user_id_users_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "user_id",
+        "foreign_table_name": "users",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      }
+    ],
+    "user_task_lists": [
+      {
+        "constraint_name": "2200_155650_1_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_155650_2_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_155650_3_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_155650_4_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "user_task_lists_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "id",
+        "foreign_table_name": "user_task_lists",
+        "foreign_column_name": "id",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "user_task_lists_task_id_tasks_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "task_id",
+        "foreign_table_name": "tasks",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      },
+      {
+        "constraint_name": "user_task_lists_user_id_users_id_fk",
+        "constraint_type": "FOREIGN KEY",
+        "column_name": "user_id",
+        "foreign_table_name": "users",
+        "foreign_column_name": "id",
+        "delete_rule": "NO ACTION",
+        "update_rule": "NO ACTION"
+      }
+    ],
+    "users": [
+      {
+        "constraint_name": "2200_32987_1_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32987_2_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32987_3_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32987_4_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32987_5_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32987_6_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32987_7_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "2200_32987_9_not_null",
+        "constraint_type": "CHECK",
+        "column_name": null,
+        "foreign_table_name": null,
+        "foreign_column_name": null,
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "users_email_unique",
+        "constraint_type": "UNIQUE",
+        "column_name": "email",
+        "foreign_table_name": "users",
+        "foreign_column_name": "email",
+        "delete_rule": null,
+        "update_rule": null
+      },
+      {
+        "constraint_name": "users_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "column_name": "id",
+        "foreign_table_name": "users",
+        "foreign_column_name": "id",
+        "delete_rule": null,
+        "update_rule": null
+      }
+    ]
+  },
+  "functions": {},
+  "triggers": {},
+  "sequences": {
+    "clients_id_seq": {
+      "data_type": "integer",
+      "start_value": "1",
+      "minimum_value": "1",
+      "maximum_value": "2147483647",
+      "increment": "1",
+      "cycle_option": "NO"
+    },
+    "invitation_tokens_id_seq": {
+      "data_type": "integer",
+      "start_value": "1",
+      "minimum_value": "1",
+      "maximum_value": "2147483647",
+      "increment": "1",
+      "cycle_option": "NO"
+    },
+    "notifications_id_seq": {
+      "data_type": "integer",
+      "start_value": "1",
+      "minimum_value": "1",
+      "maximum_value": "2147483647",
+      "increment": "1",
+      "cycle_option": "NO"
+    },
+    "password_reset_tokens_id_seq": {
+      "data_type": "integer",
+      "start_value": "1",
+      "minimum_value": "1",
+      "maximum_value": "2147483647",
+      "increment": "1",
+      "cycle_option": "NO"
+    },
+    "projects_id_seq": {
+      "data_type": "integer",
+      "start_value": "1",
+      "minimum_value": "1",
+      "maximum_value": "2147483647",
+      "increment": "1",
+      "cycle_option": "NO"
+    },
+    "sessions_id_seq": {
+      "data_type": "integer",
+      "start_value": "1",
+      "minimum_value": "1",
+      "maximum_value": "2147483647",
+      "increment": "1",
+      "cycle_option": "NO"
+    },
+    "slack_commands_id_seq": {
+      "data_type": "integer",
+      "start_value": "1",
+      "minimum_value": "1",
+      "maximum_value": "2147483647",
+      "increment": "1",
+      "cycle_option": "NO"
+    },
+    "slack_users_id_seq": {
+      "data_type": "integer",
+      "start_value": "1",
+      "minimum_value": "1",
+      "maximum_value": "2147483647",
+      "increment": "1",
+      "cycle_option": "NO"
+    },
+    "slack_workspaces_id_seq": {
+      "data_type": "integer",
+      "start_value": "1",
+      "minimum_value": "1",
+      "maximum_value": "2147483647",
+      "increment": "1",
+      "cycle_option": "NO"
+    },
+    "task_discussions_id_seq": {
+      "data_type": "integer",
+      "start_value": "1",
+      "minimum_value": "1",
+      "maximum_value": "2147483647",
+      "increment": "1",
+      "cycle_option": "NO"
+    },
+    "task_files_id_seq": {
+      "data_type": "integer",
+      "start_value": "1",
+      "minimum_value": "1",
+      "maximum_value": "2147483647",
+      "increment": "1",
+      "cycle_option": "NO"
+    },
+    "task_links_id_seq": {
+      "data_type": "integer",
+      "start_value": "1",
+      "minimum_value": "1",
+      "maximum_value": "2147483647",
+      "increment": "1",
+      "cycle_option": "NO"
+    },
+    "task_notes_id_seq": {
+      "data_type": "integer",
+      "start_value": "1",
+      "minimum_value": "1",
+      "maximum_value": "2147483647",
+      "increment": "1",
+      "cycle_option": "NO"
+    },
+    "tasks_id_seq": {
+      "data_type": "integer",
+      "start_value": "1",
+      "minimum_value": "1",
+      "maximum_value": "2147483647",
+      "increment": "1",
+      "cycle_option": "NO"
+    },
+    "teams_id_seq": {
+      "data_type": "integer",
+      "start_value": "1",
+      "minimum_value": "1",
+      "maximum_value": "2147483647",
+      "increment": "1",
+      "cycle_option": "NO"
+    },
+    "time_entries_id_seq": {
+      "data_type": "integer",
+      "start_value": "1",
+      "minimum_value": "1",
+      "maximum_value": "2147483647",
+      "increment": "1",
+      "cycle_option": "NO"
+    },
+    "user_task_lists_id_seq": {
+      "data_type": "integer",
+      "start_value": "1",
+      "minimum_value": "1",
+      "maximum_value": "2147483647",
+      "increment": "1",
+      "cycle_option": "NO"
+    },
+    "users_id_seq": {
+      "data_type": "integer",
+      "start_value": "1",
+      "minimum_value": "1",
+      "maximum_value": "2147483647",
+      "increment": "1",
+      "cycle_option": "NO"
+    }
+  }
+}
