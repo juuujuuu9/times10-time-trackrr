@@ -74,6 +74,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
   const [showAddMediaModal, setShowAddMediaModal] = useState(false);
   const [showLinkDropModal, setShowLinkDropModal] = useState(false);
   const [showSubtaskModal, setShowSubtaskModal] = useState(false);
+  const [allSubtasks, setAllSubtasks] = useState<{ id: string; name: string; priority: 'low' | 'medium' | 'high'; assignee?: string; dueDate?: string; }[]>([]);
 
   // Notification banners (in-DOM)
   // NOTE: Search for "Notification banners (in-DOM)" to find this system quickly.
@@ -164,6 +165,19 @@ const TaskStream: React.FC<TaskStreamProps> = ({
     });
   };
 
+  // Aggregate all subtasks from all posts
+  const aggregateSubtasks = useCallback((posts: Post[]) => {
+    const allSubtasks: { id: string; name: string; priority: 'low' | 'medium' | 'high'; assignee?: string; dueDate?: string; }[] = [];
+    
+    posts.forEach(post => {
+      if (post.subtasks && post.subtasks.length > 0) {
+        allSubtasks.push(...post.subtasks);
+      }
+    });
+    
+    setAllSubtasks(allSubtasks);
+  }, []);
+
   // Load posts from API
   const loadPosts = useCallback(async () => {
     try {
@@ -185,6 +199,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       if (data.success) {
         const newPosts = data.data || [];
         setPosts(newPosts);
+        aggregateSubtasks(newPosts);
         console.log('✅ Posts loaded successfully:', newPosts.length, 'posts');
       } else {
         console.error('❌ Failed to load posts:', data.message);
@@ -196,7 +211,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [collaborationId, taskId]);
+  }, [collaborationId, taskId, aggregateSubtasks]);
 
   useEffect(() => {
     loadPosts();
@@ -516,6 +531,18 @@ const TaskStream: React.FC<TaskStreamProps> = ({
 
       // Add optimistic update
       setPosts(prevPosts => [optimisticSubtasks, ...prevPosts]);
+      
+      // Update allSubtasks state
+      setAllSubtasks(prevSubtasks => [
+        ...prevSubtasks,
+        ...subtasks.map((subtask, index) => ({
+          id: `temp-${Date.now()}-${index}`,
+          name: subtask.name,
+          priority: subtask.priority,
+          assignee: subtask.assignee,
+          dueDate: subtask.dueDate
+        }))
+      ]);
 
       const discussionData = {
         type: 'subtask',
@@ -1259,6 +1286,13 @@ const TaskStream: React.FC<TaskStreamProps> = ({
 
       {/* Stream Feed */}
       <div className="space-y-4">
+        {/* Consolidated Subtasks Display */}
+        {allSubtasks.length > 0 && (
+          <div className="mb-6">
+            <SubtaskCard subtasks={allSubtasks} />
+          </div>
+        )}
+
         {filteredPosts.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-gray-500 mb-4">No posts yet</div>
@@ -1434,12 +1468,6 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                       </div>
                     )}
                     
-                    {/* Subtasks Display */}
-                    {post.subtasks && post.subtasks.length > 0 && (
-                      <div className="mb-3">
-                        <SubtaskCard subtasks={post.subtasks} />
-                      </div>
-                    )}
                     
                     {/* Post Actions */}
                     {editingPostId !== post.id && (
