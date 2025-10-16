@@ -36,7 +36,7 @@ interface Post {
     id: string;
     name: string;
     priority: 'low' | 'medium' | 'high';
-    assignee?: string;
+    assignees?: string[];
     dueDate?: string;
     completed?: boolean;
   }[];
@@ -553,7 +553,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
   };
 
   // Handle subtask creation
-  const handleCreateSubtasks = async (subtasks: { name: string; priority: 'low' | 'medium' | 'high'; assignee?: string; dueDate?: string }[]) => {
+  const handleCreateSubtasks = async (subtasks: { name: string; priority: 'low' | 'medium' | 'high'; assignees?: string[]; dueDate?: string }[]) => {
     try {
       // Optimistically add the subtasks to the UI immediately
       const optimisticSubtasks = {
@@ -568,7 +568,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
           id: `temp-${Date.now()}-${index}`,
           name: subtask.name,
           priority: subtask.priority,
-          assignee: subtask.assignee,
+          assignees: subtask.assignees,
           dueDate: subtask.dueDate,
           completed: false
         }))
@@ -586,7 +586,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
             id: `temp-${Date.now()}-${index}`,
             name: subtask.name,
             priority: subtask.priority,
-            assignee: subtask.assignee,
+            assignees: subtask.assignees,
             dueDate: subtask.dueDate,
             completed: false
           }))
@@ -1806,6 +1806,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         isOpen={showSubtaskModal}
         onClose={() => setShowSubtaskModal(false)}
         onCreateSubtasks={handleCreateSubtasks}
+        teamMembers={teamMembers}
       />
     </div>
   );

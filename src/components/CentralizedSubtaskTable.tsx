@@ -5,7 +5,7 @@ interface Subtask {
   id: string;
   name: string;
   priority: 'low' | 'medium' | 'high';
-  assignee?: string;
+  assignees?: string[];
   dueDate?: string;
   completed?: boolean;
 }
@@ -158,12 +158,42 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
                   </div>
                 </td>
                 <td className="py-3 px-4">
-                  {subtask.assignee ? (
-                    <div className="flex items-center space-x-2">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${subtask.completed ? 'bg-gray-100 text-gray-400' : 'bg-gray-200 text-gray-700'}`}>
-                        {subtask.assignee.charAt(0).toUpperCase()}
+                  {subtask.assignees && subtask.assignees.length > 0 ? (
+                    <div className="flex items-center">
+                      <div className="flex -space-x-2">
+                        {subtask.assignees.slice(0, 4).map((assignee, index) => (
+                          <div 
+                            key={index}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium border-2 border-white relative group cursor-pointer ${
+                              subtask.completed 
+                                ? 'bg-gray-100 text-gray-400' 
+                                : 'bg-gray-300 text-gray-700'
+                            }`}
+                            title={assignee}
+                          >
+                            {assignee.charAt(0).toUpperCase()}
+                            {/* Tooltip */}
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                              {assignee}
+                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                            </div>
+                          </div>
+                        ))}
+                        {subtask.assignees.length > 4 && (
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium border-2 border-white relative group cursor-pointer ${
+                            subtask.completed 
+                              ? 'bg-white text-gray-400' 
+                              : 'bg-white text-gray-700'
+                          }`}>
+                            +{subtask.assignees.length - 4}
+                            {/* Tooltip for remaining users */}
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                              {subtask.assignees.slice(4).join(', ')}
+                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <span className={`text-sm ${subtask.completed ? 'text-gray-400' : 'text-gray-700'}`}>{subtask.assignee}</span>
                     </div>
                   ) : (
                     <span className="text-sm text-gray-400">Unassigned</span>

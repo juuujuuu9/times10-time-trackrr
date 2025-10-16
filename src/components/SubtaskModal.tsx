@@ -1,11 +1,18 @@
 import React, { useState, useCallback } from 'react';
 import { X, Plus, Trash2, Edit3 } from 'lucide-react';
 
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  avatar?: string;
+}
+
 interface Subtask {
   id: string;
   name: string;
   priority: 'low' | 'medium' | 'high';
-  assignee?: string;
+  assignees?: string[];
   dueDate?: string;
   completed?: boolean;
 }
@@ -14,15 +21,16 @@ interface SubtaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreateSubtasks: (subtasks: Omit<Subtask, 'id'>[]) => void;
+  teamMembers: User[];
 }
 
-const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSubtasks }) => {
+const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSubtasks, teamMembers }) => {
   const [subtasks, setSubtasks] = useState<Subtask[]>([
     {
       id: '1',
       name: '',
       priority: 'medium',
-      assignee: '',
+      assignees: [],
       dueDate: '',
       completed: false
     }
@@ -33,7 +41,7 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
       id: Date.now().toString(),
       name: '',
       priority: 'medium',
-      assignee: '',
+      assignees: [],
       dueDate: '',
       completed: false
     };
@@ -44,10 +52,26 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
     setSubtasks(prev => prev.filter(subtask => subtask.id !== id));
   }, []);
 
-  const updateSubtask = useCallback((id: string, field: keyof Subtask, value: string) => {
+  const updateSubtask = useCallback((id: string, field: keyof Subtask, value: string | string[]) => {
     setSubtasks(prev => prev.map(subtask => 
       subtask.id === id ? { ...subtask, [field]: value } : subtask
     ));
+  }, []);
+
+  const toggleAssignee = useCallback((subtaskId: string, assigneeName: string) => {
+    setSubtasks(prev => prev.map(subtask => {
+      if (subtask.id !== subtaskId) return subtask;
+      
+      const currentAssignees = subtask.assignees || [];
+      const isAssigned = currentAssignees.includes(assigneeName);
+      
+      return {
+        ...subtask,
+        assignees: isAssigned 
+          ? currentAssignees.filter(name => name !== assigneeName)
+          : [...currentAssignees, assigneeName]
+      };
+    }));
   }, []);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
@@ -66,7 +90,7 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
     const subtasksToCreate = validSubtasks.map(subtask => ({
       name: subtask.name,
       priority: subtask.priority,
-      assignee: subtask.assignee || undefined,
+      assignees: subtask.assignees || [],
       dueDate: subtask.dueDate || undefined
     }));
 
@@ -75,7 +99,7 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
       id: '1',
       name: '',
       priority: 'medium',
-      assignee: '',
+      assignees: [],
       dueDate: '',
       completed: false
     }]);
@@ -87,7 +111,7 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
       id: '1',
       name: '',
       priority: 'medium',
-      assignee: '',
+      assignees: [],
       dueDate: '',
       completed: false
     }]);
@@ -98,7 +122,7 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
@@ -143,14 +167,14 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
                             value={subtask.name}
                             onChange={(e) => updateSubtask(subtask.id, 'name', e.target.value)}
                             placeholder="Subtask name"
-                            className="w-full px-3 py-3 border border-t-0 border-l-0 border-b-0 border-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                            className="w-full px-3 py-5 border border-t-0 border-l-0 border-b-0 border-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
                           />
                         </td>
                         <td className="py-0 px-0">
                           <select
                             value={subtask.priority}
                             onChange={(e) => updateSubtask(subtask.id, 'priority', e.target.value)}
-                            className="w-full px-3 py-3 border border-t-0 border-l-0 border-b-0 border-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                            className="w-full min-w-[7rem] px-3 py-5 border border-t-0 border-l-0 border-b-0 border-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
                           >
                             <option value="low">Low</option>
                             <option value="medium">Medium</option>
@@ -158,13 +182,54 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
                           </select>
                         </td>
                         <td className="py-0 px-0">
-                          <input
-                            type="text"
-                            value={subtask.assignee}
-                            onChange={(e) => updateSubtask(subtask.id, 'assignee', e.target.value)}
-                            placeholder="Assignee"
-                            className="w-full px-3 py-3 border border-t-0 border-l-0 border-b-0 border-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-                          />
+                          <div className="w-full px-3 py-3 border border-t-0 border-l-0 border-b-0 border-gray-100">
+                            {/* Selected Assignees - Overlapping Circular Avatars */}
+                            <div className="flex items-center">
+                              <div className="flex -space-x-2">
+                                {(subtask.assignees || []).slice(0, 4).map((assignee, index) => (
+                                  <div 
+                                    key={index}
+                                    className="w-8 h-8 bg-green-300 rounded-full flex items-center justify-center text-xs font-medium text-green-800 border-2 border-white relative group cursor-pointer"
+                                    title={assignee}
+                                    onClick={() => toggleAssignee(subtask.id, assignee)}
+                                  >
+                                    {assignee.charAt(0).toUpperCase()}
+                                    {/* Tooltip */}
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                                      {assignee} (click to remove)
+                                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                                    </div>
+                                  </div>
+                                ))}
+                                {(subtask.assignees || []).length > 4 && (
+                                  <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-xs font-medium text-gray-700 border-2 border-white relative group cursor-pointer">
+                                    +{(subtask.assignees || []).length - 4}
+                                    {/* Tooltip for remaining users */}
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                                      {(subtask.assignees || []).slice(4).join(', ')}
+                                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Available Team Members */}
+                            <div className="flex flex-wrap gap-1">
+                              {teamMembers
+                                .filter(member => !(subtask.assignees || []).includes(member.name))
+                                .map((member) => (
+                                <button
+                                  key={member.id}
+                                  type="button"
+                                  onClick={() => toggleAssignee(subtask.id, member.name)}
+                                  className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 text-gray-700 hover:bg-green-100 hover:text-green-800 transition-colors"
+                                >
+                                  + {member.name}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                         </td>
                         <td className="py-0 px-0">
                           <input
