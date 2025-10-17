@@ -1,7 +1,9 @@
 import { db } from '../../../../../db/index';
-import { teams, teamMembers as teamMembersTable, taskAssignments, taskDiscussions, tasks, users } from '../../../../../db/schema';
+import { teams, teamMembers as teamMembersTable, taskAssignments, taskDiscussions, tasks, users, projects } from '../../../../../db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { getSessionUser } from '../../../../../utils/session';
+import { sendCollaborationAssignmentEmail } from '../../../../../utils/email';
+import { getEmailBaseUrl } from '../../../../../utils/url';
 
 // RULE-001: Cascading removal function - removes user from all tasks and subtasks when removed from team
 async function cascadeRemoveUserFromTeam(userId: number, teamId: number) {
@@ -181,6 +183,42 @@ export async function POST(Astro: any) {
       role: 'member',
       joinedAt: new Date()
     });
+
+    // Send email notification to the newly added user
+    try {
+      // Get user details for email
+      const addedUser = await db.query.users.findFirst({
+        where: eq(users.id, userId)
+      });
+
+      if (addedUser && addedUser.email && addedUser.id !== currentUser.id) {
+        // Get project details for the email
+        const project = await db.query.projects.findFirst({
+          where: eq(projects.id, team.projectId)
+        });
+
+        // Get base URL for dashboard link
+        const baseUrl = getEmailBaseUrl();
+        const dashboardUrl = `${baseUrl}/admin/collaborations/${teamId}`;
+
+        console.log(`📧 Attempting to send collaboration assignment email to ${addedUser.email}`);
+        await sendCollaborationAssignmentEmail({
+          email: addedUser.email,
+          userName: addedUser.name,
+          collaborationName: team.name,
+          projectName: project?.name || 'Unknown Project',
+          addedBy: currentUser.name,
+          collaborationDescription: team.description || undefined,
+          dashboardUrl: dashboardUrl,
+        });
+        console.log(`📧 Collaboration assignment email sent to ${addedUser.email}`);
+      } else {
+        console.log(`📧 Skipping email for user ${addedUser?.email} (same user or no email)`);
+      }
+    } catch (emailError) {
+      console.error('Error sending collaboration assignment notification:', emailError);
+      // Don't fail the entire operation if email fails
+    }
 
     return new Response(JSON.stringify({
       success: true,

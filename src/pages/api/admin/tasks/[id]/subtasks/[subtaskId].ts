@@ -1,8 +1,10 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../../../../db/index';
-import { taskDiscussions, taskAssignments, users } from '../../../../../../db/schema';
+import { taskDiscussions, taskAssignments, users, tasks, projects } from '../../../../../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getSessionUser } from '../../../../../../utils/session';
+import { sendSubtaskAssignmentEmail } from '../../../../../../utils/email';
+import { getEmailBaseUrl } from '../../../../../../utils/url';
 
 export const prerender = false;
 
@@ -178,6 +180,53 @@ export const PUT: APIRoute = async (context) => {
       })
       .where(eq(taskDiscussions.id, targetDiscussion.id))
       .returning();
+
+    // Send email notifications for newly assigned users (if assignees were updated)
+    if (assignees && Array.isArray(assignees)) {
+      try {
+        // Get task and project information for email notifications
+        const task = await db.query.tasks.findFirst({
+          where: eq(tasks.id, taskId),
+          with: {
+            project: true
+          }
+        });
+
+        if (task && task.project) {
+          // Get base URL for dashboard link
+          const baseUrl = getEmailBaseUrl();
+          const dashboardUrl = `${baseUrl}/admin/collaborations/${task.teamId || 'general'}`;
+
+          // Send emails to newly assigned users
+          for (const assigneeName of assignees) {
+            // Find user by name
+            const user = await db.query.users.findFirst({
+              where: eq(users.name, assigneeName)
+            });
+
+            if (user && user.email && user.id !== currentUser.id) {
+              console.log(`📧 Attempting to send subtask assignment email to ${user.email}`);
+              await sendSubtaskAssignmentEmail({
+                email: user.email,
+                userName: user.name,
+                subtaskName: targetSubtask.title || 'Untitled Subtask',
+                taskName: task.name,
+                projectName: task.project.name,
+                assignedBy: currentUser.name,
+                subtaskDescription: targetSubtask.description || undefined,
+                dashboardUrl: dashboardUrl,
+              });
+              console.log(`📧 Subtask assignment email sent to ${user.email}`);
+            } else {
+              console.log(`📧 Skipping email for user ${assigneeName} (same user or no email)`);
+            }
+          }
+        }
+      } catch (emailError) {
+        console.error('Error sending subtask assignment notifications:', emailError);
+        // Don't fail the entire operation if email fails
+      }
+    }
 
     return new Response(JSON.stringify({
       success: true,

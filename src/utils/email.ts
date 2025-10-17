@@ -227,6 +227,27 @@ export interface PasswordResetEmailData {
   resetUrl: string;
 }
 
+export interface CollaborationAssignmentEmailData {
+  email: string;
+  userName: string;
+  collaborationName: string;
+  projectName: string;
+  addedBy: string;
+  collaborationDescription?: string;
+  dashboardUrl: string;
+}
+
+export interface SubtaskAssignmentEmailData {
+  email: string;
+  userName: string;
+  subtaskName: string;
+  taskName: string;
+  projectName: string;
+  assignedBy: string;
+  subtaskDescription?: string;
+  dashboardUrl: string;
+}
+
 export async function sendTaskAssignmentEmail(data: TaskAssignmentEmailData) {
   // Check if we have a valid Resend API key configured
   const resend = getResendClient();
@@ -650,6 +671,438 @@ export async function sendPasswordResetEmail(data: PasswordResetEmailData) {
     return emailData;
   } catch (error) {
     console.error('Error in sendPasswordResetEmail:', error);
+    throw error;
+  }
+}
+
+export async function sendCollaborationAssignmentEmail(data: CollaborationAssignmentEmailData) {
+  // Check if we have a valid Resend API key configured
+  const resend = getResendClient();
+  if (!resend) {
+    console.log('📧 NO API KEY: Collaboration assignment notification would be sent to:', data.email);
+    console.log('📧 Collaboration Details:', {
+      userName: data.userName,
+      collaborationName: data.collaborationName,
+      projectName: data.projectName,
+      addedBy: data.addedBy,
+      collaborationDescription: data.collaborationDescription,
+      dashboardUrl: data.dashboardUrl
+    });
+    
+    // Return success for testing
+    return { id: 'test-collaboration-assignment-' + Date.now() };
+  }
+
+  try {
+    // Log the attempt for debugging
+    console.log('📧 Attempting to send collaboration assignment email to:', data.email);
+    
+    const { data: emailData, error } = await resend.emails.send({
+      from: getSenderString(),
+      replyTo: getReplyToString(),
+      to: [data.email],
+      subject: `You've been added to a collaboration: ${data.collaborationName}`,
+      headers: getEmailHeaders(),
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Collaboration Assignment</title>
+          <style>
+            /* Reset and base styles */
+            body { 
+              font-family: 'Istok Web', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+              line-height: 1.6; 
+              color: #1F292E; 
+              background-color: #F2F2F3; 
+              margin: 0; 
+              padding: 0; 
+            }
+            
+            /* Container and layout */
+            .container { 
+              max-width: 600px; 
+              margin: 0 auto; 
+              padding: 20px; 
+            }
+            
+            /* Header with brand color */
+            .header { 
+              background: #d63a2e; 
+              color: white; 
+              padding: 30px; 
+              text-align: center; 
+              border-radius: 10px 10px 0 0; 
+              box-shadow: 0 2px 4px rgba(214, 58, 46, 0.2);
+            }
+            
+            .header h1 {
+              margin: 0 0 10px 0;
+              font-size: 24px;
+              font-weight: bold;
+            }
+            
+            .header p {
+              margin: 0;
+              font-size: 16px;
+              opacity: 0.9;
+            }
+            
+            /* Content area */
+            .content { 
+              background: white; 
+              padding: 30px; 
+              border-radius: 0 0 10px 10px; 
+              border: 1px solid #C8CDD0; 
+              border-top: none;
+            }
+            
+            /* Button styling */
+            .button { 
+              display: inline-block; 
+              background: #d63a2e; 
+              color: #FFFFFF !important; 
+              padding: 15px 30px; 
+              text-decoration: none; 
+              border-radius: 8px; 
+              font-weight: bold; 
+              margin: 20px 0; 
+              transition: background-color 0.2s; 
+              box-shadow: 0 2px 4px rgba(214, 58, 46, 0.2);
+            }
+            
+            .button:hover { 
+              background: #b52a24; 
+            }
+            
+            /* Collaboration card styling */
+            .collaboration-card { 
+              background: #F2F2F3; 
+              border: 1px solid #C8CDD0; 
+              border-radius: 8px; 
+              padding: 20px; 
+              margin: 20px 0; 
+            }
+            
+            .collaboration-card h3 {
+              margin-top: 0;
+              color: #d63a2e;
+              font-size: 18px;
+              font-weight: bold;
+            }
+            
+            /* Footer */
+            .footer { 
+              text-align: center; 
+              margin-top: 30px; 
+              color: #415058; 
+              font-size: 14px; 
+            }
+            
+            /* Text color classes */
+            .highlight { color: #d63a2e; }
+            .text-dark { color: #1F292E; }
+            .text-mid { color: #415058; }
+            .text-light { color: #C8CDD0; }
+            
+            /* Dark mode support */
+            @media (prefers-color-scheme: dark) {
+              .content {
+                background: #1a1a1a;
+                color: #ffffff;
+                border-color: #333;
+              }
+              .collaboration-card {
+                background: #2a2a2a;
+                border-color: #444;
+              }
+              .text-dark { color: #ffffff; }
+              .text-mid { color: #cccccc; }
+              .text-light { color: #999999; }
+              .footer { color: #cccccc; }
+            }
+            
+            /* Mobile responsiveness */
+            @media (max-width: 600px) {
+              .container { padding: 10px; }
+              .header, .content { padding: 20px; }
+              .header h1 { font-size: 20px; }
+              .header p { font-size: 14px; }
+              .collaboration-card { padding: 15px; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🤝 Collaboration Assignment</h1>
+              <p>You have been added to a collaboration</p>
+            </div>
+            <div class="content">
+              <h2 class="text-dark">Hi ${data.userName},</h2>
+              <p class="text-mid">You have been added to a collaboration by <strong class="highlight">${data.addedBy}</strong>.</p>
+              
+              <div class="collaboration-card">
+                <h3>${data.collaborationName}</h3>
+                <p class="text-mid"><strong>Project:</strong> ${data.projectName}</p>
+                ${data.collaborationDescription ? `<p class="text-mid"><strong>Description:</strong> ${data.collaborationDescription}</p>` : ''}
+              </div>
+              
+              <div style="text-align: center;">
+                <a href="${data.dashboardUrl}" class="button">View Collaboration</a>
+              </div>
+              
+              <p class="text-dark"><strong>What you can do:</strong></p>
+              <ul class="text-mid">
+                <li>View and participate in team discussions</li>
+                <li>Access shared tasks and resources</li>
+                <li>Collaborate with team members</li>
+                <li>Track progress and updates</li>
+              </ul>
+              
+              <p class="text-mid">If you have any questions about this collaboration, please contact ${data.addedBy}.</p>
+            </div>
+            <div class="footer">
+              <p>This is an automated message from Times10 Time Tracker</p>
+              <p>You can manage your email preferences in your account settings.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    });
+
+    if (error) {
+      console.error('Error sending collaboration assignment email:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      if ((error as any).statusCode === 403) {
+        throw new Error('Email service error: Please verify your domain at resend.com/domains or check your API key configuration.');
+      }
+      throw new Error(`Failed to send collaboration assignment email: ${(error as any).message || 'Unknown error'}`);
+    }
+
+    return emailData;
+  } catch (error) {
+    console.error('Error in sendCollaborationAssignmentEmail:', error);
+    throw error;
+  }
+}
+
+export async function sendSubtaskAssignmentEmail(data: SubtaskAssignmentEmailData) {
+  // Check if we have a valid Resend API key configured
+  const resend = getResendClient();
+  if (!resend) {
+    console.log('📧 NO API KEY: Subtask assignment notification would be sent to:', data.email);
+    console.log('📧 Subtask Details:', {
+      userName: data.userName,
+      subtaskName: data.subtaskName,
+      taskName: data.taskName,
+      projectName: data.projectName,
+      assignedBy: data.assignedBy,
+      subtaskDescription: data.subtaskDescription,
+      dashboardUrl: data.dashboardUrl
+    });
+    
+    // Return success for testing
+    return { id: 'test-subtask-assignment-' + Date.now() };
+  }
+
+  try {
+    // Log the attempt for debugging
+    console.log('📧 Attempting to send subtask assignment email to:', data.email);
+    
+    const { data: emailData, error } = await resend.emails.send({
+      from: getSenderString(),
+      replyTo: getReplyToString(),
+      to: [data.email],
+      subject: `You've been assigned a subtask: ${data.subtaskName}`,
+      headers: getEmailHeaders(),
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Subtask Assignment</title>
+          <style>
+            /* Reset and base styles */
+            body { 
+              font-family: 'Istok Web', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+              line-height: 1.6; 
+              color: #1F292E; 
+              background-color: #F2F2F3; 
+              margin: 0; 
+              padding: 0; 
+            }
+            
+            /* Container and layout */
+            .container { 
+              max-width: 600px; 
+              margin: 0 auto; 
+              padding: 20px; 
+            }
+            
+            /* Header with brand color */
+            .header { 
+              background: #d63a2e; 
+              color: white; 
+              padding: 30px; 
+              text-align: center; 
+              border-radius: 10px 10px 0 0; 
+              box-shadow: 0 2px 4px rgba(214, 58, 46, 0.2);
+            }
+            
+            .header h1 {
+              margin: 0 0 10px 0;
+              font-size: 24px;
+              font-weight: bold;
+            }
+            
+            .header p {
+              margin: 0;
+              font-size: 16px;
+              opacity: 0.9;
+            }
+            
+            /* Content area */
+            .content { 
+              background: white; 
+              padding: 30px; 
+              border-radius: 0 0 10px 10px; 
+              border: 1px solid #C8CDD0; 
+              border-top: none;
+            }
+            
+            /* Button styling */
+            .button { 
+              display: inline-block; 
+              background: #d63a2e; 
+              color: #FFFFFF !important; 
+              padding: 15px 30px; 
+              text-decoration: none; 
+              border-radius: 8px; 
+              font-weight: bold; 
+              margin: 20px 0; 
+              transition: background-color 0.2s; 
+              box-shadow: 0 2px 4px rgba(214, 58, 46, 0.2);
+            }
+            
+            .button:hover { 
+              background: #b52a24; 
+            }
+            
+            /* Subtask card styling */
+            .subtask-card { 
+              background: #F2F2F3; 
+              border: 1px solid #C8CDD0; 
+              border-radius: 8px; 
+              padding: 20px; 
+              margin: 20px 0; 
+            }
+            
+            .subtask-card h3 {
+              margin-top: 0;
+              color: #d63a2e;
+              font-size: 18px;
+              font-weight: bold;
+            }
+            
+            /* Footer */
+            .footer { 
+              text-align: center; 
+              margin-top: 30px; 
+              color: #415058; 
+              font-size: 14px; 
+            }
+            
+            /* Text color classes */
+            .highlight { color: #d63a2e; }
+            .text-dark { color: #1F292E; }
+            .text-mid { color: #415058; }
+            .text-light { color: #C8CDD0; }
+            
+            /* Dark mode support */
+            @media (prefers-color-scheme: dark) {
+              .content {
+                background: #1a1a1a;
+                color: #ffffff;
+                border-color: #333;
+              }
+              .subtask-card {
+                background: #2a2a2a;
+                border-color: #444;
+              }
+              .text-dark { color: #ffffff; }
+              .text-mid { color: #cccccc; }
+              .text-light { color: #999999; }
+              .footer { color: #cccccc; }
+            }
+            
+            /* Mobile responsiveness */
+            @media (max-width: 600px) {
+              .container { padding: 10px; }
+              .header, .content { padding: 20px; }
+              .header h1 { font-size: 20px; }
+              .header p { font-size: 14px; }
+              .subtask-card { padding: 15px; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>📝 Subtask Assignment</h1>
+              <p>You have been assigned a subtask</p>
+            </div>
+            <div class="content">
+              <h2 class="text-dark">Hi ${data.userName},</h2>
+              <p class="text-mid">You have been assigned a subtask by <strong class="highlight">${data.assignedBy}</strong>.</p>
+              
+              <div class="subtask-card">
+                <h3>${data.subtaskName}</h3>
+                <p class="text-mid"><strong>Task:</strong> ${data.taskName}</p>
+                <p class="text-mid"><strong>Project:</strong> ${data.projectName}</p>
+                ${data.subtaskDescription ? `<p class="text-mid"><strong>Description:</strong> ${data.subtaskDescription}</p>` : ''}
+              </div>
+              
+              <div style="text-align: center;">
+                <a href="${data.dashboardUrl}" class="button">View Subtask</a>
+              </div>
+              
+              <p class="text-dark"><strong>What you can do:</strong></p>
+              <ul class="text-mid">
+                <li>Start tracking time on this subtask</li>
+                <li>Add notes and updates</li>
+                <li>Mark the subtask as complete when finished</li>
+                <li>View progress and time spent</li>
+              </ul>
+              
+              <p class="text-mid">If you have any questions about this subtask, please contact ${data.assignedBy}.</p>
+            </div>
+            <div class="footer">
+              <p>This is an automated message from Times10 Time Tracker</p>
+              <p>You can manage your email preferences in your account settings.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    });
+
+    if (error) {
+      console.error('Error sending subtask assignment email:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      if ((error as any).statusCode === 403) {
+        throw new Error('Email service error: Please verify your domain at resend.com/domains or check your API key configuration.');
+      }
+      throw new Error(`Failed to send subtask assignment email: ${(error as any).message || 'Unknown error'}`);
+    }
+
+    return emailData;
+  } catch (error) {
+    console.error('Error in sendSubtaskAssignmentEmail:', error);
     throw error;
   }
 } 
