@@ -136,7 +136,7 @@ if (hasProjectId) {
       projectTasks = []; // Set empty array if query fails
     }
     
-    // Get task assignments separately
+    // Get task assignments and subtasks separately
     for (const task of projectTasks) {
       try {
         const assignments = await db.query.taskAssignments.findMany({
@@ -149,6 +149,37 @@ if (hasProjectId) {
       } catch (error) {
         console.log('Error fetching assignments for task:', task.id, error instanceof Error ? error.message : 'Unknown error');
         task.assignments = []; // Set empty array if query fails
+      }
+      
+      try {
+        // Get subtask discussions for this task
+        const subtaskDiscussions = await db.query.taskDiscussions.findMany({
+          where: and(
+            eq(taskDiscussions.taskId, task.id),
+            eq(taskDiscussions.type, 'subtask')
+          )
+        });
+        
+        // Extract subtasks from the subtaskData field
+        const taskSubtasks = [];
+        for (const discussion of subtaskDiscussions) {
+          if (discussion.subtaskData) {
+            try {
+              const subtaskData = JSON.parse(discussion.subtaskData);
+              if (subtaskData.subtasks && Array.isArray(subtaskData.subtasks)) {
+                taskSubtasks.push(...subtaskData.subtasks);
+              }
+            } catch (parseError) {
+              console.log('Error parsing subtask data for discussion:', discussion.id, parseError);
+            }
+          }
+        }
+        
+        task.subtasks = taskSubtasks;
+        console.log(`Task ${task.id} (${task.name}) has ${taskSubtasks.length} subtasks:`, taskSubtasks);
+      } catch (error) {
+        console.log('Error fetching subtasks for task:', task.id, error instanceof Error ? error.message : 'Unknown error');
+        task.subtasks = []; // Set empty array if query fails
       }
     }
   }
@@ -544,60 +575,73 @@ if (projectDetails && projectDetails.id) {
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
               {projectTasks.length > 0 ? projectTasks.map((task: any) => (
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <a href={`/admin/collaborations/${collaborationId}/task/${task.id}`} class="block hover:bg-gray-50 rounded-md p-2 -m-2 transition-colors duration-200">
+                <>
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
                       <div class="flex items-center">
-                        <div class="flex-shrink-0 h-10 w-10">
-                          <div class={`h-10 w-10 rounded-full flex items-center justify-center ${
-                            task.status === 'completed' ? 'bg-green-300' :
-                            task.status === 'in_progress' ? 'bg-blue-300' :
-                            task.status === 'on_hold' ? 'bg-yellow-300' :
-                            task.status === 'cancelled' ? 'bg-red-300' :
-                            'bg-gray-300'
-                          }`}>
-                            {task.status === 'pending' ? (
-                              <svg class="h-5 w-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M5 22h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2h-2a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1H5c-1.103 0-2 .897-2 2v15c0 1.103.897 2 2 2zM5 5h2v2h10V5h2v15H5V5z"></path>
-                                <text x="12" y="16" text-anchor="middle" font-size="10" font-weight="bold" fill="currentColor">...</text>
-                              </svg>
-                            ) : task.status === 'completed' ? (
-                              <svg class="h-5 w-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M5 22h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2h-2a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1H5c-1.103 0-2 .897-2 2v15c0 1.103.897 2 2 2zM5 5h2v2h10V5h2v15H5V5z"></path>
-                                <path d="m11 13.586-1.793-1.793-1.414 1.414L11 16.414l5.207-5.207-1.414-1.414z"></path>
-                              </svg>
-                            ) : task.status === 'in_progress' ? (
-                              <svg class="h-5 w-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M5 22h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2h-2a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1H5c-1.103 0-2 .897-2 2v15c0 1.103.897 2 2 2zM5 5h2v2h10V5h2v15H5V5z"></path>
-                                <path d="M10 9l6 4-6 4V9z"></path>
-                              </svg>
-                            ) : task.status === 'on_hold' ? (
-                              <svg class="h-5 w-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                              </svg>
-                            ) : task.status === 'cancelled' ? (
-                              <svg class="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                              </svg>
-                            ) : (
-                              <svg class="h-5 w-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M5 22h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2h-2a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1H5c-1.103 0-2 .897-2 2v15c0 1.103.897 2 2 2zM5 5h2v2h10V5h2v15H5V5z"></path>
-                                <text x="12" y="16" text-anchor="middle" font-size="8" fill="currentColor">...</text>
-                              </svg>
+                        <a href={`/admin/collaborations/${collaborationId}/task/${task.id}`} class="flex items-center flex-1 hover:bg-gray-50 rounded-md p-2 -m-2 transition-colors duration-200">
+                          <div class="flex-shrink-0 h-10 w-10">
+                            <div class={`h-10 w-10 rounded-full flex items-center justify-center ${
+                              task.status === 'completed' ? 'bg-green-300' :
+                              task.status === 'in_progress' ? 'bg-blue-300' :
+                              task.status === 'on_hold' ? 'bg-yellow-300' :
+                              task.status === 'cancelled' ? 'bg-red-300' :
+                              'bg-gray-300'
+                            }`}>
+                              {task.status === 'pending' ? (
+                                <svg class="h-5 w-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M5 22h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2h-2a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1H5c-1.103 0-2 .897-2 2v15c0 1.103.897 2 2 2zM5 5h2v2h10V5h2v15H5V5z"></path>
+                                  <text x="12" y="16" text-anchor="middle" font-size="10" font-weight="bold" fill="currentColor">...</text>
+                                </svg>
+                              ) : task.status === 'completed' ? (
+                                <svg class="h-5 w-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M5 22h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2h-2a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1H5c-1.103 0-2 .897-2 2v15c0 1.103.897 2 2 2zM5 5h2v2h10V5h2v15H5V5z"></path>
+                                  <path d="m11 13.586-1.793-1.793-1.414 1.414L11 16.414l5.207-5.207-1.414-1.414z"></path>
+                                </svg>
+                              ) : task.status === 'in_progress' ? (
+                                <svg class="h-5 w-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M5 22h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2h-2a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1H5c-1.103 0-2 .897-2 2v15c0 1.103.897 2 2 2zM5 5h2v2h10V5h2v15H5V5z"></path>
+                                  <path d="M10 9l6 4-6 4V9z"></path>
+                                </svg>
+                              ) : task.status === 'on_hold' ? (
+                                <svg class="h-5 w-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                              ) : task.status === 'cancelled' ? (
+                                <svg class="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                              ) : (
+                                <svg class="h-5 w-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M5 22h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2h-2a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1H5c-1.103 0-2 .897-2 2v15c0 1.103.897 2 2 2zM5 5h2v2h10V5h2v15H5V5z"></path>
+                                  <text x="12" y="16" text-anchor="middle" font-size="8" fill="currentColor">...</text>
+                                </svg>
+                              )}
+                            </div>
+                          </div>
+                          <div class="ml-4">
+                            <div class="text-sm font-medium text-gray-900">
+                              {task.name}
+                            </div>
+                            {task.description && (
+                              <div class="text-sm text-gray-500 max-w-xs truncate" title={task.description}>{task.description}</div>
                             )}
                           </div>
-                        </div>
-                        <div class="ml-4">
-                          <div class="text-sm font-medium text-gray-900">
-                            {task.name}
-                          </div>
-                          {task.description && (
-                            <div class="text-sm text-gray-500 max-w-xs truncate" title={task.description}>{task.description}</div>
-                          )}
-                        </div>
+                        </a>
+                        {/* Always show arrow for testing - remove this later */}
+                        <button 
+                          class="expand-subtasks-btn ml-2 p-1 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                          data-task-id={task.id}
+                          title={`Toggle subtasks (${task.subtasks ? task.subtasks.length : 0})`}
+                        >
+                          <svg class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                          </svg>
+                        </button>
+                        <!-- Debug: Show subtask count -->
+                        <span class="ml-1 text-xs text-gray-500">({task.subtasks ? task.subtasks.length : 0})</span>
                       </div>
-                    </a>
-                  </td>
+                    </td>
                   <td class="px-6 py-4 whitespace-nowrap">
                     <div class="flex items-center space-x-2 relative">
                       {task.assignments && task.assignments.length > 0 ? (
@@ -789,7 +833,137 @@ if (projectDetails && projectDetails.id) {
                     </button>
                   </td>
                 </tr>
-              )) : (
+                
+                <!-- Subtask rows (hidden by default) -->
+                {/* Always show test subtask row for testing - remove this later */}
+                <tr class="subtask-row bg-gray-50 border-l-4 border-gray-300 hidden" data-task-id={task.id}>
+                  <td class="px-6 py-3 pl-12">
+                    <div class="flex items-center space-x-3">
+                      <button
+                        class="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 bg-gray-200 text-gray-600 hover:bg-gray-300"
+                        title="Mark as complete"
+                      >
+                        <div class="w-4 h-4 rounded-full border-2 border-current"></div>
+                      </button>
+                      <div>
+                        <div class="font-medium text-gray-900">Test Subtask 1</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-3">
+                    <span class="text-sm text-gray-400">Unassigned</span>
+                  </td>
+                  <td class="px-6 py-3 text-sm">
+                    <span class="text-sm text-gray-400">No due date</span>
+                  </td>
+                  <td class="px-6 py-3">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-blue-600 bg-blue-50">
+                      Regular
+                    </span>
+                  </td>
+                  <td class="px-6 py-3">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      Pending
+                    </span>
+                  </td>
+                  <td class="px-6 py-3 text-sm text-gray-500">
+                    <button 
+                      class="inline-flex items-center px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-medium rounded transition-colors duration-200"
+                      title="Edit subtask"
+                    >
+                      <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                      </svg>
+                      Edit
+                    </button>
+                  </td>
+                </tr>
+                
+                {/* Real subtasks if they exist */}
+                {task.subtasks && task.subtasks.length > 0 && task.subtasks.map((subtask: any) => (
+                  <tr class="subtask-row bg-gray-50 border-l-4 border-gray-300 hidden" data-task-id={task.id}>
+                    <td class="px-6 py-3 pl-12">
+                      <div class="flex items-center space-x-3">
+                        <button
+                          class={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 ${
+                            subtask.completed
+                              ? 'bg-green-500 text-white'
+                              : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                          }`}
+                          title={subtask.completed ? 'Mark as incomplete' : 'Mark as complete'}
+                        >
+                          {subtask.completed ? (
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M5 13l3 3L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                          ) : (
+                            <div class="w-4 h-4 rounded-full border-2 border-current"></div>
+                          )}
+                        </button>
+                        <div class={`${subtask.completed ? 'line-through text-gray-500' : ''}`}>
+                          <div class="font-medium text-gray-900">{subtask.name}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-6 py-3">
+                      {subtask.assignee ? (
+                        <div class="flex items-center">
+                          <div class="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700">
+                            {subtask.assignee.charAt(0).toUpperCase()}
+                          </div>
+                          <span class="ml-2 text-sm text-gray-600">{subtask.assignee}</span>
+                        </div>
+                      ) : (
+                        <span class="text-sm text-gray-400">Unassigned</span>
+                      )}
+                    </td>
+                    <td class="px-6 py-3 text-sm">
+                      {subtask.dueDate ? (
+                        <span class={`text-sm ${subtask.completed ? 'text-gray-400' : 'text-gray-900'}`}>
+                          {new Date(subtask.dueDate).toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: '2-digit', 
+                            day: '2-digit',
+                            timeZone: 'UTC'
+                          })}
+                        </span>
+                      ) : (
+                        <span class="text-sm text-gray-400">No due date</span>
+                      )}
+                    </td>
+                    <td class="px-6 py-3">
+                      <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        subtask.completed ? 'text-gray-400 bg-gray-100' :
+                        subtask.priority === 'high' ? 'text-red-600 bg-red-50' :
+                        subtask.priority === 'medium' ? 'text-orange-600 bg-orange-50' :
+                        'text-blue-600 bg-blue-50'
+                      }`}>
+                        {subtask.priority === 'high' ? 'Urgent' :
+                         subtask.priority === 'medium' ? 'High' :
+                         'Regular'}
+                      </span>
+                    </td>
+                    <td class="px-6 py-3">
+                      <span class={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        subtask.completed ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {subtask.completed ? 'Completed' : 'Pending'}
+                      </span>
+                    </td>
+                    <td class="px-6 py-3 text-sm text-gray-500">
+                      <button 
+                        class="inline-flex items-center px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-medium rounded transition-colors duration-200"
+                        title="Edit subtask"
+                      >
+                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </>)) : (
                 <tr>
                   <td colspan="6" class="px-6 py-12 text-center">
                     <div class="flex flex-col items-center space-y-4">
@@ -1229,6 +1403,7 @@ if (projectDetails && projectDetails.id) {
     priority: task.priority,
     dueDate: task.dueDate,
     assignments: task.assignments || [],
+    subtasks: task.subtasks || [],
     createdAt: task.createdAt
   }))
 }}>
@@ -2957,5 +3132,89 @@ if (projectDetails && projectDetails.id) {
 
     // Initial filter application
     filterTasks();
+
+    // Subtask expand/collapse functionality
+    document.addEventListener('click', function(e) {
+      console.log('Click detected on:', e.target);
+      
+      if (e.target.classList.contains('expand-subtasks-btn') || e.target.closest('.expand-subtasks-btn')) {
+        console.log('Subtask button clicked!');
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const button = e.target.classList.contains('expand-subtasks-btn') ? e.target : e.target.closest('.expand-subtasks-btn');
+        const taskId = button.getAttribute('data-task-id');
+        const arrow = button.querySelector('svg');
+        const subtaskRows = document.querySelectorAll(`tr.subtask-row[data-task-id="${taskId}"]`);
+        
+        console.log('Task ID:', taskId);
+        console.log('Found subtask rows:', subtaskRows.length);
+        console.log('Arrow element:', arrow);
+        
+        // Toggle arrow rotation
+        if (arrow) {
+          arrow.classList.toggle('rotate-180');
+          console.log('Arrow rotated');
+        }
+        
+        // Toggle subtask rows visibility
+        subtaskRows.forEach((row, index) => {
+          console.log(`Toggling subtask row ${index}:`, row);
+          console.log('Before toggle - display:', row.style.display, 'hidden class:', row.classList.contains('hidden'));
+          
+          // Check current state first
+          const isCurrentlyHidden = row.style.display === 'none' || row.classList.contains('hidden');
+          
+          if (isCurrentlyHidden) {
+            // Show the row
+            row.style.display = '';
+            row.style.visibility = 'visible';
+            row.classList.remove('hidden');
+            console.log('Showing row');
+          } else {
+            // Hide the row
+            row.style.display = 'none';
+            row.style.visibility = 'hidden';
+            row.classList.add('hidden');
+            console.log('Hiding row');
+          }
+          
+          console.log('After toggle - display:', row.style.display, 'hidden class:', row.classList.contains('hidden'));
+          console.log('Row classes after toggle:', row.className);
+          
+          // Add a visual indicator that the row was toggled
+          row.style.border = row.style.display === 'none' ? '2px solid red' : '2px solid green';
+          setTimeout(() => {
+            row.style.border = '';
+          }, 1000);
+        });
+      }
+    });
   });
 </script>
+
+<style>
+  /* Subtask row styling */
+  .subtask-row {
+    background-color: #f9fafb;
+    border-left: 4px solid #d1d5db;
+  }
+  
+  .subtask-row:hover {
+    background-color: #f3f4f6;
+  }
+  
+  /* Arrow rotation animation */
+  .expand-subtasks-btn svg {
+    transition: transform 0.2s ease-in-out;
+  }
+  
+  .expand-subtasks-btn svg.rotate-180 {
+    transform: rotate(180deg);
+  }
+  
+  /* Subtask indentation */
+  .subtask-row td:first-child {
+    padding-left: 3rem;
+  }
+</style>
