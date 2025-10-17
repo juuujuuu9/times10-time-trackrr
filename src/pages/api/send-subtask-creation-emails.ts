@@ -1,6 +1,9 @@
 import type { APIRoute } from 'astro';
 import { sendSubtaskAssignmentEmail } from '../../utils/email';
 import { getEmailBaseUrl } from '../../utils/url';
+import { db } from '../../db';
+import { users } from '../../db/schema';
+import { eq } from 'drizzle-orm';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -33,26 +36,40 @@ export const POST: APIRoute = async ({ request }) => {
       if (subtask.assignees && subtask.assignees.length > 0) {
         for (const assigneeName of subtask.assignees) {
           try {
-            console.log(`📧 Sending subtask creation email to ${assigneeName} for subtask: ${subtask.name}`);
-            
-            const result = await sendSubtaskAssignmentEmail({
-              email: assigneeName, // This should be the email, not name - will be fixed in the calling code
-              userName: assigneeName,
-              subtaskName: subtask.name,
-              taskName: taskName || 'Unknown Task',
-              projectName: projectName || 'Unknown Project',
-              assignedBy: assignedBy || 'System',
-              subtaskDescription: subtask.description || undefined,
-              dashboardUrl: dashboardUrl,
+            // Find user by name to get email
+            const user = await db.query.users.findFirst({
+              where: eq(users.name, assigneeName)
             });
-            
-            results.push({
-              subtaskName: subtask.name,
-              assignee: assigneeName,
-              result: result
-            });
-            
-            console.log(`📧 Subtask creation email sent to ${assigneeName}`);
+
+            if (user && user.email) {
+              console.log(`📧 Sending subtask creation email to ${user.email} for subtask: ${subtask.name}`);
+              
+              const result = await sendSubtaskAssignmentEmail({
+                email: user.email,
+                userName: user.name,
+                subtaskName: subtask.name,
+                taskName: taskName || 'Unknown Task',
+                projectName: projectName || 'Unknown Project',
+                assignedBy: assignedBy || 'System',
+                subtaskDescription: subtask.description || undefined,
+                dashboardUrl: dashboardUrl,
+              });
+              
+              results.push({
+                subtaskName: subtask.name,
+                assignee: assigneeName,
+                result: result
+              });
+              
+              console.log(`📧 Subtask creation email sent to ${user.email}`);
+            } else {
+              console.log(`📧 Skipping email for user ${assigneeName} (user not found or no email)`);
+              results.push({
+                subtaskName: subtask.name,
+                assignee: assigneeName,
+                error: 'User not found or no email address'
+              });
+            }
           } catch (emailError) {
             console.error(`Failed to send subtask creation email to ${assigneeName}:`, emailError);
             results.push({
