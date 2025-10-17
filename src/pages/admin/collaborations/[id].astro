@@ -1,5 +1,6 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
+import StatusDropdown from '../../../components/StatusDropdown.tsx';
 import { db } from '../../../db/index';
 import { teams, teamMembers as teamMembersTable, projects, clients, users, taskNotes, taskDiscussions, taskFiles, taskLinks, tasks, taskAssignments, timeEntries } from '../../../db/schema';
 import { eq, and, desc, count, sql } from 'drizzle-orm';
@@ -311,14 +312,25 @@ if (projectDetails && projectDetails.id) {
           <div class="flex justify-between items-center w-full mb-3">
             
             <!-- Team Members -->
-            <div class="flex items-center">
+            <div class="flex items-center relative">
               <div class="flex -space-x-2">
                 {teamMembers.slice(0, 4).map((member: any, index: number) => (
                   <div 
-                    class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 border-2 border-white relative group cursor-pointer"
+                    class="collaboration-member-avatar w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 border-2 border-white relative group hover:bg-gray-400 hover:z-50 transition-colors duration-200"
                     title={member.name}
+                    data-member-id={member.id}
+                    data-member-name={member.name}
                   >
                     {member.name.charAt(0).toUpperCase()}
+                    <!-- Remove button (hidden by default) -->
+                    <button 
+                      class="remove-collaboration-member absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600 cursor-pointer"
+                      data-member-id={member.id}
+                      data-member-name={member.name}
+                      title={`Remove ${member.name} from collaboration`}
+                    >
+                      ×
+                    </button>
                     <!-- Tooltip -->
                     <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
                       {member.name}
@@ -328,8 +340,8 @@ if (projectDetails && projectDetails.id) {
                 ))}
                 {teamMembers.length > 4 && (
                   <div 
-                    class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 border-2 border-white relative group cursor-pointer"
-                    title={teamMembers.slice(4).map((member: any) => member.name).join(', ')}
+                    class="expand-collaboration-members w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 border-2 border-white relative group cursor-pointer hover:bg-gray-200 transition-colors duration-200"
+                    title={`Show all ${teamMembers.length} members`}
                   >
                     +{teamMembers.length - 4}
                     <!-- Tooltip -->
@@ -343,6 +355,36 @@ if (projectDetails && projectDetails.id) {
                     </div>
                   </div>
                 )}
+              </div>
+              
+              <!-- Expanded Members List (hidden by default) -->
+              <div id="expandedCollaborationMembers" class="hidden absolute top-8 left-0 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-50 min-w-64">
+                <div class="flex flex-wrap gap-2">
+                  {teamMembers.map((member: any) => (
+                    <div 
+                      class="collaboration-member-avatar w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 border-2 border-white relative group cursor-pointer hover:bg-gray-400 transition-colors duration-200"
+                      title={member.name}
+                      data-member-id={member.id}
+                      data-member-name={member.name}
+                    >
+                      {member.name.charAt(0).toUpperCase()}
+                      <!-- Remove button (hidden by default) -->
+                      <button 
+                        class="remove-collaboration-member absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600 cursor-pointer"
+                        data-member-id={member.id}
+                        data-member-name={member.name}
+                        title={`Remove ${member.name} from collaboration`}
+                      >
+                        ×
+                      </button>
+                      <!-- Tooltip -->
+                      <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                        {member.name}
+                        <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
             <div class="relative">
@@ -507,11 +549,42 @@ if (projectDetails && projectDetails.id) {
                     <a href={`/admin/collaborations/${collaborationId}/task/${task.id}`} class="block hover:bg-gray-50 rounded-md p-2 -m-2 transition-colors duration-200">
                       <div class="flex items-center">
                         <div class="flex-shrink-0 h-10 w-10">
-                          <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                            <svg class="h-5 w-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M5 22h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2h-2a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1H5c-1.103 0-2 .897-2 2v15c0 1.103.897 2 2 2zM5 5h2v2h10V5h2v15H5V5z"></path>
-                              <path d="m11 13.586-1.793-1.793-1.414 1.414L11 16.414l5.207-5.207-1.414-1.414z"></path>
-                            </svg>
+                          <div class={`h-10 w-10 rounded-full flex items-center justify-center ${
+                            task.status === 'completed' ? 'bg-green-300' :
+                            task.status === 'in_progress' ? 'bg-blue-300' :
+                            task.status === 'on_hold' ? 'bg-yellow-300' :
+                            task.status === 'cancelled' ? 'bg-red-300' :
+                            'bg-gray-300'
+                          }`}>
+                            {task.status === 'pending' ? (
+                              <svg class="h-5 w-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M5 22h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2h-2a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1H5c-1.103 0-2 .897-2 2v15c0 1.103.897 2 2 2zM5 5h2v2h10V5h2v15H5V5z"></path>
+                                <text x="12" y="16" text-anchor="middle" font-size="10" font-weight="bold" fill="currentColor">...</text>
+                              </svg>
+                            ) : task.status === 'completed' ? (
+                              <svg class="h-5 w-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M5 22h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2h-2a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1H5c-1.103 0-2 .897-2 2v15c0 1.103.897 2 2 2zM5 5h2v2h10V5h2v15H5V5z"></path>
+                                <path d="m11 13.586-1.793-1.793-1.414 1.414L11 16.414l5.207-5.207-1.414-1.414z"></path>
+                              </svg>
+                            ) : task.status === 'in_progress' ? (
+                              <svg class="h-5 w-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M5 22h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2h-2a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1H5c-1.103 0-2 .897-2 2v15c0 1.103.897 2 2 2zM5 5h2v2h10V5h2v15H5V5z"></path>
+                                <path d="M10 9l6 4-6 4V9z"></path>
+                              </svg>
+                            ) : task.status === 'on_hold' ? (
+                              <svg class="h-5 w-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                              </svg>
+                            ) : task.status === 'cancelled' ? (
+                              <svg class="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                              </svg>
+                            ) : (
+                              <svg class="h-5 w-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M5 22h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2h-2a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1H5c-1.103 0-2 .897-2 2v15c0 1.103.897 2 2 2zM5 5h2v2h10V5h2v15H5V5z"></path>
+                                <text x="12" y="16" text-anchor="middle" font-size="8" fill="currentColor">...</text>
+                              </svg>
+                            )}
                           </div>
                         </div>
                         <div class="ml-4">
@@ -526,15 +599,28 @@ if (projectDetails && projectDetails.id) {
                     </a>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center">
+                    <div class="flex items-center space-x-2 relative">
                       {task.assignments && task.assignments.length > 0 ? (
                         <div class="flex -space-x-2">
                           {task.assignments.slice(0, 3).map((assignment: any) => (
                             <div 
-                              class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 border-2 border-white relative group cursor-pointer"
+                              class="task-member-avatar w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 border-2 border-white relative group hover:bg-gray-400 hover:z-50 transition-colors duration-200"
                               title={assignment.user.name}
+                              data-task-id={task.id}
+                              data-user-id={assignment.user.id}
+                              data-user-name={assignment.user.name}
                             >
                               {assignment.user.name.charAt(0).toUpperCase()}
+                              <!-- Remove button (hidden by default) -->
+                              <button 
+                                class="remove-task-member absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600 cursor-pointer"
+                                data-task-id={task.id}
+                                data-user-id={assignment.user.id}
+                                data-user-name={assignment.user.name}
+                                title={`Remove ${assignment.user.name} from task`}
+                              >
+                                ×
+                              </button>
                               <!-- Tooltip -->
                               <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
                                 {assignment.user.name}
@@ -544,8 +630,9 @@ if (projectDetails && projectDetails.id) {
                           ))}
                           {task.assignments.length > 3 && (
                             <div 
-                              class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 border-2 border-white relative group cursor-pointer"
-                              title={task.assignments.slice(3).map((assignment: any) => assignment.user.name).join(', ')}
+                              class="expand-task-members w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 border-2 border-white relative group cursor-pointer hover:bg-gray-200 transition-colors duration-200"
+                              title={`Show all ${task.assignments.length} assignees`}
+                              data-task-id={task.id}
                             >
                               +{task.assignments.length - 3}
                               <!-- Tooltip -->
@@ -563,6 +650,86 @@ if (projectDetails && projectDetails.id) {
                       ) : (
                         <span class="text-sm text-gray-500">Unassigned</span>
                       )}
+                      
+                      <!-- Expanded Task Members List (hidden by default) -->
+                      <div class={`expanded-task-members-${task.id} hidden absolute top-8 left-0 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-50 min-w-64`}>
+                        <div class="flex flex-wrap gap-2">
+                          {task.assignments && task.assignments.map((assignment: any) => (
+                            <div 
+                              class="task-member-avatar w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 border-2 border-white relative group hover:bg-gray-400 hover:z-50 transition-colors duration-200"
+                              title={assignment.user.name}
+                              data-task-id={task.id}
+                              data-user-id={assignment.user.id}
+                              data-user-name={assignment.user.name}
+                            >
+                              {assignment.user.name.charAt(0).toUpperCase()}
+                              <!-- Remove button (hidden by default) -->
+                              <button 
+                                class="remove-task-member absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600 cursor-pointer"
+                                data-task-id={task.id}
+                                data-user-id={assignment.user.id}
+                                data-user-name={assignment.user.name}
+                                title={`Remove ${assignment.user.name} from task`}
+                              >
+                                ×
+                              </button>
+                              <!-- Tooltip -->
+                              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                                {assignment.user.name}
+                                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <!-- Add User Button for Task -->
+                      <div class="relative">
+                        <button 
+                          class="task-add-user-btn inline-flex items-center justify-center w-4 h-4 text-gray-600 hover:text-gray-800 transition-colors duration-200" 
+                          title="Add user to task"
+                          data-task-id={task.id}
+                        >
+                          <svg fill="currentColor" height="16px" width="16px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" xml:space="preserve">
+                            <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                            <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                            <g id="SVGRepo_iconCarrier">
+                              <g>
+                                <g>
+                                  <polygon points="451.368,229.053 451.368,168.421 410.947,168.421 410.947,229.053 350.316,229.053 350.316,269.474 410.947,269.474 410.947,330.105 451.368,330.105 451.368,269.474 512,269.474 512,229.053"></polygon>
+                                </g>
+                              </g>
+                              <g>
+                                <g>
+                                  <path d="M239.915,276.724c33.652-18.238,56.506-53.864,56.506-94.829c0-59.531-48.259-107.789-107.789-107.789 S80.842,122.364,80.842,181.895c0,40.965,22.854,76.591,56.506,94.829C66.732,283.298,0,352.877,0,437.895h377.263 C377.263,352.877,310.531,283.298,239.915,276.724z"></path>
+                                </g>
+                              </g>
+                            </g>
+                          </svg>
+                        </button>
+                        
+                        <!-- Task User Search Dropdown -->
+                        <div class="task-user-search-dropdown absolute left-0 top-6 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 hidden">
+                          <div class="p-4">
+                            <div class="relative mb-3">
+                              <input 
+                                type="text" 
+                                class="task-user-search-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Search users by name or email..."
+                              />
+                              <div class="task-user-search-spinner absolute right-3 top-1/2 transform -translate-y-1/2 hidden">
+                                <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                              </div>
+                            </div>
+                            <div class="task-user-search-results max-h-60 overflow-y-auto space-y-2">
+                              <div class="text-center py-4 text-gray-500">Loading users...</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm">
@@ -595,15 +762,15 @@ if (projectDetails && projectDetails.id) {
                     </span>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
-                    <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      task.status === 'completed' ? 'bg-green-100 text-green-800' :
-                      task.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                      task.status === 'on_hold' ? 'bg-yellow-100 text-yellow-800' :
-                      task.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {task.status.replace('_', ' ').charAt(0).toUpperCase() + task.status.replace('_', ' ').slice(1)}
-                    </span>
+                    <StatusDropdown 
+                      currentStatus={task.status}
+                      onStatusChange={(newStatus) => {
+                        // Update the task status in the UI
+                        task.status = newStatus;
+                      }}
+                      taskId={task.id}
+                      client:load
+                    />
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <button 
@@ -663,6 +830,46 @@ if (projectDetails && projectDetails.id) {
 <!-- Notification System -->
 <div id="notificationContainer" class="fixed w-full max-w-md top-4 right-4 z-50 space-y-2">
   <!-- Notifications will be dynamically added here -->
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirmationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+  <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div class="mt-3">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900" id="confirmationTitle">Confirm Action</h3>
+        <button id="closeConfirmationModal" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Content -->
+      <div class="mb-6">
+        <p class="text-sm text-gray-500" id="confirmationMessage">Are you sure you want to perform this action?</p>
+      </div>
+
+      <!-- Modal Actions -->
+      <div class="flex items-center justify-end space-x-3">
+        <button 
+          type="button" 
+          id="cancelConfirmation" 
+          class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 font-medium rounded-md transition-colors duration-200"
+        >
+          Cancel
+        </button>
+        <button 
+          type="button" 
+          id="confirmAction" 
+          class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-md transition-colors duration-200"
+        >
+          Confirm
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Team Management Modal -->
@@ -1098,9 +1305,49 @@ if (projectDetails && projectDetails.id) {
     }, 300);
   }
 
-  // Make functions globally available
-  window.showNotification = showNotification;
-  window.removeNotification = removeNotification;
+    // Make functions globally available
+    window.showNotification = showNotification;
+    window.removeNotification = removeNotification;
+    
+    // Confirmation modal functionality
+    let currentConfirmationAction = null;
+    
+    function showConfirmation(title, message, action) {
+      if (confirmationTitle) confirmationTitle.textContent = title;
+      if (confirmationMessage) confirmationMessage.textContent = message;
+      if (confirmationModal) confirmationModal.classList.remove('hidden');
+      currentConfirmationAction = action;
+    }
+    
+    function hideConfirmation() {
+      if (confirmationModal) confirmationModal.classList.add('hidden');
+      currentConfirmationAction = null;
+    }
+    
+    // Confirmation modal event handlers
+    if (closeConfirmationModal) {
+      closeConfirmationModal.addEventListener('click', hideConfirmation);
+    }
+    if (cancelConfirmation) {
+      cancelConfirmation.addEventListener('click', hideConfirmation);
+    }
+    if (confirmAction) {
+      confirmAction.addEventListener('click', function() {
+        if (currentConfirmationAction) {
+          currentConfirmationAction();
+        }
+        hideConfirmation();
+      });
+    }
+    
+    // Close confirmation modal when clicking outside
+    if (confirmationModal) {
+      confirmationModal.addEventListener('click', function(e) {
+        if (e.target === confirmationModal) {
+          hideConfirmation();
+        }
+      });
+    }
 
   // Add any client-side functionality here
   document.addEventListener('DOMContentLoaded', function() {
@@ -1146,6 +1393,14 @@ if (projectDetails && projectDetails.id) {
     const userSearchInput = document.getElementById('userSearchInput');
     const userSearchResults = document.getElementById('userSearchResults');
     const userSearchSpinner = document.getElementById('userSearchSpinner');
+    
+    // Confirmation modal elements
+    const confirmationModal = document.getElementById('confirmationModal');
+    const confirmationTitle = document.getElementById('confirmationTitle');
+    const confirmationMessage = document.getElementById('confirmationMessage');
+    const closeConfirmationModal = document.getElementById('closeConfirmationModal');
+    const cancelConfirmation = document.getElementById('cancelConfirmation');
+    const confirmAction = document.getElementById('confirmAction');
 
     if (!taskModal || !taskForm || !closeTaskModal || !cancelTaskModal || !assigneeList) {
       console.error('Required modal elements not found');
@@ -1741,6 +1996,10 @@ if (projectDetails && projectDetails.id) {
     let userSearchTimeout;
     let allUsers = []; // Store all users for filtering
     
+    // Task user search functionality
+    let taskUserSearchTimeout;
+    let taskAllUsers = []; // Store all users for task filtering
+    
     // Toggle dropdown visibility
     if (addUserBtn && userSearchDropdown) {
       addUserBtn.addEventListener('click', function(e) {
@@ -1836,6 +2095,21 @@ if (projectDetails && projectDetails.id) {
       displayUserSearchResults(filteredUsers);
     }
     
+    function filterTaskUsers(searchTerm, taskId, dropdown) {
+      if (!searchTerm || taskAllUsers.length === 0) {
+        displayTaskUserSearchResults(taskAllUsers, taskId, dropdown);
+        return;
+      }
+
+      // Filter users locally
+      const filteredUsers = taskAllUsers.filter(user => 
+        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+
+      displayTaskUserSearchResults(filteredUsers, taskId, dropdown);
+    }
+    
     function displayUserSearchResults(users) {
       if (!userSearchResults) return;
       
@@ -1892,6 +2166,104 @@ if (projectDetails && projectDetails.id) {
       }
     });
     
+    // Task user search dropdown functionality
+    document.addEventListener('click', function(e) {
+      // Handle task add user button clicks
+      if (e.target.classList.contains('task-add-user-btn') || e.target.closest('.task-add-user-btn')) {
+        e.stopPropagation();
+        const button = e.target.classList.contains('task-add-user-btn') ? e.target : e.target.closest('.task-add-user-btn');
+        const taskId = button.getAttribute('data-task-id');
+        const dropdown = button.parentElement.querySelector('.task-user-search-dropdown');
+        const input = dropdown.querySelector('.task-user-search-input');
+        
+        dropdown.classList.toggle('hidden');
+        if (!dropdown.classList.contains('hidden')) {
+          input.focus();
+          loadTaskUsers(taskId, dropdown);
+        }
+      }
+      
+      // Handle task user search result clicks
+      const taskUserContainer = e.target.closest('[data-task-user-id]');
+      if (taskUserContainer && taskUserContainer.closest('.task-user-search-results') && !taskUserContainer.classList.contains('cursor-not-allowed')) {
+        e.stopPropagation();
+        const userId = taskUserContainer.getAttribute('data-task-user-id');
+        const taskId = taskUserContainer.getAttribute('data-task-id');
+        addUserToTask(userId, taskId);
+      }
+    });
+    
+    // Close task dropdowns when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.task-add-user-btn') && !e.target.closest('.task-user-search-dropdown')) {
+        document.querySelectorAll('.task-user-search-dropdown').forEach(dropdown => {
+          dropdown.classList.add('hidden');
+        });
+      }
+    });
+    
+    // Handle expand/collapse for collaboration members
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('expand-collaboration-members') || e.target.closest('.expand-collaboration-members')) {
+        e.stopPropagation();
+        const expandedList = document.getElementById('expandedCollaborationMembers');
+        if (expandedList) {
+          expandedList.classList.toggle('hidden');
+        }
+      }
+    });
+    
+    // Handle expand/collapse for task members
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('expand-task-members') || e.target.closest('.expand-task-members')) {
+        e.stopPropagation();
+        const taskId = e.target.getAttribute('data-task-id') || e.target.closest('.expand-task-members').getAttribute('data-task-id');
+        const expandedList = document.querySelector(`.expanded-task-members-${taskId}`);
+        if (expandedList) {
+          expandedList.classList.toggle('hidden');
+        }
+      }
+    });
+    
+    // Handle remove collaboration member
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('remove-collaboration-member') || e.target.closest('.remove-collaboration-member')) {
+        e.stopPropagation();
+        const button = e.target.classList.contains('remove-collaboration-member') ? e.target : e.target.closest('.remove-collaboration-member');
+        const memberId = button.getAttribute('data-member-id');
+        const memberName = button.getAttribute('data-member-name');
+        removeCollaborationMember(memberId, memberName);
+      }
+    });
+    
+    // Handle remove task member
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('remove-task-member') || e.target.closest('.remove-task-member')) {
+        e.stopPropagation();
+        const button = e.target.classList.contains('remove-task-member') ? e.target : e.target.closest('.remove-task-member');
+        const taskId = button.getAttribute('data-task-id');
+        const userId = button.getAttribute('data-user-id');
+        const userName = button.getAttribute('data-user-name');
+        removeTaskMember(taskId, userId, userName);
+      }
+    });
+    
+    // Close expanded lists when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.expand-collaboration-members') && !e.target.closest('#expandedCollaborationMembers')) {
+        const expandedList = document.getElementById('expandedCollaborationMembers');
+        if (expandedList) {
+          expandedList.classList.add('hidden');
+        }
+      }
+      
+      if (!e.target.closest('.expand-task-members') && !e.target.closest('[class*="expanded-task-members-"]')) {
+        document.querySelectorAll('[class*="expanded-task-members-"]').forEach(dropdown => {
+          dropdown.classList.add('hidden');
+        });
+      }
+    });
+    
     async function addUserToCollaboration(userId) {
       // Get user data from container attributes
       const userContainer = document.querySelector(`#userSearchResults [data-user-id="${userId}"]`);
@@ -1935,6 +2307,239 @@ if (projectDetails && projectDetails.id) {
       }
     }
     
+    // Task user search functions
+    async function loadTaskUsers(taskId, dropdown) {
+      if (taskAllUsers.length > 0) {
+        // Users already loaded, just display them
+        displayTaskUserSearchResults(taskAllUsers, taskId, dropdown);
+        return;
+      }
+
+      try {
+        // Show loading state
+        const spinner = dropdown.querySelector('.task-user-search-spinner');
+        const results = dropdown.querySelector('.task-user-search-results');
+        if (spinner) spinner.classList.remove('hidden');
+        results.innerHTML = '<div class="text-center py-4 text-gray-500">Loading users...</div>';
+
+        // Fetch all users using the main users endpoint
+        const response = await fetch('/api/admin/users');
+        const users = await response.json();
+        
+        if (spinner) spinner.classList.add('hidden');
+        
+        if (Array.isArray(users) && users.length > 0) {
+          // Transform the data to match the expected format
+          taskAllUsers = users.map(user => ({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role
+          }));
+          displayTaskUserSearchResults(taskAllUsers, taskId, dropdown);
+        } else {
+          results.innerHTML = '<div class="text-center py-4 text-gray-500">No users found</div>';
+        }
+      } catch (error) {
+        console.error('Error loading users:', error);
+        const spinner = dropdown.querySelector('.task-user-search-spinner');
+        const results = dropdown.querySelector('.task-user-search-results');
+        if (spinner) spinner.classList.add('hidden');
+        results.innerHTML = '<div class="text-center py-4 text-red-500">Error loading users</div>';
+      }
+    }
+    
+    function displayTaskUserSearchResults(users, taskId, dropdown) {
+      const results = dropdown.querySelector('.task-user-search-results');
+      if (!results) return;
+      
+      results.innerHTML = '';
+      
+      if (users.length === 0) {
+        results.innerHTML = '<div class="text-center py-4 text-gray-500">No users found</div>';
+        return;
+      }
+
+      // Get current task assignments to filter out already assigned users
+      const task = tasksData.find(t => t.id === parseInt(taskId));
+      const assignedUserIds = task?.assignments?.map(a => a.userId) || [];
+
+      users.forEach(user => {
+        // Skip users who are already assigned to this task
+        if (assignedUserIds.includes(user.id)) {
+          return;
+        }
+        
+        const userItem = document.createElement('div');
+        userItem.className = 'flex items-center justify-between p-3 rounded-md cursor-pointer transition-colors duration-200 bg-white hover:bg-blue-50 hover:border-blue-200 border border-transparent';
+        
+        userItem.setAttribute('data-task-user-id', user.id);
+        userItem.setAttribute('data-task-id', taskId);
+        userItem.setAttribute('data-user-name', user.name);
+        userItem.setAttribute('data-user-email', user.email);
+        
+        userItem.innerHTML = `
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 relative group" title="${user.name}">
+              ${user.name.charAt(0).toUpperCase()}
+              <!-- Tooltip -->
+              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                ${user.name}
+                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+              </div>
+            </div>
+            <div>
+              <div class="text-sm font-medium text-gray-900">${user.name}</div>
+              <div class="text-xs text-gray-500">${user.email}</div>
+            </div>
+          </div>
+        `;
+        results.appendChild(userItem);
+      });
+    }
+    
+    async function addUserToTask(userId, taskId) {
+      // Get user data from container attributes
+      const userContainer = document.querySelector(`[data-task-user-id="${userId}"][data-task-id="${taskId}"]`);
+      if (!userContainer) return;
+      
+      const userName = userContainer.getAttribute('data-user-name');
+      const userEmail = userContainer.getAttribute('data-user-email');
+      
+      try {
+        // Get current task assignments first
+        const task = tasksData.find(t => t.id === parseInt(taskId));
+        const currentAssignments = task?.assignments || [];
+        const currentUserIds = currentAssignments.map(a => a.userId);
+        
+        // Add the new user to existing assignments
+        const allUserIds = [...currentUserIds, parseInt(userId)];
+        
+        // Update task assignments via API (this replaces ALL assignments)
+        const response = await fetch('/api/admin/tasks/assign', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            taskId: parseInt(taskId),
+            userIds: allUserIds
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to add user to task');
+        }
+        
+        // Show success message
+        showNotification(`${userName} has been added to the task!`, 'success');
+        
+        // Close dropdown and reload page
+        const dropdown = userContainer.closest('.task-user-search-dropdown');
+        if (dropdown) {
+          dropdown.classList.add('hidden');
+        }
+        
+        // Reload page to reflect changes
+        window.location.reload();
+        
+      } catch (error) {
+        console.error('Error adding user to task:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        showNotification('Failed to add user to task: ' + errorMessage, 'error');
+      }
+    }
+    
+    // Remove collaboration member function
+    async function removeCollaborationMember(memberId, memberName) {
+      showConfirmation(
+        'Remove Team Member',
+        `Are you sure you want to remove ${memberName} from the collaboration?`,
+        async function() {
+          try {
+            // Get current team member IDs (excluding the one to remove)
+            const updatedMemberIds = teamMembersData
+              .filter(member => member.id !== parseInt(memberId))
+              .map(member => member.id);
+            
+            // Update team members via API
+            const response = await fetch(`/api/admin/teams/${collaborationId}/members`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                memberIds: updatedMemberIds
+              })
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || 'Failed to remove member');
+            }
+            
+            // Show success message
+            showNotification(`${memberName} has been removed from the collaboration!`, 'success');
+            
+            // Reload page to reflect changes
+            window.location.reload();
+            
+          } catch (error) {
+            console.error('Error removing collaboration member:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            showNotification('Failed to remove member: ' + errorMessage, 'error');
+          }
+        }
+      );
+    }
+    
+    // Remove task member function
+    async function removeTaskMember(taskId, userId, userName) {
+      showConfirmation(
+        'Remove Task Assignee',
+        `Are you sure you want to remove ${userName} from this task?`,
+        async function() {
+          try {
+            // Get current task assignments (excluding the one to remove)
+            const task = tasksData.find(t => t.id === parseInt(taskId));
+            const currentAssignments = task?.assignments || [];
+            const updatedUserIds = currentAssignments
+              .filter(assignment => assignment.userId !== parseInt(userId))
+              .map(assignment => assignment.userId);
+            
+            // Update task assignments via API
+            const response = await fetch('/api/admin/tasks/assign', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                taskId: parseInt(taskId),
+                userIds: updatedUserIds
+              })
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || 'Failed to remove user from task');
+            }
+            
+            // Show success message
+            showNotification(`${userName} has been removed from the task!`, 'success');
+            
+            // Reload page to reflect changes
+            window.location.reload();
+            
+          } catch (error) {
+            console.error('Error removing task member:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            showNotification('Failed to remove user from task: ' + errorMessage, 'error');
+          }
+        }
+      );
+    }
+    
     // Search as user types
     userSearch.addEventListener('input', function(e) {
       const searchTerm = e.target.value.trim();
@@ -1947,6 +2552,22 @@ if (projectDetails && projectDetails.id) {
         }
         searchResults.classList.add('hidden');
         if (searchSpinner) searchSpinner.classList.add('hidden');
+      }
+    });
+    
+    // Task user search input handling
+    document.addEventListener('input', function(e) {
+      if (e.target.classList.contains('task-user-search-input')) {
+        const searchTerm = e.target.value.trim();
+        const dropdown = e.target.closest('.task-user-search-dropdown');
+        const taskId = dropdown.closest('tr').querySelector('.task-add-user-btn').getAttribute('data-task-id');
+        
+        if (searchTerm.length >= 2) {
+          filterTaskUsers(searchTerm, taskId, dropdown);
+        } else if (searchTerm.length === 0) {
+          // Show all users when search is cleared
+          displayTaskUserSearchResults(taskAllUsers, taskId, dropdown);
+        }
       }
     });
     
