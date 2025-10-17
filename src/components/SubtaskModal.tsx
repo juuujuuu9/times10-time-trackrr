@@ -22,9 +22,10 @@ interface SubtaskModalProps {
   onClose: () => void;
   onCreateSubtasks: (subtasks: Omit<Subtask, 'id'>[]) => void;
   teamMembers: User[];
+  taskAssignees?: User[]; // RULE-001: Only task assignees can be assigned to subtasks
 }
 
-const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSubtasks, teamMembers }) => {
+const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSubtasks, teamMembers, taskAssignees }) => {
   const [subtasks, setSubtasks] = useState<Subtask[]>([
     {
       id: '1',
@@ -189,14 +190,21 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
                                 {(subtask.assignees || []).slice(0, 4).map((assignee, index) => (
                                   <div 
                                     key={index}
-                                    className="w-8 h-8 bg-green-300 rounded-full flex items-center justify-center text-xs font-medium text-green-800 border-2 border-white relative group cursor-pointer"
+                                    className="w-8 h-8 bg-green-300 rounded-full flex items-center justify-center text-xs font-medium text-green-800 border-2 border-white relative group hover:bg-green-400 hover:z-50 transition-colors duration-200"
                                     title={assignee}
-                                    onClick={() => toggleAssignee(subtask.id, assignee)}
                                   >
                                     {assignee.charAt(0).toUpperCase()}
+                                    {/* Remove button (hidden by default) - RULE-001: Match task assignment styling */}
+                                    <button 
+                                      className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600 cursor-pointer"
+                                      title={`Remove ${assignee} from subtask`}
+                                      onClick={() => toggleAssignee(subtask.id, assignee)}
+                                    >
+                                      ×
+                                    </button>
                                     {/* Tooltip */}
                                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                                      {assignee} (click to remove)
+                                      {assignee}
                                       <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
                                     </div>
                                   </div>
@@ -214,9 +222,9 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
                               </div>
                             </div>
                             
-                            {/* Available Team Members */}
+                            {/* Available Task Assignees - RULE-001: Only task assignees can be assigned to subtasks */}
                             <div className="flex flex-wrap gap-1">
-                              {teamMembers
+                              {(taskAssignees || teamMembers)
                                 .filter(member => !(subtask.assignees || []).includes(member.name))
                                 .map((member) => (
                                 <button
@@ -228,6 +236,11 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
                                   + {member.name}
                                 </button>
                               ))}
+                              {(!taskAssignees || taskAssignees.length === 0) && (
+                                <div className="text-xs text-gray-500 italic">
+                                  No task assignees available. Assign users to the task first.
+                                </div>
+                              )}
                             </div>
                           </div>
                         </td>

@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../../db/index';
-import { taskAssignments, users, tasks } from '../../../../db/schema';
-import { eq, inArray } from 'drizzle-orm';
+import { taskAssignments, users, tasks, teams, teamMembers } from '../../../../db/schema';
+import { eq, inArray, and } from 'drizzle-orm';
 import { sendTaskAssignmentEmail } from '../../../../utils/email';
 import { getTaskWithProject, getUsersByIds, getUserById } from '../../../../db/queries';
 import { getSessionUser } from '../../../../utils/session';
@@ -63,6 +63,53 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       });
     }
     console.log('POST /api/admin/tasks/assign - Task exists in database');
+
+    // RULE-001: Enforce hierarchical permissions - only team members can be assigned to tasks
+    console.log('POST /api/admin/tasks/assign - Validating team member restrictions');
+    
+    // Get the task with team information
+    const taskWithTeam = await db.query.tasks.findFirst({
+      where: eq(tasks.id, parseInt(taskId)),
+      with: {
+        team: {
+          with: {
+            members: {
+              with: {
+                user: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!taskWithTeam) {
+      console.log('POST /api/admin/tasks/assign - Task not found in database');
+      return new Response(JSON.stringify({ error: 'Task not found in database' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // If task is associated with a team, validate that all users are team members
+    if (taskWithTeam.teamId && taskWithTeam.team) {
+      const teamMemberIds = taskWithTeam.team.members.map(member => member.userId);
+      const invalidUserIds = userIds.filter(userId => !teamMemberIds.includes(userId));
+      
+      if (invalidUserIds.length > 0) {
+        console.log('POST /api/admin/tasks/assign - Invalid users not in team:', invalidUserIds);
+        return new Response(JSON.stringify({ 
+          error: 'Only team members can be assigned to tasks. Invalid user IDs: ' + invalidUserIds.join(', '),
+          invalidUserIds: invalidUserIds
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      console.log('POST /api/admin/tasks/assign - All users are valid team members');
+    } else {
+      console.log('POST /api/admin/tasks/assign - Task is not associated with a team, allowing assignment');
+    }
 
     // Get current user information for the "assigned by" field
     const assignedByUser = await getUserById(currentUser.id);

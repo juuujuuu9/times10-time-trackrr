@@ -1,7 +1,110 @@
 import { db } from '../../../../../db/index';
-import { teams, teamMembers as teamMembersTable } from '../../../../../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { teams, teamMembers as teamMembersTable, taskAssignments, taskDiscussions, tasks, users } from '../../../../../db/schema';
+import { eq, and, inArray } from 'drizzle-orm';
 import { getSessionUser } from '../../../../../utils/session';
+
+// RULE-001: Cascading removal function - removes user from all tasks and subtasks when removed from team
+async function cascadeRemoveUserFromTeam(userId: number, teamId: number) {
+  console.log(`Cascading removal: Removing user ${userId} from team ${teamId} and all related tasks/subtasks`);
+  
+  try {
+    // 1. Get all tasks for this team
+    const teamTasks = await db.query.tasks.findMany({
+      where: eq(tasks.teamId, teamId)
+    });
+    
+    const taskIds = teamTasks.map(task => task.id);
+    console.log(`Found ${taskIds.length} tasks in team to process`);
+    
+    if (taskIds.length === 0) {
+      console.log('No tasks found for this team, skipping cascading removal');
+      return { tasksRemoved: 0, subtasksUpdated: 0 };
+    }
+    
+    // 2. Remove user from all task assignments for this team's tasks
+    const removedTaskAssignments = await db
+      .delete(taskAssignments)
+      .where(
+        and(
+          eq(taskAssignments.userId, userId),
+          inArray(taskAssignments.taskId, taskIds)
+        )
+      )
+      .returning();
+    
+    console.log(`Removed ${removedTaskAssignments.length} task assignments`);
+    
+    // 3. Remove user from all subtasks in this team's tasks
+    let subtasksUpdated = 0;
+    
+    // Get user name once for efficiency
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, userId)
+    });
+    
+    if (!user) {
+      console.log('User not found, skipping subtask removal');
+      return { tasksRemoved: removedTaskAssignments.length, subtasksUpdated: 0 };
+    }
+    
+    for (const taskId of taskIds) {
+      // Get all subtask discussions for this task
+      const subtaskDiscussions = await db.query.taskDiscussions.findMany({
+        where: and(
+          eq(taskDiscussions.taskId, taskId),
+          eq(taskDiscussions.type, 'subtask')
+        )
+      });
+      
+      for (const discussion of subtaskDiscussions) {
+        if (discussion.subtaskData) {
+          try {
+            const subtaskData = JSON.parse(discussion.subtaskData);
+            if (subtaskData.subtasks && Array.isArray(subtaskData.subtasks)) {
+              let updated = false;
+              
+              // Remove user from all subtasks in this discussion
+              subtaskData.subtasks.forEach((subtask: any) => {
+                if (subtask.assignees && Array.isArray(subtask.assignees)) {
+                  if (subtask.assignees.includes(user.name)) {
+                    subtask.assignees = subtask.assignees.filter((assignee: string) => assignee !== user.name);
+                    updated = true;
+                  }
+                }
+              });
+              
+              if (updated) {
+                // Update the discussion with modified subtask data
+                await db
+                  .update(taskDiscussions)
+                  .set({ 
+                    subtaskData: JSON.stringify(subtaskData),
+                    updatedAt: new Date()
+                  })
+                  .where(eq(taskDiscussions.id, discussion.id));
+                
+                subtasksUpdated++;
+              }
+            }
+          } catch (parseError) {
+            console.error('Error parsing subtask data for discussion:', discussion.id, parseError);
+          }
+        }
+      }
+    }
+    
+    console.log(`Updated ${subtasksUpdated} subtask discussions`);
+    
+    return { 
+      tasksRemoved: removedTaskAssignments.length, 
+      subtasksUpdated: subtasksUpdated 
+    };
+    
+  } catch (error) {
+    console.error('Error in cascading removal:', error);
+    throw error;
+  }
+}
 
 export async function POST(Astro: any) {
   try {
@@ -166,6 +269,25 @@ export async function PUT(Astro: any) {
     // Validate member IDs are numbers
     const validMemberIds = memberIds.filter(id => typeof id === 'number' && !isNaN(id));
     
+    // Get current team members to identify who's being removed
+    const currentMembers = await db.query.teamMembers.findMany({
+      where: eq(teamMembersTable.teamId, teamId)
+    });
+    
+    const currentMemberIds = currentMembers.map(member => member.userId);
+    const removedMemberIds = currentMemberIds.filter(id => !validMemberIds.includes(id));
+    
+    // RULE-001: Cascading removal - remove users from all tasks and subtasks when removed from team
+    for (const removedUserId of removedMemberIds) {
+      try {
+        const cascadeResult = await cascadeRemoveUserFromTeam(removedUserId, teamId);
+        console.log(`Cascading removal completed for user ${removedUserId}:`, cascadeResult);
+      } catch (cascadeError) {
+        console.error(`Error in cascading removal for user ${removedUserId}:`, cascadeError);
+        // Continue with team member removal even if cascading fails
+      }
+    }
+
     // Remove all existing team members
     await db.delete(teamMembersTable).where(eq(teamMembersTable.teamId, teamId));
 
