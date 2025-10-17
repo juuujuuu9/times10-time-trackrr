@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, User, Calendar, Check } from 'lucide-react';
+import { FileText, User, Calendar, Check, Trash2 } from 'lucide-react';
 
 interface Subtask {
   id: string;
@@ -16,6 +16,7 @@ interface CentralizedSubtaskTableProps {
   collaborationId?: number;
   taskId?: number;
   onSubtaskUpdate?: (subtaskId: string, completed: boolean) => void;
+  onDelete?: (subtaskId: string) => void;
 }
 
 const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({ 
@@ -23,9 +24,12 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
   className = '', 
   collaborationId, 
   taskId, 
-  onSubtaskUpdate 
+  onSubtaskUpdate,
+  onDelete 
 }) => {
+  console.log('🔍 CentralizedSubtaskTable props:', { subtasks: subtasks?.length, onDelete: !!onDelete, collaborationId, taskId });
   const [updatingTasks, setUpdatingTasks] = useState<Set<string>>(new Set());
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const toggleTaskCompletion = async (subtaskId: string) => {
     const subtask = subtasks.find(s => s.id === subtaskId);
@@ -50,6 +54,22 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
         newSet.delete(subtaskId);
         return newSet;
       });
+    }
+  };
+
+  const handleDelete = async (subtaskId: string) => {
+    if (!onDelete) return;
+    
+    if (window.confirm('Are you sure you want to delete this subtask? This action cannot be undone.')) {
+      setDeletingId(subtaskId);
+      try {
+        await onDelete(subtaskId);
+      } catch (error) {
+        console.error('Error deleting subtask:', error);
+        alert('Failed to delete subtask. Please try again.');
+      } finally {
+        setDeletingId(null);
+      }
     }
   };
 
@@ -128,6 +148,7 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
               <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide">ASSIGNEE</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide">DUE</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide">PRIORITY</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide w-12">ACTIONS</th>
             </tr>
           </thead>
           <tbody>
@@ -201,7 +222,7 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
                 </td>
                 <td className="py-3 px-4">
                   {subtask.dueDate ? (
-                    <span className={`text-sm ${subtask.completed ? 'text-gray-400' : isOverdue(subtask.dueDate) ? 'text-red-600 font-medium' : 'text-gray-900'}`}>
+                    <span className={`text-sm ${subtask.completed ? 'text-gray-400 line-through' : isOverdue(subtask.dueDate) ? 'text-red-600 font-medium' : 'text-gray-900'}`}>
                       {formatDate(subtask.dueDate)}
                     </span>
                   ) : (
@@ -212,6 +233,18 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${subtask.completed ? 'text-gray-400 bg-gray-100' : getPriorityColor(subtask.priority)}`}>
                     {getPriorityLabel(subtask.priority)}
                   </span>
+                </td>
+                <td className="py-3 px-4">
+                  {onDelete && (
+                    <button
+                      onClick={() => handleDelete(subtask.id)}
+                      disabled={deletingId === subtask.id}
+                      className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Delete subtask"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

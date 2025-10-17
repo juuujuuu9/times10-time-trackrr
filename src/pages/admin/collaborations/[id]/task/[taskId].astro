@@ -314,6 +314,15 @@ if (totalHours > 0) {
           teamMembers={teamMembers}
           client:load
         />
+        
+        <script define:vars={{ currentUser }}>
+          console.log('🔍 Current user data:', {
+            id: currentUser.id,
+            name: currentUser.name,
+            email: currentUser.email,
+            role: currentUser.role
+          });
+        </script>
       </div>
     </div>
   </div>

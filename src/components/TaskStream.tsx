@@ -865,6 +865,31 @@ const TaskStream: React.FC<TaskStreamProps> = ({
     }
   };
 
+  // Handle delete subtask
+  const handleDeleteSubtask = async (subtaskId: string) => {
+    try {
+      const response = await fetch(`/api/admin/tasks/${taskId}/subtasks/${subtaskId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || data.message || 'Failed to delete subtask');
+      }
+      // Notify others
+      window.dispatchEvent(new CustomEvent('taskStreamUpdate', {
+        detail: { taskId, collaborationId }
+      }));
+      // Refresh posts to get updated subtask data
+      await loadPosts();
+      addNotification('success', 'Subtask deleted successfully');
+    } catch (error) {
+      console.error('Error deleting subtask:', error);
+      addNotification('error', 'Failed to delete subtask: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      throw error; // Re-throw so SubtaskCard can handle it
+    }
+  };
+
   // Handle edit comment
   const handleEditComment = async (commentId: number, newContent: string, postId: number) => {
     try {
@@ -941,6 +966,8 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         allSubtasks.push(...post.subtasks);
       }
     });
+    console.log('🔍 getAllSubtasks: Found', allSubtasks.length, 'subtasks from', posts.length, 'posts');
+    console.log('🔍 Subtasks data:', allSubtasks);
     return allSubtasks;
   }, [posts]);
 
@@ -1332,6 +1359,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         collaborationId={collaborationId}
         taskId={taskId}
         onSubtaskUpdate={handleSubtaskUpdate}
+        onDelete={handleDeleteSubtask}
       />
 
       {/* Moved per-post deletion confirmation inline under each post */}
@@ -1565,7 +1593,11 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                     {/* Subtasks Display */}
                     {post.subtasks && post.subtasks.length > 0 && (
                       <div className="mb-3">
-                        <SubtaskCard subtasks={post.subtasks} />
+                        <SubtaskCard 
+                          subtasks={post.subtasks} 
+                          taskId={taskId}
+                          onDelete={handleDeleteSubtask}
+                        />
                       </div>
                     )}
                     

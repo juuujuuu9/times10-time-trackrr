@@ -1,5 +1,5 @@
-import React from 'react';
-import { CheckCircle, Clock, Circle, User, Calendar } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle, Clock, Circle, User, Calendar, Trash2 } from 'lucide-react';
 
 interface Subtask {
   id: string;
@@ -12,9 +12,12 @@ interface Subtask {
 interface SubtaskCardProps {
   subtasks: Subtask[];
   className?: string;
+  taskId?: number;
+  onDelete?: (subtaskId: string) => void;
 }
 
-const SubtaskCard: React.FC<SubtaskCardProps> = ({ subtasks, className = '' }) => {
+const SubtaskCard: React.FC<SubtaskCardProps> = ({ subtasks, className = '', taskId, onDelete }) => {
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const getPriorityIcon = (priority: string) => {
     switch (priority) {
       case 'high':
@@ -58,6 +61,22 @@ const SubtaskCard: React.FC<SubtaskCardProps> = ({ subtasks, className = '' }) =
     }
   };
 
+  const handleDelete = async (subtaskId: string) => {
+    if (!taskId || !onDelete) return;
+    
+    if (window.confirm('Are you sure you want to delete this subtask? This action cannot be undone.')) {
+      setDeletingId(subtaskId);
+      try {
+        await onDelete(subtaskId);
+      } catch (error) {
+        console.error('Error deleting subtask:', error);
+        alert('Failed to delete subtask. Please try again.');
+      } finally {
+        setDeletingId(null);
+      }
+    }
+  };
+
   if (!subtasks || subtasks.length === 0) {
     return null;
   }
@@ -84,6 +103,7 @@ const SubtaskCard: React.FC<SubtaskCardProps> = ({ subtasks, className = '' }) =
               <th className="text-left py-3 px-4 font-medium text-gray-700">Priority</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700">Assignee</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700">Due Date</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-700 w-12">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -144,6 +164,18 @@ const SubtaskCard: React.FC<SubtaskCardProps> = ({ subtasks, className = '' }) =
                     </div>
                   ) : (
                     <span className="text-sm text-gray-400">No due date</span>
+                  )}
+                </td>
+                <td className="py-3 px-4">
+                  {onDelete && (
+                    <button
+                      onClick={() => handleDelete(subtask.id)}
+                      disabled={deletingId === subtask.id}
+                      className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Delete subtask"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   )}
                 </td>
               </tr>
