@@ -605,6 +605,49 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       
       if (data.success) {
         console.log('✅ Subtasks created successfully, reloading posts...');
+        
+        // Send email notifications for subtasks with assignees
+        try {
+          const subtasksWithAssignees = subtasks.filter(subtask => 
+            subtask.assignees && subtask.assignees.length > 0
+          );
+          
+          if (subtasksWithAssignees.length > 0) {
+            console.log('📧 Sending email notifications for subtasks with assignees...');
+            
+            // Get task and project information for email notifications
+            const taskResponse = await fetch(`/api/admin/tasks/${taskId}`);
+            if (taskResponse.ok) {
+              const taskData = await taskResponse.json();
+              
+              // Send emails using the dedicated endpoint
+              const emailResponse = await fetch('/api/send-subtask-creation-emails', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  subtasks: subtasksWithAssignees,
+                  taskId: taskId,
+                  taskName: taskData.name,
+                  projectName: taskData.projectName,
+                  assignedBy: currentUser.name
+                })
+              });
+              
+              if (emailResponse.ok) {
+                const emailResult = await emailResponse.json();
+                console.log('📧 Subtask creation emails sent:', emailResult);
+              } else {
+                console.error('Failed to send subtask creation emails');
+              }
+            }
+          }
+        } catch (notificationError) {
+          console.error('Error sending subtask assignment notifications:', notificationError);
+          // Don't fail the entire operation if email fails
+        }
+        
         // Reload posts to get the latest data with the real ID
         await loadPosts();
         // Dispatch custom event for real-time updates

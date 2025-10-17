@@ -209,7 +209,7 @@ export const PUT: APIRoute = async (context) => {
               await sendSubtaskAssignmentEmail({
                 email: user.email,
                 userName: user.name,
-                subtaskName: targetSubtask.title || 'Untitled Subtask',
+                subtaskName: targetSubtask.name || 'Untitled Subtask',
                 taskName: task.name,
                 projectName: task.project.name,
                 assignedBy: currentUser.name,
