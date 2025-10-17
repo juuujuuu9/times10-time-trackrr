@@ -1,6 +1,7 @@
 ---
 import AdminLayout from '../../../../../layouts/AdminLayout.astro';
 import TaskStream from '../../../../../components/TaskStream.tsx';
+import StatusDropdown from '../../../../../components/StatusDropdown.tsx';
 import { db } from '../../../../../db/index';
 import { teams, teamMembers as teamMembersTable, projects, clients, users, taskNotes, taskDiscussions, taskFiles, taskLinks, tasks, taskAssignments, timeEntries } from '../../../../../db/schema';
 import { eq, and, desc, count, sql } from 'drizzle-orm';
@@ -187,14 +188,15 @@ if (totalHours > 0) {
                 )}
               </div>
             </div>
-            <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-              task.status === 'completed' ? 'bg-green-100 text-green-800' :
-              task.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-              task.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-              'bg-gray-100 text-gray-800'
-            }`}>
-              {task.status.replace('_', ' ').charAt(0).toUpperCase() + task.status.replace('_', ' ').slice(1)}
-            </span>
+            <StatusDropdown 
+              currentStatus={task.status}
+              onStatusChange={(newStatus) => {
+                // Update the task status in the UI
+                task.status = newStatus;
+              }}
+              taskId={task.id}
+              client:load
+            />
           </div>
           <div class="flex items-start w-full">
             <h2 class="text-lg font-semibold text-gray-900">{task.name}</h2>
