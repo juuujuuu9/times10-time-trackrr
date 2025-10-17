@@ -136,7 +136,7 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative" ref={dropdownRef} data-status-dropdown>
       <button
         type="button"
         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${currentOption.color} ${
@@ -173,7 +173,7 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
 
       {isOpen && !disabled && (
         <div 
-          className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+          className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-[9999]"
           role="listbox"
           aria-label="Task status options"
         >
