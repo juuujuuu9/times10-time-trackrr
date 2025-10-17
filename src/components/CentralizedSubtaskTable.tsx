@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, User, Calendar, Check, Trash2 } from 'lucide-react';
+import { FileText, User, Calendar, Check, Trash2, X } from 'lucide-react';
 
 interface Subtask {
   id: string;
@@ -19,6 +19,12 @@ interface CentralizedSubtaskTableProps {
   onDelete?: (subtaskId: string) => void;
 }
 
+interface Notification {
+  id: string;
+  type: 'success' | 'error' | 'info';
+  message: string;
+}
+
 const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({ 
   subtasks, 
   className = '', 
@@ -30,6 +36,23 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
   console.log('🔍 CentralizedSubtaskTable props:', { subtasks: subtasks?.length, onDelete: !!onDelete, collaborationId, taskId });
   const [updatingTasks, setUpdatingTasks] = useState<Set<string>>(new Set());
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [subtaskToDelete, setSubtaskToDelete] = useState<{ id: string; name: string } | null>(null);
+
+  const addNotification = (type: 'success' | 'error' | 'info', message: string) => {
+    const id = Date.now().toString();
+    setNotifications(prev => [...prev, { id, type, message }]);
+    
+    // Auto-remove notification after 5 seconds
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }, 5000);
+  };
+
+  const removeNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
 
   const toggleTaskCompletion = async (subtaskId: string) => {
     const subtask = subtasks.find(s => s.id === subtaskId);
@@ -44,9 +67,11 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
       // Call the parent's update function if provided
       if (onSubtaskUpdate) {
         await onSubtaskUpdate(subtaskId, newCompleted);
+        addNotification('success', `Subtask ${newCompleted ? 'completed' : 'reopened'} successfully`);
       }
     } catch (error) {
       console.error('Error updating subtask completion:', error);
+      addNotification('error', 'Failed to update subtask. Please try again.');
     } finally {
       // Remove loading state
       setUpdatingTasks(prev => {
@@ -57,20 +82,34 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
     }
   };
 
-  const handleDelete = async (subtaskId: string) => {
-    if (!onDelete) return;
+  const handleDeleteClick = (subtaskId: string) => {
+    const subtask = subtasks.find(s => s.id === subtaskId);
+    if (!subtask) return;
     
-    if (window.confirm('Are you sure you want to delete this subtask? This action cannot be undone.')) {
-      setDeletingId(subtaskId);
-      try {
-        await onDelete(subtaskId);
-      } catch (error) {
-        console.error('Error deleting subtask:', error);
-        alert('Failed to delete subtask. Please try again.');
-      } finally {
-        setDeletingId(null);
-      }
+    setSubtaskToDelete({ id: subtaskId, name: subtask.name });
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!onDelete || !subtaskToDelete) return;
+    
+    setDeletingId(subtaskToDelete.id);
+    try {
+      await onDelete(subtaskToDelete.id);
+      addNotification('success', 'Subtask deleted successfully');
+    } catch (error) {
+      console.error('Error deleting subtask:', error);
+      addNotification('error', 'Failed to delete subtask. Please try again.');
+    } finally {
+      setDeletingId(null);
+      setShowDeleteModal(false);
+      setSubtaskToDelete(null);
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(false);
+    setSubtaskToDelete(null);
   };
 
   const getPriorityColor = (priority: string) => {
@@ -237,7 +276,7 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
                 <td className="py-3 px-4">
                   {onDelete && (
                     <button
-                      onClick={() => handleDelete(subtask.id)}
+                      onClick={() => handleDeleteClick(subtask.id)}
                       disabled={deletingId === subtask.id}
                       className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Delete subtask"
@@ -251,6 +290,79 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
           </tbody>
         </table>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && subtaskToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Remove Subtask</h3>
+              <button
+                onClick={handleDeleteCancel}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-700 mb-6">
+                Are you sure you want to remove <span className="font-semibold">"{subtaskToDelete.name}"</span>? 
+                This action cannot be undone.
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={handleDeleteCancel}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  disabled={deletingId === subtaskToDelete.id}
+                  className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {deletingId === subtaskToDelete.id ? 'Removing...' : 'Confirm'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notifications */}
+      {notifications.length > 0 && (
+        <div className="fixed top-4 right-4 z-50 space-y-2">
+          {notifications.map((notification) => (
+            <div
+              key={notification.id}
+              className={`flex items-center justify-between p-4 rounded-lg shadow-lg max-w-sm transition-all duration-300 ${
+                notification.type === 'success'
+                  ? 'bg-green-50 border border-green-200 text-green-800'
+                  : notification.type === 'error'
+                  ? 'bg-red-50 border border-red-200 text-red-800'
+                  : 'bg-blue-50 border border-blue-200 text-blue-800'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <div className={`w-2 h-2 rounded-full ${
+                  notification.type === 'success'
+                    ? 'bg-green-500'
+                    : notification.type === 'error'
+                    ? 'bg-red-500'
+                    : 'bg-blue-500'
+                }`}></div>
+                <span className="text-sm font-medium">{notification.message}</span>
+              </div>
+              <button
+                onClick={() => removeNotification(notification.id)}
+                className="ml-3 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
