@@ -584,7 +584,7 @@ if (projectDetails && projectDetails.id) {
             <tbody class="bg-white divide-y divide-gray-200">
               {projectTasks.length > 0 ? projectTasks.map((task: any) => (
                 <>
-                  <tr class="hover:bg-gray-50">
+                  <tr class="hover:bg-gray-50" data-task-id={task.id}>
                     <td class="px-6 py-4 whitespace-nowrap">
                       <div class="flex items-center">
                         <a href={`/admin/collaborations/${collaborationId}/task/${task.id}`} class="flex items-center flex-1 hover:bg-gray-50 rounded-md p-2 -m-2 transition-colors duration-200">
@@ -816,10 +816,6 @@ if (projectDetails && projectDetails.id) {
                   <td class="px-6 py-4 whitespace-nowrap">
                     <StatusDropdown 
                       currentStatus={task.status}
-                      onStatusChange={(newStatus) => {
-                        // Update the task status in the UI
-                        task.status = newStatus;
-                      }}
                       taskId={task.id}
                       client:load
                     />
@@ -3435,19 +3431,14 @@ if (projectDetails && projectDetails.id) {
     // Initial filter application
     filterTasks();
 
-    // Handle task status updates and re-sort tasks
+
+    // Handle task status updates - reload page for simplicity
     window.addEventListener('taskStatusUpdated', function(event) {
       const { taskId: updatedTaskId, newStatus } = event.detail;
       console.log('Task status updated:', { taskId: updatedTaskId, newStatus });
       
-      // Update the task data
-      const task = tasksData.find(t => t.id === updatedTaskId);
-      if (task) {
-        task.status = newStatus;
-        
-        // Re-sort and re-render the tasks table
-        reSortAndRenderTasks();
-      }
+      // Simple solution: reload the page to show updated status
+      window.location.reload();
     });
 
     // Function to re-sort and re-render tasks based on current sorting logic

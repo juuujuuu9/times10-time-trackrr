@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 
 interface StatusDropdownProps {
   currentStatus: string;
-  onStatusChange: (newStatus: string) => void;
+  onStatusChange?: (newStatus: string) => void;
   taskId: number;
   disabled?: boolean;
 }
@@ -95,7 +95,9 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
 
       if (response.ok) {
         setLocalStatus(newStatus);
-        onStatusChange(newStatus);
+        if (onStatusChange) {
+          onStatusChange(newStatus);
+        }
         
         // Dispatch custom event for real-time updates
         window.dispatchEvent(new CustomEvent('taskStatusUpdated', {
