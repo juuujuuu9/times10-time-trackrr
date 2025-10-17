@@ -36,7 +36,7 @@ interface Post {
   subtasks?: {
     id: string;
     name: string;
-    priority: 'low' | 'medium' | 'high';
+    status: 'pending' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled';
     assignees?: string[];
     dueDate?: string;
     completed?: boolean;
@@ -610,8 +610,67 @@ const TaskStream: React.FC<TaskStreamProps> = ({
     }
   };
 
+  // Handle subtask status update
+  const handleSubtaskStatusUpdate = async (subtaskId: string, status: string) => {
+    try {
+      // Find the discussion that contains this subtask
+      const discussionWithSubtask = posts.find(post => 
+        post.subtasks && post.subtasks.some(subtask => subtask.id === subtaskId)
+      );
+
+      if (!discussionWithSubtask) {
+        console.error('Discussion with subtask not found');
+        return;
+      }
+
+      // Update the subtask in the discussion's subtaskData
+      const updatedSubtasks = discussionWithSubtask.subtasks?.map(subtask => 
+        subtask.id === subtaskId ? { ...subtask, status: status as 'pending' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled' } : subtask
+      ) || [];
+
+      // Update the discussion in the database
+      const response = await fetch(`/api/collaborations/${collaborationId}/discussions/${discussionWithSubtask.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          subtaskData: {
+            subtasks: updatedSubtasks
+          }
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update the local state
+        setPosts(prevPosts => 
+          prevPosts.map(post => 
+            post.id === discussionWithSubtask.id 
+              ? { ...post, subtasks: updatedSubtasks }
+              : post
+          )
+        );
+        
+        // Dispatch custom event for real-time updates
+        window.dispatchEvent(new CustomEvent('subtaskUpdated', {
+          detail: { subtaskId, status }
+        }));
+        
+        addNotification('success', 'Subtask status updated successfully');
+      } else {
+        console.error('Failed to update subtask status:', data);
+        addNotification('error', 'Failed to update subtask status');
+      }
+    } catch (error) {
+      console.error('Error updating subtask status:', error);
+      addNotification('error', 'Error updating subtask status: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
   // Handle subtask creation
-  const handleCreateSubtasks = async (subtasks: { name: string; priority: 'low' | 'medium' | 'high'; assignees?: string[]; dueDate?: string }[]) => {
+  const handleCreateSubtasks = async (subtasks: { name: string; status: 'pending' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled'; assignees?: string[]; dueDate?: string }[]) => {
     try {
       // Optimistically add the subtasks to the UI immediately
       const optimisticSubtasks = {
@@ -625,7 +684,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         subtasks: subtasks.map((subtask, index) => ({
           id: `temp-${Date.now()}-${index}`,
           name: subtask.name,
-          priority: subtask.priority,
+          status: subtask.status as 'pending' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled',
           assignees: subtask.assignees,
           dueDate: subtask.dueDate,
           completed: false
@@ -643,7 +702,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
           subtasks: subtasks.map((subtask, index) => ({
             id: `temp-${Date.now()}-${index}`,
             name: subtask.name,
-            priority: subtask.priority,
+            status: subtask.status as 'pending' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled',
             assignees: subtask.assignees,
             dueDate: subtask.dueDate,
             completed: false
@@ -1417,6 +1476,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         collaborationId={collaborationId}
         taskId={taskId}
         onSubtaskUpdate={handleSubtaskUpdate}
+        onStatusUpdate={handleSubtaskStatusUpdate}
         onDelete={handleDeleteSubtask}
         onAssigneeUpdate={handleSubtaskAssigneeUpdate}
         teamMembers={teamMembers}

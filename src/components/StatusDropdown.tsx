@@ -84,29 +84,39 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
     // Close dropdown immediately when selection is made
     setIsOpen(false);
     setIsUpdating(true);
+    
     try {
-      const response = await fetch(`/api/admin/tasks/${taskId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (response.ok) {
+      // If onStatusChange callback is provided, use it (for subtasks)
+      if (onStatusChange) {
+        await onStatusChange(newStatus);
         setLocalStatus(newStatus);
-        if (onStatusChange) {
-          onStatusChange(newStatus);
-        }
         
         // Dispatch custom event for real-time updates
         window.dispatchEvent(new CustomEvent('taskStatusUpdated', {
           detail: { taskId, newStatus }
         }));
       } else {
-        const errorData = await response.json();
-        console.error('Failed to update task status:', errorData);
-        // You could add a toast notification here
+        // Fallback to direct API call (for main tasks)
+        const response = await fetch(`/api/admin/tasks/${taskId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ status: newStatus }),
+        });
+
+        if (response.ok) {
+          setLocalStatus(newStatus);
+          
+          // Dispatch custom event for real-time updates
+          window.dispatchEvent(new CustomEvent('taskStatusUpdated', {
+            detail: { taskId, newStatus }
+          }));
+        } else {
+          const errorData = await response.json();
+          console.error('Failed to update task status:', errorData);
+          // You could add a toast notification here
+        }
       }
     } catch (error) {
       console.error('Error updating task status:', error);

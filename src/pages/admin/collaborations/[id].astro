@@ -841,7 +841,7 @@ if (projectDetails && projectDetails.id) {
                 <!-- Subtask rows (hidden by default) -->
                 {/* Real subtasks if they exist */}
                 {task.subtasks && task.subtasks.length > 0 && task.subtasks.map((subtask: any) => (
-                  <tr class="subtask-row bg-gray-50 border-l-4 border-gray-300 hidden" data-task-id={task.id}>
+                  <tr class="subtask-row bg-gray-25 border-l-4 border-gray-300 hidden" data-task-id={task.id}>
                     <td class="px-6 py-3 pl-12">
                       <div class="flex items-center space-x-3">
                         <button
@@ -864,7 +864,7 @@ if (projectDetails && projectDetails.id) {
                           )}
                         </button>
                         <div class={`${subtask.completed ? 'line-through text-gray-500' : ''}`}>
-                          <div class="font-medium text-gray-900">{subtask.name}</div>
+                          <div class="font-medium text-sm text-gray-900">{subtask.name}</div>
                         </div>
                       </div>
                     </td>
@@ -963,27 +963,24 @@ if (projectDetails && projectDetails.id) {
                       )}
                     </td>
                     <td class="px-6 py-3">
-                      <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        subtask.completed ? 'text-gray-400 bg-gray-100' :
-                        subtask.priority === 'high' ? 'text-red-600 bg-red-50' :
-                        subtask.priority === 'medium' ? 'text-orange-600 bg-orange-50' :
-                        'text-blue-600 bg-blue-50'
-                      }`}>
-                        {subtask.priority === 'high' ? 'Urgent' :
-                         subtask.priority === 'medium' ? 'High' :
-                         'Regular'}
-                      </span>
+                      <!-- Priority column removed for subtasks -->
                     </td>
                     <td class="px-6 py-3">
-                      <span class={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                        subtask.completed ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {subtask.completed ? 'Completed' : 'Pending'}
-                      </span>
+                      <StatusDropdown 
+                        currentStatus={subtask.status || (subtask.completed ? 'completed' : 'pending')}
+                        onStatusChange={async (newStatus) => {
+                          // Update the subtask status via API
+                          if (typeof window !== 'undefined' && (window as any).updateSubtaskStatus) {
+                            await (window as any).updateSubtaskStatus(subtask.id, task.id, newStatus);
+                          }
+                        }}
+                        taskId={parseInt(subtask.id)}
+                        client:load
+                      />
                     </td>
                     <td class="px-6 py-3 text-sm text-gray-500">
                       <button 
-                        class="delete-subtask-btn inline-flex items-center px-2 py-1 bg-red-100 hover:bg-red-200 text-red-600 text-xs font-medium rounded transition-colors duration-200"
+                        class="delete-subtask-btn inline-flex items-center px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 text-xs font-medium rounded transition-colors duration-200"
                         title="Delete subtask"
                         data-subtask-id={subtask.id}
                         data-task-id={task.id}
@@ -3841,18 +3838,90 @@ if (projectDetails && projectDetails.id) {
         `;
       }
     }
+
+    // Function to update subtask status
+    window.updateSubtaskStatus = async function(subtaskId, taskId, status) {
+      try {
+        console.log('Updating subtask status:', { subtaskId, taskId, status });
+        
+        // Make API call to update subtask status
+        const response = await fetch(`/api/admin/tasks/${taskId}/subtasks/${subtaskId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            status: status,
+            completed: status === 'completed'
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update subtask status');
+        }
+
+        // Update the subtask data in the local state
+        const subtaskRow = document.querySelector(`tr.subtask-row[data-task-id="${taskId}"] button[data-subtask-id="${subtaskId}"]`)?.closest('tr');
+        if (subtaskRow) {
+          // Update the completion toggle button if it exists
+          const toggleButton = subtaskRow.querySelector('.subtask-toggle-btn');
+          if (toggleButton) {
+            const isCompleted = status === 'completed';
+            toggleButton.setAttribute('data-completed', isCompleted.toString());
+            
+            // Update button appearance
+            if (isCompleted) {
+              toggleButton.classList.remove('bg-gray-200', 'text-gray-600', 'hover:bg-gray-300');
+              toggleButton.classList.add('bg-green-500', 'text-white');
+              toggleButton.title = 'Mark as incomplete';
+              toggleButton.innerHTML = `
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 6L9 17l-5-5"/>
+                </svg>
+              `;
+            } else {
+              toggleButton.classList.remove('bg-green-500', 'text-white');
+              toggleButton.classList.add('bg-gray-200', 'text-gray-600', 'hover:bg-gray-300');
+              toggleButton.title = 'Mark as complete';
+              toggleButton.innerHTML = `
+                <div class="w-4 h-4 rounded-full border-2 border-current"></div>
+              `;
+            }
+          }
+          
+          // Update the subtask name styling
+          const subtaskName = subtaskRow.querySelector('.font-medium');
+          if (subtaskName) {
+            if (status === 'completed') {
+              subtaskName.parentElement.classList.add('line-through', 'text-gray-500');
+            } else {
+              subtaskName.parentElement.classList.remove('line-through', 'text-gray-500');
+            }
+          }
+        }
+        
+        // Show success notification
+        showNotification('Subtask status updated successfully!', 'success');
+        
+      } catch (error) {
+        console.error('Error updating subtask status:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        showNotification('Failed to update subtask status: ' + errorMessage, 'error');
+      }
+    };
   });
 </script>
 
 <style>
   /* Subtask row styling */
   .subtask-row {
-    background-color: #f9fafb;
+    background-color: #fefefe;
     border-left: 4px solid #d1d5db;
   }
   
   .subtask-row:hover {
-    background-color: #f3f4f6;
+    background-color: #f9fafb;
   }
   
   /* Arrow rotation animation */

@@ -11,7 +11,7 @@ interface User {
 interface Subtask {
   id: string;
   name: string;
-  priority: 'low' | 'medium' | 'high';
+  status: 'pending' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled';
   assignees?: string[];
   dueDate?: string;
   completed?: boolean;
@@ -30,7 +30,7 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
     {
       id: '1',
       name: '',
-      priority: 'medium',
+      status: 'pending',
       assignees: [],
       dueDate: '',
       completed: false
@@ -41,7 +41,7 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
     const newSubtask: Subtask = {
       id: Date.now().toString(),
       name: '',
-      priority: 'medium',
+      status: 'pending',
       assignees: [],
       dueDate: '',
       completed: false
@@ -90,7 +90,7 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
     // Convert to the format expected by the parent
     const subtasksToCreate = validSubtasks.map(subtask => ({
       name: subtask.name,
-      priority: subtask.priority,
+      status: subtask.status,
       assignees: subtask.assignees || [],
       dueDate: subtask.dueDate || undefined
     }));
@@ -99,7 +99,7 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
     setSubtasks([{
       id: '1',
       name: '',
-      priority: 'medium',
+      status: 'pending',
       assignees: [],
       dueDate: '',
       completed: false
@@ -111,7 +111,7 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
     setSubtasks([{
       id: '1',
       name: '',
-      priority: 'medium',
+      status: 'pending',
       assignees: [],
       dueDate: '',
       completed: false
@@ -154,8 +154,8 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
                   <thead>
                     <tr className="border-b border-gray-200">
                       <th className="text-left py-3 px-4 font-medium text-gray-700">Name</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-700">Priority</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-700">Assignee</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-700">Status</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-700">Due Date</th>
                     </tr>
                   </thead>
@@ -170,17 +170,6 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
                             placeholder="Subtask name"
                             className="w-full px-3 py-5 border border-t-0 border-l-0 border-b-0 border-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
                           />
-                        </td>
-                        <td className="py-0 px-0">
-                          <select
-                            value={subtask.priority}
-                            onChange={(e) => updateSubtask(subtask.id, 'priority', e.target.value)}
-                            className="w-full min-w-[7rem] px-3 py-5 border border-t-0 border-l-0 border-b-0 border-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-                          >
-                            <option value="low">Low</option>
-                            <option value="medium">Medium</option>
-                            <option value="high">High</option>
-                          </select>
                         </td>
                         <td className="py-0 px-0">
                           <div className="w-full px-3 py-3 border border-t-0 border-l-0 border-b-0 border-gray-100">
@@ -243,6 +232,19 @@ const SubtaskModal: React.FC<SubtaskModalProps> = ({ isOpen, onClose, onCreateSu
                               )}
                             </div>
                           </div>
+                        </td>
+                        <td className="py-0 px-0">
+                          <select
+                            value={subtask.status}
+                            onChange={(e) => updateSubtask(subtask.id, 'status', e.target.value)}
+                            className="w-full min-w-[7rem] px-3 py-5 border border-t-0 border-l-0 border-b-0 border-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="on_hold">On Hold</option>
+                            <option value="cancelled">Cancelled</option>
+                          </select>
                         </td>
                         <td className="py-0 px-0">
                           <input

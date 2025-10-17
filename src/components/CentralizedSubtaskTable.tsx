@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, User, Calendar, Check, Trash2, X } from 'lucide-react';
+import StatusDropdown from './StatusDropdown';
 
 interface Subtask {
   id: string;
   name: string;
-  priority: 'low' | 'medium' | 'high';
+  status: 'pending' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled';
   assignees?: string[];
   dueDate?: string;
   completed?: boolean;
@@ -16,6 +17,7 @@ interface CentralizedSubtaskTableProps {
   collaborationId?: number;
   taskId?: number;
   onSubtaskUpdate?: (subtaskId: string, completed: boolean) => void;
+  onStatusUpdate?: (subtaskId: string, status: string) => void;
   onDelete?: (subtaskId: string) => void;
   onAssigneeUpdate?: (subtaskId: string, assignees: string[]) => void;
   teamMembers?: Array<{ id: number; name: string; email: string }>;
@@ -33,6 +35,7 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
   collaborationId, 
   taskId, 
   onSubtaskUpdate,
+  onStatusUpdate,
   onDelete,
   onAssigneeUpdate,
   teamMembers = []
@@ -175,6 +178,18 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
     }
   };
 
+  const handleStatusUpdate = async (subtaskId: string, newStatus: string) => {
+    if (!onStatusUpdate) return;
+    
+    try {
+      await onStatusUpdate(subtaskId, newStatus);
+      addNotification('success', 'Subtask status updated successfully');
+    } catch (error) {
+      console.error('Error updating subtask status:', error);
+      addNotification('error', 'Failed to update subtask status. Please try again.');
+    }
+  };
+
   const filteredTeamMembers = teamMembers.filter(member => 
     member.name.toLowerCase().includes(assigneeSearchTerm.toLowerCase()) &&
     !subtasks.find(s => s.id === showAssigneePopup)?.assignees?.includes(member.name)
@@ -196,27 +211,6 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
     }
   }, [showAssigneePopup]);
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return 'text-red-600 bg-red-50';
-      case 'medium':
-        return 'text-orange-600 bg-orange-50';
-      default:
-        return 'text-blue-600 bg-blue-50';
-    }
-  };
-
-  const getPriorityLabel = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return 'Urgent';
-      case 'medium':
-        return 'High';
-      default:
-        return 'Regular';
-    }
-  };
 
   const formatDate = (dateString: string) => {
     try {
@@ -270,7 +264,7 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
               <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide">NAME</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide">ASSIGNEE</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide">DUE</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide">PRIORITY</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide">STATUS</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide w-12">ACTIONS</th>
             </tr>
           </thead>
@@ -436,9 +430,12 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
                   )}
                 </td>
                 <td className="py-3 px-4">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${subtask.completed ? 'text-gray-400 bg-gray-100' : getPriorityColor(subtask.priority)}`}>
-                    {getPriorityLabel(subtask.priority)}
-                  </span>
+                  <StatusDropdown
+                    currentStatus={subtask.status || 'pending'}
+                    onStatusChange={(newStatus) => handleStatusUpdate(subtask.id, newStatus)}
+                    taskId={parseInt(subtask.id)}
+                    disabled={subtask.completed}
+                  />
                 </td>
                 <td className="py-3 px-4">
                   {onDelete && (

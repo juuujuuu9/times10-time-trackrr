@@ -4,7 +4,7 @@ import { CheckCircle, Clock, Circle, User, Calendar, Trash2 } from 'lucide-react
 interface Subtask {
   id: string;
   name: string;
-  priority: 'low' | 'medium' | 'high';
+  status: 'pending' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled';
   assignees?: string[];
   dueDate?: string;
 }
@@ -18,23 +18,31 @@ interface SubtaskCardProps {
 
 const SubtaskCard: React.FC<SubtaskCardProps> = ({ subtasks, className = '', taskId, onDelete }) => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const getPriorityIcon = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return <Circle className="w-4 h-4 text-red-600" />;
-      case 'medium':
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircle className="w-4 h-4 text-green-600" />;
+      case 'in_progress':
+        return <Clock className="w-4 h-4 text-blue-600" />;
+      case 'on_hold':
         return <Circle className="w-4 h-4 text-yellow-600" />;
+      case 'cancelled':
+        return <Circle className="w-4 h-4 text-red-600" />;
       default:
         return <Circle className="w-4 h-4 text-gray-400" />;
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return 'text-red-600 bg-red-50';
-      case 'medium':
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'text-green-600 bg-green-50';
+      case 'in_progress':
+        return 'text-blue-600 bg-blue-50';
+      case 'on_hold':
         return 'text-yellow-600 bg-yellow-50';
+      case 'cancelled':
+        return 'text-red-600 bg-red-50';
       default:
         return 'text-gray-600 bg-gray-50';
     }
@@ -100,7 +108,7 @@ const SubtaskCard: React.FC<SubtaskCardProps> = ({ subtasks, className = '', tas
             <tr>
               <th className="text-left py-3 px-4 font-medium text-gray-700 w-8"></th>
               <th className="text-left py-3 px-4 font-medium text-gray-700">Name</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700">Priority</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-700">Status</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700">Assignee</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700">Due Date</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700 w-12">Actions</th>
@@ -110,14 +118,14 @@ const SubtaskCard: React.FC<SubtaskCardProps> = ({ subtasks, className = '', tas
             {subtasks.map((subtask, index) => (
               <tr key={subtask.id} className={`border-b border-gray-100 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                 <td className="py-3 px-4">
-                  {getPriorityIcon(subtask.priority)}
+                  {getStatusIcon(subtask.status)}
                 </td>
                 <td className="py-3 px-4">
                   <div className="font-medium text-gray-900">{subtask.name}</div>
                 </td>
                 <td className="py-3 px-4">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(subtask.priority)}`}>
-                    {subtask.priority.charAt(0).toUpperCase() + subtask.priority.slice(1)}
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(subtask.status)}`}>
+                    {subtask.status.charAt(0).toUpperCase() + subtask.status.slice(1).replace('_', ' ')}
                   </span>
                 </td>
                 <td className="py-3 px-4">
