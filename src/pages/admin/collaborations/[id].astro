@@ -628,11 +628,11 @@ if (projectDetails && projectDetails.id) {
                             </div>
                           </div>
                           <div class="ml-4">
-                            <div class="text-sm font-medium text-gray-900">
+                            <div class={`text-sm font-medium ${task.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'}`}>
                               {task.name}
                             </div>
                             {task.description && (
-                              <div class="text-sm text-gray-500 max-w-xs truncate" title={task.description}>{task.description}</div>
+                              <div class={`text-sm max-w-xs truncate ${task.status === 'completed' ? 'line-through text-gray-400' : 'text-gray-500'}`} title={task.description}>{task.description}</div>
                             )}
                           </div>
                         </a>
@@ -792,7 +792,7 @@ if (projectDetails && projectDetails.id) {
                       dueDate.setHours(0, 0, 0, 0);
                       const isOverdue = dueDate < today && task.status !== 'completed';
                       return (
-                        <span class={isOverdue ? 'text-red-600 font-medium' : 'text-gray-500'}>
+                        <span class={`${task.status === 'completed' ? 'line-through text-gray-400' : isOverdue ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
                           {dueDate.toLocaleDateString('en-US', { 
                             year: 'numeric', 
                             month: '2-digit', 
@@ -2740,7 +2740,7 @@ if (projectDetails && projectDetails.id) {
                   </div>
                 </div>
                 <div class="text-xs">
-                  ${isAssigned ? '✓ Assigned' : 'Click to assign'}
+                  ${isAssigned ? '✓' : ''}
                 </div>
               </div>
             `;
@@ -3552,11 +3552,6 @@ if (projectDetails && projectDetails.id) {
           console.log('After toggle - display:', row.style.display, 'hidden class:', row.classList.contains('hidden'));
           console.log('Row classes after toggle:', row.className);
           
-          // Add a visual indicator that the row was toggled
-          row.style.border = row.style.display === 'none' ? '2px solid red' : '2px solid green';
-          setTimeout(() => {
-            row.style.border = '';
-          }, 1000);
         });
       }
       
