@@ -146,9 +146,9 @@ if (totalHours > 0) {
 ---
 
 <AdminLayout title={`${task.name} - Task Stream`} currentPage="collaborations">
-  <div class="flex h-fit">
+  <div class="flex h-fit" style="overflow: visible;">
     <!-- Left Sidebar -->
-    <div class="w-1/4 bg-white border-r rounded-xl border-gray-200 p-6 status-dropdown-container">
+    <div class="w-1/4 bg-white border-r rounded-xl border-gray-200 p-6 status-dropdown-container" style="overflow: visible;">
       <!-- Task Overview Card -->
       <div class="bg-white rounded-lg border border-gray-200 p-4 mb-6 h-auto">
         <div class="flex flex-col items-start justify-between mb-3">
@@ -279,7 +279,7 @@ if (totalHours > 0) {
     </div>
 
     <!-- Main Content Area -->
-    <div class="flex-1 p-6 pt-0">
+    <div class="flex-1 p-6 pt-0" style="overflow: visible;">
       <!-- Header with Breadcrumbs -->
       <div class="flex justify-between gap-4 items-center mb-6">
         <div class="flex items-center flex-1">
@@ -329,19 +329,65 @@ if (totalHours > 0) {
 </AdminLayout>
 
 <style>
-  /* Ensure status dropdowns can flow outside their containers */
-  .status-dropdown-container {
+  /* Comprehensive dropdown clipping prevention */
+  .status-dropdown-container,
+  .assignee-dropdown-container,
+  .dropdown-container {
+    overflow: visible !important;
+    position: relative;
+  }
+  
+  /* Allow all dropdowns to escape parent overflow constraints */
+  [data-status-dropdown],
+  [data-assignee-dropdown],
+  [data-dropdown] {
+    position: relative;
+    z-index: 99999;
     overflow: visible !important;
   }
   
-  /* Allow dropdowns to escape parent overflow constraints */
-  [data-status-dropdown] {
-    position: relative;
-    z-index: 9999;
+  /* Ensure all containers don't clip dropdowns */
+  .w-1\/4,
+  .flex,
+  .grid,
+  table,
+  tbody,
+  tr,
+  td {
+    overflow: visible !important;
   }
   
-  /* Ensure the sidebar doesn't clip dropdowns */
-  .w-1\/4 {
-    overflow: visible;
+  /* Force visibility for all dropdown menus */
+  .dropdown-menu,
+  .status-dropdown-menu,
+  .assignee-popup-container,
+  .popup-menu {
+    position: absolute !important;
+    z-index: 99999 !important;
+    overflow: visible !important;
+  }
+  
+  /* Ensure fixed positioning works properly */
+  .fixed {
+    position: fixed !important;
+    z-index: 99999 !important;
+  }
+  
+  /* Override any overflow hidden that might be applied */
+  * {
+    box-sizing: border-box;
+  }
+  
+  /* Specific fixes for common clipping scenarios */
+  .overflow-hidden {
+    overflow: visible !important;
+  }
+  
+  .overflow-auto {
+    overflow: visible !important;
+  }
+  
+  .overflow-y-auto {
+    overflow: visible !important;
   }
 </style>

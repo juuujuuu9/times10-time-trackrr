@@ -1,6 +1,7 @@
 ---
 import { getSessionUser } from '../utils/session';
 import AdminTimer from '../components/AdminTimer';
+import '../styles/dropdown-fixes.css';
 
 export interface Props {
   title: string;
@@ -158,7 +159,7 @@ const navItems = [
         </header>
 
         <!-- Page content -->
-        <main class="flex-1 overflow-y-auto p-6" style="background-color: #f0eef5; overflow-x: visible;">
+        <main class="flex-1 overflow-y-auto p-6" style="background-color: #f0eef5; overflow: visible;">
           <slot />
         </main>
       </div>

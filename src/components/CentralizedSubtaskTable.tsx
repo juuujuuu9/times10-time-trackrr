@@ -349,7 +349,7 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
                     
                     {/* Add User Button for Subtask */}
                     {onAssigneeUpdate && !subtask.completed && (
-                      <div className="relative assignee-popup-container">
+                      <div className="relative assignee-popup-container" style={{ overflow: 'visible' }}>
                         <button
                           onClick={(e) => {
                             const rect = e.currentTarget.getBoundingClientRect();
@@ -369,11 +369,12 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
                         {/* Assignee Popup */}
                         {showAssigneePopup === subtask.id && popupPosition && (
                           <div 
-                            className="fixed bg-white border border-gray-200 rounded-lg shadow-lg z-[9999] min-w-64 assignee-popup-container"
+                            className="fixed bg-white border border-gray-200 rounded-lg shadow-lg z-[99999] min-w-64 assignee-popup-container dropdown-menu"
                             style={{
                               top: `${popupPosition.top}px`,
                               left: `${popupPosition.left}px`,
-                              zIndex: 9999
+                              zIndex: 99999,
+                              position: 'fixed'
                             }}
                           >
                             <div className="p-3 border-b border-gray-200">
