@@ -2572,32 +2572,30 @@ if (projectDetails && projectDetails.id) {
         const spinner = dropdown.querySelector('.task-user-search-spinner');
         const results = dropdown.querySelector('.task-user-search-results');
         if (spinner) spinner.classList.remove('hidden');
-        results.innerHTML = '<div class="text-center py-4 text-gray-500">Loading users...</div>';
+        results.innerHTML = '<div class="text-center py-4 text-gray-500">Loading team members...</div>';
 
-        // Fetch all users using the main users endpoint
-        const response = await fetch('/api/admin/users');
-        const users = await response.json();
-        
-        if (spinner) spinner.classList.add('hidden');
-        
-        if (Array.isArray(users) && users.length > 0) {
-          // Transform the data to match the expected format
-          taskAllUsers = users.map(user => ({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role
+        // Use team members data instead of fetching all users
+        if (Array.isArray(teamMembersData) && teamMembersData.length > 0) {
+          // Transform the team members data to match the expected format
+          taskAllUsers = teamMembersData.map(member => ({
+            id: member.id,
+            name: member.name,
+            email: member.email,
+            role: 'team_member' // Team members don't have roles in the current structure
           }));
+          
+          if (spinner) spinner.classList.add('hidden');
           displayTaskUserSearchResults(taskAllUsers, taskId, dropdown);
         } else {
-          results.innerHTML = '<div class="text-center py-4 text-gray-500">No users found</div>';
+          if (spinner) spinner.classList.add('hidden');
+          results.innerHTML = '<div class="text-center py-4 text-gray-500">No team members found</div>';
         }
       } catch (error) {
-        console.error('Error loading users:', error);
+        console.error('Error loading team members:', error);
         const spinner = dropdown.querySelector('.task-user-search-spinner');
         const results = dropdown.querySelector('.task-user-search-results');
         if (spinner) spinner.classList.add('hidden');
-        results.innerHTML = '<div class="text-center py-4 text-red-500">Error loading users</div>';
+        results.innerHTML = '<div class="text-center py-4 text-red-500">Error loading team members</div>';
       }
     }
     
@@ -2716,32 +2714,30 @@ if (projectDetails && projectDetails.id) {
         const spinner = dropdown.querySelector('.subtask-user-search-spinner');
         const results = dropdown.querySelector('.subtask-user-search-results');
         if (spinner) spinner.classList.remove('hidden');
-        results.innerHTML = '<div class="text-center py-4 text-gray-500">Loading users...</div>';
+        results.innerHTML = '<div class="text-center py-4 text-gray-500">Loading team members...</div>';
 
-        // Fetch all users using the main users endpoint
-        const response = await fetch('/api/admin/users');
-        const users = await response.json();
-        
-        if (spinner) spinner.classList.add('hidden');
-        
-        if (Array.isArray(users) && users.length > 0) {
-          // Transform the data to match the expected format
-          taskAllUsers = users.map(user => ({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role
+        // Use team members data instead of fetching all users
+        if (Array.isArray(teamMembersData) && teamMembersData.length > 0) {
+          // Transform the team members data to match the expected format
+          taskAllUsers = teamMembersData.map(member => ({
+            id: member.id,
+            name: member.name,
+            email: member.email,
+            role: 'team_member' // Team members don't have roles in the current structure
           }));
+          
+          if (spinner) spinner.classList.add('hidden');
           displaySubtaskUserSearchResults(taskAllUsers, subtaskId, taskId, dropdown);
         } else {
-          results.innerHTML = '<div class="text-center py-4 text-gray-500">No users found</div>';
+          if (spinner) spinner.classList.add('hidden');
+          results.innerHTML = '<div class="text-center py-4 text-gray-500">No team members found</div>';
         }
       } catch (error) {
-        console.error('Error loading users:', error);
+        console.error('Error loading team members:', error);
         const spinner = dropdown.querySelector('.subtask-user-search-spinner');
         const results = dropdown.querySelector('.subtask-user-search-results');
         if (spinner) spinner.classList.add('hidden');
-        results.innerHTML = '<div class="text-center py-4 text-red-500">Error loading users</div>';
+        results.innerHTML = '<div class="text-center py-4 text-red-500">Error loading team members</div>';
       }
     }
     
