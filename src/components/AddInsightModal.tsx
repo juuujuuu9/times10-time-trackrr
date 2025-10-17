@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import BasicTiptapEditor from './BasicTiptapEditor';
 
 interface User {
   id: number;
@@ -27,81 +28,11 @@ const AddInsightModal: React.FC<AddInsightModalProps> = ({
   initialMentionedUsers
 }) => {
   const [content, setContent] = useState('');
-  const [showMentions, setShowMentions] = useState(false);
-  const [mentionQuery, setMentionQuery] = useState('');
   const [mentionedUsers, setMentionedUsers] = useState<User[]>([]);
-  const [cursorPosition, setCursorPosition] = useState(0);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Filter team members based on mention query
-  const filteredMembers = teamMembers.filter(member => 
-    member.id !== currentUser.id && 
-    member.name.toLowerCase().includes(mentionQuery.toLowerCase())
-  );
-
-  // Handle textarea input
-  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    const cursorPos = e.target.selectionStart;
-    
-    setContent(value);
-    setCursorPosition(cursorPos);
-
-    // Check for @ mentions
-    const textBeforeCursor = value.substring(0, cursorPos);
-    const atMatch = textBeforeCursor.match(/@(\w*)$/);
-    
-    if (atMatch) {
-      setMentionQuery(atMatch[1]);
-      setShowMentions(true);
-    } else {
-      setShowMentions(false);
-    }
-  };
-
-  // Format user name for mention (FirstL format)
-  const formatMentionName = (user: User) => {
-    const nameParts = user.name.split(' ');
-    if (nameParts.length >= 2) {
-      const firstName = nameParts[0];
-      const lastName = nameParts[nameParts.length - 1];
-      return `${firstName}${lastName.charAt(0)}`;
-    }
-    return user.name; // Fallback to full name if only one name part
-  };
-
-  // Handle mention selection
-  const handleMentionSelect = (user: User) => {
-    const textBeforeCursor = content.substring(0, cursorPosition);
-    const textAfterCursor = content.substring(cursorPosition);
-    const atMatch = textBeforeCursor.match(/@(\w*)$/);
-    
-    if (atMatch) {
-      const beforeAt = textBeforeCursor.substring(0, atMatch.index);
-      const mentionName = formatMentionName(user);
-      const newContent = `${beforeAt}@${mentionName} ${textAfterCursor}`;
-      setContent(newContent);
-      setShowMentions(false);
-      setMentionedUsers(prev => [...prev.filter(u => u.id !== user.id), user]);
-      
-      // Focus back to textarea
-      setTimeout(() => {
-        if (textareaRef.current) {
-          const newCursorPos = beforeAt.length + mentionName.length + 2;
-          textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
-          textareaRef.current.focus();
-        }
-      }, 0);
-    }
-  };
-
-  // Handle key events
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (showMentions) {
-      if (e.key === 'Escape') {
-        setShowMentions(false);
-      }
-    }
+  // Handle mentioned users change
+  const handleMentionedUsersChange = (users: User[]) => {
+    setMentionedUsers(users);
   };
 
   // Handle form submission
@@ -119,11 +50,10 @@ const AddInsightModal: React.FC<AddInsightModalProps> = ({
   const handleClose = () => {
     setContent('');
     setMentionedUsers([]);
-    setShowMentions(false);
     onClose();
   };
 
-  // Focus textarea when modal opens
+  // Handle initial values when modal opens
   useEffect(() => {
     if (isOpen) {
       // Seed initial content/mentions if provided
@@ -132,12 +62,6 @@ const AddInsightModal: React.FC<AddInsightModalProps> = ({
       }
       if (initialMentionedUsers !== undefined) {
         setMentionedUsers(initialMentionedUsers);
-      }
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-        // Move caret to end
-        const end = (initialContent ?? content).length;
-        textareaRef.current.setSelectionRange(end, end);
       }
     }
   }, [isOpen, initialContent, initialMentionedUsers]);
@@ -163,65 +87,12 @@ const AddInsightModal: React.FC<AddInsightModalProps> = ({
         {/* Content */}
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
           <div className="p-6 flex-1">
-            <div className="relative">
-              <textarea
-                ref={textareaRef}
-                value={content}
-                onChange={handleInput}
-                onKeyDown={handleKeyDown}
-                placeholder="What do you want to share? @mention a user to notify them."
-                className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                style={{ minHeight: '120px' }}
-              />
-              
-              {/* Mention suggestions dropdown */}
-              {showMentions && filteredMembers.length > 0 && (
-                <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-                  {filteredMembers.map((member) => (
-                    <button
-                      key={member.id}
-                      type="button"
-                      onClick={() => handleMentionSelect(member)}
-                      className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center space-x-3 first:rounded-t-lg last:rounded-b-lg"
-                    >
-                      <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 flex-shrink-0">
-                        {member.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-900">{member.name}</div>
-                        <div className="text-sm text-gray-500">{member.email}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Mentioned users display */}
-            {mentionedUsers.length > 0 && (
-              <div className="mt-4">
-                <div className="text-sm text-gray-600 mb-2">Mentioned:</div>
-                <div className="flex flex-wrap gap-2">
-                  {mentionedUsers.map((user) => (
-                    <div
-                      key={user.id}
-                      className="inline-flex items-center space-x-2 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm"
-                    >
-                      <span>@{formatMentionName(user)}</span>
-                      <button
-                        type="button"
-                        onClick={() => setMentionedUsers(prev => prev.filter(u => u.id !== user.id))}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <BasicTiptapEditor
+              content={content}
+              onChange={setContent}
+              placeholder="What do you want to share? Use the toolbar above to format your text."
+              className="w-full"
+            />
           </div>
 
           {/* Footer */}

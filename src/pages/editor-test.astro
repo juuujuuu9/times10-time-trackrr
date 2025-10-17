@@ -1,0 +1,49 @@
+---
+// Basic Tiptap Editor Test Page
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.png" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Editor Test</title>
+  </head>
+  <body>
+    <div id="editor-test"></div>
+    <script>
+      import BasicTiptapEditor from '../components/BasicTiptapEditor.tsx';
+      import React, { useState } from 'react';
+      import { createRoot } from 'react-dom/client';
+      
+      function EditorTest() {
+        const [content, setContent] = useState('<p>Hello <strong>world</strong>! This is a <em>test</em>.</p>');
+        
+        return React.createElement('div', { className: 'max-w-4xl mx-auto p-6' }, [
+          React.createElement('h1', { key: 'title', className: 'text-3xl font-bold mb-6' }, 'Editor Test'),
+          React.createElement('div', { key: 'editor', className: 'mb-6' },
+            React.createElement(BasicTiptapEditor, {
+              content,
+              onChange: setContent,
+              placeholder: "Type something...",
+              className: "w-full"
+            })
+          ),
+          React.createElement('div', { key: 'preview', className: 'bg-gray-50 p-4 rounded' }, [
+            React.createElement('h2', { key: 'preview-title', className: 'text-xl font-semibold mb-2' }, 'Preview:'),
+            React.createElement('div', { 
+              key: 'preview-content', 
+              className: 'prose prose-sm max-w-none',
+              dangerouslySetInnerHTML: { __html: content }
+            })
+          ])
+        ]);
+      }
+      
+      const container = document.getElementById('editor-test');
+      const root = createRoot(container);
+      root.render(React.createElement(EditorTest));
+    </script>
+  </body>
+</html>

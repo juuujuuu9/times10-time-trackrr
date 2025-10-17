@@ -7,6 +7,7 @@ import LinkPreview from './LinkPreview';
 import SubtaskModal from './SubtaskModal';
 import SubtaskCard from './SubtaskCard';
 import CentralizedSubtaskTable from './CentralizedSubtaskTable';
+import BasicTiptapEditor from './BasicTiptapEditor';
 
 interface User {
   id: number;
@@ -1508,12 +1509,11 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                       editingPostId === post.id ? (
                         // Edit mode for post
                         <div className="mb-6 mt-6">
-                          <textarea
-                            value={editContent}
-                            onChange={(e) => setEditContent(e.target.value)}
-                            className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            rows={3}
+                          <BasicTiptapEditor
+                            content={editContent}
+                            onChange={setEditContent}
                             placeholder="Edit your post..."
+                            className="w-full"
                           />
                           <div className="flex items-center space-x-2 mt-2">
                             <button
@@ -1531,7 +1531,10 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                           </div>
                         </div>
                       ) : (
-                        <p className="text-gray-700 mb-6 mt-6 text-lg ">{renderContentWithMentions(post.content)}</p>
+                        <div 
+                          className="text-gray-700 mb-6 mt-6 text-lg prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{ __html: post.content }}
+                        />
                       )
                     )}
                     
@@ -1700,13 +1703,11 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                             {getUserInitials(currentUser)}
                           </div>
                           <div className="flex-1 flex items-center space-x-2">
-                            <input
-                              type="text"
+                            <BasicTiptapEditor
+                              content={newComment[post.id] || ''}
+                              onChange={(value) => setNewComment(prev => ({ ...prev, [post.id]: value }))}
                               placeholder="Write a reply..."
-                              value={newComment[post.id] || ''}
-                              onChange={(e) => setNewComment(prev => ({ ...prev, [post.id]: e.target.value }))}
-                              onKeyDown={(e) => e.key === 'Enter' && handleSubmitComment(post.id)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                              className="w-full"
                             />
                             <button
                               onClick={() => handleSubmitComment(post.id)}
@@ -1744,12 +1745,11 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                               {editingCommentId === comment.id ? (
                                 // Edit mode for comment
                                 <div className="mb-2">
-                                  <textarea
-                                    value={editContent}
-                                    onChange={(e) => setEditContent(e.target.value)}
-                                    className="w-full p-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    rows={2}
+                                  <BasicTiptapEditor
+                                    content={editContent}
+                                    onChange={setEditContent}
                                     placeholder="Edit your comment..."
+                                    className="w-full"
                                   />
                                   <div className="flex items-center space-x-2 mt-1">
                                     <button
@@ -1767,7 +1767,10 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                   </div>
                                 </div>
                               ) : (
-                                <p className="text-gray-700 text-sm">{renderContentWithMentions(comment.content)}</p>
+                                <div 
+                                  className="text-gray-700 text-sm prose prose-sm max-w-none"
+                                  dangerouslySetInnerHTML={{ __html: comment.content }}
+                                />
                               )}
                               {/* Comment actions: Reply for others, Edit/Delete for own comments */}
                               {editingCommentId !== comment.id && (
@@ -1815,13 +1818,11 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                       {getUserInitials(currentUser)}
                                     </div>
                                     <div className="flex-1 flex items-center space-x-2">
-                                      <input 
-                                        type="text" 
-                                        placeholder="Write a reply..." 
-                                        value={newComment[comment.id] || ''}
-                                        onChange={(e) => setNewComment(prev => ({ ...prev, [comment.id]: e.target.value }))}
-                                        onKeyDown={(e) => e.key === 'Enter' && handleSubmitComment(comment.id)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                      <BasicTiptapEditor
+                                        content={newComment[comment.id] || ''}
+                                        onChange={(value) => setNewComment(prev => ({ ...prev, [comment.id]: value }))}
+                                        placeholder="Write a reply..."
+                                        className="w-full"
                                       />
                                       <button
                                         onClick={() => handleSubmitComment(comment.id)}
@@ -1849,7 +1850,10 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                           <span className="font-medium text-gray-900 text-sm">{child.author.name}</span>
                                           <span className="text-xs text-gray-500">{formatTimeAgo(child.createdAt)}</span>
                                         </div>
-                                        <p className="text-gray-700 text-sm">{renderContentWithMentions(child.content)}</p>
+                                        <div 
+                                          className="text-gray-700 text-sm prose prose-sm max-w-none"
+                                          dangerouslySetInnerHTML={{ __html: child.content }}
+                                        />
                                         {/* No Reply button for second-level to avoid deeper nesting */}
                                       </div>
                                     </div>

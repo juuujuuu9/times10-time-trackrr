@@ -1,0 +1,25 @@
+---
+// Rich Text Editor Demo Page
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.png" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Rich Text Editor Demo</title>
+  </head>
+  <body>
+    <div id="rich-text-demo"></div>
+    <script>
+      import RichTextDemo from '../components/RichTextDemo.tsx';
+      import React from 'react';
+      import { createRoot } from 'react-dom/client';
+      
+      const container = document.getElementById('rich-text-demo');
+      const root = createRoot(container);
+      root.render(React.createElement(RichTextDemo));
+    </script>
+  </body>
+</html>
