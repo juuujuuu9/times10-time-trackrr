@@ -6,6 +6,99 @@ import { getSessionUser } from '../../../../utils/session';
 
 export const prerender = false;
 
+export const GET: APIRoute = async (context) => {
+  try {
+    console.log('GET task API called');
+    
+    // Get current user and verify admin access
+    const currentUser = await getSessionUser(context);
+    
+    if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'developer')) {
+      return new Response(JSON.stringify({
+        success: false,
+        message: 'Unauthorized access',
+        error: 'Insufficient permissions'
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const { id } = context.params;
+
+    if (!id) {
+      return new Response(JSON.stringify({ 
+        success: false,
+        error: 'Task ID is required' 
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const taskId = parseInt(id);
+    
+    if (isNaN(taskId)) {
+      return new Response(JSON.stringify({
+        success: false,
+        message: 'Invalid task ID format',
+        error: 'Task ID must be a valid number'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Get task with project information
+    const task = await db.query.tasks.findFirst({
+      where: eq(tasks.id, taskId),
+      with: {
+        project: true
+      }
+    });
+
+    if (!task) {
+      return new Response(JSON.stringify({
+        success: false,
+        message: 'Task not found',
+        error: 'Task does not exist'
+      }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
+      data: {
+        id: task.id,
+        name: task.name,
+        description: task.description,
+        status: task.status,
+        priority: task.priority,
+        projectId: task.projectId,
+        projectName: task.project?.name || 'Unknown Project',
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt
+      }
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+  } catch (error) {
+    console.error('Error fetching task:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      message: 'Internal server error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+};
+
 export const PUT: APIRoute = async (context) => {
   try {
     console.log('PUT task API called');
