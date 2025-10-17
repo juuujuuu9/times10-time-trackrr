@@ -940,24 +940,12 @@ if (projectDetails && projectDetails.id) {
                             </svg>
                           </button>
                           
-                          <!-- Subtask User Search Dropdown -->
-                          <div class="subtask-user-search-dropdown absolute left-0 top-6 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 hidden">
-                            <div class="p-4">
-                              <div class="relative mb-3">
-                                <input 
-                                  type="text" 
-                                  class="subtask-user-search-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                  placeholder="Search users by name or email..."
-                                />
-                                <div class="subtask-user-search-spinner absolute right-3 top-1/2 transform -translate-y-1/2 hidden">
-                                  <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                  </svg>
-                                </div>
-                              </div>
-                              <div class="subtask-user-search-results max-h-60 overflow-y-auto space-y-2">
-                                <div class="text-center py-4 text-gray-500">Loading users...</div>
+                          <!-- Simple Subtask User Assignment -->
+                          <div class="subtask-user-assignment absolute left-0 top-6 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 hidden">
+                            <div class="p-3">
+                              <div class="text-sm font-medium text-gray-700 mb-2">Assign to subtask:</div>
+                              <div class="subtask-user-list max-h-48 overflow-y-auto space-y-1">
+                                <!-- Parent task assignees will be populated here -->
                               </div>
                             </div>
                           </div>
@@ -2031,8 +2019,8 @@ if (projectDetails && projectDetails.id) {
     document.addEventListener('click', function(e) {
       if (e.target.classList.contains('edit-task-btn') || e.target.closest('.edit-task-btn')) {
         const button = e.target.classList.contains('edit-task-btn') ? e.target : e.target.closest('.edit-task-btn');
-        const taskId = parseInt(button.getAttribute('data-task-id'));
-        showEditTaskModal(taskId);
+        const editTaskId = parseInt(button.getAttribute('data-task-id'));
+        showEditTaskModal(editTaskId);
       }
     });
 
@@ -2397,14 +2385,14 @@ if (projectDetails && projectDetails.id) {
       if (e.target.classList.contains('task-add-user-btn') || e.target.closest('.task-add-user-btn')) {
         e.stopPropagation();
         const button = e.target.classList.contains('task-add-user-btn') ? e.target : e.target.closest('.task-add-user-btn');
-        const taskId = button.getAttribute('data-task-id');
+        const addUserTaskId = button.getAttribute('data-task-id');
         const dropdown = button.parentElement.querySelector('.task-user-search-dropdown');
         const input = dropdown.querySelector('.task-user-search-input');
         
         dropdown.classList.toggle('hidden');
         if (!dropdown.classList.contains('hidden')) {
           input.focus();
-          loadTaskUsers(taskId, dropdown);
+          loadTaskUsers(addUserTaskId, dropdown);
         }
       }
       
@@ -2413,14 +2401,12 @@ if (projectDetails && projectDetails.id) {
         e.stopPropagation();
         const button = e.target.classList.contains('subtask-add-user-btn') ? e.target : e.target.closest('.subtask-add-user-btn');
         const subtaskId = button.getAttribute('data-subtask-id');
-        const taskId = button.getAttribute('data-task-id');
-        const dropdown = button.parentElement.querySelector('.subtask-user-search-dropdown');
-        const input = dropdown.querySelector('.subtask-user-search-input');
+        const subtaskTaskId = button.getAttribute('data-task-id');
+        const dropdown = button.parentElement.querySelector('.subtask-user-assignment');
         
         dropdown.classList.toggle('hidden');
         if (!dropdown.classList.contains('hidden')) {
-          input.focus();
-          loadSubtaskUsers(subtaskId, taskId, dropdown);
+          loadSubtaskUsersSimple(subtaskId, subtaskTaskId, dropdown);
         }
       }
       
@@ -2429,18 +2415,18 @@ if (projectDetails && projectDetails.id) {
       if (taskUserContainer && taskUserContainer.closest('.task-user-search-results') && !taskUserContainer.classList.contains('cursor-not-allowed')) {
         e.stopPropagation();
         const userId = taskUserContainer.getAttribute('data-task-user-id');
-        const taskId = taskUserContainer.getAttribute('data-task-id');
-        addUserToTask(userId, taskId);
+        const taskUserTaskId = taskUserContainer.getAttribute('data-task-id');
+        addUserToTask(userId, taskUserTaskId);
       }
       
-      // Handle subtask user search result clicks
+      // Handle subtask user assignment clicks
       const subtaskUserContainer = e.target.closest('[data-subtask-user-id]');
-      if (subtaskUserContainer && subtaskUserContainer.closest('.subtask-user-search-results') && !subtaskUserContainer.classList.contains('cursor-not-allowed')) {
+      if (subtaskUserContainer && subtaskUserContainer.closest('.subtask-user-list') && !subtaskUserContainer.classList.contains('cursor-not-allowed')) {
         e.stopPropagation();
         const userId = subtaskUserContainer.getAttribute('data-subtask-user-id');
         const subtaskId = subtaskUserContainer.getAttribute('data-subtask-id');
-        const taskId = subtaskUserContainer.getAttribute('data-task-id');
-        addUserToSubtask(userId, subtaskId, taskId);
+        const subtaskUserTaskId = subtaskUserContainer.getAttribute('data-task-id');
+        addUserToSubtask(userId, subtaskId, subtaskUserTaskId);
       }
     });
     
@@ -2452,8 +2438,8 @@ if (projectDetails && projectDetails.id) {
         });
       }
       
-      if (!e.target.closest('.subtask-add-user-btn') && !e.target.closest('.subtask-user-search-dropdown')) {
-        document.querySelectorAll('.subtask-user-search-dropdown').forEach(dropdown => {
+      if (!e.target.closest('.subtask-add-user-btn') && !e.target.closest('.subtask-user-assignment')) {
+        document.querySelectorAll('.subtask-user-assignment').forEach(dropdown => {
           dropdown.classList.add('hidden');
         });
       }
@@ -2474,8 +2460,8 @@ if (projectDetails && projectDetails.id) {
     document.addEventListener('click', function(e) {
       if (e.target.classList.contains('expand-task-members') || e.target.closest('.expand-task-members')) {
         e.stopPropagation();
-        const taskId = e.target.getAttribute('data-task-id') || e.target.closest('.expand-task-members').getAttribute('data-task-id');
-        const expandedList = document.querySelector(`.expanded-task-members-${taskId}`);
+        const expandTaskId = e.target.getAttribute('data-task-id') || e.target.closest('.expand-task-members').getAttribute('data-task-id');
+        const expandedList = document.querySelector(`.expanded-task-members-${expandTaskId}`);
         if (expandedList) {
           expandedList.classList.toggle('hidden');
         }
@@ -2498,10 +2484,10 @@ if (projectDetails && projectDetails.id) {
       if (e.target.classList.contains('remove-task-member') || e.target.closest('.remove-task-member')) {
         e.stopPropagation();
         const button = e.target.classList.contains('remove-task-member') ? e.target : e.target.closest('.remove-task-member');
-        const taskId = button.getAttribute('data-task-id');
+        const removeTaskId = button.getAttribute('data-task-id');
         const userId = button.getAttribute('data-user-id');
         const userName = button.getAttribute('data-user-name');
-        removeTaskMember(taskId, userId, userName);
+        removeTaskMember(removeTaskId, userId, userName);
       }
     });
     
@@ -2706,43 +2692,107 @@ if (projectDetails && projectDetails.id) {
       }
     }
     
+    // Simple subtask user assignment function
+    async function loadSubtaskUsersSimple(subtaskId, taskId, dropdown) {
+      try {
+        const userList = dropdown.querySelector('.subtask-user-list');
+        userList.innerHTML = '<div class="text-center py-2 text-gray-500">Loading...</div>';
+
+        // Fetch users assigned to the parent task
+        const response = await fetch(`/api/admin/tasks/${taskId}/assignments`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch task assignments');
+        }
+        
+        const assignments = await response.json();
+        
+        if (assignments && assignments.length > 0) {
+          // Get current subtask data to find existing assignees
+          const task = tasksData.find(t => t.id === parseInt(taskId));
+          let currentAssignees = [];
+          
+          if (task && task.subtasks) {
+            const subtask = task.subtasks.find(s => s.id === subtaskId);
+            if (subtask && subtask.assignees) {
+              currentAssignees = [...subtask.assignees];
+            }
+          }
+          
+          // Create simple list of users
+          userList.innerHTML = assignments.map(assignment => {
+            const isAssigned = currentAssignees.includes(assignment.userName);
+            return `
+              <div 
+                class="flex items-center justify-between p-2 hover:bg-gray-50 cursor-pointer rounded ${isAssigned ? 'bg-green-50 text-green-700' : ''}"
+                data-subtask-user-id="${assignment.userId}"
+                data-subtask-id="${subtaskId}"
+                data-task-id="${taskId}"
+                data-user-name="${assignment.userName}"
+                data-user-email="${assignment.userEmail}"
+              >
+                <div class="flex items-center space-x-2">
+                  <div class="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
+                    <span class="text-xs font-medium text-gray-600">${assignment.userName.charAt(0).toUpperCase()}</span>
+                  </div>
+                  <div>
+                    <div class="text-sm font-medium">${assignment.userName}</div>
+                    <div class="text-xs text-gray-500">${assignment.userEmail}</div>
+                  </div>
+                </div>
+                <div class="text-xs">
+                  ${isAssigned ? '✓ Assigned' : 'Click to assign'}
+                </div>
+              </div>
+            `;
+          }).join('');
+        } else {
+          userList.innerHTML = '<div class="text-center py-2 text-gray-500">No users assigned to this task.</div>';
+        }
+      } catch (error) {
+        console.error('Error loading subtask users:', error);
+        const userList = dropdown.querySelector('.subtask-user-list');
+        userList.innerHTML = '<div class="text-center py-2 text-red-500">Error loading users.</div>';
+      }
+    }
+
     // Subtask user search functions
     async function loadSubtaskUsers(subtaskId, taskId, dropdown) {
-      if (taskAllUsers.length > 0) {
-        // Users already loaded, just display them
-        displaySubtaskUserSearchResults(taskAllUsers, subtaskId, taskId, dropdown);
-        return;
-      }
-
       try {
         // Show loading state
         const spinner = dropdown.querySelector('.subtask-user-search-spinner');
         const results = dropdown.querySelector('.subtask-user-search-results');
         if (spinner) spinner.classList.remove('hidden');
-        results.innerHTML = '<div class="text-center py-4 text-gray-500">Loading team members...</div>';
+        results.innerHTML = '<div class="text-center py-4 text-gray-500">Loading task assignees...</div>';
 
-        // Use team members data instead of fetching all users
-        if (Array.isArray(teamMembersData) && teamMembersData.length > 0) {
-          // Transform the team members data to match the expected format
-          taskAllUsers = teamMembersData.map(member => ({
-            id: member.id,
-            name: member.name,
-            email: member.email,
-            role: 'team_member' // Team members don't have roles in the current structure
+        // Fetch users assigned to the parent task only
+        const response = await fetch(`/api/admin/tasks/${taskId}/assignments`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch task assignments');
+        }
+        
+        const assignments = await response.json();
+        
+        if (spinner) spinner.classList.add('hidden');
+        
+        if (assignments && assignments.length > 0) {
+          // Transform the assignments data to match the expected format
+          const taskUsers = assignments.map(assignment => ({
+            id: assignment.userId,
+            name: assignment.userName,
+            email: assignment.userEmail,
+            role: 'task_assignee'
           }));
           
-          if (spinner) spinner.classList.add('hidden');
-          displaySubtaskUserSearchResults(taskAllUsers, subtaskId, taskId, dropdown);
+          displaySubtaskUserSearchResults(taskUsers, subtaskId, taskId, dropdown);
         } else {
-          if (spinner) spinner.classList.add('hidden');
-          results.innerHTML = '<div class="text-center py-4 text-gray-500">No team members found</div>';
+          results.innerHTML = '<div class="text-center py-4 text-gray-500">No users assigned to this task</div>';
         }
       } catch (error) {
-        console.error('Error loading team members:', error);
+        console.error('Error loading task assignees:', error);
         const spinner = dropdown.querySelector('.subtask-user-search-spinner');
         const results = dropdown.querySelector('.subtask-user-search-results');
         if (spinner) spinner.classList.add('hidden');
-        results.innerHTML = '<div class="text-center py-4 text-red-500">Error loading team members</div>';
+        results.innerHTML = '<div class="text-center py-4 text-red-500">Error loading task assignees</div>';
       }
     }
     
@@ -2788,18 +2838,29 @@ if (projectDetails && projectDetails.id) {
     }
     
     function filterSubtaskUsers(searchTerm, subtaskId, taskId, dropdown) {
-      if (!searchTerm || taskAllUsers.length === 0) {
-        displaySubtaskUserSearchResults(taskAllUsers, subtaskId, taskId, dropdown);
+      const results = dropdown.querySelector('.subtask-user-search-results');
+      if (!results) return;
+      
+      // Get all user items in the results
+      const userItems = results.querySelectorAll('[data-subtask-user-id]');
+      
+      if (!searchTerm) {
+        // Show all users
+        userItems.forEach(item => item.style.display = 'block');
         return;
       }
 
-      // Filter users locally
-      const filteredUsers = taskAllUsers.filter(user => 
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-
-      displaySubtaskUserSearchResults(filteredUsers, subtaskId, taskId, dropdown);
+      // Filter users locally based on search term
+      userItems.forEach(item => {
+        const userName = item.getAttribute('data-user-name') || '';
+        const userEmail = item.getAttribute('data-user-email') || '';
+        const searchLower = searchTerm.toLowerCase();
+        
+        const matches = userName.toLowerCase().includes(searchLower) || 
+                       userEmail.toLowerCase().includes(searchLower);
+        
+        item.style.display = matches ? 'block' : 'none';
+      });
     }
     
     async function addUserToSubtask(userId, subtaskId, taskId) {
@@ -2966,30 +3027,16 @@ if (projectDetails && projectDetails.id) {
       if (e.target.classList.contains('task-user-search-input')) {
         const searchTerm = e.target.value.trim();
         const dropdown = e.target.closest('.task-user-search-dropdown');
-        const taskId = dropdown.closest('tr').querySelector('.task-add-user-btn').getAttribute('data-task-id');
+        const inputTaskId = dropdown.closest('tr').querySelector('.task-add-user-btn').getAttribute('data-task-id');
         
         if (searchTerm.length >= 2) {
-          filterTaskUsers(searchTerm, taskId, dropdown);
+          filterTaskUsers(searchTerm, inputTaskId, dropdown);
         } else if (searchTerm.length === 0) {
           // Show all users when search is cleared
-          displayTaskUserSearchResults(taskAllUsers, taskId, dropdown);
+          displayTaskUserSearchResults(taskAllUsers, inputTaskId, dropdown);
         }
       }
       
-      // Handle subtask user search input
-      if (e.target.classList.contains('subtask-user-search-input')) {
-        const searchTerm = e.target.value.trim();
-        const dropdown = e.target.closest('.subtask-user-search-dropdown');
-        const subtaskId = dropdown.closest('tr').querySelector('.subtask-add-user-btn').getAttribute('data-subtask-id');
-        const taskId = dropdown.closest('tr').querySelector('.subtask-add-user-btn').getAttribute('data-task-id');
-        
-        if (searchTerm.length >= 2) {
-          filterSubtaskUsers(searchTerm, subtaskId, taskId, dropdown);
-        } else if (searchTerm.length === 0) {
-          // Show all users when search is cleared
-          displaySubtaskUserSearchResults(taskAllUsers, subtaskId, taskId, dropdown);
-        }
-      }
     });
     
     userSearch.addEventListener('keypress', function(e) {
@@ -3265,8 +3312,8 @@ if (projectDetails && projectDetails.id) {
       let visibleCount = 0;
 
       taskRows.forEach(row => {
-        const taskId = row.querySelector('a[href*="/task/"]')?.getAttribute('href')?.split('/').pop();
-        const task = tasksData.find(t => t.id.toString() === taskId);
+        const filterTaskId = row.querySelector('a[href*="/task/"]')?.getAttribute('href')?.split('/').pop();
+        const task = tasksData.find(t => t.id.toString() === filterTaskId);
         
         if (!task) {
           row.style.display = 'none';
@@ -3386,11 +3433,11 @@ if (projectDetails && projectDetails.id) {
 
     // Handle task status updates and re-sort tasks
     window.addEventListener('taskStatusUpdated', function(event) {
-      const { taskId, newStatus } = event.detail;
-      console.log('Task status updated:', { taskId, newStatus });
+      const { taskId: updatedTaskId, newStatus } = event.detail;
+      console.log('Task status updated:', { taskId: updatedTaskId, newStatus });
       
       // Update the task data
-      const task = tasksData.find(t => t.id === taskId);
+      const task = tasksData.find(t => t.id === updatedTaskId);
       if (task) {
         task.status = newStatus;
         
@@ -3440,8 +3487,8 @@ if (projectDetails && projectDetails.id) {
       taskRows.forEach(row => {
         const taskLink = row.querySelector('a[href*="/task/"]');
         if (taskLink) {
-          const taskId = parseInt(taskLink.getAttribute('href')?.split('/').pop() || '0');
-          taskRowMap.set(taskId, row);
+          const mapTaskId = parseInt(taskLink.getAttribute('href')?.split('/').pop() || '0');
+          taskRowMap.set(mapTaskId, row);
         }
       });
       
@@ -3466,11 +3513,11 @@ if (projectDetails && projectDetails.id) {
         e.stopPropagation();
         
         const button = e.target.classList.contains('expand-subtasks-btn') ? e.target : e.target.closest('.expand-subtasks-btn');
-        const taskId = button.getAttribute('data-task-id');
+        const expandSubtaskTaskId = button.getAttribute('data-task-id');
         const arrow = button.querySelector('svg');
-        const subtaskRows = document.querySelectorAll(`tr.subtask-row[data-task-id="${taskId}"]`);
+        const subtaskRows = document.querySelectorAll(`tr.subtask-row[data-task-id="${expandSubtaskTaskId}"]`);
         
-        console.log('Task ID:', taskId);
+        console.log('Task ID:', expandSubtaskTaskId);
         console.log('Found subtask rows:', subtaskRows.length);
         console.log('Arrow element:', arrow);
         
@@ -3520,18 +3567,18 @@ if (projectDetails && projectDetails.id) {
         
         const button = e.target.classList.contains('subtask-toggle-btn') ? e.target : e.target.closest('.subtask-toggle-btn');
         const subtaskId = button.getAttribute('data-subtask-id');
-        const taskId = button.getAttribute('data-task-id');
+        const toggleTaskId = button.getAttribute('data-task-id');
         const currentCompleted = button.getAttribute('data-completed') === 'true';
         const newCompleted = !currentCompleted;
         
-        console.log('Subtask toggle clicked:', { subtaskId, taskId, currentCompleted, newCompleted });
+        console.log('Subtask toggle clicked:', { subtaskId, taskId: toggleTaskId, currentCompleted, newCompleted });
         
         // Show loading state
         button.disabled = true;
         button.classList.add('opacity-50', 'cursor-not-allowed');
         
         // Update subtask completion via API
-        updateSubtaskCompletion(subtaskId, taskId, newCompleted, button);
+        updateSubtaskCompletion(subtaskId, toggleTaskId, newCompleted, button);
       }
       
       // Handle subtask deletion
@@ -3541,10 +3588,10 @@ if (projectDetails && projectDetails.id) {
         
         const button = e.target.classList.contains('delete-subtask-btn') ? e.target : e.target.closest('.delete-subtask-btn');
         const subtaskId = button.getAttribute('data-subtask-id');
-        const taskId = button.getAttribute('data-task-id');
+        const deleteTaskId = button.getAttribute('data-task-id');
         const subtaskName = button.getAttribute('data-subtask-name');
         
-        console.log('Subtask delete clicked:', { subtaskId, taskId, subtaskName });
+        console.log('Subtask delete clicked:', { subtaskId, taskId: deleteTaskId, subtaskName });
         
         // Show confirmation dialog
         if (confirm(`Are you sure you want to delete the subtask "${subtaskName}"? This action cannot be undone.`)) {
@@ -3559,7 +3606,7 @@ if (projectDetails && projectDetails.id) {
           `;
           
           // Delete subtask via API
-          deleteSubtask(subtaskId, taskId, button);
+          deleteSubtask(subtaskId, deleteTaskId, button);
         }
       }
     });

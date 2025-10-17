@@ -8,33 +8,28 @@ async function cascadeRemoveUserFromTeam(userId: number, teamId: number) {
   console.log(`Cascading removal: Removing user ${userId} from team ${teamId} and all related tasks/subtasks`);
   
   try {
-    // 1. Get all tasks for this team
-    const teamTasks = await db.query.tasks.findMany({
-      where: eq(tasks.teamId, teamId)
+    // 1. Get all task assignments for this user (regardless of team)
+    const userTaskAssignments = await db.query.taskAssignments.findMany({
+      where: eq(taskAssignments.userId, userId)
     });
     
-    const taskIds = teamTasks.map(task => task.id);
-    console.log(`Found ${taskIds.length} tasks in team to process`);
+    const taskIds = userTaskAssignments.map(assignment => assignment.taskId);
+    console.log(`Found ${taskIds.length} task assignments for user ${userId} to process`);
     
     if (taskIds.length === 0) {
-      console.log('No tasks found for this team, skipping cascading removal');
+      console.log('No task assignments found for this user, skipping cascading removal');
       return { tasksRemoved: 0, subtasksUpdated: 0 };
     }
     
-    // 2. Remove user from all task assignments for this team's tasks
+    // 2. Remove user from all task assignments
     const removedTaskAssignments = await db
       .delete(taskAssignments)
-      .where(
-        and(
-          eq(taskAssignments.userId, userId),
-          inArray(taskAssignments.taskId, taskIds)
-        )
-      )
+      .where(eq(taskAssignments.userId, userId))
       .returning();
     
     console.log(`Removed ${removedTaskAssignments.length} task assignments`);
     
-    // 3. Remove user from all subtasks in this team's tasks
+    // 3. Remove user from all subtasks in the user's tasks
     let subtasksUpdated = 0;
     
     // Get user name once for efficiency

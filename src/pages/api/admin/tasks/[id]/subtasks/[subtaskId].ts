@@ -58,6 +58,20 @@ export const PUT: APIRoute = async (context) => {
       });
     }
 
+    // Parse taskId first before using it
+    const taskId = parseInt(id);
+    
+    if (isNaN(taskId)) {
+      return new Response(JSON.stringify({
+        success: false,
+        message: 'Invalid task ID format',
+        error: 'Task ID must be a valid number'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // RULE-001: Enforce hierarchical permissions - only task assignees can be assigned to subtasks
     if (assignees && Array.isArray(assignees)) {
       console.log('Validating subtask assignees against task assignees');
@@ -87,19 +101,6 @@ export const PUT: APIRoute = async (context) => {
       }
       
       console.log('All subtask assignees are valid task assignees');
-    }
-
-    const taskId = parseInt(id);
-    
-    if (isNaN(taskId)) {
-      return new Response(JSON.stringify({
-        success: false,
-        message: 'Invalid task ID format',
-        error: 'Task ID must be a valid number'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
     }
 
     // Subtask ID can be a string (like 'temp-1760589411117-0')
