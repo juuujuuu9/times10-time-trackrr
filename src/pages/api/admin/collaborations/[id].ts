@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../../db/index';
-import { teams, teamMembers } from '../../../../db/schema';
+import { teams, teamMembers, tasks } from '../../../../db/schema';
 import { eq } from 'drizzle-orm';
 import { getSessionUser } from '../../../../utils/session';
 
@@ -90,20 +90,38 @@ export const DELETE: APIRoute = async (context) => {
       });
     }
 
-    // Delete in correct order to avoid foreign key constraints
-    // Note: With simplified schema, we only need to delete the team itself
-    // The direct relationships will be handled by CASCADE constraints
+    // Check for tasks associated with this team first
+    console.log('Step 3: Checking for associated tasks...');
+    const associatedTasks = await db.query.tasks.findMany({
+      where: eq(tasks.teamId, parsedTeamId)
+    });
+    console.log('Associated tasks found:', associatedTasks.length);
+    
+    if (associatedTasks.length > 0) {
+      console.log('Step 3a: Removing team association from tasks...');
+      try {
+        // Remove team association from tasks (set teamId to null)
+        await db.update(tasks)
+          .set({ teamId: null, updatedAt: new Date() })
+          .where(eq(tasks.teamId, parsedTeamId));
+        console.log('Team association removed from tasks');
+      } catch (taskError) {
+        console.error('Error removing team association from tasks:', taskError);
+        throw taskError;
+      }
+    }
 
-    console.log('Step 3: Deleting team members...');
+    console.log('Step 4: Deleting team members...');
+    let deletedMembers = [];
     try {
-      const deletedMembers = await db.delete(teamMembers).where(eq(teamMembers.teamId, parsedTeamId)).returning();
+      deletedMembers = await db.delete(teamMembers).where(eq(teamMembers.teamId, parsedTeamId)).returning();
       console.log('Team members deleted:', deletedMembers.length);
     } catch (memberError) {
       console.error('Error deleting team members:', memberError);
       throw memberError;
     }
 
-    console.log('Step 4: Deleting team...');
+    console.log('Step 5: Deleting team...');
     try {
       const deletedTeam = await db.delete(teams).where(eq(teams.id, parsedTeamId)).returning();
       console.log('Team deleted successfully:', deletedTeam.length);
@@ -117,7 +135,9 @@ export const DELETE: APIRoute = async (context) => {
       message: 'Collaboration deleted successfully',
       data: {
         deletedTeamId: parsedTeamId,
-        deletedTeamName: existingTeam.name
+        deletedTeamName: existingTeam.name,
+        disassociatedTasks: associatedTasks.length,
+        deletedMembers: deletedMembers.length
       }
     }), {
       status: 200,

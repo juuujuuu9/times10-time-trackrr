@@ -257,6 +257,9 @@ const groupedTeams = Array.from(teamsByClient.values()).sort((a, b) =>
   </div>
 </AdminLayout>
 
+<!-- Dialogue System -->
+<script src="/src/components/DialogueSystem.js"></script>
+
 <script>
   document.addEventListener('DOMContentLoaded', function() {
 
@@ -270,8 +273,13 @@ const groupedTeams = Array.from(teamsByClient.values()).sort((a, b) =>
         const teamId = target.getAttribute('data-team-id');
         const teamName = target.getAttribute('data-team-name');
         
-        // Show confirmation dialog
-        const confirmed = confirm(`Are you sure you want to delete the collaboration "${teamName}"?\n\nThis action cannot be undone and will remove all team members and associated data.`);
+        // Show confirmation dialog using DialogueSystem
+        const confirmed = await window.DialogueSystem.confirm(
+          'Delete Collaboration',
+          `Are you sure you want to delete the collaboration "${teamName}"?\n\nThis action cannot be undone and will remove all team members and associated data.`,
+          'Delete Collaboration',
+          'Cancel'
+        );
         
         if (!confirmed) {
           return;
@@ -299,18 +307,27 @@ const groupedTeams = Array.from(teamsByClient.values()).sort((a, b) =>
           
           if (result.success) {
             // Show success message and reload page
-            alert('Collaboration deleted successfully!');
+            await window.DialogueSystem.success(
+              'Success',
+              'Collaboration deleted successfully!'
+            );
             window.location.reload();
           } else {
             // Show error message
-            alert(`Error deleting collaboration: ${result.message || 'Unknown error'}`);
+            await window.DialogueSystem.error(
+              'Error',
+              `Failed to delete collaboration: ${result.message || 'Unknown error'}`
+            );
             // Restore button state
             target.innerHTML = originalText;
             target.disabled = false;
           }
         } catch (error) {
           console.error('Error deleting collaboration:', error);
-          alert('Error deleting collaboration. Please try again.');
+          await window.DialogueSystem.error(
+            'Error',
+            'Error deleting collaboration. Please try again.'
+          );
           // Restore button state
           target.innerHTML = originalText;
           target.disabled = false;
