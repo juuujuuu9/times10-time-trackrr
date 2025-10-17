@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileText, User, Calendar, Check, Trash2, X } from 'lucide-react';
 
 interface Subtask {
@@ -17,6 +17,8 @@ interface CentralizedSubtaskTableProps {
   taskId?: number;
   onSubtaskUpdate?: (subtaskId: string, completed: boolean) => void;
   onDelete?: (subtaskId: string) => void;
+  onAssigneeUpdate?: (subtaskId: string, assignees: string[]) => void;
+  teamMembers?: Array<{ id: number; name: string; email: string }>;
 }
 
 interface Notification {
@@ -31,7 +33,9 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
   collaborationId, 
   taskId, 
   onSubtaskUpdate,
-  onDelete 
+  onDelete,
+  onAssigneeUpdate,
+  teamMembers = []
 }) => {
   console.log('🔍 CentralizedSubtaskTable props:', { subtasks: subtasks?.length, onDelete: !!onDelete, collaborationId, taskId });
   const [updatingTasks, setUpdatingTasks] = useState<Set<string>>(new Set());
@@ -39,6 +43,10 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [subtaskToDelete, setSubtaskToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [showAssigneePopup, setShowAssigneePopup] = useState<string | null>(null);
+  const [assigneeSearchTerm, setAssigneeSearchTerm] = useState('');
+  const [updatingAssignees, setUpdatingAssignees] = useState<Set<string>>(new Set());
+  const [popupPosition, setPopupPosition] = useState<{ top: number; left: number } | null>(null);
 
   const addNotification = (type: 'success' | 'error' | 'info', message: string) => {
     const id = Date.now().toString();
@@ -111,6 +119,82 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
     setShowDeleteModal(false);
     setSubtaskToDelete(null);
   };
+
+  const handleRemoveAssignee = async (subtaskId: string, assigneeName: string) => {
+    const subtask = subtasks.find(s => s.id === subtaskId);
+    if (!subtask || !onAssigneeUpdate) return;
+
+    const updatedAssignees = (subtask.assignees || []).filter(name => name !== assigneeName);
+    
+    setUpdatingAssignees(prev => new Set(prev).add(subtaskId));
+    
+    try {
+      await onAssigneeUpdate(subtaskId, updatedAssignees);
+      addNotification('success', `${assigneeName} removed from subtask`);
+    } catch (error) {
+      console.error('Error removing assignee:', error);
+      addNotification('error', 'Failed to remove assignee. Please try again.');
+    } finally {
+      setUpdatingAssignees(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(subtaskId);
+        return newSet;
+      });
+    }
+  };
+
+  const handleAddAssignee = async (subtaskId: string, assigneeName: string) => {
+    const subtask = subtasks.find(s => s.id === subtaskId);
+    if (!subtask || !onAssigneeUpdate) return;
+
+    const currentAssignees = subtask.assignees || [];
+    if (currentAssignees.includes(assigneeName)) {
+      addNotification('info', `${assigneeName} is already assigned to this subtask`);
+      return;
+    }
+
+    const updatedAssignees = [...currentAssignees, assigneeName];
+    
+    setUpdatingAssignees(prev => new Set(prev).add(subtaskId));
+    
+    try {
+      await onAssigneeUpdate(subtaskId, updatedAssignees);
+      addNotification('success', `${assigneeName} added to subtask`);
+      setShowAssigneePopup(null);
+      setAssigneeSearchTerm('');
+      setPopupPosition(null);
+    } catch (error) {
+      console.error('Error adding assignee:', error);
+      addNotification('error', 'Failed to add assignee. Please try again.');
+    } finally {
+      setUpdatingAssignees(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(subtaskId);
+        return newSet;
+      });
+    }
+  };
+
+  const filteredTeamMembers = teamMembers.filter(member => 
+    member.name.toLowerCase().includes(assigneeSearchTerm.toLowerCase()) &&
+    !subtasks.find(s => s.id === showAssigneePopup)?.assignees?.includes(member.name)
+  );
+
+  // Close popup when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showAssigneePopup && !(event.target as Element).closest('.assignee-popup-container')) {
+        setShowAssigneePopup(null);
+        setAssigneeSearchTerm('');
+        setPopupPosition(null);
+      }
+    };
+
+    if (showAssigneePopup) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showAssigneePopup]);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -218,20 +302,31 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
                   </div>
                 </td>
                 <td className="py-3 px-4">
-                  {subtask.assignees && subtask.assignees.length > 0 ? (
-                    <div className="flex items-center">
+                  <div className="flex items-center space-x-2 relative">
+                    {subtask.assignees && subtask.assignees.length > 0 ? (
                       <div className="flex -space-x-2">
                         {subtask.assignees.slice(0, 4).map((assignee, index) => (
                           <div 
                             key={index}
-                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium border-2 border-white relative group cursor-pointer ${
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium border-2 border-white relative group hover:bg-gray-400 hover:z-50 transition-colors duration-200 ${
                               subtask.completed 
                                 ? 'bg-gray-100 text-gray-400' 
                                 : 'bg-gray-300 text-gray-700'
-                            }`}
+                            } ${updatingAssignees.has(subtask.id) ? 'opacity-50' : ''}`}
                             title={assignee}
                           >
                             {assignee.charAt(0).toUpperCase()}
+                            {/* Remove button (hidden by default) */}
+                            {onAssigneeUpdate && !subtask.completed && (
+                              <button 
+                                className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600 cursor-pointer"
+                                title={`Remove ${assignee} from subtask`}
+                                onClick={() => handleRemoveAssignee(subtask.id, assignee)}
+                                disabled={updatingAssignees.has(subtask.id)}
+                              >
+                                ×
+                              </button>
+                            )}
                             {/* Tooltip */}
                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
                               {assignee}
@@ -254,10 +349,82 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
                           </div>
                         )}
                       </div>
-                    </div>
-                  ) : (
-                    <span className="text-sm text-gray-400">Unassigned</span>
-                  )}
+                    ) : (
+                      <span className="text-sm text-gray-400">Unassigned</span>
+                    )}
+                    
+                    {/* Add User Button for Subtask */}
+                    {onAssigneeUpdate && !subtask.completed && (
+                      <div className="relative assignee-popup-container">
+                        <button
+                          onClick={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setPopupPosition({
+                              top: rect.bottom + window.scrollY + 4,
+                              left: rect.left + window.scrollX
+                            });
+                            setShowAssigneePopup(subtask.id);
+                          }}
+                          disabled={updatingAssignees.has(subtask.id)}
+                          className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Add assignee"
+                        >
+                          +
+                        </button>
+                        
+                        {/* Assignee Popup */}
+                        {showAssigneePopup === subtask.id && popupPosition && (
+                          <div 
+                            className="fixed bg-white border border-gray-200 rounded-lg shadow-lg z-[9999] min-w-64 assignee-popup-container"
+                            style={{
+                              top: `${popupPosition.top}px`,
+                              left: `${popupPosition.left}px`,
+                              zIndex: 9999
+                            }}
+                          >
+                            <div className="p-3 border-b border-gray-200">
+                              <input
+                                type="text"
+                                placeholder="Search team members..."
+                                value={assigneeSearchTerm}
+                                onChange={(e) => setAssigneeSearchTerm(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                autoFocus
+                              />
+                            </div>
+                            <div className="max-h-48 overflow-y-auto">
+                              {filteredTeamMembers.length > 0 ? (
+                                filteredTeamMembers.map((member) => (
+                                  <button
+                                    key={member.id}
+                                    onClick={() => handleAddAssignee(subtask.id, member.name)}
+                                    className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm border-b border-gray-100 last:border-b-0"
+                                  >
+                                    <div className="font-medium text-gray-900">{member.name}</div>
+                                    <div className="text-xs text-gray-500">{member.email}</div>
+                                  </button>
+                                ))
+                              ) : (
+                                <div className="px-3 py-2 text-sm text-gray-500">No team members found</div>
+                              )}
+                            </div>
+                            <div className="p-2 border-t border-gray-200">
+                              <button
+                                onClick={() => {
+                                  setShowAssigneePopup(null);
+                                  setAssigneeSearchTerm('');
+                                  setPopupPosition(null);
+                                }}
+                                className="w-full px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </td>
                 <td className="py-3 px-4">
                   {subtask.dueDate ? (

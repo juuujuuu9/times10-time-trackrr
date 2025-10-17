@@ -552,6 +552,63 @@ const TaskStream: React.FC<TaskStreamProps> = ({
     }
   };
 
+  // Handle subtask assignee update
+  const handleSubtaskAssigneeUpdate = async (subtaskId: string, assignees: string[]) => {
+    try {
+      // Find the discussion that contains this subtask
+      const discussionWithSubtask = posts.find(post => 
+        post.subtasks && post.subtasks.some(subtask => subtask.id === subtaskId)
+      );
+
+      if (!discussionWithSubtask) {
+        console.error('Discussion with subtask not found');
+        return;
+      }
+
+      // Update the subtask in the discussion's subtaskData
+      const updatedSubtasks = discussionWithSubtask.subtasks?.map(subtask => 
+        subtask.id === subtaskId ? { ...subtask, assignees } : subtask
+      ) || [];
+
+      // Update the discussion in the database
+      const response = await fetch(`/api/collaborations/${collaborationId}/discussions/${discussionWithSubtask.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          subtaskData: {
+            subtasks: updatedSubtasks
+          }
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update the local state
+        setPosts(prevPosts => 
+          prevPosts.map(post => 
+            post.id === discussionWithSubtask.id 
+              ? { ...post, subtasks: updatedSubtasks }
+              : post
+          )
+        );
+        
+        // Dispatch custom event for real-time updates
+        window.dispatchEvent(new CustomEvent('taskStreamUpdate', {
+          detail: { taskId, collaborationId }
+        }));
+      } else {
+        console.error('Failed to update subtask assignees:', data.error || data.message);
+        addNotification('error', 'Failed to update subtask assignees: ' + (data.error || data.message || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error updating subtask assignees:', error);
+      addNotification('error', 'Error updating subtask assignees: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
   // Handle subtask creation
   const handleCreateSubtasks = async (subtasks: { name: string; priority: 'low' | 'medium' | 'high'; assignees?: string[]; dueDate?: string }[]) => {
     try {
@@ -1360,6 +1417,8 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         taskId={taskId}
         onSubtaskUpdate={handleSubtaskUpdate}
         onDelete={handleDeleteSubtask}
+        onAssigneeUpdate={handleSubtaskAssigneeUpdate}
+        teamMembers={teamMembers}
       />
 
       {/* Moved per-post deletion confirmation inline under each post */}
