@@ -308,7 +308,7 @@ if (projectDetails && projectDetails.id) {
       <!-- Project Overview Card -->
       <div class="bg-white rounded-lg border border-gray-200 p-4 mb-6">
         <div class="flex flex-col items-start justify-between mb-3">
-          <div class="flex justify-between items-start w-full mb-3">
+          <div class="flex justify-between items-center w-full mb-3">
             
             <!-- Team Members -->
             <div class="flex items-center">
@@ -345,8 +345,48 @@ if (projectDetails && projectDetails.id) {
                 )}
               </div>
             </div>
-            <div class="inline-flex items-center rounded-full bg-green-400 text-green-800 h-4 w-4">
+            <div class="relative">
+              <button id="addUserBtn" class="inline-flex items-center justify-center w-4 h-4 text-gray-600 hover:text-gray-800 transition-colors duration-200" title="Add user to collaboration">
+                <svg fill="currentColor" height="16px" width="16px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" xml:space="preserve">
+                  <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                  <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                  <g id="SVGRepo_iconCarrier">
+                    <g>
+                      <g>
+                        <polygon points="451.368,229.053 451.368,168.421 410.947,168.421 410.947,229.053 350.316,229.053 350.316,269.474 410.947,269.474 410.947,330.105 451.368,330.105 451.368,269.474 512,269.474 512,229.053"></polygon>
+                      </g>
+                    </g>
+                    <g>
+                      <g>
+                        <path d="M239.915,276.724c33.652-18.238,56.506-53.864,56.506-94.829c0-59.531-48.259-107.789-107.789-107.789 S80.842,122.364,80.842,181.895c0,40.965,22.854,76.591,56.506,94.829C66.732,283.298,0,352.877,0,437.895h377.263 C377.263,352.877,310.531,283.298,239.915,276.724z"></path>
+                      </g>
+                    </g>
+                  </g>
+                </svg>
+              </button>
               
+              <!-- User Search Dropdown -->
+              <div id="userSearchDropdown" class="absolute left-0 top-6 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 hidden">
+                <div class="p-4">
+                  <div class="relative mb-3">
+                    <input 
+                      type="text" 
+                      id="userSearchInput" 
+                      placeholder="Search users by name or email..."
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <div id="userSearchSpinner" class="absolute right-3 top-1/2 transform -translate-y-1/2 hidden">
+                      <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    </div>
+                  </div>
+                  <div id="userSearchResults" class="max-h-60 overflow-y-auto space-y-2">
+                    <div class="text-center py-4 text-gray-500">Loading users...</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           <div class="flex items-start w-full">
@@ -749,7 +789,6 @@ if (projectDetails && projectDetails.id) {
               <option value="pending">Pending</option>
               <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>
-              <option value="on_hold">On Hold</option>
               <option value="cancelled">Cancelled</option>
             </select>
           </div>
@@ -903,7 +942,6 @@ if (projectDetails && projectDetails.id) {
               <option value="pending">Pending</option>
               <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>
-              <option value="on_hold">On Hold</option>
               <option value="cancelled">Cancelled</option>
             </select>
           </div>
@@ -1101,6 +1139,13 @@ if (projectDetails && projectDetails.id) {
     const dueFilter = document.getElementById('dueFilter');
     const resetFiltersBtn = document.getElementById('resetFilters');
     const tasksTableBody = document.querySelector('tbody');
+    
+    // User search dropdown elements
+    const addUserBtn = document.getElementById('addUserBtn');
+    const userSearchDropdown = document.getElementById('userSearchDropdown');
+    const userSearchInput = document.getElementById('userSearchInput');
+    const userSearchResults = document.getElementById('userSearchResults');
+    const userSearchSpinner = document.getElementById('userSearchSpinner');
 
     if (!taskModal || !taskForm || !closeTaskModal || !cancelTaskModal || !assigneeList) {
       console.error('Required modal elements not found');
@@ -1265,7 +1310,7 @@ if (projectDetails && projectDetails.id) {
           </div>
           ${isAlreadyMember ? 
             '<span class="text-sm text-gray-500">Already a member</span>' :
-            '<span class="text-sm text-blue-600 font-medium">Click to add</span>'
+            ''
           }
         `;
         searchResults.appendChild(userItem);
@@ -1691,6 +1736,204 @@ if (projectDetails && projectDetails.id) {
     
     // Edit task search event handlers
     editSearchUsers.addEventListener('click', searchUsersForEditTask);
+    
+    // User search dropdown functionality
+    let userSearchTimeout;
+    let allUsers = []; // Store all users for filtering
+    
+    // Toggle dropdown visibility
+    if (addUserBtn && userSearchDropdown) {
+      addUserBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        userSearchDropdown.classList.toggle('hidden');
+        if (!userSearchDropdown.classList.contains('hidden')) {
+          userSearchInput.focus();
+          loadAllUsers(); // Load all users when dropdown opens
+        }
+      });
+    }
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+      if (userSearchDropdown && !userSearchDropdown.contains(e.target) && !addUserBtn.contains(e.target)) {
+        userSearchDropdown.classList.add('hidden');
+      }
+    });
+    
+    // Load all users when dropdown opens
+    async function loadAllUsers() {
+      if (allUsers.length > 0) {
+        // Users already loaded, just display them
+        displayUserSearchResults(allUsers);
+        return;
+      }
+
+      try {
+        // Show loading state
+        if (userSearchSpinner) userSearchSpinner.classList.remove('hidden');
+        userSearchResults.innerHTML = '<div class="text-center py-4 text-gray-500">Loading users...</div>';
+
+        // Fetch all users using the main users endpoint
+        const response = await fetch('/api/admin/users');
+        const users = await response.json();
+        
+        if (userSearchSpinner) userSearchSpinner.classList.add('hidden');
+        
+        if (Array.isArray(users) && users.length > 0) {
+          // Transform the data to match the expected format
+          allUsers = users.map(user => ({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role
+          }));
+          displayUserSearchResults(allUsers);
+        } else {
+          userSearchResults.innerHTML = '<div class="text-center py-4 text-gray-500">No users found</div>';
+        }
+      } catch (error) {
+        console.error('Error loading users:', error);
+        if (userSearchSpinner) userSearchSpinner.classList.add('hidden');
+        userSearchResults.innerHTML = '<div class="text-center py-4 text-red-500">Error loading users</div>';
+      }
+    }
+
+    // Handle user search input
+    if (userSearchInput) {
+      userSearchInput.addEventListener('input', function(e) {
+        const searchTerm = e.target.value.trim();
+        if (searchTerm.length >= 2) {
+          filterUsers(searchTerm);
+        } else if (searchTerm.length === 0) {
+          // Show all users when search is cleared
+          displayUserSearchResults(allUsers);
+        }
+      });
+      
+      userSearchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const searchTerm = userSearchInput.value.trim();
+          if (searchTerm.length >= 2) {
+            filterUsers(searchTerm);
+          }
+        }
+      });
+    }
+    
+    function filterUsers(searchTerm) {
+      if (!searchTerm || allUsers.length === 0) {
+        displayUserSearchResults(allUsers);
+        return;
+      }
+
+      // Filter users locally
+      const filteredUsers = allUsers.filter(user => 
+        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+
+      displayUserSearchResults(filteredUsers);
+    }
+    
+    function displayUserSearchResults(users) {
+      if (!userSearchResults) return;
+      
+      userSearchResults.innerHTML = '';
+      
+      if (users.length === 0) {
+        userSearchResults.innerHTML = '<div class="text-center py-4 text-gray-500">No users found</div>';
+        return;
+      }
+
+      users.forEach(user => {
+        // Check if user is already a team member
+        const isAlreadyMember = teamMembersData.some(member => member.id === user.id);
+        
+        // Skip users who are already members
+        if (isAlreadyMember) {
+          return;
+        }
+        
+        const userItem = document.createElement('div');
+        userItem.className = 'flex items-center justify-between p-3 rounded-md cursor-pointer transition-colors duration-200 bg-white hover:bg-blue-50 hover:border-blue-200 border border-transparent';
+        
+        userItem.setAttribute('data-user-id', user.id);
+        userItem.setAttribute('data-user-name', user.name);
+        userItem.setAttribute('data-user-email', user.email);
+        
+        userItem.innerHTML = `
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 relative group" title="${user.name}">
+              ${user.name.charAt(0).toUpperCase()}
+              <!-- Tooltip -->
+              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                ${user.name}
+                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+              </div>
+            </div>
+            <div>
+              <div class="text-sm font-medium text-gray-900">${user.name}</div>
+              <div class="text-xs text-gray-500">${user.email}</div>
+            </div>
+          </div>
+        `;
+        userSearchResults.appendChild(userItem);
+      });
+    }
+    
+    // Handle clicking on user search results
+    document.addEventListener('click', function(e) {
+      const userContainer = e.target.closest('[data-user-id]');
+      if (userContainer && userContainer.closest('#userSearchResults') && !userContainer.classList.contains('cursor-not-allowed')) {
+        e.stopPropagation(); // Prevent event from bubbling to other listeners
+        const userId = userContainer.getAttribute('data-user-id');
+        addUserToCollaboration(userId);
+      }
+    });
+    
+    async function addUserToCollaboration(userId) {
+      // Get user data from container attributes
+      const userContainer = document.querySelector(`#userSearchResults [data-user-id="${userId}"]`);
+      if (!userContainer) return;
+      
+      const userName = userContainer.getAttribute('data-user-name');
+      const userEmail = userContainer.getAttribute('data-user-email');
+      
+      try {
+        // Add user to collaboration team via API
+        const response = await fetch(`/api/admin/teams/${collaborationId}/members`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: parseInt(userId)
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to add user to collaboration');
+        }
+        
+        // Show success message
+        showNotification(`${userName} has been added to the collaboration!`, 'success');
+        
+        // Close dropdown and clear search
+        userSearchDropdown.classList.add('hidden');
+        userSearchInput.value = '';
+        userSearchResults.innerHTML = '<div class="text-center py-4 text-gray-500">Loading users...</div>';
+        
+        // Reload page to reflect changes
+        window.location.reload();
+        
+      } catch (error) {
+        console.error('Error adding user to collaboration:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        showNotification('Failed to add user: ' + errorMessage, 'error');
+      }
+    }
     
     // Search as user types
     userSearch.addEventListener('input', function(e) {
