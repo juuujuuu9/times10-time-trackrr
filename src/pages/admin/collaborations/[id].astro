@@ -628,18 +628,18 @@ if (projectDetails && projectDetails.id) {
                             )}
                           </div>
                         </a>
-                        {/* Always show arrow for testing - remove this later */}
-                        <button 
-                          class="expand-subtasks-btn ml-2 p-1 text-gray-400 hover:text-gray-600 transition-colors duration-200"
-                          data-task-id={task.id}
-                          title={`Toggle subtasks (${task.subtasks ? task.subtasks.length : 0})`}
-                        >
-                          <svg class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                          </svg>
-                        </button>
-                        <!-- Debug: Show subtask count -->
-                        <span class="ml-1 text-xs text-gray-500">({task.subtasks ? task.subtasks.length : 0})</span>
+                        {/* Only show arrow if task has subtasks */}
+                        {task.subtasks && task.subtasks.length > 0 && (
+                          <button 
+                            class="expand-subtasks-btn ml-2 p-1 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                            data-task-id={task.id}
+                            title={`Toggle subtasks (${task.subtasks.length})`}
+                          >
+                            <svg class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                          </button>
+                        )}
                       </div>
                     </td>
                   <td class="px-6 py-4 whitespace-nowrap">
@@ -835,66 +835,25 @@ if (projectDetails && projectDetails.id) {
                 </tr>
                 
                 <!-- Subtask rows (hidden by default) -->
-                {/* Always show test subtask row for testing - remove this later */}
-                <tr class="subtask-row bg-gray-50 border-l-4 border-gray-300 hidden" data-task-id={task.id}>
-                  <td class="px-6 py-3 pl-12">
-                    <div class="flex items-center space-x-3">
-                      <button
-                        class="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 bg-gray-200 text-gray-600 hover:bg-gray-300"
-                        title="Mark as complete"
-                      >
-                        <div class="w-4 h-4 rounded-full border-2 border-current"></div>
-                      </button>
-                      <div>
-                        <div class="font-medium text-gray-900">Test Subtask 1</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td class="px-6 py-3">
-                    <span class="text-sm text-gray-400">Unassigned</span>
-                  </td>
-                  <td class="px-6 py-3 text-sm">
-                    <span class="text-sm text-gray-400">No due date</span>
-                  </td>
-                  <td class="px-6 py-3">
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-blue-600 bg-blue-50">
-                      Regular
-                    </span>
-                  </td>
-                  <td class="px-6 py-3">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      Pending
-                    </span>
-                  </td>
-                  <td class="px-6 py-3 text-sm text-gray-500">
-                    <button 
-                      class="inline-flex items-center px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-medium rounded transition-colors duration-200"
-                      title="Edit subtask"
-                    >
-                      <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                      </svg>
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-                
                 {/* Real subtasks if they exist */}
                 {task.subtasks && task.subtasks.length > 0 && task.subtasks.map((subtask: any) => (
                   <tr class="subtask-row bg-gray-50 border-l-4 border-gray-300 hidden" data-task-id={task.id}>
                     <td class="px-6 py-3 pl-12">
                       <div class="flex items-center space-x-3">
                         <button
-                          class={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 ${
+                          class={`subtask-toggle-btn w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 ${
                             subtask.completed
                               ? 'bg-green-500 text-white'
                               : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                           }`}
                           title={subtask.completed ? 'Mark as incomplete' : 'Mark as complete'}
+                          data-subtask-id={subtask.id}
+                          data-task-id={task.id}
+                          data-completed={subtask.completed}
                         >
                           {subtask.completed ? (
-                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M5 13l3 3L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <path d="M20 6L9 17l-5-5"/>
                             </svg>
                           ) : (
                             <div class="w-4 h-4 rounded-full border-2 border-current"></div>
@@ -906,16 +865,102 @@ if (projectDetails && projectDetails.id) {
                       </div>
                     </td>
                     <td class="px-6 py-3">
-                      {subtask.assignee ? (
-                        <div class="flex items-center">
-                          <div class="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700">
-                            {subtask.assignee.charAt(0).toUpperCase()}
+                      <div class="flex items-center space-x-2 relative">
+                        {subtask.assignees && subtask.assignees.length > 0 ? (
+                          <div class="flex items-center">
+                            <div class="flex -space-x-2">
+                              {subtask.assignees.slice(0, 4).map((assignee: any, index: number) => (
+                                <div 
+                                  class={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium border-2 border-white relative group cursor-pointer transition-all duration-200 hover:z-20 hover:scale-110 ${
+                                    subtask.completed 
+                                      ? 'bg-gray-100 text-gray-400' 
+                                      : 'bg-gray-300 text-gray-700'
+                                  }`}
+                                  title={assignee}
+                                >
+                                  {subtask.completed ? (
+                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                      <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                  ) : (
+                                    assignee.charAt(0).toUpperCase()
+                                  )}
+                                  <!-- Tooltip -->
+                                  <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                                    {assignee}
+                                    <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                                  </div>
+                                </div>
+                              ))}
+                              {subtask.assignees.length > 4 && (
+                                <div class={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium border-2 border-white relative group cursor-pointer transition-all duration-200 hover:z-20 hover:scale-110 ${
+                                  subtask.completed 
+                                    ? 'bg-white text-gray-400' 
+                                    : 'bg-white text-gray-700'
+                                }`}>
+                                  +{subtask.assignees.length - 4}
+                                  <!-- Tooltip for remaining users -->
+                                  <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                                    {subtask.assignees.slice(4).join(', ')}
+                                    <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <span class="ml-2 text-sm text-gray-600">{subtask.assignee}</span>
+                        ) : (
+                          <span class="text-sm text-gray-400">Unassigned</span>
+                        )}
+                        
+                        <!-- Add User Button for Subtask -->
+                        <div class="relative">
+                          <button 
+                            class="subtask-add-user-btn inline-flex items-center justify-center w-4 h-4 text-gray-600 hover:text-gray-800 transition-colors duration-200" 
+                            title="Add user to subtask"
+                            data-subtask-id={subtask.id}
+                            data-task-id={task.id}
+                          >
+                            <svg fill="currentColor" height="16px" width="16px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" xml:space="preserve">
+                              <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                              <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                              <g id="SVGRepo_iconCarrier">
+                                <g>
+                                  <g>
+                                    <polygon points="451.368,229.053 451.368,168.421 410.947,168.421 410.947,229.053 350.316,229.053 350.316,269.474 410.947,269.474 410.947,330.105 451.368,330.105 451.368,269.474 512,269.474 512,229.053"></polygon>
+                                  </g>
+                                </g>
+                                <g>
+                                  <g>
+                                    <path d="M239.915,276.724c33.652-18.238,56.506-53.864,56.506-94.829c0-59.531-48.259-107.789-107.789-107.789 S80.842,122.364,80.842,181.895c0,40.965,22.854,76.591,56.506,94.829C66.732,283.298,0,352.877,0,437.895h377.263 C377.263,352.877,310.531,283.298,239.915,276.724z"></path>
+                                  </g>
+                                </g>
+                              </g>
+                            </svg>
+                          </button>
+                          
+                          <!-- Subtask User Search Dropdown -->
+                          <div class="subtask-user-search-dropdown absolute left-0 top-6 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 hidden">
+                            <div class="p-4">
+                              <div class="relative mb-3">
+                                <input 
+                                  type="text" 
+                                  class="subtask-user-search-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  placeholder="Search users by name or email..."
+                                />
+                                <div class="subtask-user-search-spinner absolute right-3 top-1/2 transform -translate-y-1/2 hidden">
+                                  <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                  </svg>
+                                </div>
+                              </div>
+                              <div class="subtask-user-search-results max-h-60 overflow-y-auto space-y-2">
+                                <div class="text-center py-4 text-gray-500">Loading users...</div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      ) : (
-                        <span class="text-sm text-gray-400">Unassigned</span>
-                      )}
+                      </div>
                     </td>
                     <td class="px-6 py-3 text-sm">
                       {subtask.dueDate ? (
@@ -2358,6 +2403,22 @@ if (projectDetails && projectDetails.id) {
         }
       }
       
+      // Handle subtask add user button clicks
+      if (e.target.classList.contains('subtask-add-user-btn') || e.target.closest('.subtask-add-user-btn')) {
+        e.stopPropagation();
+        const button = e.target.classList.contains('subtask-add-user-btn') ? e.target : e.target.closest('.subtask-add-user-btn');
+        const subtaskId = button.getAttribute('data-subtask-id');
+        const taskId = button.getAttribute('data-task-id');
+        const dropdown = button.parentElement.querySelector('.subtask-user-search-dropdown');
+        const input = dropdown.querySelector('.subtask-user-search-input');
+        
+        dropdown.classList.toggle('hidden');
+        if (!dropdown.classList.contains('hidden')) {
+          input.focus();
+          loadSubtaskUsers(subtaskId, taskId, dropdown);
+        }
+      }
+      
       // Handle task user search result clicks
       const taskUserContainer = e.target.closest('[data-task-user-id]');
       if (taskUserContainer && taskUserContainer.closest('.task-user-search-results') && !taskUserContainer.classList.contains('cursor-not-allowed')) {
@@ -2366,12 +2427,28 @@ if (projectDetails && projectDetails.id) {
         const taskId = taskUserContainer.getAttribute('data-task-id');
         addUserToTask(userId, taskId);
       }
+      
+      // Handle subtask user search result clicks
+      const subtaskUserContainer = e.target.closest('[data-subtask-user-id]');
+      if (subtaskUserContainer && subtaskUserContainer.closest('.subtask-user-search-results') && !subtaskUserContainer.classList.contains('cursor-not-allowed')) {
+        e.stopPropagation();
+        const userId = subtaskUserContainer.getAttribute('data-subtask-user-id');
+        const subtaskId = subtaskUserContainer.getAttribute('data-subtask-id');
+        const taskId = subtaskUserContainer.getAttribute('data-task-id');
+        addUserToSubtask(userId, subtaskId, taskId);
+      }
     });
     
-    // Close task dropdowns when clicking outside
+    // Close task and subtask dropdowns when clicking outside
     document.addEventListener('click', function(e) {
       if (!e.target.closest('.task-add-user-btn') && !e.target.closest('.task-user-search-dropdown')) {
         document.querySelectorAll('.task-user-search-dropdown').forEach(dropdown => {
+          dropdown.classList.add('hidden');
+        });
+      }
+      
+      if (!e.target.closest('.subtask-add-user-btn') && !e.target.closest('.subtask-user-search-dropdown')) {
+        document.querySelectorAll('.subtask-user-search-dropdown').forEach(dropdown => {
           dropdown.classList.add('hidden');
         });
       }
@@ -2626,6 +2703,164 @@ if (projectDetails && projectDetails.id) {
       }
     }
     
+    // Subtask user search functions
+    async function loadSubtaskUsers(subtaskId, taskId, dropdown) {
+      if (taskAllUsers.length > 0) {
+        // Users already loaded, just display them
+        displaySubtaskUserSearchResults(taskAllUsers, subtaskId, taskId, dropdown);
+        return;
+      }
+
+      try {
+        // Show loading state
+        const spinner = dropdown.querySelector('.subtask-user-search-spinner');
+        const results = dropdown.querySelector('.subtask-user-search-results');
+        if (spinner) spinner.classList.remove('hidden');
+        results.innerHTML = '<div class="text-center py-4 text-gray-500">Loading users...</div>';
+
+        // Fetch all users using the main users endpoint
+        const response = await fetch('/api/admin/users');
+        const users = await response.json();
+        
+        if (spinner) spinner.classList.add('hidden');
+        
+        if (Array.isArray(users) && users.length > 0) {
+          // Transform the data to match the expected format
+          taskAllUsers = users.map(user => ({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role
+          }));
+          displaySubtaskUserSearchResults(taskAllUsers, subtaskId, taskId, dropdown);
+        } else {
+          results.innerHTML = '<div class="text-center py-4 text-gray-500">No users found</div>';
+        }
+      } catch (error) {
+        console.error('Error loading users:', error);
+        const spinner = dropdown.querySelector('.subtask-user-search-spinner');
+        const results = dropdown.querySelector('.subtask-user-search-results');
+        if (spinner) spinner.classList.add('hidden');
+        results.innerHTML = '<div class="text-center py-4 text-red-500">Error loading users</div>';
+      }
+    }
+    
+    function displaySubtaskUserSearchResults(users, subtaskId, taskId, dropdown) {
+      const results = dropdown.querySelector('.subtask-user-search-results');
+      if (!results) return;
+      
+      results.innerHTML = '';
+      
+      if (users.length === 0) {
+        results.innerHTML = '<div class="text-center py-4 text-gray-500">No users found</div>';
+        return;
+      }
+
+      users.forEach(user => {
+        const userItem = document.createElement('div');
+        userItem.className = 'flex items-center justify-between p-3 rounded-md cursor-pointer transition-colors duration-200 bg-white hover:bg-blue-50 hover:border-blue-200 border border-transparent';
+        
+        userItem.setAttribute('data-subtask-user-id', user.id);
+        userItem.setAttribute('data-subtask-id', subtaskId);
+        userItem.setAttribute('data-task-id', taskId);
+        userItem.setAttribute('data-user-name', user.name);
+        userItem.setAttribute('data-user-email', user.email);
+        
+        userItem.innerHTML = `
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 relative group" title="${user.name}">
+              ${user.name.charAt(0).toUpperCase()}
+              <!-- Tooltip -->
+              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                ${user.name}
+                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+              </div>
+            </div>
+            <div>
+              <div class="text-sm font-medium text-gray-900">${user.name}</div>
+              <div class="text-xs text-gray-500">${user.email}</div>
+            </div>
+          </div>
+        `;
+        results.appendChild(userItem);
+      });
+    }
+    
+    function filterSubtaskUsers(searchTerm, subtaskId, taskId, dropdown) {
+      if (!searchTerm || taskAllUsers.length === 0) {
+        displaySubtaskUserSearchResults(taskAllUsers, subtaskId, taskId, dropdown);
+        return;
+      }
+
+      // Filter users locally
+      const filteredUsers = taskAllUsers.filter(user => 
+        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+
+      displaySubtaskUserSearchResults(filteredUsers, subtaskId, taskId, dropdown);
+    }
+    
+    async function addUserToSubtask(userId, subtaskId, taskId) {
+      // Get user data from container attributes
+      const userContainer = document.querySelector(`[data-subtask-user-id="${userId}"][data-subtask-id="${subtaskId}"]`);
+      if (!userContainer) return;
+      
+      const userName = userContainer.getAttribute('data-user-name');
+      const userEmail = userContainer.getAttribute('data-user-email');
+      
+      try {
+        // Get current subtask data to find existing assignees
+        const task = tasksData.find(t => t.id === parseInt(taskId));
+        let currentAssignees = [];
+        
+        if (task && task.subtasks) {
+          const subtask = task.subtasks.find(s => s.id === subtaskId);
+          if (subtask && subtask.assignees) {
+            currentAssignees = [...subtask.assignees];
+          }
+        }
+        
+        // Add the new user to existing assignees (avoid duplicates)
+        if (!currentAssignees.includes(userName)) {
+          currentAssignees.push(userName);
+        }
+        
+        // Update subtask assignees via API
+        const response = await fetch(`/api/admin/tasks/${taskId}/subtasks/${subtaskId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            assignees: currentAssignees
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to assign user to subtask');
+        }
+        
+        // Show success message
+        showNotification(`${userName} has been assigned to the subtask!`, 'success');
+        
+        // Close dropdown and reload page
+        const dropdown = userContainer.closest('.subtask-user-search-dropdown');
+        if (dropdown) {
+          dropdown.classList.add('hidden');
+        }
+        
+        // Reload page to reflect changes
+        window.location.reload();
+        
+      } catch (error) {
+        console.error('Error assigning user to subtask:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        showNotification('Failed to assign user to subtask: ' + errorMessage, 'error');
+      }
+    }
+    
     // Remove collaboration member function
     async function removeCollaborationMember(memberId, memberName) {
       showConfirmation(
@@ -2742,6 +2977,21 @@ if (projectDetails && projectDetails.id) {
         } else if (searchTerm.length === 0) {
           // Show all users when search is cleared
           displayTaskUserSearchResults(taskAllUsers, taskId, dropdown);
+        }
+      }
+      
+      // Handle subtask user search input
+      if (e.target.classList.contains('subtask-user-search-input')) {
+        const searchTerm = e.target.value.trim();
+        const dropdown = e.target.closest('.subtask-user-search-dropdown');
+        const subtaskId = dropdown.closest('tr').querySelector('.subtask-add-user-btn').getAttribute('data-subtask-id');
+        const taskId = dropdown.closest('tr').querySelector('.subtask-add-user-btn').getAttribute('data-task-id');
+        
+        if (searchTerm.length >= 2) {
+          filterSubtaskUsers(searchTerm, subtaskId, taskId, dropdown);
+        } else if (searchTerm.length === 0) {
+          // Show all users when search is cleared
+          displaySubtaskUserSearchResults(taskAllUsers, subtaskId, taskId, dropdown);
         }
       }
     });
@@ -3189,7 +3439,100 @@ if (projectDetails && projectDetails.id) {
           }, 1000);
         });
       }
+      
+      // Handle subtask completion toggle
+      if (e.target.classList.contains('subtask-toggle-btn') || e.target.closest('.subtask-toggle-btn')) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const button = e.target.classList.contains('subtask-toggle-btn') ? e.target : e.target.closest('.subtask-toggle-btn');
+        const subtaskId = button.getAttribute('data-subtask-id');
+        const taskId = button.getAttribute('data-task-id');
+        const currentCompleted = button.getAttribute('data-completed') === 'true';
+        const newCompleted = !currentCompleted;
+        
+        console.log('Subtask toggle clicked:', { subtaskId, taskId, currentCompleted, newCompleted });
+        
+        // Show loading state
+        button.disabled = true;
+        button.classList.add('opacity-50', 'cursor-not-allowed');
+        
+        // Update subtask completion via API
+        updateSubtaskCompletion(subtaskId, taskId, newCompleted, button);
+      }
     });
+
+    // Function to update subtask completion status
+    async function updateSubtaskCompletion(subtaskId, taskId, completed, button) {
+      try {
+        console.log('Updating subtask completion:', { subtaskId, taskId, completed });
+        
+        // Make API call to update subtask completion
+        const response = await fetch(`/api/admin/tasks/${taskId}/subtasks/${subtaskId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            completed: completed
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update subtask');
+        }
+
+        // Update the button state
+        button.setAttribute('data-completed', completed.toString());
+        
+        // Update button appearance
+        if (completed) {
+          button.classList.remove('bg-gray-200', 'text-gray-600', 'hover:bg-gray-300');
+          button.classList.add('bg-green-500', 'text-white');
+          button.title = 'Mark as incomplete';
+          
+          // Update icon
+          button.innerHTML = `
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 6L9 17l-5-5"/>
+            </svg>
+          `;
+        } else {
+          button.classList.remove('bg-green-500', 'text-white');
+          button.classList.add('bg-gray-200', 'text-gray-600', 'hover:bg-gray-300');
+          button.title = 'Mark as complete';
+          
+          // Update icon
+          button.innerHTML = `
+            <div class="w-4 h-4 rounded-full border-2 border-current"></div>
+          `;
+        }
+        
+        // Update the subtask name styling
+        const subtaskRow = button.closest('tr');
+        const subtaskName = subtaskRow.querySelector('.font-medium');
+        if (subtaskName) {
+          if (completed) {
+            subtaskName.classList.add('line-through', 'text-gray-500');
+          } else {
+            subtaskName.classList.remove('line-through', 'text-gray-500');
+          }
+        }
+        
+        // Show success notification
+        showNotification(`Subtask ${completed ? 'completed' : 'marked as incomplete'}!`, 'success');
+        
+      } catch (error) {
+        console.error('Error updating subtask completion:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        showNotification('Failed to update subtask: ' + errorMessage, 'error');
+      } finally {
+        // Remove loading state
+        button.disabled = false;
+        button.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+    }
   });
 </script>
 
