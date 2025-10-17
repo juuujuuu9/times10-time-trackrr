@@ -2372,7 +2372,10 @@ if (projectDetails && projectDetails.id) {
     // Handle clicking on user search results
     document.addEventListener('click', function(e) {
       const userContainer = e.target.closest('[data-user-id]');
-      if (userContainer && userContainer.closest('#userSearchResults') && !userContainer.classList.contains('cursor-not-allowed')) {
+      if (userContainer && 
+          userContainer.closest('#userSearchResults') && 
+          !userContainer.classList.contains('cursor-not-allowed') &&
+          !userContainer.classList.contains('task-member-avatar')) {
         e.stopPropagation(); // Prevent event from bubbling to other listeners
         const userId = userContainer.getAttribute('data-user-id');
         addUserToCollaboration(userId);
@@ -3070,10 +3073,11 @@ if (projectDetails && projectDetails.id) {
 
     // Handle add/remove member buttons dynamically
     document.addEventListener('click', function(e) {
-      // Handle clicking on entire user container (but not on remove buttons)
+      // Handle clicking on entire user container (but not on remove buttons or task member avatars)
       const userContainer = e.target.closest('[data-user-id]');
       if (userContainer && 
           !userContainer.classList.contains('cursor-not-allowed') &&
+          !userContainer.classList.contains('task-member-avatar') &&
           !e.target.classList.contains('remove-collaboration-member') &&
           !e.target.classList.contains('remove-task-member') &&
           !e.target.closest('.remove-collaboration-member') &&
