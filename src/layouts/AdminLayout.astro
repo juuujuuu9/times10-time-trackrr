@@ -72,7 +72,7 @@ const navItems = [
 
         <!-- Admin Content (hidden initially) -->
         <div id="adminContent" class="hidden">
-      <div class="flex h-screen">
+      <div class="flex min-h-screen">
       <!-- Sidebar -->
       <div class="w-64 bg-white shadow-sm border-gray-200 flex flex-col">
         <div class="h-[60px] px-4 py-2 pt-3 border-b border-gray-200">
@@ -127,10 +127,10 @@ const navItems = [
       </div>
 
       <!-- Main content -->
-      <div class="flex-1 flex flex-col overflow-hidden">
+      <div class="flex-1 flex flex-col min-h-0">
         <!-- Top bar -->
-        <header class="bg-white shadow-sm border-b border-gray-200 h-[60px]">
-          <div class="flex items-center justify-between px-6 py-0 h-full">
+        <header class="bg-white shadow-sm border-b border-gray-200 flex-shrink-0 flex justify-end items-center h-[60px]">
+          <div class="flex items-center justify-between px-6 py-0">
             <div class="flex items-center">
               <!-- Title removed -->
             </div>
@@ -158,7 +158,7 @@ const navItems = [
         </header>
 
         <!-- Page content -->
-        <main class="flex-1 overflow-y-auto p-6" style="background-color: #f0eef5; overflow: visible;">
+        <main class="flex-1 overflow-y-auto p-6" style="background-color: #f0eef5;">
           <slot />
         </main>
       </div>

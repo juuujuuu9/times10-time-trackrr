@@ -1,11 +1,10 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import Strike from '@tiptap/extension-strike';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
-import { lowlight } from 'lowlight';
+import { createLowlight } from 'lowlight';
 
 interface SimpleTiptapEditorProps {
   content: string;
@@ -20,6 +19,68 @@ const SimpleTiptapEditor: React.FC<SimpleTiptapEditorProps> = ({
   placeholder = "Write your message...",
   className = "",
 }) => {
+  // Inject styles into document head
+  useEffect(() => {
+    const styleId = 'tiptap-editor-styles';
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = `
+        .ProseMirror ul {
+          list-style-type: disc !important;
+          padding-left: 1.5rem !important;
+          margin: 0.5rem 0 !important;
+        }
+        .ProseMirror ol {
+          list-style-type: decimal !important;
+          padding-left: 1.5rem !important;
+          margin: 0.5rem 0 !important;
+        }
+        .ProseMirror li {
+          margin: 0.25rem 0 !important;
+          display: list-item !important;
+        }
+        .ProseMirror ul li::marker {
+          content: "•" !important;
+          color: #374151 !important;
+        }
+        .ProseMirror ol li::marker {
+          content: counter(list-item) "." !important;
+          color: #374151 !important;
+        }
+        .ProseMirror pre {
+          background: #f8f9fa !important;
+          border: 1px solid #e9ecef !important;
+          border-radius: 0.375rem !important;
+          padding: 1rem !important;
+          margin: 1rem 0 !important;
+          overflow-x: auto !important;
+        }
+        .ProseMirror code {
+          background: #f1f3f4 !important;
+          padding: 0.125rem 0.25rem !important;
+          border-radius: 0.25rem !important;
+          font-size: 0.875em !important;
+        }
+        .ProseMirror blockquote {
+          border-left: 4px solid #e5e7eb !important;
+          padding-left: 1rem !important;
+          margin: 1rem 0 !important;
+          font-style: italic !important;
+          color: #6b7280 !important;
+        }
+        .ProseMirror p.is-editor-empty:first-child::before {
+          content: attr(data-placeholder);
+          float: left;
+          color: #9ca3af;
+          pointer-events: none;
+          height: 0;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -32,19 +93,21 @@ const SimpleTiptapEditor: React.FC<SimpleTiptapEditorProps> = ({
           keepAttributes: false,
         },
         strike: false, // Disable the built-in strike to use our custom one
-      }),
-      Strike,
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: 'text-blue-600 hover:text-blue-800 underline',
+        link: {
+          openOnClick: false,
+          HTMLAttributes: {
+            class: 'text-blue-600 hover:text-blue-800 underline',
+          },
         },
       }),
+      Strike,
       CodeBlockLowlight.configure({
-        lowlight,
+        lowlight: createLowlight(),
       }),
       Placeholder.configure({
         placeholder,
+        showOnlyWhenEditable: true,
+        showOnlyCurrent: true,
       }),
     ],
     content,
@@ -53,33 +116,7 @@ const SimpleTiptapEditor: React.FC<SimpleTiptapEditorProps> = ({
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm max-w-none focus:outline-none min-h-[100px] p-3',
-        style: `
-          .ProseMirror {
-            outline: none;
-          }
-          .ProseMirror pre {
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 0.375rem;
-            padding: 1rem;
-            margin: 1rem 0;
-            overflow-x: auto;
-          }
-          .ProseMirror code {
-            background: #f1f3f4;
-            padding: 0.125rem 0.25rem;
-            border-radius: 0.25rem;
-            font-size: 0.875em;
-          }
-          .ProseMirror blockquote {
-            border-left: 4px solid #e5e7eb;
-            padding-left: 1rem;
-            margin: 1rem 0;
-            font-style: italic;
-            color: #6b7280;
-          }
-        `,
+        class: 'prose prose-sm max-w-none focus:outline-none min-h-[100px] p-3 tiptap-editor',
       },
     },
   });
@@ -197,8 +234,9 @@ const SimpleTiptapEditor: React.FC<SimpleTiptapEditorProps> = ({
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
+          disabled={!editor?.can().chain().focus().toggleBulletList().run()}
           className={`p-2 rounded hover:bg-gray-100 transition-colors ${
-            editor.isActive('bulletList') ? 'bg-gray-200' : ''
+            editor?.isActive('bulletList') ? 'bg-gray-200' : ''
           }`}
           title="Bullet List"
         >
@@ -211,6 +249,7 @@ const SimpleTiptapEditor: React.FC<SimpleTiptapEditorProps> = ({
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          disabled={!editor.can().chain().focus().toggleOrderedList().run()}
           className={`p-2 rounded hover:bg-gray-100 transition-colors ${
             editor.isActive('orderedList') ? 'bg-gray-200' : ''
           }`}
@@ -227,6 +266,7 @@ const SimpleTiptapEditor: React.FC<SimpleTiptapEditorProps> = ({
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          disabled={!editor.can().chain().focus().toggleBlockquote().run()}
           className={`p-2 rounded hover:bg-gray-100 transition-colors ${
             editor.isActive('blockquote') ? 'bg-gray-200' : ''
           }`}
@@ -241,6 +281,7 @@ const SimpleTiptapEditor: React.FC<SimpleTiptapEditorProps> = ({
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          disabled={!editor.can().chain().focus().toggleCodeBlock().run()}
           className={`p-2 rounded hover:bg-gray-100 transition-colors ${
             editor.isActive('codeBlock') ? 'bg-gray-200' : ''
           }`}

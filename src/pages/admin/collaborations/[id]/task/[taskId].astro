@@ -146,7 +146,7 @@ if (totalHours > 0) {
 ---
 
 <AdminLayout title={`${task.name} - Task Stream`} currentPage="collaborations">
-  <div class="flex h-fit" style="overflow: visible;">
+  <div class="flex min-h-0">
     <!-- Left Sidebar -->
     <div class="w-1/4 bg-white border-r rounded-xl border-gray-200 p-6 status-dropdown-container" style="overflow: visible;">
       <!-- Task Overview Card -->
@@ -279,7 +279,7 @@ if (totalHours > 0) {
     </div>
 
     <!-- Main Content Area -->
-    <div class="flex-1 p-6 pt-0" style="overflow: visible;">
+    <div class="flex-1 p-6 pt-0 overflow-y-auto">
       <!-- Header with Breadcrumbs -->
       <div class="flex justify-between gap-4 items-center mb-6">
         <div class="flex items-center flex-1">

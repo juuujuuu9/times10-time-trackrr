@@ -7,7 +7,7 @@ import LinkPreview from './LinkPreview';
 import SubtaskModal from './SubtaskModal';
 import SubtaskCard from './SubtaskCard';
 import CentralizedSubtaskTable from './CentralizedSubtaskTable';
-import BasicTiptapEditor from './BasicTiptapEditor';
+import SimpleRichEditor from './SimpleRichEditor';
 
 interface User {
   id: number;
@@ -1048,6 +1048,37 @@ const TaskStream: React.FC<TaskStreamProps> = ({
     }
   };
 
+  // Handle editing a post
+  const handleEditPost = async (postId: number, newContent: string) => {
+    try {
+      const response = await fetch(`/api/collaborations/${collaborationId}/discussions/${postId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: newContent })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update post');
+      }
+      
+      const data = await response.json();
+      
+      // Update the post in the local state
+      setPosts(prevPosts => 
+        prevPosts.map(post => 
+          post.id === postId 
+            ? { ...post, content: newContent, updatedAt: new Date().toISOString() }
+            : post
+        )
+      );
+      
+      addNotification('success', 'Post updated successfully');
+    } catch (error) {
+      console.error('Error updating post:', error);
+      addNotification('error', 'Failed to update post: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
   // Handle save edit
   const handleSaveEdit = async () => {
     if (!editContent.trim()) {
@@ -1057,7 +1088,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
 
     try {
       if (editingPostId) {
-        await handleEditComment(editingPostId, editContent.trim(), editingPostId);
+        await handleEditPost(editingPostId, editContent.trim());
         cancelEditing();
       } else if (editingCommentId) {
         // Find the post that contains this comment
@@ -1569,11 +1600,12 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                       editingPostId === post.id ? (
                         // Edit mode for post
                         <div className="mb-6 mt-6">
-                          <BasicTiptapEditor
+                          <SimpleRichEditor
                             content={editContent}
                             onChange={setEditContent}
-                            placeholder="Edit your post..."
-                            className="w-full"
+                            placeholder="Leave a message or quick note here. @mention team members to notify them."
+                            teamMembers={teamMembers}
+                            currentUser={currentUser}
                           />
                           <div className="flex items-center space-x-2 mt-2">
                             <button
@@ -1591,10 +1623,9 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                           </div>
                         </div>
                       ) : (
-                        <div 
-                          className="text-gray-700 mb-6 mt-6 text-lg prose prose-sm max-w-none"
-                          dangerouslySetInnerHTML={{ __html: post.content }}
-                        />
+                        <div className="text-gray-700 mb-6 mt-6 text-lg prose prose-sm max-w-none">
+                          {renderContentWithMentions(post.content)}
+                        </div>
                       )
                     )}
                     
@@ -1763,10 +1794,12 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                             {getUserInitials(currentUser)}
                           </div>
                           <div className="flex-1 flex items-center space-x-2">
-                            <BasicTiptapEditor
+                            <SimpleRichEditor
                               content={newComment[post.id] || ''}
-                              onChange={(value) => setNewComment(prev => ({ ...prev, [post.id]: value }))}
-                              placeholder="Write a reply..."
+                              onChange={(value: string) => setNewComment(prev => ({ ...prev, [post.id]: value }))}
+                              placeholder="Leave a message or quick note here. @mention team members to notify them."
+                              teamMembers={teamMembers}
+                              currentUser={currentUser}
                               className="w-full"
                             />
                             <button
@@ -1805,10 +1838,12 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                               {editingCommentId === comment.id ? (
                                 // Edit mode for comment
                                 <div className="mb-2">
-                                  <BasicTiptapEditor
+                                  <SimpleRichEditor
                                     content={editContent}
                                     onChange={setEditContent}
                                     placeholder="Edit your comment..."
+                                    teamMembers={teamMembers}
+                                    currentUser={currentUser}
                                     className="w-full"
                                   />
                                   <div className="flex items-center space-x-2 mt-1">
@@ -1827,10 +1862,9 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                   </div>
                                 </div>
                               ) : (
-                                <div 
-                                  className="text-gray-700 text-sm prose prose-sm max-w-none"
-                                  dangerouslySetInnerHTML={{ __html: comment.content }}
-                                />
+                                <div className="text-gray-700 text-sm prose prose-sm max-w-none">
+                                  {renderContentWithMentions(comment.content)}
+                                </div>
                               )}
                               {/* Comment actions: Reply for others, Edit/Delete for own comments */}
                               {editingCommentId !== comment.id && (
@@ -1878,10 +1912,12 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                       {getUserInitials(currentUser)}
                                     </div>
                                     <div className="flex-1 flex items-center space-x-2">
-                                      <BasicTiptapEditor
+                                      <SimpleRichEditor
                                         content={newComment[comment.id] || ''}
-                                        onChange={(value) => setNewComment(prev => ({ ...prev, [comment.id]: value }))}
-                                        placeholder="Write a reply..."
+                                        onChange={(value: string) => setNewComment(prev => ({ ...prev, [comment.id]: value }))}
+                                        placeholder="Leave a message or quick note here. @mention team members to notify them."
+                                        teamMembers={teamMembers}
+                                        currentUser={currentUser}
                                         className="w-full"
                                       />
                                       <button
@@ -1910,10 +1946,9 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                           <span className="font-medium text-gray-900 text-sm">{child.author.name}</span>
                                           <span className="text-xs text-gray-500">{formatTimeAgo(child.createdAt)}</span>
                                         </div>
-                                        <div 
-                                          className="text-gray-700 text-sm prose prose-sm max-w-none"
-                                          dangerouslySetInnerHTML={{ __html: child.content }}
-                                        />
+                                        <div className="text-gray-700 text-sm prose prose-sm max-w-none">
+                                          {renderContentWithMentions(child.content)}
+                                        </div>
                                         {/* No Reply button for second-level to avoid deeper nesting */}
                                       </div>
                                     </div>

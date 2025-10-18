@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import SimpleTiptapEditor from './SimpleTiptapEditor';
 
 interface User {
   id: number;
@@ -24,23 +25,14 @@ const AddMediaModal: React.FC<AddMediaModalProps> = ({
 }) => {
   const [content, setContent] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [showMentions, setShowMentions] = useState(false);
-  const [mentionQuery, setMentionQuery] = useState('');
   const [mentionedUsers, setMentionedUsers] = useState<User[]>([]);
-  const [cursorPosition, setCursorPosition] = useState(0);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // File size limit: 1GB
   const MAX_FILE_SIZE = 1024 * 1024 * 1024; // 1GB in bytes
 
-  // Filter team members based on mention query
-  const filteredMembers = teamMembers.filter(member => 
-    member.id !== currentUser.id && 
-    member.name.toLowerCase().includes(mentionQuery.toLowerCase())
-  );
 
   // Handle file selection
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,69 +90,9 @@ const AddMediaModal: React.FC<AddMediaModalProps> = ({
   };
 
   // Handle textarea input
-  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    const cursorPos = e.target.selectionStart;
-    
-    setContent(value);
-    setCursorPosition(cursorPos);
 
-    // Check for @ mentions
-    const textBeforeCursor = value.substring(0, cursorPos);
-    const atMatch = textBeforeCursor.match(/@(\w*)$/);
-    
-    if (atMatch) {
-      setMentionQuery(atMatch[1]);
-      setShowMentions(true);
-    } else {
-      setShowMentions(false);
-    }
-  };
 
-  // Format user name for mention (FirstL format)
-  const formatMentionName = (user: User) => {
-    const nameParts = user.name.split(' ');
-    if (nameParts.length >= 2) {
-      const firstName = nameParts[0];
-      const lastName = nameParts[nameParts.length - 1];
-      return `${firstName}${lastName.charAt(0)}`;
-    }
-    return user.name; // Fallback to full name if only one name part
-  };
 
-  // Handle mention selection
-  const handleMentionSelect = (user: User) => {
-    const textBeforeCursor = content.substring(0, cursorPosition);
-    const textAfterCursor = content.substring(cursorPosition);
-    const atMatch = textBeforeCursor.match(/@(\w*)$/);
-    
-    if (atMatch) {
-      const beforeAt = textBeforeCursor.substring(0, atMatch.index);
-      const mentionName = formatMentionName(user);
-      const newContent = `${beforeAt}@${mentionName} ${textAfterCursor}`;
-      setContent(newContent);
-      setShowMentions(false);
-      setMentionedUsers(prev => [...prev.filter(u => u.id !== user.id), user]);
-      
-      // Focus back to textarea
-      setTimeout(() => {
-        if (textareaRef.current) {
-          const newCursorPos = beforeAt.length + mentionName.length + 2;
-          textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
-          textareaRef.current.focus();
-        }
-      }, 0);
-    }
-  };
-
-  // Handle key events
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (showMentions) {
-      if (e.key === 'Escape') {
-        setShowMentions(false);
-      }
-    }
-  };
 
   // Format file size for display
   const formatFileSize = (bytes: number) => {
@@ -220,7 +152,6 @@ const AddMediaModal: React.FC<AddMediaModalProps> = ({
       setContent('');
       setSelectedFiles([]);
       setMentionedUsers([]);
-      setShowMentions(false);
       setUploadProgress(0);
       onClose();
     }
@@ -236,12 +167,6 @@ const AddMediaModal: React.FC<AddMediaModalProps> = ({
     setSelectedFiles([]);
   };
 
-  // Focus textarea when modal opens
-  useEffect(() => {
-    if (isOpen && textareaRef.current) {
-      textareaRef.current.focus();
-    }
-  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -365,38 +290,12 @@ const AddMediaModal: React.FC<AddMediaModalProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Add a description (optional)
               </label>
-              <textarea
-                ref={textareaRef}
-                value={content}
-                onChange={handleInput}
-                onKeyDown={handleKeyDown}
-                placeholder="Describe your media... @mention a user to notify them."
-                className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                style={{ minHeight: '120px' }}
-                disabled={isUploading}
+              <SimpleTiptapEditor
+                content={content}
+                onChange={setContent}
+                placeholder="Leave a message or quick note here. @mention team members to notify them."
+                className="w-full min-h-[120px] border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent"
               />
-              
-              {/* Mention suggestions dropdown */}
-              {showMentions && filteredMembers.length > 0 && (
-                <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-                  {filteredMembers.map((member) => (
-                    <button
-                      key={member.id}
-                      type="button"
-                      onClick={() => handleMentionSelect(member)}
-                      className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center space-x-3 first:rounded-t-lg last:rounded-b-lg"
-                    >
-                      <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 flex-shrink-0">
-                        {member.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-900">{member.name}</div>
-                        <div className="text-sm text-gray-500">{member.email}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Mentioned users display */}
@@ -409,7 +308,7 @@ const AddMediaModal: React.FC<AddMediaModalProps> = ({
                       key={user.id}
                       className="inline-flex items-center space-x-2 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm"
                     >
-                      <span>@{formatMentionName(user)}</span>
+                      <span>@{user.name}</span>
                       <button
                         type="button"
                         onClick={() => setMentionedUsers(prev => prev.filter(u => u.id !== user.id))}

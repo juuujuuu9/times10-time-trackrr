@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import BasicTiptapEditor from './BasicTiptapEditor';
+import SimpleRichEditor from './SimpleRichEditor';
 
 interface User {
   id: number;
@@ -87,11 +87,15 @@ const AddInsightModal: React.FC<AddInsightModalProps> = ({
         {/* Content */}
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
           <div className="p-6 flex-1">
-            <BasicTiptapEditor
+            <SimpleRichEditor
               content={content}
               onChange={setContent}
-              placeholder="What do you want to share? Use the toolbar above to format your text."
+              placeholder="Leave a message or quick note here. @mention team members to notify them."
               className="w-full"
+              teamMembers={teamMembers}
+              currentUser={currentUser}
+              onMentionedUsersChange={handleMentionedUsersChange}
+              initialMentionedUsers={mentionedUsers}
             />
           </div>
 

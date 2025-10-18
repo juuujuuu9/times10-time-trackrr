@@ -164,7 +164,7 @@ export const TeamChat: React.FC<TeamChatProps> = ({
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a message..."
+            placeholder="Leave a message or quick note here. @mention team members to notify them."
             className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             disabled={isSending}
           />
