@@ -447,7 +447,7 @@ if (projectDetails && projectDetails.id) {
               </button>
               
               <!-- User Search Dropdown -->
-              <div id="userSearchDropdown" class="absolute left-0 top-6 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 hidden">
+              <div id="userSearchDropdown" class="absolute left-0 top-6 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-[99999] hidden" style="position: fixed; z-index: 99999;">
                 <div class="p-4">
                   <div class="relative mb-3">
                     <input 
@@ -564,12 +564,12 @@ if (projectDetails && projectDetails.id) {
       </div>
 
       <!-- Tasks Table -->
-      <div class="bg-white rounded-lg border border-gray-200 shadow-sm min-h-[calc(100vh-11rem)]">
+      <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
         <div class="px-6 py-4 border-b border-gray-200">
           <h2 class="text-lg font-semibold text-gray-900">Tasks</h2>
         </div>
         
-        <div class="overflow-x-auto min-h-[calc(100vh-14.75rem)]">
+        <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
@@ -761,7 +761,7 @@ if (projectDetails && projectDetails.id) {
                         </button>
                         
                         <!-- Task User Search Dropdown -->
-                        <div class="task-user-search-dropdown absolute left-0 top-6 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 hidden">
+                        <div class="task-user-search-dropdown absolute left-0 top-6 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-[99999] hidden" style="position: fixed; z-index: 99999;">
                           <div class="p-4">
                             <div class="relative mb-3">
                               <input 
@@ -937,7 +937,7 @@ if (projectDetails && projectDetails.id) {
                           </button>
                           
                           <!-- Simple Subtask User Assignment -->
-                          <div class="subtask-user-assignment absolute left-0 top-6 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 hidden">
+                          <div class="subtask-user-assignment absolute left-0 top-6 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-[99999] hidden" style="position: fixed; z-index: 99999;">
                             <div class="p-3">
                               <div class="text-sm font-medium text-gray-700 mb-2">Assign to subtask:</div>
                               <div class="subtask-user-list max-h-48 overflow-y-auto space-y-1">
@@ -2287,12 +2287,22 @@ if (projectDetails && projectDetails.id) {
     let taskUserSearchTimeout;
     let taskAllUsers = []; // Store all users for task filtering
     
+    // Function to position dropdown correctly
+    function positionDropdown(dropdown, trigger) {
+      if (!dropdown || !trigger) return;
+      
+      const rect = trigger.getBoundingClientRect();
+      dropdown.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+      dropdown.style.left = (rect.left + window.scrollX) + 'px';
+    }
+
     // Toggle dropdown visibility
     if (addUserBtn && userSearchDropdown) {
       addUserBtn.addEventListener('click', function(e) {
         e.stopPropagation();
         userSearchDropdown.classList.toggle('hidden');
         if (!userSearchDropdown.classList.contains('hidden')) {
+          positionDropdown(userSearchDropdown, addUserBtn);
           userSearchInput.focus();
           loadAllUsers(); // Load all users when dropdown opens
         }
@@ -2468,6 +2478,7 @@ if (projectDetails && projectDetails.id) {
         
         dropdown.classList.toggle('hidden');
         if (!dropdown.classList.contains('hidden')) {
+          positionDropdown(dropdown, button);
           input.focus();
           loadTaskUsers(addUserTaskId, dropdown);
         }
@@ -2483,6 +2494,7 @@ if (projectDetails && projectDetails.id) {
         
         dropdown.classList.toggle('hidden');
         if (!dropdown.classList.contains('hidden')) {
+          positionDropdown(dropdown, button);
           loadSubtaskUsersSimple(subtaskId, subtaskTaskId, dropdown);
         }
       }
@@ -3936,5 +3948,58 @@ if (projectDetails && projectDetails.id) {
   /* Subtask indentation */
   .subtask-row td:first-child {
     padding-left: 3rem;
+  }
+  
+  /* Comprehensive dropdown clipping prevention */
+  .task-user-search-dropdown,
+  .userSearchDropdown,
+  .subtask-user-assignment,
+  .expanded-task-members,
+  .expandedCollaborationMembers {
+    position: fixed !important;
+    z-index: 99999 !important;
+    overflow: visible !important;
+  }
+  
+  /* Ensure all containers don't clip dropdowns */
+  .overflow-x-auto,
+  .overflow-y-auto,
+  .overflow-auto,
+  .overflow-hidden,
+  table,
+  tbody,
+  tr,
+  td,
+  .flex,
+  .grid {
+    overflow: visible !important;
+  }
+  
+  /* Force visibility for all dropdown menus */
+  .dropdown-menu,
+  .popup-menu,
+  .user-search-dropdown,
+  .task-user-search-dropdown {
+    position: fixed !important;
+    z-index: 99999 !important;
+    overflow: visible !important;
+  }
+  
+  /* Override any overflow hidden that might be applied */
+  * {
+    box-sizing: border-box;
+  }
+  
+  /* Specific fixes for common clipping scenarios */
+  .overflow-hidden {
+    overflow: visible !important;
+  }
+  
+  .overflow-auto {
+    overflow: visible !important;
+  }
+  
+  .overflow-y-auto {
+    overflow: visible !important;
   }
 </style>
