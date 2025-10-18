@@ -723,7 +723,9 @@ export const CostDoughnutChart: React.FC<{ data: ChartData[]; title: string; can
         try {
           console.log('Fetching team members for:', projectName);
           // Fetch team members from the API
-          const response = await fetch(`/api/projects/${encodeURIComponent(projectName)}/team-members`);
+          const response = await fetch(`/api/projects/${encodeURIComponent(projectName)}/team-members`, {
+            credentials: 'include'
+          });
           
           if (response.ok) {
             const result = await response.json();

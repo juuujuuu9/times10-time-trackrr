@@ -122,6 +122,7 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
           headers: {
             'Content-Type': 'application/json',
           },
+          credentials: 'include',
           body: JSON.stringify({ status: newStatus }),
         });
 

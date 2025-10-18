@@ -33,7 +33,9 @@ export const TeamFiles: React.FC<TeamFilesProps> = ({
   const loadFiles = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/teams/${teamId}/files`);
+      const response = await fetch(`/api/teams/${teamId}/files`, {
+        credentials: 'include'
+      });
       const result = await response.json();
       
       if (result.success) {
@@ -72,6 +74,7 @@ export const TeamFiles: React.FC<TeamFilesProps> = ({
 
       const response = await fetch(`/api/teams/${teamId}/files`, {
         method: 'POST',
+        credentials: 'include',
         body: formData
       });
 
@@ -107,7 +110,8 @@ export const TeamFiles: React.FC<TeamFilesProps> = ({
 
     try {
       const response = await fetch(`/api/teams/${teamId}/files/${fileId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        credentials: 'include'
       });
 
       const result = await response.json();

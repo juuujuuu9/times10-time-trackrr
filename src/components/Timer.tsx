@@ -208,7 +208,9 @@ export default function Timer() {
     console.log('loadDailyDurationTotals: Loading for week', selectedWeekStart.toISOString(), 'to', selectedWeekEnd.toISOString());
 
     try {
-      const response = await fetch(`/api/reports/daily-duration-totals?userId=${currentUserId}&startDate=${encodeURIComponent(selectedWeekStart.toISOString())}&endDate=${encodeURIComponent(selectedWeekEnd.toISOString())}`);
+      const response = await fetch(`/api/reports/daily-duration-totals?userId=${currentUserId}&startDate=${encodeURIComponent(selectedWeekStart.toISOString())}&endDate=${encodeURIComponent(selectedWeekEnd.toISOString())}`, {
+        credentials: 'include'
+      });
       if (response.ok) {
         const data = await response.json();
         console.log('loadDailyDurationTotals: Received data:', data.weekTotals);
@@ -236,7 +238,9 @@ export default function Timer() {
     console.log('loadTaskDailyTotals: Loading for week', selectedWeekStart.toISOString(), 'to', selectedWeekEnd.toISOString());
 
     try {
-      const response = await fetch(`/api/reports/task-daily-totals?userId=${currentUserId}&startDate=${encodeURIComponent(selectedWeekStart.toISOString())}&endDate=${encodeURIComponent(selectedWeekEnd.toISOString())}`);
+      const response = await fetch(`/api/reports/task-daily-totals?userId=${currentUserId}&startDate=${encodeURIComponent(selectedWeekStart.toISOString())}&endDate=${encodeURIComponent(selectedWeekEnd.toISOString())}`, {
+        credentials: 'include'
+      });
       if (response.ok) {
         const data = await response.json();
         console.log('🔄 [TIMER DEBUG] loadTaskDailyTotals: Received data:', data.taskDailyData?.length || 0, 'tasks');
@@ -266,6 +270,7 @@ export default function Timer() {
       setTasksLoading(true);
       // Load projects for the user
       const projectsResponse = await fetch(`/api/projects?userId=${currentUserId}&limit=500`, {
+        credentials: 'include',
         signal: AbortSignal.timeout(10000) // 10 second timeout
       });
 
@@ -780,7 +785,9 @@ export default function Timer() {
       const targetDate = new Date(selectedWeekStart);
       targetDate.setDate(selectedWeekStart.getDate() + dayOfWeek);
       
-      const response = await fetch(`/api/time-entries/duration?userId=${currentUserId}&taskId=${taskId}&date=${targetDate.toISOString().split('T')[0]}`);
+      const response = await fetch(`/api/time-entries/duration?userId=${currentUserId}&taskId=${taskId}&date=${targetDate.toISOString().split('T')[0]}`, {
+        credentials: 'include'
+      });
       
       if (response.ok) {
         const data = await response.json();

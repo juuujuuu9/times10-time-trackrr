@@ -245,6 +245,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include session cookies for authentication
         body: JSON.stringify({
           taskId,
           type,
@@ -295,6 +296,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include session cookies for authentication
         body: JSON.stringify({
           taskId,
           type: 'insight',
@@ -397,6 +399,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include session cookies for authentication
         body: JSON.stringify(discussionData),
       });
 
@@ -467,6 +470,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include session cookies for authentication
         body: JSON.stringify(discussionData),
       });
 
@@ -520,6 +524,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include session cookies for authentication
         body: JSON.stringify({
           subtaskData: {
             subtasks: updatedSubtasks
@@ -577,6 +582,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include session cookies for authentication
         body: JSON.stringify({
           subtaskData: {
             subtasks: updatedSubtasks
@@ -634,6 +640,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include session cookies for authentication
         body: JSON.stringify({
           subtaskData: {
             subtasks: updatedSubtasks
@@ -715,6 +722,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include session cookies for authentication
         body: JSON.stringify(discussionData),
       });
 
@@ -733,7 +741,9 @@ const TaskStream: React.FC<TaskStreamProps> = ({
             console.log('📧 Sending email notifications for subtasks with assignees...');
             
             // Get task and project information for email notifications
-            const taskResponse = await fetch(`/api/admin/tasks/${taskId}`);
+            const taskResponse = await fetch(`/api/admin/tasks/${taskId}`, {
+              credentials: 'include'
+            });
             if (taskResponse.ok) {
               const taskData = await taskResponse.json();
               
@@ -798,6 +808,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include session cookies for authentication
         body: JSON.stringify({
           content: commentContent
         }),
@@ -987,7 +998,8 @@ const TaskStream: React.FC<TaskStreamProps> = ({
     try {
       const response = await fetch(`/api/admin/tasks/${taskId}/subtasks/${subtaskId}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
       });
       const data = await response.json();
       if (!response.ok || !data.success) {

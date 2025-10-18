@@ -58,7 +58,9 @@ export default function AdminTimer() {
 
     try {
       // Load regular tasks
-      const response = await fetch(`/api/tasks?assignedOnly=false&limit=500${currentUserId ? `&assignedTo=${currentUserId}` : ''}`);
+      const response = await fetch(`/api/tasks?assignedOnly=false&limit=500${currentUserId ? `&assignedTo=${currentUserId}` : ''}`, {
+        credentials: 'include'
+      });
       let regularTasks = [];
       if (response.ok) {
         const tasksData = await response.json();
@@ -66,7 +68,9 @@ export default function AdminTimer() {
       }
 
       // Load system tasks
-      const systemResponse = await fetch(`/api/system-tasks?limit=500`);
+      const systemResponse = await fetch(`/api/system-tasks?limit=500`, {
+        credentials: 'include'
+      });
       let systemTasks = [];
       if (systemResponse.ok) {
         const systemTasksData = await systemResponse.json();
@@ -112,8 +116,8 @@ export default function AdminTimer() {
             // Load user's regular tasks and system tasks in parallel
             setTasksLoading(true);
             const [tasksResponse, systemTasksResponse] = await Promise.all([
-              fetch(`/api/tasks?assignedOnly=false&limit=500&assignedTo=${userId}`),
-              fetch(`/api/system-tasks?limit=500`)
+              fetch(`/api/tasks?assignedOnly=false&limit=500&assignedTo=${userId}`, { credentials: 'include' }),
+              fetch(`/api/system-tasks?limit=500`, { credentials: 'include' })
             ]);
 
             let regularTasks = [];

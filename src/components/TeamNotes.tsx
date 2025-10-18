@@ -32,7 +32,9 @@ export const TeamNotes: React.FC<TeamNotesProps> = ({
   const loadNotes = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/teams/${teamId}/notes`);
+      const response = await fetch(`/api/teams/${teamId}/notes`, {
+        credentials: 'include'
+      });
       const result = await response.json();
       
       if (result.success) {
@@ -62,6 +64,7 @@ export const TeamNotes: React.FC<TeamNotesProps> = ({
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ content: newNote.trim() })
       });
 
@@ -109,6 +112,7 @@ export const TeamNotes: React.FC<TeamNotesProps> = ({
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ content: editContent.trim() })
       });
 
@@ -137,7 +141,8 @@ export const TeamNotes: React.FC<TeamNotesProps> = ({
 
     try {
       const response = await fetch(`/api/teams/${teamId}/notes/${noteId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        credentials: 'include'
       });
 
       const result = await response.json();

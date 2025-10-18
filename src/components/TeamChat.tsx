@@ -39,7 +39,9 @@ export const TeamChat: React.FC<TeamChatProps> = ({
   const loadMessages = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/teams/${teamId}/chat`);
+      const response = await fetch(`/api/teams/${teamId}/chat`, {
+        credentials: 'include'
+      });
       const result = await response.json();
       
       if (result.success) {
@@ -68,6 +70,7 @@ export const TeamChat: React.FC<TeamChatProps> = ({
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ content: newMessage.trim() })
       });
 
