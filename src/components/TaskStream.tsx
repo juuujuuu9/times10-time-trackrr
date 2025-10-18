@@ -1429,6 +1429,17 @@ const TaskStream: React.FC<TaskStreamProps> = ({
   };
 
   const renderContentWithMentions = (text: string): React.ReactNode => {
+    // If content contains HTML tags, render as HTML with mention support
+    if (text.includes('<') && text.includes('>')) {
+      return (
+        <div 
+          dangerouslySetInnerHTML={{ __html: text }}
+          className="prose prose-sm max-w-none"
+        />
+      );
+    }
+    
+    // For plain text, handle mentions
     const viewerHandle = getUserMentionHandle(currentUser);
     const parts: React.ReactNode[] = [];
     const mentionRegex = /@([A-Za-z0-9_]+)/g;
