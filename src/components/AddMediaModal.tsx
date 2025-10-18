@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import SimpleTiptapEditor from './SimpleTiptapEditor';
+import SimpleRichEditor from './SimpleRichEditor';
 
 interface User {
   id: number;
@@ -290,11 +290,13 @@ const AddMediaModal: React.FC<AddMediaModalProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Add a description (optional)
               </label>
-              <SimpleTiptapEditor
+              <SimpleRichEditor
                 content={content}
                 onChange={setContent}
                 placeholder="Leave a message or quick note here. @mention team members to notify them."
                 className="w-full min-h-[120px] border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent"
+                teamMembers={teamMembers}
+                currentUser={currentUser}
               />
             </div>
 

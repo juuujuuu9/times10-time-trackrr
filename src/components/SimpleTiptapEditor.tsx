@@ -174,9 +174,8 @@ const SimpleTiptapEditor: React.FC<SimpleTiptapEditorProps> = ({
           }`}
           title="Bold (Ctrl+B)"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 4h8a4 4 0 014 4 4 4 0 01-4 4H6z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 12h9a4 4 0 014 4 4 4 0 01-4 4H6z" />
+          <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path fillRule="evenodd" clipRule="evenodd" d="M2 1H8.625C11.0412 1 13 2.95875 13 5.375C13 6.08661 12.8301 6.75853 12.5287 7.35243C13.4313 8.15386 14 9.32301 14 10.625C14 13.0412 12.0412 15 9.625 15H2V1ZM5.5 9.75V11.5H9.625C10.1082 11.5 10.5 11.1082 10.5 10.625C10.5 10.1418 10.1082 9.75 9.625 9.75H5.5ZM5.5 6.25H8.625C9.10825 6.25 9.5 5.85825 9.5 5.375C9.5 4.89175 9.10825 4.5 8.625 4.5H5.5V6.25Z" fill="currentColor" />
           </svg>
         </button>
 
@@ -193,8 +192,8 @@ const SimpleTiptapEditor: React.FC<SimpleTiptapEditorProps> = ({
           }`}
           title="Italic (Ctrl+I)"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 4L6 20M14 4l-4 16" />
+          <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M14 1H5V4H7.75219L5.08553 12H2V15H11V12H8.24781L10.9145 4H14V1Z" fill="currentColor" />
           </svg>
         </button>
 
@@ -208,8 +207,8 @@ const SimpleTiptapEditor: React.FC<SimpleTiptapEditorProps> = ({
           }`}
           title="Strikethrough"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l6 0" />
+          <svg className="w-4 h-4" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <polygon points="302.748,220.383 302.748,126.887 407.374,126.887 407.374,55.652 104.626,55.652 104.626,126.887 209.252,126.887 209.252,220.383 0,220.383 0,293.844 209.252,293.844 209.252,456.348 302.748,456.348 302.748,293.844 512,293.844 512,220.383" fill="currentColor" />
           </svg>
         </button>
 
@@ -240,8 +239,15 @@ const SimpleTiptapEditor: React.FC<SimpleTiptapEditorProps> = ({
           }`}
           title="Bullet List"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+          <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 1H1V3H3V1Z" fill="currentColor" />
+            <path d="M3 5H1V7H3V5Z" fill="currentColor" />
+            <path d="M1 9H3V11H1V9Z" fill="currentColor" />
+            <path d="M3 13H1V15H3V13Z" fill="currentColor" />
+            <path d="M15 1H5V3H15V1Z" fill="currentColor" />
+            <path d="M15 5H5V7H15V5Z" fill="currentColor" />
+            <path d="M5 9H15V11H5V9Z" fill="currentColor" />
+            <path d="M15 13H5V15H15V13Z" fill="currentColor" />
           </svg>
         </button>
 

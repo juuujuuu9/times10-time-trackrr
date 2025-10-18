@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { X, Link, ExternalLink, Image, Globe } from 'lucide-react';
-import SimpleTiptapEditor from './SimpleTiptapEditor';
+import SimpleRichEditor from './SimpleRichEditor';
 
 interface LinkPreview {
   url: string;
@@ -195,11 +195,13 @@ const LinkDropModal: React.FC<LinkDropModalProps> = ({ isOpen, onClose, onAddLin
               <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
                 Add a message (optional)
               </label>
-              <SimpleTiptapEditor
+              <SimpleRichEditor
                 content={content}
                 onChange={setContent}
                 placeholder="Leave a message or quick note here. @mention team members to notify them."
                 className="w-full min-h-[120px] border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500"
+                teamMembers={teamMembers}
+                currentUser={currentUser}
               />
             </div>
 
