@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface StatusDropdownProps {
   currentStatus: string;
@@ -19,7 +20,9 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
   const [isOpen, setIsOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [localStatus, setLocalStatus] = useState(currentStatus);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   const currentOption = statusOptions.find(option => option.value === localStatus) || statusOptions[0];
 
@@ -77,6 +80,23 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
   useEffect(() => {
     setLocalStatus(currentStatus);
   }, [currentStatus]);
+
+  // Update dropdown position when opening
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      updateDropdownPosition();
+    }
+  }, [isOpen]);
+
+  const updateDropdownPosition = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX
+      });
+    }
+  };
 
   const handleStatusChange = async (newStatus: string) => {
     if (newStatus === localStatus || isUpdating) return;
@@ -138,6 +158,7 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
   return (
     <div className="relative" ref={dropdownRef} data-status-dropdown>
       <button
+        ref={buttonRef}
         type="button"
         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${currentOption.color} ${
           disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'
@@ -171,12 +192,17 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
         )}
       </button>
 
-      {isOpen && !disabled && (
+      {isOpen && !disabled && createPortal(
         <div 
-          className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-[99999] dropdown-menu"
+          className="fixed w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-[99999] dropdown-menu"
           role="listbox"
           aria-label="Task status options"
-          style={{ position: 'absolute', zIndex: 99999 }}
+          style={{ 
+            position: 'fixed', 
+            zIndex: 99999,
+            top: dropdownPosition.top,
+            left: dropdownPosition.left
+          }}
         >
           <div className="py-1">
             <div className="px-3 py-2 text-xs font-semibold text-gray-500 border-b border-gray-100">
@@ -207,7 +233,8 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
               </button>
             ))}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -257,7 +257,7 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" style={{ overflow: 'visible' }}>
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
