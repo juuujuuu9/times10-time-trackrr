@@ -745,7 +745,8 @@ const TaskStream: React.FC<TaskStreamProps> = ({
               credentials: 'include'
             });
             if (taskResponse.ok) {
-              const taskData = await taskResponse.json();
+              const taskResponseData = await taskResponse.json();
+              const taskData = taskResponseData.data;
               
               // Send emails using the dedicated endpoint
               const emailResponse = await fetch('/api/send-subtask-creation-emails', {
