@@ -315,6 +315,8 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         window.dispatchEvent(new CustomEvent('taskStreamUpdate', {
           detail: { taskId, collaborationId }
         }));
+        // Close the modal after successful creation
+        setShowAddInsightModal(false);
       } else {
         console.error('❌ Failed to create insight:', data.error || data.message);
         // Remove the optimistic update on failure
@@ -414,6 +416,8 @@ const TaskStream: React.FC<TaskStreamProps> = ({
           detail: { taskId, collaborationId }
         }));
         addNotification('success', `${files.length} file${files.length !== 1 ? 's' : ''} uploaded successfully!`);
+        // Close the modal after successful upload
+        setShowAddMediaModal(false);
       } else {
         console.error('❌ Failed to create media discussion:', data.error || data.message);
         // Remove the optimistic update on failure
@@ -485,6 +489,8 @@ const TaskStream: React.FC<TaskStreamProps> = ({
           detail: { taskId, collaborationId }
         }));
         addNotification('success', 'Link shared successfully!');
+        // Close the modal after successful creation
+        setShowLinkDropModal(false);
       } else {
         console.error('❌ Failed to create link discussion:', data.error || data.message);
         // Remove the optimistic update on failure
@@ -783,6 +789,8 @@ const TaskStream: React.FC<TaskStreamProps> = ({
           detail: { taskId, collaborationId }
         }));
         addNotification('success', `${subtasks.length} subtask${subtasks.length !== 1 ? 's' : ''} created successfully!`);
+        // Close the modal after successful creation
+        setShowSubtaskModal(false);
       } else {
         console.error('❌ Failed to create subtasks:', data.error || data.message);
         // Remove the optimistic update on failure
@@ -1431,17 +1439,34 @@ const TaskStream: React.FC<TaskStreamProps> = ({
   const [prefillContent, setPrefillContent] = useState<string | undefined>(undefined);
   const [prefillMentionedUsers, setPrefillMentionedUsers] = useState<User[] | undefined>(undefined);
 
-  const handleMentionClick = (handle: string) => {
+  const handleMentionClick = (handle: string, postId?: number) => {
     const target = teamMembers.find(u => getUserMentionHandle(u).toLowerCase() === handle.toLowerCase());
     if (!target) return;
     if (target.id === currentUser.id) return; // ignore clicks on self mentions
-    const contentSeed = `@${getUserMentionHandle(target)} `;
-    setPrefillContent(contentSeed);
-    setPrefillMentionedUsers([target]);
-    setShowAddInsightModal(true);
+    
+    if (postId) {
+      // Open reply to the specific post
+      const authorHandle = getUserMentionHandle(target);
+      const mentionPrefix = `@${authorHandle} `;
+      setReplyOpen(prev => ({ ...prev, [postId]: true }));
+      setNewComment(prev => {
+        const existing = prev[postId] || '';
+        // Ensure the content starts with the mention to the target user
+        const nextValue = existing.startsWith(mentionPrefix)
+          ? existing
+          : `${mentionPrefix}${existing.replace(/^@\w+\s+/, '')}`;
+        return { ...prev, [postId]: nextValue };
+      });
+    } else {
+      // Fallback to opening new post modal (for backward compatibility)
+      const contentSeed = `@${getUserMentionHandle(target)} `;
+      setPrefillContent(contentSeed);
+      setPrefillMentionedUsers([target]);
+      setShowAddInsightModal(true);
+    }
   };
 
-  const renderContentWithMentions = (text: string): React.ReactNode => {
+  const renderContentWithMentions = (text: string, author?: User, postId?: number): React.ReactNode => {
     // If content contains HTML tags, render as HTML with mention support
     if (text.includes('<') && text.includes('>')) {
       return (
@@ -1459,6 +1484,9 @@ const TaskStream: React.FC<TaskStreamProps> = ({
     let lastIndex = 0;
     let match: RegExpExecArray | null;
 
+    // Determine if this content is from the current user
+    const isFromCurrentUser = author && author.id === currentUser.id;
+
     while ((match = mentionRegex.exec(text)) !== null) {
       const matchStart = match.index;
       const matchEnd = matchStart + match[0].length;
@@ -1467,15 +1495,25 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       }
       const handle = match[1];
       const isViewer = handle.toLowerCase() === viewerHandle.toLowerCase();
+      
+      // Style mentions differently based on whether the post is from current user
+      const mentionClassName = isFromCurrentUser 
+        ? (isViewer 
+          ? "font-bold text-red-600" 
+          : "font-semibold text-gray-800")
+        : (isViewer 
+          ? "font-bold text-red-600" 
+          : "font-semibold text-gray-400"); // Lighter gray for non-current-user posts
+      
       parts.push(
         isViewer ? (
-          <span key={`m-${matchStart}`} className="font-bold text-red-600">@{handle}</span>
+          <span key={`m-${matchStart}`} className={mentionClassName}>@{handle}</span>
         ) : (
           <button
             key={`m-${matchStart}`}
             type="button"
-            onClick={() => handleMentionClick(handle)}
-            className="font-semibold text-gray-800"
+            onClick={() => handleMentionClick(handle, postId)}
+            className={mentionClassName}
             title={`Mention ${handle}`}
           >
             @{handle}
@@ -1648,7 +1686,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                         </div>
                       ) : (
                         <div className="text-gray-700 mb-6 mt-6 text-lg prose prose-sm max-w-none">
-                          {renderContentWithMentions(post.content)}
+                          {renderContentWithMentions(post.content, post.author, post.id)}
                         </div>
                       )
                     )}
@@ -1887,7 +1925,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                 </div>
                               ) : (
                                 <div className="text-gray-700 text-sm prose prose-sm max-w-none">
-                                  {renderContentWithMentions(comment.content)}
+                                  {renderContentWithMentions(comment.content, comment.author, post.id)}
                                 </div>
                               )}
                               {/* Comment actions: Reply for others, Edit/Delete for own comments */}
@@ -1971,7 +2009,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                           <span className="text-xs text-gray-500">{formatTimeAgo(child.createdAt)}</span>
                                         </div>
                                         <div className="text-gray-700 text-sm prose prose-sm max-w-none">
-                                          {renderContentWithMentions(child.content)}
+                                          {renderContentWithMentions(child.content, child.author, post.id)}
                                         </div>
                                         {/* No Reply button for second-level to avoid deeper nesting */}
                                       </div>
