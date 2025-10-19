@@ -63,13 +63,13 @@ const TaskStream: React.FC<TaskStreamProps> = ({
   taskId, 
   collaborationId, 
   currentUser, 
-  teamMembers 
+  teamMembers
 }) => {
   console.log('TaskStream component mounted with props:', { taskId, collaborationId, currentUser, teamMembers });
   
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'insights' | 'media' | 'links' | 'subtasks'>('all');
+  const [filter, setFilter] = useState<'all' | 'insight' | 'media' | 'link' | 'subtask' | 'mentions'>('all');
   const [memberFilter, setMemberFilter] = useState<string>('all');
   const [timeFilter, setTimeFilter] = useState<string>('all');
   const [newComment, setNewComment] = useState<{ [postId: number]: string }>({});
@@ -77,6 +77,43 @@ const TaskStream: React.FC<TaskStreamProps> = ({
   const [showAddMediaModal, setShowAddMediaModal] = useState(false);
   const [showLinkDropModal, setShowLinkDropModal] = useState(false);
   const [showSubtaskModal, setShowSubtaskModal] = useState(false);
+
+  // Listen for filter change events from parent
+  useEffect(() => {
+    const handleFilterChange = (event: CustomEvent) => {
+      const { activeFilter } = event.detail;
+      console.log('🔍 TaskStream received filter change event:', activeFilter);
+      console.log('🔍 Previous filter was:', filter);
+      setFilter(activeFilter);
+      console.log('🔍 New filter set to:', activeFilter);
+    };
+
+    const handleMemberFilterChange = (event: CustomEvent) => {
+      const { memberId } = event.detail;
+      console.log('🔍 TaskStream received member filter change event:', memberId);
+      setMemberFilter(memberId);
+    };
+
+    const handleTimeFilterChange = (event: CustomEvent) => {
+      const { timeRange } = event.detail;
+      console.log('🔍 TaskStream received time filter change event:', timeRange);
+      setTimeFilter(timeRange);
+    };
+
+    // Add event listeners for all filter changes
+    document.addEventListener('taskStreamFilterChange', handleFilterChange as EventListener);
+    document.addEventListener('taskStreamMemberFilterChange', handleMemberFilterChange as EventListener);
+    document.addEventListener('taskStreamTimeFilterChange', handleTimeFilterChange as EventListener);
+    console.log('🔍 TaskStream event listeners added');
+    
+    // Cleanup
+    return () => {
+      document.removeEventListener('taskStreamFilterChange', handleFilterChange as EventListener);
+      document.removeEventListener('taskStreamMemberFilterChange', handleMemberFilterChange as EventListener);
+      document.removeEventListener('taskStreamTimeFilterChange', handleTimeFilterChange as EventListener);
+      console.log('🔍 TaskStream event listeners removed');
+    };
+  }, [filter, memberFilter, timeFilter]);
 
   // Notification banners (in-DOM)
   // NOTE: Search for "Notification banners (in-DOM)" to find this system quickly.
@@ -1142,16 +1179,93 @@ const TaskStream: React.FC<TaskStreamProps> = ({
 
   // Filter posts based on current filters
   const filteredPosts = posts.filter(post => {
+    console.log('🔍 Filtering post:', {
+      id: post.id,
+      type: post.type,
+      filter: filter,
+      content: post.content.substring(0, 30) + '...',
+      hasLinkPreview: !!post.linkPreview
+    });
+    
     // Hide subtask posts from the feed
     if (post.type === 'subtask') {
+      console.log('🔍 Filtered out subtask post');
       return false;
     }
 
-    if (filter !== 'all' && post.type !== filter) return false;
+    // Use internal filter state
+    if (filter !== 'all' && filter !== 'mentions' && post.type !== filter) {
+      console.log('🔍 Post filtered out by type:', post.type, '!==', filter);
+      return false;
+    }
+    
+    // Handle mentions filtering - show posts that mention the current user
+    if (filter === 'mentions') {
+      const content = post.content.toLowerCase();
+      const currentUserName = currentUser.name.toLowerCase();
+      const currentUserEmail = currentUser.email.toLowerCase();
+      
+      // Check if post content contains @mentions of current user
+      const hasMention = content.includes(`@${currentUserName}`) || 
+                        content.includes(`@${currentUserEmail}`) ||
+                        content.includes(`@${currentUser.name}`) ||
+                        content.includes(`@${currentUser.email}`);
+      
+      console.log('🔍 Mentions check for post:', {
+        hasMention,
+        content: content.substring(0, 50),
+        currentUserName,
+        currentUserEmail
+      });
+      if (!hasMention) return false;
+    }
+    
     if (memberFilter !== 'all' && post.author.id.toString() !== memberFilter) return false;
-    // Add time filtering logic here
+    
+    // Handle time filtering
+    if (timeFilter !== 'all') {
+      const postDate = new Date(post.createdAt);
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const postDay = new Date(postDate.getFullYear(), postDate.getMonth(), postDate.getDate());
+      
+      let shouldInclude = false;
+      
+      switch (timeFilter) {
+        case 'today':
+          shouldInclude = postDay.getTime() === today.getTime();
+          break;
+        case 'week':
+          const weekAgo = new Date(today);
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          shouldInclude = postDate >= weekAgo;
+          break;
+        case 'month':
+          const monthAgo = new Date(today);
+          monthAgo.setMonth(monthAgo.getMonth() - 1);
+          shouldInclude = postDate >= monthAgo;
+          break;
+        default:
+          shouldInclude = true;
+      }
+      
+      console.log('🔍 Time filter check:', {
+        timeFilter,
+        postDate: postDate.toISOString().split('T')[0],
+        shouldInclude
+      });
+      
+      if (!shouldInclude) return false;
+    }
+    
+    console.log('🔍 Post passed all filters');
     return true;
   });
+
+  // Debug: Log all posts and their types
+  console.log('🔍 All posts:', posts.map(p => ({ id: p.id, type: p.type, hasLinkPreview: !!p.linkPreview })));
+  console.log('🔍 Current filters:', { filter, memberFilter, timeFilter });
+  console.log('🔍 Filtered posts count:', filteredPosts.length);
 
   // Format time ago
   const formatTimeAgo = (dateString: string) => {
@@ -1537,7 +1651,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       {/* Notification banners (in-DOM) */}
       {/* NOTE: Search for "Notification banners (in-DOM)" to find this system quickly. */}
       <div
