@@ -6,6 +6,7 @@ interface StatusDropdownProps {
   onStatusChange?: (newStatus: string) => void;
   taskId: number;
   disabled?: boolean;
+  completed?: boolean;
 }
 
 const statusOptions = [
@@ -16,13 +17,21 @@ const statusOptions = [
   { value: 'cancelled', label: 'Cancelled', color: 'bg-red-100 text-red-800', icon: 'cancelled' }
 ];
 
-export default function StatusDropdown({ currentStatus, onStatusChange, taskId, disabled = false }: StatusDropdownProps) {
+export default function StatusDropdown({ currentStatus, onStatusChange, taskId, disabled = false, completed = false }: StatusDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [localStatus, setLocalStatus] = useState(currentStatus);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // Debug logging
+  console.log('🔍 StatusDropdown rendered:', { currentStatus, taskId, disabled, completed, isOpen });
+
+  // Track isOpen state changes
+  useEffect(() => {
+    console.log('🔄 isOpen state changed to:', isOpen, 'for taskId:', taskId);
+  }, [isOpen, taskId]);
 
   const currentOption = statusOptions.find(option => option.value === localStatus) || statusOptions[0];
 
@@ -99,6 +108,7 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
   };
 
   const handleStatusChange = async (newStatus: string) => {
+    console.log('🔄 handleStatusChange called:', { newStatus, localStatus, isUpdating, taskId });
     if (newStatus === localStatus || isUpdating) return;
 
     // Close dropdown immediately when selection is made
@@ -163,8 +173,15 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
         type="button"
         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${currentOption.color} ${
           disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'
-        } transition-opacity`}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        } ${completed ? 'grayscale opacity-60' : ''} transition-opacity`}
+        onClick={(e) => {
+          e.stopPropagation(); // Prevent event from bubbling to global click handlers
+          console.log('🖱️ StatusDropdown button clicked:', { disabled, isOpen, taskId });
+          if (!disabled) {
+            console.log('🔄 Setting isOpen to:', !isOpen);
+            setIsOpen(!isOpen);
+          }
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
@@ -195,12 +212,12 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
 
       {isOpen && !disabled && createPortal(
         <div 
-          className="fixed w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-[99999] dropdown-menu"
+          className="fixed w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-[999999] dropdown-menu"
           role="listbox"
           aria-label="Task status options"
           style={{ 
             position: 'fixed', 
-            zIndex: 99999,
+            zIndex: 999999,
             top: dropdownPosition.top,
             left: dropdownPosition.left
           }}
@@ -216,7 +233,10 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
                 className={`w-full flex items-center px-3 py-2 text-sm text-left hover:bg-gray-50 transition-colors focus:bg-gray-50 focus:outline-none ${
                   option.value === localStatus ? 'bg-gray-50' : ''
                 }`}
-                onClick={() => handleStatusChange(option.value)}
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent event from bubbling to global click handlers
+                  handleStatusChange(option.value);
+                }}
                 onKeyDown={(e) => handleKeyDown(e, option.value)}
                 disabled={isUpdating}
                 role="option"

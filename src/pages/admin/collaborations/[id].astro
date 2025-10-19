@@ -344,7 +344,7 @@ if (projectDetails && projectDetails.id) {
 <AdminLayout title={`${collaboration.name} - Collaboration`} currentPage="collaborations">
   <div class="flex h-full">
     <!-- Left Sidebar -->
-    <div class="w-1/4 bg-white border-r border-gray-200 p-6 rounded-xl">
+    <div class="w-1/4 bg-white border-r border-gray-200 p-6 rounded-xl sticky top-0 overflow-y-auto" style="height: calc(100vh - 120px); max-height: calc(100vh - 120px);">
       <!-- Project Overview Card -->
       <div class="bg-white rounded-lg border border-gray-200 p-4 mb-6">
         <div class="flex flex-col items-start justify-between mb-3">
@@ -525,7 +525,7 @@ if (projectDetails && projectDetails.id) {
     </div>
 
     <!-- Main Content Area -->
-    <div class="flex-1 p-6 pt-0">
+    <div class="flex-1 p-6 pt-0 overflow-y-auto" style="height: calc(100vh - 120px); max-height: calc(100vh - 120px);">
       <!-- Header -->
       <div class="flex justify-between gap-4 items-center mb-6">
         <div class="flex items-center flex-1">
@@ -566,7 +566,19 @@ if (projectDetails && projectDetails.id) {
       <!-- Tasks Table -->
       <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
         <div class="px-6 py-4 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-900">Tasks</h2>
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-900">Tasks</h2>
+            <button 
+              id="toggle-all-subtasks-btn"
+              class="flex items-center space-x-2 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors duration-200"
+              title="Toggle all subtasks"
+            >
+              <svg class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+              <span id="toggle-all-text">Subtasks</span>
+            </button>
+          </div>
         </div>
         
         <div class="overflow-x-auto">
@@ -816,8 +828,18 @@ if (projectDetails && projectDetails.id) {
                   <td class="px-6 py-4 whitespace-nowrap">
                     <StatusDropdown 
                       currentStatus={task.status}
+                      onStatusChange={async (newStatus) => {
+                        console.log('🎯 StatusDropdown onStatusChange called:', { taskId: task.id, newStatus });
+                        // Update the main task status via API
+                        if (typeof window !== 'undefined' && (window as any).updateTaskStatus) {
+                          console.log('📞 Calling updateTaskStatus...');
+                          await (window as any).updateTaskStatus(task.id, newStatus);
+                        } else {
+                          console.error('❌ updateTaskStatus function not found on window object');
+                        }
+                      }}
                       taskId={task.id}
-                      client:load
+                      client:visible
                     />
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -975,7 +997,8 @@ if (projectDetails && projectDetails.id) {
                           }
                         }}
                         taskId={parseInt(subtask.id)}
-                        client:load
+                        completed={subtask.completed}
+                        client:visible
                       />
                     </td>
                     <td class="px-6 py-3 text-sm text-gray-500">
@@ -1559,6 +1582,39 @@ if (projectDetails && projectDetails.id) {
         notification.parentNode.removeChild(notification);
       }
     }, 300);
+  }
+
+  // Utility function to update global toggle button state
+  function updateGlobalToggleButtonState() {
+    const allSubtaskRows = document.querySelectorAll('tr.subtask-row');
+    const toggleButton = document.getElementById('toggle-all-subtasks-btn');
+    const toggleText = document.getElementById('toggle-all-text');
+    const toggleArrow = toggleButton?.querySelector('svg');
+    
+    if (!toggleButton || !toggleText || !toggleArrow) return;
+    
+    // Count visible subtask rows
+    const visibleSubtaskRows = Array.from(allSubtaskRows).filter(row => 
+      !row.classList.contains('hidden')
+    );
+    
+    // Determine if all subtasks are expanded or collapsed
+    const allExpanded = visibleSubtaskRows.length === allSubtaskRows.length && allSubtaskRows.length > 0;
+    const allCollapsed = visibleSubtaskRows.length === 0;
+    
+    if (allExpanded) {
+      // All expanded - show "Close"
+      toggleText.textContent = 'Close';
+      toggleArrow.classList.add('rotate-180');
+    } else if (allCollapsed) {
+      // All collapsed - show "Subtasks"
+      toggleText.textContent = 'Subtasks';
+      toggleArrow.classList.remove('rotate-180');
+    } else {
+      // Mixed state - show "Subtasks" (default to expand)
+      toggleText.textContent = 'Subtasks';
+      toggleArrow.classList.remove('rotate-180');
+    }
   }
 
     // Make functions globally available
@@ -3631,26 +3687,96 @@ if (projectDetails && projectDetails.id) {
           console.log(`Toggling subtask row ${index}:`, row);
           console.log('Before toggle - display:', row.style.display, 'hidden class:', row.classList.contains('hidden'));
           
-          // Check current state first
-          const isCurrentlyHidden = row.style.display === 'none' || row.classList.contains('hidden');
-          
-          if (isCurrentlyHidden) {
-            // Show the row
+          // Simple toggle - just flip the current state
+          if (row.classList.contains('hidden')) {
+            // Currently hidden, show it
+            row.classList.remove('hidden');
             row.style.display = '';
             row.style.visibility = 'visible';
-            row.classList.remove('hidden');
             console.log('Showing row');
           } else {
-            // Hide the row
+            // Currently visible, hide it
+            row.classList.add('hidden');
             row.style.display = 'none';
             row.style.visibility = 'hidden';
-            row.classList.add('hidden');
             console.log('Hiding row');
           }
           
           console.log('After toggle - display:', row.style.display, 'hidden class:', row.classList.contains('hidden'));
           console.log('Row classes after toggle:', row.className);
           
+        });
+        
+        // Update global toggle button state after individual toggle
+        updateGlobalToggleButtonState();
+      }
+      
+      // Handle toggle all subtasks button
+      if (e.target.id === 'toggle-all-subtasks-btn' || e.target.closest('#toggle-all-subtasks-btn')) {
+        console.log('Toggle all subtasks button clicked!');
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const button = e.target.id === 'toggle-all-subtasks-btn' ? e.target : e.target.closest('#toggle-all-subtasks-btn');
+        const arrow = button.querySelector('svg');
+        const textSpan = document.getElementById('toggle-all-text');
+        const allSubtaskRows = document.querySelectorAll('tr.subtask-row');
+        const allExpandButtons = document.querySelectorAll('.expand-subtasks-btn');
+        
+        console.log('Found subtask rows:', allSubtaskRows.length);
+        console.log('Found expand buttons:', allExpandButtons.length);
+        
+        // Determine current state by checking if any subtasks are visible
+        const visibleSubtaskRows = Array.from(allSubtaskRows).filter(row => 
+          !row.style.display === 'none' && !row.classList.contains('hidden')
+        );
+        const shouldExpand = visibleSubtaskRows.length === 0;
+        
+        console.log('Should expand:', shouldExpand);
+        
+        // Toggle arrow rotation
+        if (arrow) {
+          if (shouldExpand) {
+            arrow.classList.remove('rotate-180');
+          } else {
+            arrow.classList.add('rotate-180');
+          }
+        }
+        
+        // Update button text
+        if (textSpan) {
+          textSpan.textContent = shouldExpand ? 'Subtasks' : 'Close';
+        }
+        
+        // Toggle all subtask rows
+        allSubtaskRows.forEach((row, index) => {
+          console.log(`Toggling subtask row ${index}:`, row);
+          
+          if (shouldExpand) {
+            // Show the row
+            row.classList.remove('hidden');
+            row.style.display = '';
+            row.style.visibility = 'visible';
+            console.log('Showing row');
+          } else {
+            // Hide the row
+            row.classList.add('hidden');
+            row.style.display = 'none';
+            row.style.visibility = 'hidden';
+            console.log('Hiding row');
+          }
+        });
+        
+        // Update all individual expand buttons to match the global state
+        allExpandButtons.forEach(expandButton => {
+          const buttonArrow = expandButton.querySelector('svg');
+          if (buttonArrow) {
+            if (shouldExpand) {
+              buttonArrow.classList.remove('rotate-180');
+            } else {
+              buttonArrow.classList.add('rotate-180');
+            }
+          }
         });
       }
       
@@ -3920,6 +4046,44 @@ if (projectDetails && projectDetails.id) {
         console.error('Error updating subtask status:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         showNotification('Failed to update subtask status: ' + errorMessage, 'error');
+      }
+    };
+
+    // Function to update main task status
+    window.updateTaskStatus = async function(taskId, status) {
+      try {
+        console.log('🔄 updateTaskStatus called:', { taskId, status });
+        
+        // Make API call to update task status
+        const response = await fetch(`/api/admin/tasks/${taskId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({ status: status })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update task status');
+        }
+
+        const result = await response.json();
+        console.log('Task status updated successfully:', result);
+        
+        // Dispatch custom event for real-time updates
+        window.dispatchEvent(new CustomEvent('taskStatusUpdated', {
+          detail: { taskId, newStatus: status }
+        }));
+        
+        // Show success notification
+        showNotification('Task status updated successfully!', 'success');
+        
+      } catch (error) {
+        console.error('Error updating task status:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        showNotification('Failed to update task status: ' + errorMessage, 'error');
       }
     };
   });
