@@ -2,6 +2,7 @@
 import AdminLayout from '../../../../../layouts/AdminLayout.astro';
 import TaskStream from '../../../../../components/TaskStream.tsx';
 import StatusDropdown from '../../../../../components/StatusDropdown.tsx';
+import TaskTimer from '../../../../../components/TaskTimer.tsx';
 import { db } from '../../../../../db/index';
 import { teams, teamMembers as teamMembersTable, projects, clients, users, taskNotes, taskDiscussions, taskFiles, taskLinks, tasks, taskAssignments, timeEntries } from '../../../../../db/schema';
 import { eq, and, desc, count, sql } from 'drizzle-orm';
@@ -219,6 +220,21 @@ if (totalHours > 0) {
             <p class="font-medium">{(task.project as any)?.name}</p>
             <p class="text-gray-500">{(task.project as any)?.client?.name}</p>
           </div>
+        </div>
+
+        <!-- Timer Component -->
+        <div class="pt-4 border-t border-gray-200">
+          <TaskTimer 
+            taskId={taskId}
+            taskName={task.name}
+            projectName={(task.project as any)?.name || 'Unknown Project'}
+            currentUser={{
+              id: currentUser.id,
+              name: currentUser.name,
+              email: currentUser.email
+            }}
+            client:load
+          />
         </div>
       </div>
 
