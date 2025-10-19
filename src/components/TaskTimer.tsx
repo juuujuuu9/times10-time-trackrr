@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRealtimeTimer } from '../utils/useRealtimeTimer';
 
 interface TaskTimerProps {
-  taskId: number;
+  taskId: number; // This is actually the projectId from the task
   taskName: string;
   projectName: string;
   currentUser: {
@@ -17,6 +17,14 @@ export default function TaskTimer({ taskId, taskName, projectName, currentUser }
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Debug: Log what TaskTimer received
+  console.log('🔍 [TASK TIMER DEBUG] TaskTimer received props:', {
+    taskId,
+    taskName,
+    projectName,
+    currentUserId: currentUser.id
+  });
 
   // Use the realtime timer hook
   const { 

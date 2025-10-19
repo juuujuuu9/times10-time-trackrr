@@ -88,6 +88,13 @@ console.log('Task found:', {
   assignments: task.taskAssignments?.length || 0
 });
 
+// Debug: Log what we're passing to TaskTimer
+console.log('TaskTimer props:', {
+  taskId: task.projectId,
+  taskName: task.name,
+  projectName: (task.project as any)?.name || 'Unknown Project'
+});
+
 // Get team members
 const teamMembers = (collaboration as any).members.map((member: any) => ({
   id: member.user.id,
@@ -225,7 +232,7 @@ if (totalHours > 0) {
         <!-- Timer Component -->
         <div class="pt-4 border-t border-gray-200">
           <TaskTimer 
-            taskId={taskId}
+            taskId={task.projectId}
             taskName={task.name}
             projectName={(task.project as any)?.name || 'Unknown Project'}
             currentUser={{
