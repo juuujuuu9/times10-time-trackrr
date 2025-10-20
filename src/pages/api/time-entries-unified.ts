@@ -5,7 +5,7 @@
 
 import type { APIRoute } from 'astro';
 import { TimeEntryService } from '../../services/timeEntryService';
-import { CreateTimeEntryRequest, UpdateTimeEntryRequest } from '../../services/types';
+import type { CreateTimeEntryRequest, UpdateTimeEntryRequest } from '../../services/types';
 import { isTokenExpired } from '../../utils/auth';
 import { db } from '../../db';
 import { sessions } from '../../db/schema';

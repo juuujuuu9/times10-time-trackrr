@@ -18,6 +18,12 @@
       ]
     }
   ],
+  "functions": {
+    "regions": ["pdx1", "sfo1"]
+  },
+  "crons": {
+    "regions": ["pdx1"]
+  },
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
   "framework": "astro"
