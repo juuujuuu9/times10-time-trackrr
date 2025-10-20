@@ -33,6 +33,16 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
     console.log('🔄 isOpen state changed to:', isOpen, 'for taskId:', taskId);
   }, [isOpen, taskId]);
 
+  // Debug button click events
+  useEffect(() => {
+    const handleGlobalClick = (event: MouseEvent) => {
+      console.log('🌍 Global click detected:', { target: event.target, isOpen, taskId });
+    };
+    
+    document.addEventListener('click', handleGlobalClick);
+    return () => document.removeEventListener('click', handleGlobalClick);
+  }, [isOpen, taskId]);
+
   const currentOption = statusOptions.find(option => option.value === localStatus) || statusOptions[0];
 
   const renderStatusIcon = (status: string) => {
@@ -176,10 +186,20 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
         } ${completed ? 'grayscale opacity-60' : ''} transition-opacity`}
         onClick={(e) => {
           e.stopPropagation(); // Prevent event from bubbling to global click handlers
-          console.log('🖱️ StatusDropdown button clicked:', { disabled, isOpen, taskId });
+          console.log('🖱️ StatusDropdown button clicked:', { 
+            disabled, 
+            isOpen, 
+            taskId, 
+            target: e.target,
+            currentTarget: e.currentTarget,
+            eventType: e.type
+          });
           if (!disabled) {
             console.log('🔄 Setting isOpen to:', !isOpen);
             setIsOpen(!isOpen);
+            console.log('✅ isOpen state updated, should trigger re-render');
+          } else {
+            console.log('❌ Button is disabled, not opening dropdown');
           }
         }}
         onKeyDown={(e) => {
@@ -210,18 +230,26 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
         )}
       </button>
 
-      {isOpen && !disabled && createPortal(
-        <div 
-          className="fixed w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-[999999] dropdown-menu"
-          role="listbox"
-          aria-label="Task status options"
-          style={{ 
-            position: 'fixed', 
-            zIndex: 999999,
-            top: dropdownPosition.top,
-            left: dropdownPosition.left
-          }}
-        >
+      {isOpen && !disabled && (() => {
+        console.log('🎯 Rendering dropdown portal:', { 
+          isOpen, 
+          disabled, 
+          taskId, 
+          position: dropdownPosition,
+          portalTarget: 'document.body'
+        });
+        return createPortal(
+          <div 
+            className="fixed w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-[999999] dropdown-menu"
+            role="listbox"
+            aria-label="Task status options"
+            style={{ 
+              position: 'fixed', 
+              zIndex: 999999,
+              top: dropdownPosition.top,
+              left: dropdownPosition.left
+            }}
+          >
           <div className="py-1">
             <div className="px-3 py-2 text-xs font-semibold text-gray-500 border-b border-gray-100">
               Statuses
@@ -256,7 +284,8 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
           </div>
         </div>,
         document.body
-      )}
+        );
+      })()}
     </div>
   );
 }

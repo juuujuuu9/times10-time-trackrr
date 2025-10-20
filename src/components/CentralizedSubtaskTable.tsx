@@ -42,12 +42,23 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
 }) => {
   console.log('🔍 CentralizedSubtaskTable props:', { subtasks: subtasks?.length, onDelete: !!onDelete, collaborationId, taskId });
   
-  // Debug subtask IDs
+  // Debug subtask IDs and data structure
   if (subtasks && subtasks.length > 0) {
+    console.log('🔍 All subtasks data:', subtasks);
     const invalidSubtasks = subtasks.filter(subtask => !subtask.id || subtask.id === '0' || subtask.id === 0);
     if (invalidSubtasks.length > 0) {
       console.warn('⚠️ Found subtasks with invalid IDs:', invalidSubtasks);
     }
+    
+    // Debug each subtask's StatusDropdown props
+    subtasks.forEach((subtask, index) => {
+      console.log(`🔍 Subtask ${index} StatusDropdown props:`, {
+        id: subtask.id,
+        status: subtask.status,
+        completed: subtask.completed,
+        validId: subtask.id && subtask.id !== '0' && subtask.id !== 0
+      });
+    });
   }
   const [updatingTasks, setUpdatingTasks] = useState<Set<string>>(new Set());
   const [deletingId, setDeletingId] = useState<string | null>(null);
