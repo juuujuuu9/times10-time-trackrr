@@ -1,12 +1,11 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../../../../db';
-import { taskDiscussions, teamMembers } from '../../../../../../db/schema';
+import { taskDiscussions, teamMembers, tasks, projects } from '../../../../../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getSessionUser } from '../../../../../../utils/session';
 import { sendMentionNotificationEmail } from '../../../../../../utils/email';
 import { extractMentions, resolveMentions } from '../../../../../../utils/mentionUtils';
 import { getEmailBaseUrl } from '../../../../../../utils/url';
-import { teamMembers, tasks, projects } from '../../../../../../db/schema';
 
 // POST /api/collaborations/[id]/discussions/[discussionId]/comments - Create a new comment
 export const POST: APIRoute = async (context) => {
