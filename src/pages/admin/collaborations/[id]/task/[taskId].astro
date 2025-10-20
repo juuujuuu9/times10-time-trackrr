@@ -88,13 +88,6 @@ console.log('Task found:', {
   assignments: task.taskAssignments?.length || 0
 });
 
-// Debug: Log what we're passing to TaskTimer
-console.log('TaskTimer props:', {
-  taskId: task.projectId,
-  taskName: task.name,
-  projectName: (task.project as any)?.name || 'Unknown Project'
-});
-
 // Get team members
 const teamMembers = (collaboration as any).members.map((member: any) => ({
   id: member.user.id,
@@ -154,9 +147,9 @@ if (totalHours > 0) {
 ---
 
 <AdminLayout title={`${task.name} - Task Stream`} currentPage="collaborations">
-  <div class="flex h-full">
+  <div class="flex">
     <!-- Left Sidebar -->
-    <div class="w-1/4 bg-white border-r rounded-xl border-gray-200 p-6 status-dropdown-container sticky top-0 overflow-y-auto" style="overflow: visible; height: calc(100vh - 120px); max-height: calc(100vh - 120px);">
+    <div class="w-1/4 bg-white border-r rounded-xl border-gray-200 p-6 status-dropdown-container sticky top-0" style="overflow: visible; min-height: calc(100vh - 120px); height: auto; max-height: none;">
       <!-- Task Overview Card -->
       <div class="bg-white rounded-lg border border-gray-200 p-4 mb-6 h-auto">
         <div class="flex flex-col items-start justify-between mb-3">
@@ -232,7 +225,7 @@ if (totalHours > 0) {
         <!-- Timer Component -->
         <div class="pt-4 border-t border-gray-200">
           <TaskTimer 
-            taskId={task.projectId}
+            taskId={taskId}
             taskName={task.name}
             projectName={(task.project as any)?.name || 'Unknown Project'}
             currentUser={{
