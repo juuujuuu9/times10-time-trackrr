@@ -1273,12 +1273,6 @@ export async function sendMentionNotificationEmail(data: MentionNotificationEmai
               
               <p><strong>${data.mentionedBy}</strong> mentioned you in a ${data.postType} on the task <strong>"${data.taskName}"</strong>.</p>
               
-              <div class="mention-highlight">
-                <strong>💬 Mentioned in:</strong> ${data.taskName}<br>
-                <strong>👤 By:</strong> ${data.mentionedBy}<br>
-                <strong>📝 Type:</strong> ${data.postType}
-              </div>
-              
               <div class="task-info">
                 <h3>📋 Task Details</h3>
                 <p><strong>Task:</strong> ${data.taskName}</p>
