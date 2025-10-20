@@ -328,6 +328,7 @@ export const POST: APIRoute = async (context) => {
     } = body;
     
     console.log('📋 Extracted subtask data:', { subtask, subtaskData });
+    console.log('🔍 API: Received mentionedUsers:', mentionedUsers);
 
     if (!content || content.trim() === '') {
       return new Response(JSON.stringify({
@@ -389,7 +390,9 @@ export const POST: APIRoute = async (context) => {
     }
 
     // Send notifications for mentioned users
+    console.log('🔍 API: Checking mentionedUsers for email sending:', { mentionedUsers, taskId });
     if (mentionedUsers && mentionedUsers.length > 0 && taskId) {
+      console.log('🔍 API: Processing mentioned users for email notifications');
       try {
         // Get task details for notification
         const task = await db.query.tasks.findFirst({
