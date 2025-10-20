@@ -415,14 +415,14 @@ export const POST: APIRoute = async (context) => {
           // Send email notifications for mentioned users
           try {
             // Get team members for mention resolution
-            const teamMembers = await db.query.teamMembers.findMany({
+            const teamMembersList = await db.query.teamMembers.findMany({
               where: eq(teamMembers.teamId, collaborationId),
               with: {
                 user: true
               }
             });
 
-            const teamMemberUsers = teamMembers.map(tm => tm.user);
+            const teamMemberUsers = teamMembersList.map(tm => tm.user);
             
             // Extract mentions from content and resolve them
             const extractedMentions = extractMentions(content);
