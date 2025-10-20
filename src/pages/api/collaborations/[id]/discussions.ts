@@ -4,6 +4,9 @@ import { taskDiscussions, teams, teamMembers, users, tasks } from '../../../../d
 import { eq, and, desc, sql, inArray } from 'drizzle-orm';
 import { getSessionUser } from '../../../../utils/session';
 import { NotificationService } from '../../../../services/notificationService';
+import { sendMentionNotificationEmail } from '../../../../utils/email';
+import { extractMentions, resolveMentions } from '../../../../utils/mentionUtils';
+import { getEmailBaseUrl } from '../../../../utils/url';
 
 // GET /api/collaborations/[id]/discussions - Get discussions for a collaboration
 export const GET: APIRoute = async (context) => {
@@ -397,13 +400,60 @@ export const POST: APIRoute = async (context) => {
         });
 
         if (task) {
+          // Create in-app notifications
           await NotificationService.createMentionNotifications(
             mentionedUsers,
             currentUser.name,
             task.name,
             createdDiscussion.id
           );
-          console.log(`📧 Mention notifications sent to ${mentionedUsers.length} users`);
+          console.log(`📧 In-app mention notifications sent to ${mentionedUsers.length} users`);
+
+          // Send email notifications for mentioned users
+          try {
+            // Get team members for mention resolution
+            const teamMembers = await db.query.teamMembers.findMany({
+              where: eq(teamMembers.teamId, collaborationId),
+              with: {
+                user: true
+              }
+            });
+
+            const teamMemberUsers = teamMembers.map(tm => tm.user);
+            
+            // Extract mentions from content and resolve them
+            const extractedMentions = extractMentions(content);
+            const resolvedMentions = resolveMentions(extractedMentions, teamMemberUsers);
+            
+            // Get base URL for task stream link
+            const baseUrl = getEmailBaseUrl();
+            const taskStreamUrl = `${baseUrl}/admin/collaborations/${collaborationId}/task/${taskId}`;
+
+            // Send email to each mentioned user
+            for (const mention of resolvedMentions) {
+              if (mention.email && mention.userId !== currentUser.id) {
+                try {
+                  console.log(`📧 Sending mention email to ${mention.email} for user ${mention.fullName}`);
+                  await sendMentionNotificationEmail({
+                    email: mention.email,
+                    userName: mention.fullName,
+                    mentionedBy: currentUser.name,
+                    content: content,
+                    taskName: task.name,
+                    projectName: task.project.name,
+                    taskStreamUrl: taskStreamUrl,
+                    postType: type
+                  });
+                  console.log(`📧 Mention email sent to ${mention.email}`);
+                } catch (emailError) {
+                  console.error(`Failed to send mention email to ${mention.email}:`, emailError);
+                }
+              }
+            }
+          } catch (emailNotificationError) {
+            console.error('Error sending mention email notifications:', emailNotificationError);
+            // Don't fail the entire operation if email notifications fail
+          }
         }
       } catch (notificationError) {
         console.error('Error sending mention notifications:', notificationError);

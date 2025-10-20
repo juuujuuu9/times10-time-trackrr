@@ -248,6 +248,17 @@ export interface SubtaskAssignmentEmailData {
   dashboardUrl: string;
 }
 
+export interface MentionNotificationEmailData {
+  email: string;
+  userName: string;
+  mentionedBy: string;
+  content: string;
+  taskName: string;
+  projectName: string;
+  taskStreamUrl: string;
+  postType: string;
+}
+
 export async function sendTaskAssignmentEmail(data: TaskAssignmentEmailData) {
   // Check if we have a valid Resend API key configured
   const resend = getResendClient();
@@ -1104,5 +1115,211 @@ export async function sendSubtaskAssignmentEmail(data: SubtaskAssignmentEmailDat
   } catch (error) {
     console.error('Error in sendSubtaskAssignmentEmail:', error);
     throw error;
+  }
+}
+
+export async function sendMentionNotificationEmail(data: MentionNotificationEmailData) {
+  // Check if we have a valid Resend API key configured
+  const resend = getResendClient();
+  if (!resend) {
+    console.log('📧 NO API KEY: Mention notification would be sent to:', data.email);
+    console.log('📧 Mention Details:', {
+      userName: data.userName,
+      mentionedBy: data.mentionedBy,
+      content: data.content.substring(0, 100) + '...',
+      taskName: data.taskName,
+      projectName: data.projectName,
+      postType: data.postType,
+      taskStreamUrl: data.taskStreamUrl
+    });
+    
+    // Return success for testing
+    return { id: 'test-mention-notification-' + Date.now() };
+  }
+
+  try {
+    // Log the attempt for debugging
+    console.log('📧 Attempting to send mention notification email to:', data.email);
+    
+    const { data: emailData, error } = await resend.emails.send({
+      from: getSenderString(),
+      replyTo: getReplyToString(),
+      to: [data.email],
+      subject: `You were mentioned in ${data.taskName}`,
+      headers: getEmailHeaders(),
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Mention Notification</title>
+          <style>
+            /* Reset and base styles */
+            body { 
+              font-family: 'Istok Web', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+              line-height: 1.6; 
+              color: #1F292E; 
+              background-color: #F2F2F3; 
+              margin: 0; 
+              padding: 0; 
+            }
+            
+            .container { 
+              max-width: 600px; 
+              margin: 0 auto; 
+              background-color: #FFFFFF; 
+              border-radius: 12px; 
+              overflow: hidden; 
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
+            }
+            
+            .header { 
+              background: linear-gradient(135deg, ${getPrimaryColor()} 0%, ${getSecondaryColor()} 100%); 
+              padding: 32px 24px; 
+              text-align: center; 
+              color: white; 
+            }
+            
+            .logo { 
+              max-width: 120px; 
+              height: auto; 
+              margin-bottom: 16px; 
+            }
+            
+            .header h1 { 
+              margin: 0; 
+              font-size: 24px; 
+              font-weight: 600; 
+              color: white; 
+            }
+            
+            .content { 
+              padding: 32px 24px; 
+            }
+            
+            .mention-highlight { 
+              background-color: #FEF3C7; 
+              border-left: 4px solid #F59E0B; 
+              padding: 16px; 
+              margin: 20px 0; 
+              border-radius: 8px; 
+            }
+            
+            .content-preview { 
+              background-color: #F9FAFB; 
+              border: 1px solid #E5E7EB; 
+              border-radius: 8px; 
+              padding: 16px; 
+              margin: 16px 0; 
+              font-style: italic; 
+              color: #6B7280; 
+            }
+            
+            .button { 
+              display: inline-block; 
+              background-color: ${getPrimaryColor()}; 
+              color: white; 
+              padding: 12px 24px; 
+              text-decoration: none; 
+              border-radius: 8px; 
+              font-weight: 600; 
+              margin: 20px 0; 
+              transition: background-color 0.2s; 
+            }
+            
+            .button:hover { 
+              background-color: ${getSecondaryColor()}; 
+            }
+            
+            .footer { 
+              background-color: #F9FAFB; 
+              padding: 24px; 
+              text-align: center; 
+              color: #6B7280; 
+              font-size: 14px; 
+              border-top: 1px solid #E5E7EB; 
+            }
+            
+            .task-info { 
+              background-color: #F3F4F6; 
+              border-radius: 8px; 
+              padding: 16px; 
+              margin: 16px 0; 
+            }
+            
+            .task-info h3 { 
+              margin: 0 0 8px 0; 
+              color: #1F2937; 
+              font-size: 16px; 
+            }
+            
+            .task-info p { 
+              margin: 4px 0; 
+              color: #6B7280; 
+              font-size: 14px; 
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <img src="${getLogoUrl()}" alt="Times10 Trackr" class="logo">
+              <h1>You were mentioned!</h1>
+            </div>
+            
+            <div class="content">
+              <p>Hi <strong>${data.userName}</strong>,</p>
+              
+              <p><strong>${data.mentionedBy}</strong> mentioned you in a ${data.postType} on the task <strong>"${data.taskName}"</strong>.</p>
+              
+              <div class="mention-highlight">
+                <strong>💬 Mentioned in:</strong> ${data.taskName}<br>
+                <strong>👤 By:</strong> ${data.mentionedBy}<br>
+                <strong>📝 Type:</strong> ${data.postType}
+              </div>
+              
+              <div class="task-info">
+                <h3>📋 Task Details</h3>
+                <p><strong>Task:</strong> ${data.taskName}</p>
+                <p><strong>Project:</strong> ${data.projectName}</p>
+                <p><strong>Mentioned by:</strong> ${data.mentionedBy}</p>
+              </div>
+              
+              <div class="content-preview">
+                <strong>Message preview:</strong><br>
+                "${data.content.length > 200 ? data.content.substring(0, 200) + '...' : data.content}"
+              </div>
+              
+              <p>Click the button below to view the full conversation and respond:</p>
+              
+              <a href="${data.taskStreamUrl}" class="button">View Task Stream</a>
+              
+              <p style="margin-top: 24px; color: #6B7280; font-size: 14px;">
+                This notification was sent because you were mentioned in a task discussion. 
+                You can reply directly in the task stream to continue the conversation.
+              </p>
+            </div>
+            
+            <div class="footer">
+              <p>This email was sent from Times10 Trackr</p>
+              <p>If you no longer want to receive these notifications, please contact your team administrator.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    });
+
+    if (error) {
+      console.error('Resend API error:', error);
+      throw new Error(`Failed to send mention notification email: ${error.message}`);
+    }
+
+    console.log('📧 Mention notification email sent successfully:', emailData);
+    return emailData;
+  } catch (error) {
+    console.error('Error sending mention notification email:', error);
+    throw new Error(`Failed to send mention notification email: ${(error as any).message || 'Unknown error'}`);
   }
 } 

@@ -3,6 +3,10 @@ import { db } from '../../../../../../db';
 import { taskDiscussions, teamMembers } from '../../../../../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getSessionUser } from '../../../../../../utils/session';
+import { sendMentionNotificationEmail } from '../../../../../../utils/email';
+import { extractMentions, resolveMentions } from '../../../../../../utils/mentionUtils';
+import { getEmailBaseUrl } from '../../../../../../utils/url';
+import { teamMembers, tasks, projects } from '../../../../../../db/schema';
 
 // POST /api/collaborations/[id]/discussions/[discussionId]/comments - Create a new comment
 export const POST: APIRoute = async (context) => {
@@ -99,6 +103,64 @@ export const POST: APIRoute = async (context) => {
 
     if (!createdComment) {
       throw new Error('Failed to retrieve created comment');
+    }
+
+    // Send email notifications for @ mentions in comments
+    try {
+      // Extract mentions from content and resolve them
+      const extractedMentions = extractMentions(content);
+      
+      if (extractedMentions.length > 0) {
+        // Get team members for mention resolution
+        const teamMembersList = await db.query.teamMembers.findMany({
+          where: eq(teamMembers.teamId, collaborationId),
+          with: {
+            user: true
+          }
+        });
+
+        const teamMemberUsers = teamMembersList.map(tm => tm.user);
+        const resolvedMentions = resolveMentions(extractedMentions, teamMemberUsers);
+        
+        // Get task details for email
+        const task = await db.query.tasks.findFirst({
+          where: eq(tasks.id, discussion.taskId),
+          with: {
+            project: true
+          }
+        });
+
+        if (task && resolvedMentions.length > 0) {
+          // Get base URL for task stream link
+          const baseUrl = getEmailBaseUrl();
+          const taskStreamUrl = `${baseUrl}/admin/collaborations/${collaborationId}/task/${discussion.taskId}`;
+
+          // Send email to each mentioned user
+          for (const mention of resolvedMentions) {
+            if (mention.email && mention.userId !== currentUser.id) {
+              try {
+                console.log(`📧 Sending mention email to ${mention.email} for user ${mention.fullName} (comment)`);
+                await sendMentionNotificationEmail({
+                  email: mention.email,
+                  userName: mention.fullName,
+                  mentionedBy: currentUser.name,
+                  content: content,
+                  taskName: task.name,
+                  projectName: task.project.name,
+                  taskStreamUrl: taskStreamUrl,
+                  postType: 'comment'
+                });
+                console.log(`📧 Mention email sent to ${mention.email} (comment)`);
+              } catch (emailError) {
+                console.error(`Failed to send mention email to ${mention.email}:`, emailError);
+              }
+            }
+          }
+        }
+      }
+    } catch (emailNotificationError) {
+      console.error('Error sending mention email notifications for comment:', emailNotificationError);
+      // Don't fail the entire operation if email notifications fail
     }
 
     return new Response(JSON.stringify({

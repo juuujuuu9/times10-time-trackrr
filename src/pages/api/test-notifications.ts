@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { sendCollaborationAssignmentEmail, sendTaskAssignmentEmail, sendSubtaskAssignmentEmail } from '../../utils/email';
+import { sendCollaborationAssignmentEmail, sendTaskAssignmentEmail, sendSubtaskAssignmentEmail, sendMentionNotificationEmail } from '../../utils/email';
 import { getEmailBaseUrl } from '../../utils/url';
 
 export const POST: APIRoute = async ({ request }) => {
@@ -63,6 +63,20 @@ export const POST: APIRoute = async ({ request }) => {
         });
         break;
 
+      case 'mention':
+        console.log('🧪 Testing mention notification email...');
+        result = await sendMentionNotificationEmail({
+          email: email,
+          userName: 'Test User',
+          mentionedBy: 'Admin User',
+          content: 'This is a test message that mentions @TestUser in a task discussion.',
+          taskName: 'Test Task',
+          projectName: 'Test Project',
+          taskStreamUrl: `${baseUrl}/admin/collaborations/1/task/1`,
+          postType: 'insight'
+        });
+        break;
+
       case 'all':
         console.log('🧪 Testing all notification types...');
         const results = [];
@@ -104,13 +118,26 @@ export const POST: APIRoute = async ({ request }) => {
         });
         results.push({ type: 'subtask', result: subtaskResult });
 
+        // Test mention email
+        const mentionResult = await sendMentionNotificationEmail({
+          email: email,
+          userName: 'Test User',
+          mentionedBy: 'Admin User',
+          content: 'This is a test message that mentions @TestUser in a task discussion.',
+          taskName: 'Test Task',
+          projectName: 'Test Project',
+          taskStreamUrl: `${baseUrl}/admin/collaborations/1/task/1`,
+          postType: 'insight'
+        });
+        results.push({ type: 'mention', result: mentionResult });
+
         result = results;
         break;
 
       default:
         return new Response(JSON.stringify({
           success: false,
-          error: 'Invalid test type. Use: collaboration, task, subtask, or all'
+          error: 'Invalid test type. Use: collaboration, task, subtask, mention, or all'
         }), {
           status: 400,
           headers: { 'Content-Type': 'application/json' }
