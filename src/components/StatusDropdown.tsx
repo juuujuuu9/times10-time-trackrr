@@ -84,16 +84,31 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const isInsideButton = dropdownRef.current && dropdownRef.current.contains(target);
+      const isInsideDropdown = document.querySelector('.dropdown-menu')?.contains(target);
+      
+      console.log('🔍 Click outside handler:', { 
+        isInsideButton, 
+        isInsideDropdown, 
+        isOpen, 
+        target: target,
+        dropdownExists: !!document.querySelector('.dropdown-menu')
+      });
+      
+      if (!isInsideButton && !isInsideDropdown) {
+        console.log('🔄 Closing dropdown due to click outside');
         setIsOpen(false);
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [isOpen]);
 
   // Sync local status with prop changes
   useEffect(() => {
@@ -186,6 +201,7 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
         } ${completed ? 'grayscale opacity-60' : ''} transition-opacity`}
         onClick={(e) => {
           e.stopPropagation(); // Prevent event from bubbling to global click handlers
+          e.preventDefault(); // Prevent default behavior
           console.log('🖱️ StatusDropdown button clicked:', { 
             disabled, 
             isOpen, 
@@ -196,8 +212,11 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
           });
           if (!disabled) {
             console.log('🔄 Setting isOpen to:', !isOpen);
-            setIsOpen(!isOpen);
-            console.log('✅ isOpen state updated, should trigger re-render');
+            // Add small delay to prevent immediate closing
+            setTimeout(() => {
+              setIsOpen(!isOpen);
+              console.log('✅ isOpen state updated, should trigger re-render');
+            }, 10);
           } else {
             console.log('❌ Button is disabled, not opening dropdown');
           }
