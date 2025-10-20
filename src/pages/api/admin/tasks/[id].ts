@@ -1,8 +1,10 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../../db/index';
-import { tasks, taskAssignments, timeEntries, sessions, taskDiscussions, taskFiles, taskLinks, taskNotes } from '../../../../db/schema';
+import { tasks, taskAssignments, timeEntries, sessions, taskDiscussions, taskFiles, taskLinks, taskNotes, users, projects } from '../../../../db/schema';
 import { eq } from 'drizzle-orm';
 import { getSessionUser } from '../../../../utils/session';
+import { sendTaskStatusChangeEmail, sendTaskCompletionEmail } from '../../../../utils/email';
+import { getEmailBaseUrl } from '../../../../utils/url';
 
 export const prerender = false;
 
@@ -167,9 +169,17 @@ export const PUT: APIRoute = async (context) => {
       });
     }
 
-    // Check if task exists
+    // Check if task exists and get full details
     const existingTask = await db.query.tasks.findFirst({
-      where: eq(tasks.id, taskId)
+      where: eq(tasks.id, taskId),
+      with: {
+        project: true,
+        assignments: {
+          with: {
+            user: true
+          }
+        }
+      }
     });
 
     if (!existingTask) {
@@ -183,6 +193,9 @@ export const PUT: APIRoute = async (context) => {
       });
     }
 
+    // Store old status for email notifications
+    const oldStatus = existingTask.status;
+
     // Update the task status
     const updatedTask = await db
       .update(tasks)
@@ -192,6 +205,64 @@ export const PUT: APIRoute = async (context) => {
       })
       .where(eq(tasks.id, taskId))
       .returning();
+
+    // Send email notifications for status changes
+    if (oldStatus !== status && existingTask.assignments && existingTask.assignments.length > 0) {
+      try {
+        const baseUrl = getEmailBaseUrl();
+        const dashboardUrl = `${baseUrl}/admin/collaborations/${existingTask.teamId || 'general'}`;
+        
+        // Send status change notifications to all assignees
+        for (const assignment of existingTask.assignments) {
+          if (assignment.user && assignment.user.email && assignment.user.id !== currentUser.id) {
+            try {
+              console.log(`📧 Attempting to send status change email to ${assignment.user.email}`);
+              await sendTaskStatusChangeEmail({
+                email: assignment.user.email,
+                userName: assignment.user.name,
+                taskName: existingTask.name,
+                projectName: existingTask.project?.name || 'Unknown Project',
+                oldStatus: oldStatus,
+                newStatus: status,
+                changedBy: currentUser.name,
+                dashboardUrl: dashboardUrl,
+              });
+              console.log(`📧 Status change email sent to ${assignment.user.email}`);
+            } catch (emailError) {
+              console.error(`Failed to send status change email to ${assignment.user.email}:`, emailError);
+              // Don't fail the entire operation if email fails
+            }
+          }
+        }
+
+        // Send completion notification if task was completed
+        if (status === 'completed') {
+          for (const assignment of existingTask.assignments) {
+            if (assignment.user && assignment.user.email && assignment.user.id !== currentUser.id) {
+              try {
+                console.log(`📧 Attempting to send completion email to ${assignment.user.email}`);
+                await sendTaskCompletionEmail({
+                  email: assignment.user.email,
+                  userName: assignment.user.name,
+                  taskName: existingTask.name,
+                  projectName: existingTask.project?.name || 'Unknown Project',
+                  completedBy: currentUser.name,
+                  completionDate: new Date().toLocaleDateString(),
+                  dashboardUrl: dashboardUrl,
+                });
+                console.log(`📧 Completion email sent to ${assignment.user.email}`);
+              } catch (emailError) {
+                console.error(`Failed to send completion email to ${assignment.user.email}:`, emailError);
+                // Don't fail the entire operation if email fails
+              }
+            }
+          }
+        }
+      } catch (notificationError) {
+        console.error('Error sending status change notifications:', notificationError);
+        // Don't fail the entire operation if notifications fail
+      }
+    }
 
     return new Response(JSON.stringify({
       success: true,

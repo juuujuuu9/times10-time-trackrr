@@ -3,7 +3,7 @@ import { db } from '../../../../../../db';
 import { taskDiscussions, teamMembers, tasks, projects } from '../../../../../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getSessionUser } from '../../../../../../utils/session';
-import { sendMentionNotificationEmail } from '../../../../../../utils/email';
+import { sendMentionNotificationEmail, sendInsightReplyEmail } from '../../../../../../utils/email';
 import { extractMentions, resolveMentions } from '../../../../../../utils/mentionUtils';
 import { getEmailBaseUrl } from '../../../../../../utils/url';
 
@@ -160,6 +160,48 @@ export const POST: APIRoute = async (context) => {
     } catch (emailNotificationError) {
       console.error('Error sending mention email notifications for comment:', emailNotificationError);
       // Don't fail the entire operation if email notifications fail
+    }
+
+    // Send reply notification to the original insight author
+    try {
+      // Get the original discussion author
+      const originalDiscussion = await db.query.taskDiscussions.findFirst({
+        where: eq(taskDiscussions.id, discussionId),
+        with: {
+          user: true
+        }
+      });
+
+      if (originalDiscussion && originalDiscussion.user && originalDiscussion.user.email && originalDiscussion.user.id !== currentUser.id) {
+        // Get task details for notification
+        const task = await db.query.tasks.findFirst({
+          where: eq(tasks.id, discussion.taskId),
+          with: {
+            project: true
+          }
+        });
+
+        if (task) {
+          const baseUrl = getEmailBaseUrl();
+          const taskStreamUrl = `${baseUrl}/admin/collaborations/${collaborationId}/task/${discussion.taskId}`;
+
+          console.log(`📧 Attempting to send insight reply email to ${originalDiscussion.user.email}`);
+          await sendInsightReplyEmail({
+            email: originalDiscussion.user.email,
+            userName: originalDiscussion.user.name,
+            taskName: task.name,
+            projectName: task.project?.name || 'Unknown Project',
+            repliedBy: currentUser.name,
+            replyContent: content.trim(),
+            originalInsightContent: originalDiscussion.content,
+            taskStreamUrl: taskStreamUrl,
+          });
+          console.log(`📧 Insight reply email sent to ${originalDiscussion.user.email}`);
+        }
+      }
+    } catch (replyNotificationError) {
+      console.error('Error sending insight reply notification:', replyNotificationError);
+      // Don't fail the entire operation if reply notification fails
     }
 
     return new Response(JSON.stringify({

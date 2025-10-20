@@ -4,7 +4,7 @@ import { taskDiscussions, teams, teamMembers, users, tasks } from '../../../../d
 import { eq, and, desc, sql, inArray } from 'drizzle-orm';
 import { getSessionUser } from '../../../../utils/session';
 import { NotificationService } from '../../../../services/notificationService';
-import { sendMentionNotificationEmail } from '../../../../utils/email';
+import { sendMentionNotificationEmail, sendNewInsightEmail } from '../../../../utils/email';
 import { extractMentions, resolveMentions } from '../../../../utils/mentionUtils';
 import { getEmailBaseUrl } from '../../../../utils/url';
 
@@ -460,6 +460,54 @@ export const POST: APIRoute = async (context) => {
         }
       } catch (notificationError) {
         console.error('Error sending mention notifications:', notificationError);
+        // Don't fail the entire operation if notifications fail
+      }
+    }
+
+    // Send new insight notifications to task followers (if this is a new insight)
+    if (type === 'insight' && taskId) {
+      try {
+        // Get task details for notification
+        const task = await db.query.tasks.findFirst({
+          where: eq(tasks.id, parseInt(taskId)),
+          with: {
+            project: true,
+            assignments: {
+              with: {
+                user: true
+              }
+            }
+          }
+        });
+
+        if (task && task.assignments && task.assignments.length > 0) {
+          const baseUrl = getEmailBaseUrl();
+          const taskStreamUrl = `${baseUrl}/admin/collaborations/${collaborationId}/task/${taskId}`;
+
+          // Send new insight notifications to all task assignees (followers)
+          for (const assignment of task.assignments) {
+            if (assignment.user && assignment.user.email && assignment.user.id !== currentUser.id) {
+              try {
+                console.log(`📧 Attempting to send new insight email to ${assignment.user.email}`);
+                await sendNewInsightEmail({
+                  email: assignment.user.email,
+                  userName: assignment.user.name,
+                  taskName: task.name,
+                  projectName: task.project?.name || 'Unknown Project',
+                  insightAuthor: currentUser.name,
+                  insightContent: content.trim(),
+                  taskStreamUrl: taskStreamUrl,
+                });
+                console.log(`📧 New insight email sent to ${assignment.user.email}`);
+              } catch (emailError) {
+                console.error(`Failed to send new insight email to ${assignment.user.email}:`, emailError);
+                // Don't fail the entire operation if email fails
+              }
+            }
+          }
+        }
+      } catch (notificationError) {
+        console.error('Error sending new insight notifications:', notificationError);
         // Don't fail the entire operation if notifications fail
       }
     }

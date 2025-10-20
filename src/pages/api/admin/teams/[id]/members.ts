@@ -2,7 +2,7 @@ import { db } from '../../../../../db/index';
 import { teams, teamMembers as teamMembersTable, taskAssignments, taskDiscussions, tasks, users, projects } from '../../../../../db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { getSessionUser } from '../../../../../utils/session';
-import { sendCollaborationAssignmentEmail } from '../../../../../utils/email';
+import { sendCollaborationAssignmentEmail, sendCollaborationRemovalEmail } from '../../../../../utils/email';
 import { getEmailBaseUrl } from '../../../../../utils/url';
 
 // RULE-001: Cascading removal function - removes user from all tasks and subtasks when removed from team
@@ -309,6 +309,52 @@ export async function PUT(Astro: any) {
     
     const currentMemberIds = currentMembers.map(member => member.userId);
     const removedMemberIds = currentMemberIds.filter(id => !validMemberIds.includes(id));
+    
+    // Send removal notifications before cascading removal
+    if (removedMemberIds.length > 0) {
+      try {
+        // Get team and project details for email notifications
+        const teamDetails = await db.query.teams.findFirst({
+          where: eq(teams.id, teamId),
+          with: {
+            project: true
+          }
+        });
+
+        if (teamDetails) {
+          const baseUrl = getEmailBaseUrl();
+          const fallbackUrl = `${baseUrl}/dashboard`;
+
+          // Send removal notifications to removed users
+          for (const removedUserId of removedMemberIds) {
+            const removedUser = await db.query.users.findFirst({
+              where: eq(users.id, removedUserId)
+            });
+
+            if (removedUser && removedUser.email) {
+              try {
+                console.log(`📧 Attempting to send collaboration removal email to ${removedUser.email}`);
+                await sendCollaborationRemovalEmail({
+                  email: removedUser.email,
+                  userName: removedUser.name,
+                  collaborationName: teamDetails.name,
+                  projectName: teamDetails.project?.name || 'Unknown Project',
+                  removedBy: currentUser.name,
+                  fallbackUrl: fallbackUrl,
+                });
+                console.log(`📧 Collaboration removal email sent to ${removedUser.email}`);
+              } catch (emailError) {
+                console.error(`Failed to send collaboration removal email to ${removedUser.email}:`, emailError);
+                // Don't fail the entire operation if email fails
+              }
+            }
+          }
+        }
+      } catch (notificationError) {
+        console.error('Error sending collaboration removal notifications:', notificationError);
+        // Don't fail the entire operation if notifications fail
+      }
+    }
     
     // RULE-001: Cascading removal - remove users from all tasks and subtasks when removed from team
     for (const removedUserId of removedMemberIds) {

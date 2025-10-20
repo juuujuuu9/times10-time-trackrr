@@ -1,8 +1,10 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../../../../db';
-import { taskDiscussions, teamMembers } from '../../../../../../db/schema';
+import { taskDiscussions, teamMembers, tasks } from '../../../../../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getSessionUser } from '../../../../../../utils/session';
+import { sendInsightLikedEmail } from '../../../../../../utils/email';
+import { getEmailBaseUrl } from '../../../../../../utils/url';
 
 // POST /api/collaborations/[id]/discussions/[discussionId]/like - Like/unlike a discussion
 export const POST: APIRoute = async (context) => {
@@ -50,9 +52,12 @@ export const POST: APIRoute = async (context) => {
       });
     }
 
-    // Get the discussion
+    // Get the discussion with author info
     const discussion = await db.query.taskDiscussions.findFirst({
-      where: eq(taskDiscussions.id, discussionId)
+      where: eq(taskDiscussions.id, discussionId),
+      with: {
+        user: true
+      }
     });
 
     if (!discussion) {
@@ -63,6 +68,39 @@ export const POST: APIRoute = async (context) => {
         status: 404,
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    // Send like notification to the insight author (if not the same user)
+    if (discussion.user && discussion.user.email && discussion.user.id !== currentUser.id) {
+      try {
+        // Get task details for notification
+        const task = await db.query.tasks.findFirst({
+          where: eq(tasks.id, discussion.taskId),
+          with: {
+            project: true
+          }
+        });
+
+        if (task) {
+          const baseUrl = getEmailBaseUrl();
+          const taskStreamUrl = `${baseUrl}/admin/collaborations/${collaborationId}/task/${discussion.taskId}`;
+
+          console.log(`📧 Attempting to send insight liked email to ${discussion.user.email}`);
+          await sendInsightLikedEmail({
+            email: discussion.user.email,
+            userName: discussion.user.name,
+            taskName: task.name,
+            projectName: task.project?.name || 'Unknown Project',
+            likedBy: currentUser.name,
+            insightContent: discussion.content,
+            taskStreamUrl: taskStreamUrl,
+          });
+          console.log(`📧 Insight liked email sent to ${discussion.user.email}`);
+        }
+      } catch (likeNotificationError) {
+        console.error('Error sending insight liked notification:', likeNotificationError);
+        // Don't fail the entire operation if like notification fails
+      }
     }
 
     // For now, just return success since likes field doesn't exist in schema
