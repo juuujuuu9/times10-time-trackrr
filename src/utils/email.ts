@@ -2448,4 +2448,4 @@ export async function sendInsightResolvedEmail(data: InsightResolvedEmailData) {
     console.error('Error sending insight resolved email:', error);
     throw new Error(`Failed to send insight resolved email: ${(error as any).message || 'Unknown error'}`);
   }
-} 
+} // Subtask email fix deployed Mon Oct 20 11:07:53 PDT 2025
