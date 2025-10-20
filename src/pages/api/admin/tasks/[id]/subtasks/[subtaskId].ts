@@ -199,13 +199,13 @@ export const PUT: APIRoute = async (context) => {
 
           // Send emails to newly assigned users
           for (const assigneeName of assignees) {
-            // Find user by name
+            // Find user by name with more robust matching
             const user = await db.query.users.findFirst({
-              where: eq(users.name, assigneeName)
+              where: eq(users.name, assigneeName.trim())
             });
 
             if (user && user.email && user.id !== currentUser.id) {
-              console.log(`📧 Attempting to send subtask assignment email to ${user.email}`);
+              console.log(`📧 Attempting to send subtask assignment email to ${user.email} (found user: ${user.name})`);
               await sendSubtaskAssignmentEmail({
                 email: user.email,
                 userName: user.name,
@@ -218,7 +218,7 @@ export const PUT: APIRoute = async (context) => {
               });
               console.log(`📧 Subtask assignment email sent to ${user.email}`);
             } else {
-              console.log(`📧 Skipping email for user ${assigneeName} (same user or no email)`);
+              console.log(`📧 Skipping email for user "${assigneeName}" - User lookup failed or no email. Found user: ${user ? `${user.name} (${user.email})` : 'null'}`);
             }
           }
         }
