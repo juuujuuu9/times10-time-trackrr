@@ -63,6 +63,7 @@ const SimpleRichEditor: React.FC<SimpleRichEditorProps> = ({
 
   // Handle mention selection
   const handleMentionSelect = (user: User) => {
+    console.log('🔍 SimpleRichEditor: handleMentionSelect called with user:', user);
     if (!editorRef.current) return;
     
     const selection = window.getSelection();
@@ -78,10 +79,14 @@ const SimpleRichEditor: React.FC<SimpleRichEditorProps> = ({
       const textAfterCursor = textContent.substring(cursorPos);
       const atMatch = textBeforeCursor.match(/@(\w*)$/);
       
+      console.log('🔍 SimpleRichEditor: mention detection:', { textBeforeCursor, atMatch, user });
+      
       if (atMatch) {
         const beforeAt = textBeforeCursor.substring(0, atMatch.index);
         const mentionName = formatMentionName(user);
         const newText = `${beforeAt}@${mentionName} ${textAfterCursor}`;
+        
+        console.log('🔍 SimpleRichEditor: creating mention:', { mentionName, newText });
         
         // Update the text node
         textNode.textContent = newText;
@@ -93,6 +98,7 @@ const SimpleRichEditor: React.FC<SimpleRichEditorProps> = ({
         setShowMentions(false);
         const newMentionedUsers = [...mentionedUsers.filter(u => u.id !== user.id), user];
         setMentionedUsers(newMentionedUsers);
+        console.log('🔍 SimpleRichEditor: calling onMentionedUsersChange with:', newMentionedUsers);
         onMentionedUsersChange?.(newMentionedUsers);
         
         // Set cursor position after the mention

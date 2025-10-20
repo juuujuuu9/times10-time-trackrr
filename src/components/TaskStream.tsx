@@ -307,6 +307,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
 
   // Handle insight creation with mentions
   const handleCreateInsight = async (content: string, mentionedUsers: User[]) => {
+    console.log('🔍 TaskStream: handleCreateInsight called with:', { content, mentionedUsers });
     try {
       // Optimistically add the insight to the UI immediately
       const optimisticInsight = {
@@ -326,18 +327,22 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       
       setPosts(prevPosts => [optimisticInsight, ...prevPosts]);
       
+      const requestBody = {
+        taskId,
+        type: 'insight',
+        content,
+        mentionedUsers: mentionedUsers.map(user => user.id)
+      };
+      
+      console.log('🔍 TaskStream: sending request with body:', requestBody);
+      
       const response = await fetch(`/api/collaborations/${collaborationId}/discussions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include', // Include session cookies for authentication
-        body: JSON.stringify({
-          taskId,
-          type: 'insight',
-          content,
-          mentionedUsers: mentionedUsers.map(user => user.id)
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
