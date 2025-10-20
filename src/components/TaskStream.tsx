@@ -393,6 +393,8 @@ const TaskStream: React.FC<TaskStreamProps> = ({
 
         const fileResult = await fileResponse.json();
         
+        console.log('📁 File upload response:', fileResult);
+        
         if (!fileResult.success) {
           throw new Error(fileResult.error || `Failed to upload file: ${file.name}`);
         }
@@ -436,6 +438,8 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         mentionedUsers: mentionedUsers.map(user => user.id)
       };
 
+      console.log('📝 Creating discussion with data:', discussionData);
+      
       const response = await fetch(`/api/collaborations/${collaborationId}/discussions`, {
         method: 'POST',
         headers: {
@@ -446,6 +450,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       });
 
       const data = await response.json();
+      console.log('📝 Discussion creation response:', data);
       
       if (data.success) {
         console.log('✅ Media files uploaded successfully, reloading posts...');
@@ -1174,30 +1179,31 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         allSubtasks.push(...post.subtasks);
       }
     });
-    console.log('🔍 getAllSubtasks: Found', allSubtasks.length, 'subtasks from', posts.length, 'posts');
-    console.log('🔍 Subtasks data:', allSubtasks);
+    // console.log('🔍 getAllSubtasks: Found', allSubtasks.length, 'subtasks from', posts.length, 'posts');
+    // console.log('🔍 Subtasks data:', allSubtasks);
     return allSubtasks;
   }, [posts]);
 
   // Filter posts based on current filters
   const filteredPosts = posts.filter(post => {
-    console.log('🔍 Filtering post:', {
-      id: post.id,
-      type: post.type,
-      filter: filter,
-      content: post.content.substring(0, 30) + '...',
-      hasLinkPreview: !!post.linkPreview
-    });
+    // Debug logging removed for production
+    // console.log('🔍 Filtering post:', {
+    //   id: post.id,
+    //   type: post.type,
+    //   filter: filter,
+    //   content: post.content.substring(0, 30) + '...',
+    //   hasLinkPreview: !!post.linkPreview
+    // });
     
     // Hide subtask posts from the feed
     if (post.type === 'subtask') {
-      console.log('🔍 Filtered out subtask post');
+      // console.log('🔍 Filtered out subtask post');
       return false;
     }
 
     // Use internal filter state
     if (filter !== 'all' && filter !== 'mentions' && post.type !== filter) {
-      console.log('🔍 Post filtered out by type:', post.type, '!==', filter);
+      // console.log('🔍 Post filtered out by type:', post.type, '!==', filter);
       return false;
     }
     
@@ -1213,12 +1219,12 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                         content.includes(`@${currentUser.name}`) ||
                         content.includes(`@${currentUser.email}`);
       
-      console.log('🔍 Mentions check for post:', {
-        hasMention,
-        content: content.substring(0, 50),
-        currentUserName,
-        currentUserEmail
-      });
+      // console.log('🔍 Mentions check for post:', {
+      //   hasMention,
+      //   content: content.substring(0, 50),
+      //   currentUserName,
+      //   currentUserEmail
+      // });
       if (!hasMention) return false;
     }
     
@@ -1251,23 +1257,24 @@ const TaskStream: React.FC<TaskStreamProps> = ({
           shouldInclude = true;
       }
       
-      console.log('🔍 Time filter check:', {
-        timeFilter,
-        postDate: postDate.toISOString().split('T')[0],
-        shouldInclude
-      });
+      // console.log('🔍 Time filter check:', {
+      //   timeFilter,
+      //   postDate: postDate.toISOString().split('T')[0],
+      //   shouldInclude
+      // });
       
       if (!shouldInclude) return false;
     }
     
-    console.log('🔍 Post passed all filters');
+    // console.log('🔍 Post passed all filters');
     return true;
   });
 
   // Debug: Log all posts and their types
-  console.log('🔍 All posts:', posts.map(p => ({ id: p.id, type: p.type, hasLinkPreview: !!p.linkPreview })));
-  console.log('🔍 Current filters:', { filter, memberFilter, timeFilter });
-  console.log('🔍 Filtered posts count:', filteredPosts.length);
+  // Debug logging removed for production
+  // console.log('🔍 All posts:', posts.map(p => ({ id: p.id, type: p.type, hasLinkPreview: !!p.linkPreview })));
+  // console.log('🔍 Current filters:', { filter, memberFilter, timeFilter });
+  // console.log('🔍 Filtered posts count:', filteredPosts.length);
 
   // Format time ago
   const formatTimeAgo = (dateString: string) => {

@@ -28,6 +28,7 @@ const AddMediaModal: React.FC<AddMediaModalProps> = ({
   const [mentionedUsers, setMentionedUsers] = useState<User[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [showMentions, setShowMentions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // File size limit: 1GB

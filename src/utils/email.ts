@@ -1219,7 +1219,7 @@ export async function sendMentionNotificationEmail(data: MentionNotificationEmai
             .button { 
               display: inline-block; 
               background-color: ${getPrimaryColor()}; 
-              color: white; 
+              color: white !important; 
               padding: 12px 24px; 
               text-decoration: none; 
               border-radius: 8px; 
