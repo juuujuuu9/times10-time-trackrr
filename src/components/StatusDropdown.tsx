@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 interface StatusDropdownProps {
   currentStatus: string;
   onStatusChange?: (newStatus: string) => void;
-  taskId: number;
+  taskId: string | number;
   disabled?: boolean;
   completed?: boolean;
 }

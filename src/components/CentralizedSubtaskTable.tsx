@@ -41,6 +41,14 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
   teamMembers = []
 }) => {
   console.log('🔍 CentralizedSubtaskTable props:', { subtasks: subtasks?.length, onDelete: !!onDelete, collaborationId, taskId });
+  
+  // Debug subtask IDs
+  if (subtasks && subtasks.length > 0) {
+    const invalidSubtasks = subtasks.filter(subtask => !subtask.id || subtask.id === '0' || subtask.id === 0);
+    if (invalidSubtasks.length > 0) {
+      console.warn('⚠️ Found subtasks with invalid IDs:', invalidSubtasks);
+    }
+  }
   const [updatingTasks, setUpdatingTasks] = useState<Set<string>>(new Set());
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -430,12 +438,16 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
                   )}
                 </td>
                 <td className="py-3 px-4">
-                  <StatusDropdown
-                    currentStatus={subtask.status || 'pending'}
-                    onStatusChange={(newStatus) => handleStatusUpdate(subtask.id, newStatus)}
-                    taskId={typeof subtask.id === 'string' ? parseInt(subtask.id) || 0 : subtask.id}
-                    disabled={subtask.completed}
-                  />
+                  {subtask.id && subtask.id !== '0' && subtask.id !== 0 ? (
+                    <StatusDropdown
+                      currentStatus={subtask.status || 'pending'}
+                      onStatusChange={(newStatus) => handleStatusUpdate(subtask.id, newStatus)}
+                      taskId={subtask.id}
+                      disabled={subtask.completed}
+                    />
+                  ) : (
+                    <span className="text-sm text-gray-400">Invalid subtask ID</span>
+                  )}
                 </td>
                 <td className="py-3 px-4">
                   {onDelete && (
