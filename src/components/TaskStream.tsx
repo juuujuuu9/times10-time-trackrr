@@ -604,51 +604,50 @@ const TaskStream: React.FC<TaskStreamProps> = ({
   // Handle subtask assignee update
   const handleSubtaskAssigneeUpdate = async (subtaskId: string, assignees: string[]) => {
     try {
-      // Find the discussion that contains this subtask
-      const discussionWithSubtask = posts.find(post => 
-        post.subtasks && post.subtasks.some(subtask => subtask.id === subtaskId)
-      );
-
-      if (!discussionWithSubtask) {
-        console.error('Discussion with subtask not found');
-        return;
-      }
-
-      // Update the subtask in the discussion's subtaskData
-      const updatedSubtasks = discussionWithSubtask.subtasks?.map(subtask => 
-        subtask.id === subtaskId ? { ...subtask, assignees } : subtask
-      ) || [];
-
-      // Update the discussion in the database
-      const response = await fetch(`/api/collaborations/${collaborationId}/discussions/${discussionWithSubtask.id}`, {
+      console.log(`📧 Updating subtask ${subtaskId} assignees:`, assignees);
+      
+      // Use the correct API endpoint that sends email notifications
+      const response = await fetch(`/api/admin/tasks/${taskId}/subtasks/${subtaskId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include', // Include session cookies for authentication
         body: JSON.stringify({
-          subtaskData: {
-            subtasks: updatedSubtasks
-          }
+          assignees: assignees
         }),
       });
 
       const data = await response.json();
       
       if (data.success) {
-        // Update the local state
-        setPosts(prevPosts => 
-          prevPosts.map(post => 
-            post.id === discussionWithSubtask.id 
-              ? { ...post, subtasks: updatedSubtasks }
-              : post
-          )
+        // Find the discussion that contains this subtask and update local state
+        const discussionWithSubtask = posts.find(post => 
+          post.subtasks && post.subtasks.some(subtask => subtask.id === subtaskId)
         );
+
+        if (discussionWithSubtask) {
+          const updatedSubtasks = discussionWithSubtask.subtasks?.map(subtask => 
+            subtask.id === subtaskId ? { ...subtask, assignees } : subtask
+          ) || [];
+
+          // Update the local state
+          setPosts(prevPosts => 
+            prevPosts.map(post => 
+              post.id === discussionWithSubtask.id 
+                ? { ...post, subtasks: updatedSubtasks }
+                : post
+            )
+          );
+        }
         
         // Dispatch custom event for real-time updates
         window.dispatchEvent(new CustomEvent('taskStreamUpdate', {
           detail: { taskId, collaborationId }
         }));
+        
+        addNotification('success', 'Subtask assignees updated successfully');
+        console.log(`📧 Subtask assignees updated successfully for subtask ${subtaskId}`);
       } else {
         console.error('Failed to update subtask assignees:', data.error || data.message);
         addNotification('error', 'Failed to update subtask assignees: ' + (data.error || data.message || 'Unknown error'));
