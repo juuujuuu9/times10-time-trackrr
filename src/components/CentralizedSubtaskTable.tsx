@@ -433,7 +433,7 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
                   <StatusDropdown
                     currentStatus={subtask.status || 'pending'}
                     onStatusChange={(newStatus) => handleStatusUpdate(subtask.id, newStatus)}
-                    taskId={parseInt(subtask.id)}
+                    taskId={typeof subtask.id === 'string' ? parseInt(subtask.id) || 0 : subtask.id}
                     disabled={subtask.completed}
                   />
                 </td>

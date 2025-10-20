@@ -83,9 +83,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
     const handleFilterChange = (event: CustomEvent) => {
       const { activeFilter } = event.detail;
       console.log('🔍 TaskStream received filter change event:', activeFilter);
-      console.log('🔍 Previous filter was:', filter);
       setFilter(activeFilter);
-      console.log('🔍 New filter set to:', activeFilter);
     };
 
     const handleMemberFilterChange = (event: CustomEvent) => {
@@ -113,7 +111,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       document.removeEventListener('taskStreamTimeFilterChange', handleTimeFilterChange as EventListener);
       console.log('🔍 TaskStream event listeners removed');
     };
-  }, [filter, memberFilter, timeFilter]);
+  }, []); // Remove dependencies to prevent infinite re-renders
 
   // Notification banners (in-DOM)
   // NOTE: Search for "Notification banners (in-DOM)" to find this system quickly.
