@@ -1,5 +1,5 @@
 ---
-import Layout from '../../../../../layouts/Layout.astro';
+import DashboardLayout from '../../../../../layouts/DashboardLayout.astro';
 import TaskStream from '../../../../../components/TaskStream.tsx';
 import StatusDropdown from '../../../../../components/StatusDropdown.tsx';
 import TaskTimer from '../../../../../components/TaskTimer.tsx';
@@ -146,10 +146,10 @@ if (totalHours > 0) {
 }
 ---
 
-<Layout title={`${task.name} - Task Stream`}>
-  <div class="flex">
+<DashboardLayout title={`${task.name} - Task Stream`}>
+  <div class="flex h-full mx-auto px-4 sm:px-8 mt-8 w-full">
     <!-- Left Sidebar -->
-    <div class="w-1/4 bg-white border-r rounded-xl border-gray-200 p-6 status-dropdown-container sticky top-0" style="overflow: visible; min-height: calc(100vh - 120px); height: auto; max-height: none;">
+    <div class="w-1/4 bg-white border-r border-gray-200 p-6 rounded-xl sticky top-8" style="height: fit-content;">
       <!-- Task Overview Card -->
       <div class="bg-white rounded-lg border border-gray-200 p-4 mb-6 h-auto">
         <div class="flex flex-col items-start justify-between mb-3">
@@ -299,7 +299,7 @@ if (totalHours > 0) {
     </div>
 
     <!-- Main Content Area -->
-    <div class="flex-1 p-6 pt-0 overflow-y-auto" style="height: calc(100vh - 120px); max-height: calc(100vh - 120px);">
+    <div class="flex-1 p-6 pt-0" style="min-height: calc(100vh - 120px);">
       <!-- Header with Breadcrumbs -->
       <div class="flex justify-between gap-4 items-center mb-6">
         <div class="flex items-center flex-1">
@@ -321,7 +321,7 @@ if (totalHours > 0) {
       </div>
 
       <!-- Main Stream Interface -->
-      <div class="space-y-6">
+      <div class="space-y-6" style="padding-bottom: 200px;">
         <div data-task-stream>
           <TaskStream 
             taskId={taskId}
@@ -435,7 +435,7 @@ if (totalHours > 0) {
       </div>
     </div>
   </div>
-</Layout>
+</DashboardLayout>
 
 <style>
   /* Comprehensive dropdown clipping prevention */

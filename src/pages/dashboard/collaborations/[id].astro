@@ -343,9 +343,9 @@ if (projectDetails && projectDetails.id) {
 
 <DashboardLayout title={`${collaboration.name} - Collaboration`}>
 
-  <div class="flex h-full">
+  <div class="flex h-full mx-auto px-4 sm:px-8 mt-8 w-full">
     <!-- Left Sidebar -->
-    <div class="w-1/4 bg-white border-r border-gray-200 p-6 rounded-xl sticky top-0 overflow-y-auto" style="height: calc(100vh - 120px); max-height: calc(100vh - 120px);">
+    <div class="w-1/4 bg-white border-r border-gray-200 p-6 rounded-xl sticky top-8" style="height: fit-content;">
       <!-- Project Overview Card -->
       <div class="bg-white rounded-lg border border-gray-200 p-4 mb-6">
         <div class="flex flex-col items-start justify-between mb-3">
@@ -526,7 +526,7 @@ if (projectDetails && projectDetails.id) {
     </div>
 
     <!-- Main Content Area -->
-    <div class="flex-1 p-6 pt-0 overflow-y-auto" style="height: calc(100vh - 120px); max-height: calc(100vh - 120px);">
+    <div class="w-3/4 flex-1 p-6 pt-0 pr-0">
       <!-- Header -->
       <div class="flex justify-between gap-4 items-center mb-6">
         <div class="flex items-center flex-1">

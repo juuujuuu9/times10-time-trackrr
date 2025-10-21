@@ -1,13 +1,6 @@
 ---
-import Layout from '../../layouts/Layout.astro';
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
 import { neon } from '@neondatabase/serverless';
-import { getSessionUser } from '../../utils/session';
-
-// Get current user
-const currentUser = await getSessionUser(Astro);
-if (!currentUser) {
-  return Astro.redirect('/login');
-}
 
 // Get database connection
 const databaseUrl = import.meta.env.DATABASE_URL || process.env.DATABASE_URL;
@@ -111,13 +104,13 @@ const groupedTeams = Array.from(teamsByClient.values()).sort((a, b) =>
 );
 ---
 
-<Layout title="Collaborations">
-  <div class="space-y-6">
+<DashboardLayout title="Collaborations">
+  <div class="space-y-6 max-w-7xl mx-auto px-4 sm:px-8 mt-12 w-full">
     <!-- Header -->
     <div class="flex justify-between items-center">
       <div>
         <h1 class="text-2xl font-bold text-gray-900">Collaborations</h1>
-        <p class="text-gray-600">View and manage your collaborative work</p>
+        <p class="text-gray-600">View and manage your collaborative teams</p>
       </div>
     </div>
 
@@ -245,4 +238,4 @@ const groupedTeams = Array.from(teamsByClient.values()).sort((a, b) =>
       </div>
     )}
   </div>
-</Layout>
+</DashboardLayout>
