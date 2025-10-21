@@ -37,6 +37,20 @@ interface Task {
   displayName?: string; // For system-generated tasks
 }
 
+interface TimerData {
+  id: number;
+  projectId: number;
+  startTime: string;
+  elapsedSeconds: number;
+  notes?: string;
+  project?: {
+    id: number;
+    name: string;
+    clientId: number;
+    status: string;
+  };
+}
+
 export default function Timer() {
   // Real-time synchronized timer component that supports:
   // - Cross-device timer synchronization
@@ -48,6 +62,7 @@ export default function Timer() {
   const [selectedTask, setSelectedTask] = useState<number | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ name: string } | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [localTime, setLocalTime] = useState(0);
   const [taskSearchTerm, setTaskSearchTerm] = useState('');
@@ -335,6 +350,7 @@ export default function Timer() {
           if (userData.success && userData.user) {
             const userId = userData.user.id;
             setCurrentUserId(userId);
+            setCurrentUser({ name: userData.user.name });
             
             // Load curated task list and tasks in parallel to reduce latency
             await Promise.allSettled([
@@ -634,8 +650,9 @@ export default function Timer() {
     };
 
     // Enhanced time entry change handler with comprehensive logging
-    const handleTimeEntryChangedEnhanced = (event: CustomEvent) => {
-      console.log('🔄 [TIMER DEBUG] Time entry change event received:', event.type, event.detail);
+    const handleTimeEntryChangedEnhanced = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      console.log('🔄 [TIMER DEBUG] Time entry change event received:', customEvent.type, customEvent.detail);
       handleTimeEntryChanged();
     };
 
@@ -2123,8 +2140,11 @@ export default function Timer() {
     <div className="bg-white p-6 rounded-lg shadow-lg">
       <div className="flex items-center justify-between mb-4">
         
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-800">Hi, {currentUser?.name?.split(' ')[0] || 'User'}!</h2>
+        </div>
         {/* Layout Toggle and Collaborations Button */}
-        <div className="flex items-center w-full justify-between">
+        <div className="flex items-center justify-between space-x-8">
                     
           {/* Collaborations Button */}
           <a
