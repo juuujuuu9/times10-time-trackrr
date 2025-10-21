@@ -1,5 +1,5 @@
 ---
-import Layout from '../../../layouts/Layout.astro';
+import DashboardLayout from '../../../layouts/DashboardLayout.astro';
 import StatusDropdown from '../../../components/StatusDropdown.tsx';
 import { db } from '../../../db/index';
 import { teams, teamMembers as teamMembersTable, projects, clients, users, taskNotes, taskDiscussions, taskFiles, taskLinks, tasks, taskAssignments, timeEntries } from '../../../db/schema';
@@ -341,7 +341,8 @@ if (projectDetails && projectDetails.id) {
 }
 ---
 
-<Layout title={`${collaboration.name} - Collaboration`}>
+<DashboardLayout title={`${collaboration.name} - Collaboration`}>
+
   <div class="flex h-full">
     <!-- Left Sidebar -->
     <div class="w-1/4 bg-white border-r border-gray-200 p-6 rounded-xl sticky top-0 overflow-y-auto" style="height: calc(100vh - 120px); max-height: calc(100vh - 120px);">
@@ -1053,7 +1054,7 @@ if (projectDetails && projectDetails.id) {
 
     </div>
   </div>
-</Layout>
+</DashboardLayout>
 
 <!-- Notification System -->
 <div id="notificationContainer" class="fixed w-full max-w-md top-4 right-4 z-50 space-y-2">
@@ -4087,6 +4088,7 @@ if (projectDetails && projectDetails.id) {
       }
     };
   });
+
 </script>
 
 <style>

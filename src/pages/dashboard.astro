@@ -1,154 +1,22 @@
 ---
-import Layout from '../layouts/Layout.astro';
+import DashboardLayout from '../layouts/DashboardLayout.astro';
 import { requireAuth } from '../utils/session';
 import Timer from '../components/Timer';
 // Require authentication
 const user = await requireAuth('/')(Astro) as any;
 ---
 
-<Layout title="Dashboard - Times10 Time Tracker">
-  <div class="min-h-screen" style="background-color: #f0eef5;">
-    <!-- Loading State (shown immediately) -->
-    <div id="loadingState" class="min-h-screen flex items-center justify-center" style="background-color: #f0eef5;">
-      <div class="text-center">
-        <div class="w-12 h-12 border-4 border-gray-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p class="text-gray-600 text-lg">Loading dashboard...</p>
-      </div>
+<DashboardLayout title="Dashboard - Times10 Time Tracker">
+  <!-- Loading State (shown immediately) -->
+  <div id="loadingState" class="min-h-screen flex items-center justify-center" style="background-color: #f0eef5;">
+    <div class="text-center">
+      <div class="w-12 h-12 border-4 border-gray-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+      <p class="text-gray-600 text-lg">Loading dashboard...</p>
     </div>
+  </div>
 
-    <!-- Dashboard Content (hidden initially) -->
-    <div id="dashboardContent" class="hidden">
-      <!-- Header -->
-      <header class="bg-white shadow-sm border-b border-gray-200 flex items-center" style="height: 58px;">
-        <div class="max-w-7xl mx-auto px-4 sm:px-8 w-full">
-          <div class="flex justify-between items-center">
-            <div class="flex items-center">
-              <a href="/" class="flex items-center hover:opacity-80 transition-opacity">
-                <img src="/trackr-icon.png" alt="Times10 Logo" class="w-auto mr-3 py-0" style="height: calc(58px - 1rem);" />
-              </a>
-            </div>
-            <div class="flex items-center">
-              <!-- Desktop role badge (hidden on mobile) -->
-              <span class={`hidden sm:inline-block px-3 py-1 text-xs font-medium rounded-full mr-4 ${
-                user?.role === 'admin' 
-                  ? 'bg-black text-white' 
-                  : user?.role === 'developer'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-gray-100 text-gray-800'
-              }`}>
-                {user?.role === 'admin' ? 'Admin' : user?.role === 'developer' ? 'Developer' : 'Team Member'}
-              </span>
-              <!-- Hamburger menu button -->
-              <button
-                id="mobileMenuButton"
-                class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
-                aria-label="Open menu"
-              >
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <!-- Mobile Menu Overlay -->
-      <div id="mobileMenuOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
-        <div class="fixed inset-y-0 right-0 w-full max-w-sm bg-white shadow-xl transform transition-transform duration-300 ease-in-out translate-x-full" id="mobileMenu">
-          <div class="flex flex-col h-full">
-            <!-- Menu Header -->
-            <div class="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 class="text-lg font-semibold text-gray-900">Menu</h2>
-              <button
-                id="closeMobileMenuButton"
-                class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-                aria-label="Close menu"
-              >
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
-
-            <!-- Menu Content -->
-            <div class="flex-1 flex flex-col justify-between p-6">
-              <!-- Welcome Section -->
-              <div class="space-y-6">
-                <div class="text-center">
-                  <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span class="text-2xl text-gray-600">👋</span>
-                  </div>
-                  <h3 class="text-xl font-semibold text-gray-900 mb-2">Welcome, {user?.name || 'User'}!</h3>
-                  <span class={`inline-block px-3 py-1 text-sm font-medium rounded-full ${
-                    user?.role === 'admin' 
-                      ? 'bg-black text-white' 
-                      : user?.role === 'developer'
-                      ? 'bg-red-600 text-white'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {user?.role === 'admin' ? 'Admin' : user?.role === 'developer' ? 'Developer' : 'Team Member'}
-                  </span>
-                </div>
-
-                <!-- Quick Actions -->
-                <div class="space-y-3">
-                  <button
-                    id="mobileAddTimeEntryBtn"
-                    class="w-full text-white px-4 py-3 rounded-lg transition-colors text-sm font-medium flex items-center justify-center space-x-2"
-                    style="background-color: #1F292E"
-                    onmouseover="this.style.backgroundColor='#000000'"
-                    onmouseout="this.style.backgroundColor='#1F292E'"
-                  >
-                    <svg fill="currentColor" viewBox="0 0 24 24" id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4">
-                      <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                      <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-                      <g id="SVGRepo_iconCarrier"> 
-                        <path d="M23,18H20V15a1,1,0,0,0-2,0v3H15a1,1,0,0,0,0,2h3v3a1,1,0,0,0,2,0V20h3a1,1,0,0,0,0-2Z M11,7v4.586L8.293,14.293a1,1,0,1,0,1.414,1.414l3-3A1,1,0,0,0,13,12V7a1,1,0,0,0-2,0Z M14.728,21.624a9.985,9.985,0,1,1,6.9-6.895,1,1,0,1,0,1.924.542,11.989,11.989,0,1,0-8.276,8.277,1,1,0,1,0-.544-1.924Z"></path>
-                      </g>
-                    </svg>
-                    <span>Quick Entry</span>
-                  </button>
-                  <button
-                    id="mobileViewReportsBtn"
-                    class="w-full bg-gray-100 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-                  >
-                    View Reports
-                  </button>
-                  <button
-                    id="mobileViewAllEntriesBtn"
-                    class="w-full bg-gray-100 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-                  >
-                    All Time Entries
-                  </button>
-                  <a
-                    href="/teams"
-                    class="w-full bg-blue-100 text-blue-700 px-4 py-3 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium flex items-center justify-center space-x-2"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                    </svg>
-                    <span>Teams</span>
-                  </a>
-                </div>
-              </div>
-
-              <!-- Sign Out Button -->
-              <div class="pt-6 border-t border-gray-200">
-                <button
-                  id="mobileLogoutButton"
-                  class="w-full bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium flex items-center justify-center space-x-2"
-                >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                  </svg>
-                  <span>Sign Out</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+  <!-- Dashboard Content (hidden initially) -->
+  <div id="dashboardContent" class="hidden">
 
       <div class="max-w-7xl mx-auto p-2 sm:p-4 lg:p-8">
         <div id="dashboardGrid" class="grid grid-cols-1 lg:grid-cols-3 lg:gap-8 sm:gap-4 gap-2 transition-all duration-500 ease-in-out">
@@ -590,7 +458,7 @@ const user = await requireAuth('/')(Astro) as any;
       </div>
     </div>
   </div>
-</Layout>
+</DashboardLayout>
 
 <script>
   // Import timezone utilities
@@ -1210,76 +1078,7 @@ const user = await requireAuth('/')(Astro) as any;
     }
   });
 
-  // Mobile Menu Functionality
-  const mobileMenuButton = document.getElementById('mobileMenuButton');
-  const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
-  const mobileMenu = document.getElementById('mobileMenu');
-  const closeMobileMenuButton = document.getElementById('closeMobileMenuButton');
-
-  function openMobileMenu() {
-    if (mobileMenuOverlay && mobileMenu) {
-      mobileMenuOverlay.classList.remove('hidden');
-      // Trigger reflow to ensure the overlay is visible before animation
-      mobileMenuOverlay.offsetHeight;
-      mobileMenu.classList.remove('translate-x-full');
-      // Prevent body scroll when menu is open
-      document.body.style.overflow = 'hidden';
-    }
-  }
-
-  function closeMobileMenu() {
-    if (mobileMenuOverlay && mobileMenu) {
-      mobileMenu.classList.add('translate-x-full');
-      // Wait for animation to complete before hiding overlay
-      setTimeout(() => {
-        mobileMenuOverlay.classList.add('hidden');
-        // Restore body scroll
-        document.body.style.overflow = '';
-      }, 300);
-    }
-  }
-
-  // Open mobile menu
-  mobileMenuButton?.addEventListener('click', openMobileMenu);
-
-  // Close mobile menu
-  closeMobileMenuButton?.addEventListener('click', closeMobileMenu);
-
-  // Close mobile menu when clicking overlay
-  mobileMenuOverlay?.addEventListener('click', (e) => {
-    if (e.target === mobileMenuOverlay) {
-      closeMobileMenu();
-    }
-  });
-
-  // Close mobile menu with Escape key
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && mobileMenuOverlay && !mobileMenuOverlay.classList.contains('hidden')) {
-      closeMobileMenu();
-    }
-  });
-
-  // Mobile menu button functionality
-  document.getElementById('mobileAddTimeEntryBtn')?.addEventListener('click', () => {
-    closeMobileMenu();
-    // Trigger the existing add time entry modal
-    const addTimeEntryBtn = document.getElementById('addTimeEntryBtn');
-    if (addTimeEntryBtn) {
-      addTimeEntryBtn.click();
-    }
-  });
-
-  document.getElementById('mobileViewReportsBtn')?.addEventListener('click', () => {
-    closeMobileMenu();
-    window.location.href = '/admin';
-  });
-
-  document.getElementById('mobileViewAllEntriesBtn')?.addEventListener('click', () => {
-    closeMobileMenu();
-    window.location.href = '/time-entries';
-  });
-
-  // Logout functionality (both desktop and mobile)
+  // Logout functionality
   async function performLogout() {
     try {
       // Get current user ID and clear only their timer state
@@ -1303,9 +1102,6 @@ const user = await requireAuth('/')(Astro) as any;
 
   // Desktop logout (if it still exists)
   document.getElementById('logoutButton')?.addEventListener('click', performLogout);
-
-  // Mobile logout
-  document.getElementById('mobileLogoutButton')?.addEventListener('click', performLogout);
 
   // Load data when page loads
   document.addEventListener('DOMContentLoaded', loadDashboardData);
