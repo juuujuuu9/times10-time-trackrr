@@ -2122,10 +2122,21 @@ export default function Timer() {
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold text-gray-800">Time Tracker</h2>
         
-        {/* Layout Toggle */}
-        <div className="flex items-center space-x-2">
+        {/* Layout Toggle and Collaborations Button */}
+        <div className="flex items-center w-full justify-between">
+                    
+          {/* Collaborations Button */}
+          <a
+            href="/dashboard/collaborations"
+            className="flex flex-row items-center justify-center gap-3 bg-white border border-gray-400 px-3 py-[.5rem] rounded transition-colors hover:bg-gray-50 h-full"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+            </svg>
+            <span className="text-sm text-gray-800">Collaborations</span>
+          </a>
+
           {/* <span className="text-sm text-gray-600">View:</span> */}
           <div className="flex bg-gray-100 rounded-lg p-1">
             <button
@@ -2158,6 +2169,8 @@ export default function Timer() {
           </div>
         </div>
       </div>
+
+      <hr className="my-4 border-gray-200" />
       
       {/* Task Selection - Dropdown Layout */}
       {layoutMode === 'dropdown' && !isRunning && (
