@@ -42,7 +42,7 @@ const isCollaborationsPage = Astro.url.pathname.includes('/collaborations');
                 <img src="/trackr-icon.png" alt="Times10 Logo" class="w-auto mr-3 py-0" style="height: calc(58px - 1rem);" />
               </a>
             </div>
-            <div class="flex items-center">
+            <div class="flex items-center relative">
               <!-- Desktop role badge (hidden on mobile) -->
               <span class={`hidden sm:inline-block px-3 py-1 text-xs font-medium rounded-full mr-4 ${
                 currentUser?.role === 'admin' 
@@ -53,6 +53,49 @@ const isCollaborationsPage = Astro.url.pathname.includes('/collaborations');
               }`}>
                 {currentUser?.role === 'admin' ? 'Admin' : currentUser?.role === 'developer' ? 'Developer' : 'Team Member'}
               </span>
+              
+              <!-- Notification Bell Icon -->
+              <button
+                id="notificationBell"
+                class="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors mr-2"
+                aria-label="Notifications"
+              >
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6">
+                  <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                  <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                  <g id="SVGRepo_iconCarrier"> 
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M6.31317 12.463C6.20006 9.29213 8.60976 6.6252 11.701 6.5C14.7923 6.6252 17.202 9.29213 17.0889 12.463C17.0889 13.78 18.4841 15.063 18.525 16.383C18.525 16.4017 18.525 16.4203 18.525 16.439C18.5552 17.2847 17.9124 17.9959 17.0879 18.029H13.9757C13.9786 18.677 13.7404 19.3018 13.3098 19.776C12.8957 20.2372 12.3123 20.4996 11.701 20.4996C11.0897 20.4996 10.5064 20.2372 10.0923 19.776C9.66161 19.3018 9.42346 18.677 9.42635 18.029H6.31317C5.48869 17.9959 4.84583 17.2847 4.87602 16.439C4.87602 16.4203 4.87602 16.4017 4.87602 16.383C4.91795 15.067 6.31317 13.781 6.31317 12.463Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> 
+                    <path d="M9.42633 17.279C9.01212 17.279 8.67633 17.6148 8.67633 18.029C8.67633 18.4432 9.01212 18.779 9.42633 18.779V17.279ZM13.9757 18.779C14.3899 18.779 14.7257 18.4432 14.7257 18.029C14.7257 17.6148 14.3899 17.279 13.9757 17.279V18.779ZM12.676 5.25C13.0902 5.25 13.426 4.91421 13.426 4.5C13.426 4.08579 13.0902 3.75 12.676 3.75V5.25ZM10.726 3.75C10.3118 3.75 9.97601 4.08579 9.97601 4.5C9.97601 4.91421 10.3118 5.25 10.726 5.25V3.75ZM9.42633 18.779H13.9757V17.279H9.42633V18.779ZM12.676 3.75H10.726V5.25H12.676V3.75Z" fill="currentColor"></path> 
+                  </g>
+                </svg>
+                <!-- Notification dot indicator -->
+                <span id="notificationDot" class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full hidden"></span>
+              </button>
+              
+              <!-- Notification Center Dropdown -->
+              <div id="notificationDropdown" class="absolute top-full right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 hidden">
+                <div class="p-4 border-b border-gray-200">
+                  <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900">Notifications</h3>
+                    <button id="markAllReadBtn" class="text-sm text-gray-600 hover:text-gray-900 hover:underline font-medium">
+                      Mark all as read
+                    </button>
+                  </div>
+                </div>
+                <div id="notificationList" class="max-h-96 overflow-y-auto">
+                  <!-- Notifications will be populated here -->
+                  <div class="p-4 text-center text-gray-500">
+                    <svg className="w-24 h-24 mx-auto text-gray-300 my-4" fill="#6b7280" height="200px" width="200px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512.001 512.001" xml:space="preserve"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g> <g> <g> <path d="M234.442,59.286h84.615c4.465,0,8.084-3.619,8.084-8.084s-3.62-8.084-8.084-8.084h-84.615 c-7.43,0-13.474-6.044-13.474-13.474s6.044-13.474,13.474-13.474h172.463c7.43,0,13.474,6.044,13.474,13.474 c0,2.38-0.612,4.643-1.82,6.727c-2.238,3.864-0.919,8.81,2.945,11.047c3.862,2.239,8.81,0.918,11.047-2.944 c2.614-4.515,3.996-9.643,3.996-14.831c0-16.344-13.297-29.642-29.642-29.642H234.442c-16.345,0-29.642,13.298-29.642,29.642 S218.097,59.286,234.442,59.286z"></path> <path d="M309.895,194.023h-67.907c-4.465,0-8.084,3.618-8.084,8.084c0,4.466,3.62,8.084,8.084,8.084h67.907 c16.345,0,29.642-13.298,29.642-29.642s-13.297-29.642-29.642-29.642h-44.194c-4.465,0-8.084,3.618-8.084,8.084 c0,4.466,3.62,8.084,8.084,8.084h44.194c7.43,0,13.474,6.044,13.474,13.474C323.368,187.978,317.325,194.023,309.895,194.023z"></path> <path d="M187.913,61.981v104.915c0,4.466,3.62,8.084,8.084,8.084s8.084-3.618,8.084-8.084V61.981c0-4.466-3.62-8.084-8.084-8.084 S187.913,57.515,187.913,61.981z"></path> <path d="M453.435,48.507h28.923c7.43,0,13.474,6.044,13.474,13.474s-6.044,13.474-13.474,13.474H363.789 c-7.43,0-13.474-6.044-13.474-13.474c0-2.38,0.612-4.644,1.819-6.727c2.238-3.864,0.919-8.81-2.945-11.047 c-3.862-2.238-8.809-0.919-11.047,2.944c-2.614,4.515-3.996,9.642-3.996,14.831c0,16.344,13.297,29.642,29.642,29.642h118.568 c16.345,0,29.642-13.298,29.642-29.642s-13.297-29.642-29.642-29.642h-28.923c-4.465,0-8.084,3.618-8.084,8.084 C445.351,44.888,448.97,48.507,453.435,48.507z"></path> <path d="M99.705,280.253c-10.401,0-18.863,8.463-18.863,18.863c0,16.344,13.297,29.642,29.642,29.642H153.6 c16.345,0,29.642-13.298,29.642-29.642c0-10.401-8.463-18.863-18.863-18.863H99.705z M167.074,299.116 c0,7.43-6.044,13.474-13.474,13.474h-43.116c-7.43,0-13.474-6.044-13.474-13.474c0-1.486,1.209-2.695,2.695-2.695h64.674 C165.864,296.422,167.074,297.631,167.074,299.116z"></path> <path d="M59.284,43.971v122.924c0,4.466,3.62,8.084,8.084,8.084c4.465,0,8.084-3.618,8.084-8.084V43.971 c0-4.466-3.62-8.084-8.084-8.084C62.904,35.887,59.284,39.505,59.284,43.971z"></path> <path d="M75.738,250.153c5.452,8.725,14.849,13.933,25.137,13.933h62.335c10.287,0,19.685-5.208,25.136-13.933l60.503-96.805 c9.967-15.948,15.235-34.316,15.235-53.121c0-8.52-1.073-16.988-3.188-25.167c-1.118-4.323-5.527-6.918-9.851-5.802 c-4.322,1.118-6.92,5.529-5.802,9.851c1.774,6.858,2.673,13.962,2.673,21.118c0,15.772-4.418,31.177-12.777,44.552 l-60.503,96.805c-2.478,3.966-6.75,6.333-11.426,6.333h-62.335c-4.676,0-8.948-2.367-11.426-6.333l-60.503-96.805 c-8.359-13.375-12.777-28.78-12.777-44.552c0-46.349,37.708-84.057,84.059-84.057h63.63c7.682,0,15.291,1.035,22.615,3.075 c4.305,1.199,8.759-1.318,9.958-5.618c1.198-4.301-1.317-8.759-5.618-9.956c-8.737-2.435-17.807-3.669-26.955-3.669h-63.63 C44.961,0.002,0,44.963,0,100.227c0,18.805,5.268,37.173,15.235,53.12L75.738,250.153z"></path> <path d="M503.916,495.832h-3.767l-33.11-231.766c-2.407-16.85-12.981-31.354-28.286-38.8 c-15.305-7.444-33.242-6.813-47.986,1.691l-35.601,20.539c-0.072,0.041-0.144,0.082-0.216,0.125l-98.021,56.551 c-0.104,0.056-0.205,0.114-0.306,0.176l-76.216,43.972c-3.867,2.23-5.193,7.174-2.963,11.042 c2.231,3.869,7.177,5.195,11.043,2.962l66.015-38.085l7.206,50.439c0.632,4.42,4.728,7.477,9.146,6.86 c4.42-0.632,7.491-4.727,6.86-9.146l-8.123-56.858l84.493-48.747l15.529,108.701c0.632,4.42,4.725,7.483,9.146,6.86 c4.42-0.632,7.491-4.727,6.86-9.146l-15.591-109.137c-0.28-1.963-0.67-3.902-1.166-5.806l29.984-17.299 c10.239-5.906,22.205-6.327,32.833-1.157c10.628,5.172,17.682,14.847,19.354,26.547l32.783,229.479h-26.241 c-3.13-23.669-19.799-43.69-42.584-50.967v-0.233c0-25.26-20.55-45.81-45.811-45.81c-4.681,0-9.335,0.721-13.772,2.116 c-7.934-14.443-23.15-23.674-40.122-23.674c-18.624,0-34.91,11.199-42.012,27.532c-6.819-3.9-14.565-5.974-22.662-5.974 c-8.097,0-15.843,2.074-22.662,5.974c-7.102-16.332-23.388-27.532-42.012-27.532c-18.624,0-34.91,11.199-42.012,27.532 c-6.819-3.9-14.565-5.974-22.662-5.974c-24.355,0-44.332,19.106-45.732,43.116h-2.773c-31.437,0-57.482,23.524-61.454,53.895 h-3.22C3.62,495.831,0,499.45,0,503.915c0,4.466,3.62,8.084,8.084,8.084h43.475c4.465,0,8.084-3.618,8.084-8.084 c0-4.466-3.62-8.084-8.084-8.084H27.662c3.83-21.418,22.594-37.726,45.096-37.726h10.779c4.465,0,8.084-3.618,8.084-8.084v-5.389 c0-16.344,13.297-29.642,29.642-29.642c8.146,0,15.743,3.247,21.393,9.139c2.163,2.256,5.434,3.066,8.398,2.073 c2.964-0.991,5.093-3.601,5.465-6.705c1.783-14.86,14.43-26.067,29.418-26.067c14.988,0,27.635,11.206,29.418,26.067 c0.373,3.103,2.501,5.714,5.465,6.705c2.963,0.991,6.234,0.183,8.398-2.073c5.65-5.894,13.247-9.139,21.393-9.139 c8.146,0,15.743,3.247,21.393,9.139c2.163,2.256,5.435,3.066,8.398,2.073c2.964-0.991,5.093-3.601,5.465-6.705 c1.783-14.86,14.43-26.067,29.418-26.067c12.904,0,24.24,8.246,28.205,20.52c0.739,2.289,2.46,4.129,4.693,5.022 c2.233,0.89,4.747,0.743,6.861-0.405c4.306-2.341,9.194-3.579,14.134-3.579c16.345,0,29.642,13.298,29.642,29.642v6.47 c0,3.845,2.708,7.158,6.476,7.924c18.542,3.763,32.644,18.642,35.919,36.807H82.818c-4.465,0-8.084,3.618-8.084,8.084 c0,4.466,3.62,8.084,8.084,8.084h410.181c0.043,0.001,0.085,0.001,0.128,0.001s0.085,0,0.128-0.001h10.661 c4.465,0,8.084-3.619,8.084-8.084C512,499.451,508.38,495.832,503.916,495.832z"></path> <path d="M123.958,37.458v187.015c0,4.466,3.62,8.084,8.084,8.084s8.084-3.618,8.084-8.084V37.458c0-4.466-3.62-8.084-8.084-8.084 S123.958,32.993,123.958,37.458z"></path> </g> </g> </g> </g></svg>
+                    <p>No notifications yet</p>
+                  </div>
+                </div>
+                <div class="flex p-4 border-t border-gray-200 items-center justify-center">
+                  <a href="/notifications" class="text-sm text-gray-600 hover:text-gray-900 font-medium mx-auto hover:underline">
+                    View all notifications
+                  </a>
+                </div>
+              </div>
+              
               <!-- Hamburger menu button -->
               <button
                 id="mobileMenuButton"
@@ -183,8 +226,227 @@ const isCollaborationsPage = Astro.url.pathname.includes('/collaborations');
     </div>
 
     <script>
+      // Notification System
+      class NotificationCenter {
+        notifications: any[];
+        notificationBell: HTMLElement | null;
+        notificationDropdown: HTMLElement | null;
+        notificationDot: HTMLElement | null;
+        notificationList: HTMLElement | null;
+        markAllReadBtn: HTMLElement | null;
+
+        constructor() {
+          this.notifications = JSON.parse(localStorage.getItem('notifications') || '[]');
+          this.notificationBell = document.getElementById('notificationBell');
+          this.notificationDropdown = document.getElementById('notificationDropdown');
+          this.notificationDot = document.getElementById('notificationDot');
+          this.notificationList = document.getElementById('notificationList');
+          this.markAllReadBtn = document.getElementById('markAllReadBtn');
+          
+          this.init();
+        }
+
+        init() {
+          this.setupEventListeners();
+          this.updateNotificationDisplay();
+          this.setupNotificationEvents();
+        }
+
+        setupEventListeners() {
+          // Toggle notification dropdown
+          this.notificationBell?.addEventListener('click', (e: Event) => {
+            e.stopPropagation();
+            this.toggleDropdown();
+          });
+
+          // Close dropdown when clicking outside
+          document.addEventListener('click', (e: Event) => {
+            const target = e.target as HTMLElement;
+            if (!this.notificationDropdown?.contains(target) && !this.notificationBell?.contains(target)) {
+              this.closeDropdown();
+            }
+          });
+
+          // Mark all as read
+          this.markAllReadBtn?.addEventListener('click', () => {
+            this.markAllAsRead();
+          });
+        }
+
+        setupNotificationEvents() {
+          // Listen for custom notification events
+          // @ts-ignore - Custom events not in DocumentEventMap
+          document.addEventListener('timeEntryCreated', (e: any) => {
+            this.addNotification({
+              id: Date.now(),
+              type: 'time_entry',
+              title: 'Time Entry Added',
+              message: `New time entry created: ${e.detail?.duration || 'Manual entry'}`,
+              timestamp: new Date(),
+              read: false
+            });
+          });
+
+          // @ts-ignore - Custom events not in DocumentEventMap
+          document.addEventListener('collaborationUpdated', (e: any) => {
+            this.addNotification({
+              id: Date.now(),
+              type: 'collaboration',
+              title: 'Collaboration Updated',
+              message: `Collaboration "${e.detail?.name || 'Untitled'}" has been updated`,
+              timestamp: new Date(),
+              read: false
+            });
+          });
+
+          // @ts-ignore - Custom events not in DocumentEventMap
+          document.addEventListener('taskAssigned', (e: any) => {
+            this.addNotification({
+              id: Date.now(),
+              type: 'task_assignment',
+              title: 'Task Assigned',
+              message: `You've been assigned to: ${e.detail?.taskName || 'New Task'}`,
+              timestamp: new Date(),
+              read: false
+            });
+          });
+
+          // @ts-ignore - Custom events not in DocumentEventMap
+          document.addEventListener('subtaskCreated', (e: any) => {
+            this.addNotification({
+              id: Date.now(),
+              type: 'subtask',
+              title: 'Subtask Created',
+              message: `New subtask: ${e.detail?.subtaskName || 'Untitled Subtask'}`,
+              timestamp: new Date(),
+              read: false
+            });
+          });
+
+          // @ts-ignore - Custom events not in DocumentEventMap
+          document.addEventListener('insightAdded', (e: any) => {
+            this.addNotification({
+              id: Date.now(),
+              type: 'insight',
+              title: 'New Insight',
+              message: `New insight added to collaboration`,
+              timestamp: new Date(),
+              read: false
+            });
+          });
+        }
+
+        addNotification(notification: any) {
+          this.notifications.unshift(notification);
+          this.saveNotifications();
+          this.updateNotificationDisplay();
+          this.showNotificationDot();
+        }
+
+        markAllAsRead() {
+          this.notifications.forEach((notification: any) => {
+            notification.read = true;
+          });
+          this.saveNotifications();
+          this.updateNotificationDisplay();
+          this.hideNotificationDot();
+        }
+
+        markAsRead(notificationId: number) {
+          const notification = this.notifications.find((n: any) => n.id === notificationId);
+          if (notification) {
+            notification.read = true;
+            this.saveNotifications();
+            this.updateNotificationDisplay();
+            this.updateNotificationDot();
+          }
+        }
+
+        saveNotifications() {
+          localStorage.setItem('notifications', JSON.stringify(this.notifications));
+        }
+
+        updateNotificationDisplay() {
+          if (!this.notificationList) return;
+
+          const unreadNotifications = this.notifications.filter((n: any) => !n.read);
+          
+          if (unreadNotifications.length === 0) {
+            this.notificationList.innerHTML = `
+              <div class="p-4 text-center text-gray-500">
+                <svg class="w-24 h-24 mx-auto text-gray-300 my-4" fill="#6b7280" height="200px" width="200px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512.001 512.001" xml:space="preserve"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g> <g> <g> <path d="M234.442,59.286h84.615c4.465,0,8.084-3.619,8.084-8.084s-3.62-8.084-8.084-8.084h-84.615 c-7.43,0-13.474-6.044-13.474-13.474s6.044-13.474,13.474-13.474h172.463c7.43,0,13.474,6.044,13.474,13.474 c0,2.38-0.612,4.643-1.82,6.727c-2.238,3.864-0.919,8.81,2.945,11.047c3.862,2.239,8.81,0.918,11.047-2.944 c2.614-4.515,3.996-9.643,3.996-14.831c0-16.344-13.297-29.642-29.642-29.642H234.442c-16.345,0-29.642,13.298-29.642,29.642 S218.097,59.286,234.442,59.286z"></path> <path d="M309.895,194.023h-67.907c-4.465,0-8.084,3.618-8.084,8.084c0,4.466,3.62,8.084,8.084,8.084h67.907 c16.345,0,29.642-13.298,29.642-29.642s-13.297-29.642-29.642-29.642h-44.194c-4.465,0-8.084,3.618-8.084,8.084 c0,4.466,3.62,8.084,8.084,8.084h44.194c7.43,0,13.474,6.044,13.474,13.474C323.368,187.978,317.325,194.023,309.895,194.023z"></path> <path d="M187.913,61.981v104.915c0,4.466,3.62,8.084,8.084,8.084s8.084-3.618,8.084-8.084V61.981c0-4.466-3.62-8.084-8.084-8.084 S187.913,57.515,187.913,61.981z"></path> <path d="M453.435,48.507h28.923c7.43,0,13.474,6.044,13.474,13.474s-6.044,13.474-13.474,13.474H363.789 c-7.43,0-13.474-6.044-13.474-13.474c0-2.38,0.612-4.644,1.819-6.727c2.238-3.864,0.919-8.81-2.945-11.047 c-3.862-2.238-8.809-0.919-11.047,2.944c-2.614,4.515-3.996,9.642-3.996,14.831c0,16.344,13.297,29.642,29.642,29.642h118.568 c16.345,0,29.642-13.298,29.642-29.642s-13.297-29.642-29.642-29.642h-28.923c-4.465,0-8.084,3.618-8.084,8.084 C445.351,44.888,448.97,48.507,453.435,48.507z"></path> <path d="M99.705,280.253c-10.401,0-18.863,8.463-18.863,18.863c0,16.344,13.297,29.642,29.642,29.642H153.6 c16.345,0,29.642-13.298,29.642-29.642c0-10.401-8.463-18.863-18.863-18.863H99.705z M167.074,299.116 c0,7.43-6.044,13.474-13.474,13.474h-43.116c-7.43,0-13.474-6.044-13.474-13.474c0-1.486,1.209-2.695,2.695-2.695h64.674 C165.864,296.422,167.074,297.631,167.074,299.116z"></path> <path d="M59.284,43.971v122.924c0,4.466,3.62,8.084,8.084,8.084c4.465,0,8.084-3.618,8.084-8.084V43.971 c0-4.466-3.62-8.084-8.084-8.084C62.904,35.887,59.284,39.505,59.284,43.971z"></path> <path d="M75.738,250.153c5.452,8.725,14.849,13.933,25.137,13.933h62.335c10.287,0,19.685-5.208,25.136-13.933l60.503-96.805 c9.967-15.948,15.235-34.316,15.235-53.121c0-8.52-1.073-16.988-3.188-25.167c-1.118-4.323-5.527-6.918-9.851-5.802 c-4.322,1.118-6.92,5.529-5.802,9.851c1.774,6.858,2.673,13.962,2.673,21.118c0,15.772-4.418,31.177-12.777,44.552 l-60.503,96.805c-2.478,3.966-6.75,6.333-11.426,6.333h-62.335c-4.676,0-8.948-2.367-11.426-6.333l-60.503-96.805 c-8.359-13.375-12.777-28.78-12.777-44.552c0-46.349,37.708-84.057,84.059-84.057h63.63c7.682,0,15.291,1.035,22.615,3.075 c4.305,1.199,8.759-1.318,9.958-5.618c1.198-4.301-1.317-8.759-5.618-9.956c-8.737-2.435-17.807-3.669-26.955-3.669h-63.63 C44.961,0.002,0,44.963,0,100.227c0,18.805,5.268,37.173,15.235,53.12L75.738,250.153z"></path> <path d="M503.916,495.832h-3.767l-33.11-231.766c-2.407-16.85-12.981-31.354-28.286-38.8 c-15.305-7.444-33.242-6.813-47.986,1.691l-35.601,20.539c-0.072,0.041-0.144,0.082-0.216,0.125l-98.021,56.551 c-0.104,0.056-0.205,0.114-0.306,0.176l-76.216,43.972c-3.867,2.23-5.193,7.174-2.963,11.042 c2.231,3.869,7.177,5.195,11.043,2.962l66.015-38.085l7.206,50.439c0.632,4.42,4.728,7.477,9.146,6.86 c4.42-0.632,7.491-4.727,6.86-9.146l-8.123-56.858l84.493-48.747l15.529,108.701c0.632,4.42,4.725,7.483,9.146,6.86 c4.42-0.632,7.491-4.727,6.86-9.146l-15.591-109.137c-0.28-1.963-0.67-3.902-1.166-5.806l29.984-17.299 c10.239-5.906,22.205-6.327,32.833-1.157c10.628,5.172,17.682,14.847,19.354,26.547l32.783,229.479h-26.241 c-3.13-23.669-19.799-43.69-42.584-50.967v-0.233c0-25.26-20.55-45.81-45.811-45.81c-4.681,0-9.335,0.721-13.772,2.116 c-7.934-14.443-23.15-23.674-40.122-23.674c-18.624,0-34.91,11.199-42.012,27.532c-6.819-3.9-14.565-5.974-22.662-5.974 c-8.097,0-15.843,2.074-22.662,5.974c-7.102-16.332-23.388-27.532-42.012-27.532c-18.624,0-34.91,11.199-42.012,27.532 c-6.819-3.9-14.565-5.974-22.662-5.974c-24.355,0-44.332,19.106-45.732,43.116h-2.773c-31.437,0-57.482,23.524-61.454,53.895 h-3.22C3.62,495.831,0,499.45,0,503.915c0,4.466,3.62,8.084,8.084,8.084h43.475c4.465,0,8.084-3.618,8.084-8.084 c0-4.466-3.62-8.084-8.084-8.084H27.662c3.83-21.418,22.594-37.726,45.096-37.726h10.779c4.465,0,8.084-3.618,8.084-8.084v-5.389 c0-16.344,13.297-29.642,29.642-29.642c8.146,0,15.743,3.247,21.393,9.139c2.163,2.256,5.434,3.066,8.398,2.073 c2.964-0.991,5.093-3.601,5.465-6.705c1.783-14.86,14.43-26.067,29.418-26.067c14.988,0,27.635,11.206,29.418,26.067 c0.373,3.103,2.501,5.714,5.465,6.705c2.963,0.991,6.234,0.183,8.398-2.073c5.65-5.894,13.247-9.139,21.393-9.139 c8.146,0,15.743,3.247,21.393,9.139c2.163,2.256,5.435,3.066,8.398,2.073c2.964-0.991,5.093-3.601,5.465-6.705 c1.783-14.86,14.43-26.067,29.418-26.067c12.904,0,24.24,8.246,28.205,20.52c0.739,2.289,2.46,4.129,4.693,5.022 c2.233,0.89,4.747,0.743,6.861-0.405c4.306-2.341,9.194-3.579,14.134-3.579c16.345,0,29.642,13.298,29.642,29.642v6.47 c0,3.845,2.708,7.158,6.476,7.924c18.542,3.763,32.644,18.642,35.919,36.807H82.818c-4.465,0-8.084,3.618-8.084,8.084 c0,4.466,3.62,8.084,8.084,8.084h410.181c0.043,0.001,0.085,0.001,0.128,0.001s0.085,0,0.128-0.001h10.661 c4.465,0,8.084-3.619,8.084-8.084C512,499.451,508.38,495.832,503.916,495.832z"></path> <path d="M123.958,37.458v187.015c0,4.466,3.62,8.084,8.084,8.084s8.084-3.618,8.084-8.084V37.458c0-4.466-3.62-8.084-8.084-8.084 S123.958,32.993,123.958,37.458z"></path> </g> </g> </g> </g></svg>
+                <p>No notifications yet</p>
+              </div>
+            `;
+            return;
+          }
+
+          this.notificationList.innerHTML = unreadNotifications.map((notification: any) => `
+            <div class="p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer" onclick="notificationCenter.markAsRead(${notification.id})">
+              <div class="flex items-start space-x-3">
+                <div class="flex-shrink-0">
+                  <div class="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-gray-900">${notification.title}</p>
+                  <p class="text-sm text-gray-500">${notification.message}</p>
+                  <p class="text-xs text-gray-400 mt-1">${this.formatTimestamp(notification.timestamp)}</p>
+                </div>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        formatTimestamp(timestamp: Date) {
+          const now = new Date();
+          const notificationTime = new Date(timestamp);
+          const diffInMinutes = Math.floor((now.getTime() - notificationTime.getTime()) / (1000 * 60));
+          
+          if (diffInMinutes < 1) return 'Just now';
+          if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+          if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+          return notificationTime.toLocaleDateString();
+        }
+
+        updateNotificationDot() {
+          const unreadCount = this.notifications.filter((n: any) => !n.read).length;
+          if (unreadCount > 0) {
+            this.showNotificationDot();
+          } else {
+            this.hideNotificationDot();
+          }
+        }
+
+        showNotificationDot() {
+          this.notificationDot?.classList.remove('hidden');
+        }
+
+        hideNotificationDot() {
+          this.notificationDot?.classList.add('hidden');
+        }
+
+        toggleDropdown() {
+          if (this.notificationDropdown?.classList.contains('hidden')) {
+            this.openDropdown();
+          } else {
+            this.closeDropdown();
+          }
+        }
+
+        openDropdown() {
+          this.notificationDropdown?.classList.remove('hidden');
+        }
+
+        closeDropdown() {
+          this.notificationDropdown?.classList.add('hidden');
+        }
+      }
+
       // Mobile Menu Functionality
       document.addEventListener('DOMContentLoaded', function() {
+        // Initialize notification center
+        (window as any).notificationCenter = new NotificationCenter();
+        
         const mobileMenuButton = document.getElementById('mobileMenuButton');
         const closeMobileMenuButton = document.getElementById('closeMobileMenuButton');
         const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
@@ -194,19 +456,27 @@ const isCollaborationsPage = Astro.url.pathname.includes('/collaborations');
         // Open mobile menu
         if (mobileMenuButton) {
           mobileMenuButton.addEventListener('click', function() {
-            mobileMenuOverlay.classList.remove('hidden');
-            setTimeout(() => {
-              mobileMenu.classList.remove('translate-x-full');
-            }, 10);
+            if (mobileMenuOverlay) {
+              mobileMenuOverlay.classList.remove('hidden');
+              setTimeout(() => {
+                if (mobileMenu) {
+                  mobileMenu.classList.remove('translate-x-full');
+                }
+              }, 10);
+            }
           });
         }
 
         // Close mobile menu
         function closeMobileMenu() {
-          mobileMenu.classList.add('translate-x-full');
-          setTimeout(() => {
-            mobileMenuOverlay.classList.add('hidden');
-          }, 300);
+          if (mobileMenu) {
+            mobileMenu.classList.add('translate-x-full');
+            setTimeout(() => {
+              if (mobileMenuOverlay) {
+                mobileMenuOverlay.classList.add('hidden');
+              }
+            }, 300);
+          }
         }
 
         if (closeMobileMenuButton) {
@@ -326,5 +596,54 @@ const isCollaborationsPage = Astro.url.pathname.includes('/collaborations');
 
   #mobileMenu .bg-gray-100 {
     background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  }
+
+  /* Notification Center Styles */
+  #notificationDropdown {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e5e7eb;
+    z-index: 9999;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 0.5rem;
+    width: 20rem;
+    max-height: 24rem;
+    overflow: hidden;
+  }
+
+  #notificationDot {
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  /* Notification item hover effects */
+  #notificationList .hover\\:bg-gray-50:hover {
+    background-color: #f9fafb;
+    transition: background-color 0.2s ease-in-out;
+  }
+
+  /* Notification bell hover effect */
+  #notificationBell:hover {
+    transform: scale(1.05);
+    transition: transform 0.2s ease-in-out;
+  }
+
+  /* Responsive notification dropdown */
+  @media (max-width: 640px) {
+    #notificationDropdown {
+      width: calc(100vw - 2rem);
+      right: 1rem;
+      left: 1rem;
+      max-width: 20rem;
+    }
   }
 </style>
