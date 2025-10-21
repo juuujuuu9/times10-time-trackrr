@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { getSenderString, getReplyToString, getLogoUrl, getPrimaryColor, getSecondaryColor, getEmailHeaders } from './emailConfig';
+import { getStandardEmailTemplate, createInfoCard } from './emailTemplate';
 
 // Only initialize Resend if we have a valid API key
 const getResendClient = () => {
@@ -46,153 +47,31 @@ export async function sendInvitationEmail(data: InvitationEmailData) {
       to: [data.email],
       subject: `You've been invited to join Times10 Time Tracker`,
       headers: getEmailHeaders(),
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Times10 Invitation</title>
-          <style>
-            /* Reset and base styles */
-            body { 
-              font-family: 'Istok Web', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-              line-height: 1.6; 
-              color: #1F292E; 
-              background-color: #F2F2F3; 
-              margin: 0; 
-              padding: 0; 
-            }
-            
-            /* Container and layout */
-            .container { 
-              max-width: 600px; 
-              margin: 0 auto; 
-              padding: 20px; 
-            }
-            
-            /* Header with brand color */
-            .header { 
-              background: #d63a2e; 
-              color: white; 
-              padding: 30px; 
-              text-align: center; 
-              border-radius: 10px 10px 0 0; 
-              box-shadow: 0 2px 4px rgba(214, 58, 46, 0.2);
-            }
-            
-            .header h1 {
-              margin: 0 0 10px 0;
-              font-size: 24px;
-              font-weight: bold;
-            }
-            
-            .header p {
-              margin: 0;
-              font-size: 16px;
-              opacity: 0.9;
-            }
-            
-            /* Content area */
-            .content { 
-              background: white; 
-              padding: 30px; 
-              border-radius: 0 0 10px 10px; 
-              border: 1px solid #C8CDD0; 
-              border-top: none;
-            }
-            
-            /* Button styling */
-            .button { 
-              display: inline-block; 
-              background: #d63a2e; 
-              color: #FFFFFF !important; 
-              padding: 15px 30px; 
-              text-decoration: none; 
-              border-radius: 8px; 
-              font-weight: bold; 
-              margin: 20px 0; 
-              transition: background-color 0.2s; 
-              box-shadow: 0 2px 4px rgba(214, 58, 46, 0.2);
-            }
-            
-            .button:hover { 
-              background: #b52a24; 
-            }
-            
-            /* Footer */
-            .footer { 
-              text-align: center; 
-              margin-top: 30px; 
-              color: #415058; 
-              font-size: 14px; 
-            }
-            
-            /* Text color classes */
-            .highlight { color: #d63a2e; }
-            .text-dark { color: #1F292E; }
-            .text-mid { color: #415058; }
-            .text-light { color: #C8CDD0; }
-            
-            /* Dark mode support */
-            @media (prefers-color-scheme: dark) {
-              .content {
-                background: #1a1a1a;
-                color: #ffffff;
-                border-color: #333;
-              }
-              .text-dark { color: #ffffff; }
-              .text-mid { color: #cccccc; }
-              .text-light { color: #999999; }
-              .footer { color: #cccccc; }
-            }
-            
-            /* Mobile responsiveness */
-            @media (max-width: 600px) {
-              .container { padding: 10px; }
-              .header, .content { padding: 20px; }
-              .header h1 { font-size: 20px; }
-              .header p { font-size: 14px; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <img src="${getLogoUrl()}" alt="Times10 Logo" class="header-logo" style="max-width: 120px; height: auto; margin-bottom: 15px;" />
-              <h1>🚀 Welcome to Times10!</h1>
-              <p>You've been invited to join our time tracking platform</p>
-            </div>
-            <div class="content">
-              <h2 class="text-dark">Hi ${data.name},</h2>
-              <p class="text-mid">You've been invited by <strong class="highlight">${data.invitedBy}</strong> to join Times10 Time Tracker as a <strong class="highlight">${data.role === 'admin' ? 'admin' : 'Team Member'}</strong>.</p>
-              
-              <p class="text-mid">Times10 is a powerful time tracking platform that helps teams manage their time, projects, and productivity.</p>
-              
-              <div style="text-align: center;">
-                <a href="${data.invitationUrl}" class="button">Set Up Your Account</a>
-              </div>
-              
-              <p class="text-dark"><strong>What you can do with Times10:</strong></p>
-              <ul class="text-mid">
-                <li>Track time on projects and tasks</li>
-                <li>View detailed reports and analytics</li>
-                <li>Collaborate with your team</li>
-                <li>Manage projects and clients</li>
-              </ul>
-              
-              <p class="text-mid"><strong>Important:</strong> This invitation link will expire in 24 hours for security reasons.</p>
-              
-              <p class="text-mid">If you have any questions, please contact your team administrator.</p>
-            </div>
-            <div class="footer">
-              <p>This is an automated message from Times10 Time Tracker</p>
-              <p>If you didn't expect this invitation, please ignore this email.</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `,
+      html: getStandardEmailTemplate({
+        title: '🚀 Welcome to Times10!',
+        subtitle: 'You\'ve been invited to join our time tracking platform',
+        content: `
+          <h2 class="text-dark">Hi ${data.name},</h2>
+          <p class="text-mid">You've been invited by <strong class="highlight">${data.invitedBy}</strong> to join Times10 Time Tracker as a <strong class="highlight">${data.role === 'admin' ? 'admin' : 'Team Member'}</strong>.</p>
+          
+          <p class="text-mid">Times10 is a powerful time tracking platform that helps teams manage their time, projects, and productivity.</p>
+          
+          <p class="text-dark"><strong>What you can do with Times10:</strong></p>
+          <ul class="text-mid">
+            <li>Track time on projects and tasks</li>
+            <li>View detailed reports and analytics</li>
+            <li>Collaborate with your team</li>
+            <li>Manage projects and clients</li>
+          </ul>
+          
+          <p class="text-mid"><strong>Important:</strong> This invitation link will expire in 24 hours for security reasons.</p>
+          
+          <p class="text-mid">If you have any questions, please contact your team administrator.</p>
+        `,
+        buttonText: 'Set Up Your Account',
+        buttonUrl: data.invitationUrl,
+        footerText: 'This is an automated message from Times10 Time Tracker. If you didn\'t expect this invitation, please ignore this email.'
+      }),
     });
 
     if (error) {
@@ -288,175 +167,33 @@ export async function sendTaskAssignmentEmail(data: TaskAssignmentEmailData) {
       to: [data.email],
       subject: `New Task Assigned: ${data.taskName}`,
       headers: getEmailHeaders(),
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>New Task Assignment</title>
-          <style>
-            /* Reset and base styles */
-            body { 
-              font-family: 'Istok Web', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-              line-height: 1.6; 
-              color: #1F292E; 
-              background-color: #F2F2F3; 
-              margin: 0; 
-              padding: 0; 
-            }
-            
-            /* Container and layout */
-            .container { 
-              max-width: 600px; 
-              margin: 0 auto; 
-              padding: 20px; 
-            }
-            
-            /* Header with brand color */
-            .header { 
-              background: #d63a2e; 
-              color: white; 
-              padding: 30px; 
-              text-align: center; 
-              border-radius: 10px 10px 0 0; 
-              box-shadow: 0 2px 4px rgba(214, 58, 46, 0.2);
-            }
-            
-            .header h1 {
-              margin: 0 0 10px 0;
-              font-size: 24px;
-              font-weight: bold;
-            }
-            
-            .header p {
-              margin: 0;
-              font-size: 16px;
-              opacity: 0.9;
-            }
-            
-            /* Content area */
-            .content { 
-              background: white; 
-              padding: 30px; 
-              border-radius: 0 0 10px 10px; 
-              border: 1px solid #C8CDD0; 
-              border-top: none;
-            }
-            
-            /* Button styling */
-            .button { 
-              display: inline-block; 
-              background: #d63a2e; 
-              color: #FFFFFF !important; 
-              padding: 15px 30px; 
-              text-decoration: none; 
-              border-radius: 8px; 
-              font-weight: bold; 
-              margin: 20px 0; 
-              transition: background-color 0.2s; 
-              box-shadow: 0 2px 4px rgba(214, 58, 46, 0.2);
-            }
-            
-            .button:hover { 
-              background: #b52a24; 
-            }
-            
-            /* Task card styling */
-            .task-card { 
-              background: #F2F2F3; 
-              border: 1px solid #C8CDD0; 
-              border-radius: 8px; 
-              padding: 20px; 
-              margin: 20px 0; 
-            }
-            
-            .task-card h3 {
-              margin-top: 0;
-              color: #d63a2e;
-              font-size: 18px;
-              font-weight: bold;
-            }
-            
-            /* Footer */
-            .footer { 
-              text-align: center; 
-              margin-top: 30px; 
-              color: #415058; 
-              font-size: 14px; 
-            }
-            
-            /* Text color classes */
-            .highlight { color: #d63a2e; }
-            .text-dark { color: #1F292E; }
-            .text-mid { color: #415058; }
-            .text-light { color: #C8CDD0; }
-            
-            /* Dark mode support */
-            @media (prefers-color-scheme: dark) {
-              .content {
-                background: #1a1a1a;
-                color: #ffffff;
-                border-color: #333;
-              }
-              .task-card {
-                background: #2a2a2a;
-                border-color: #444;
-              }
-              .text-dark { color: #ffffff; }
-              .text-mid { color: #cccccc; }
-              .text-light { color: #999999; }
-              .footer { color: #cccccc; }
-            }
-            
-            /* Mobile responsiveness */
-            @media (max-width: 600px) {
-              .container { padding: 10px; }
-              .header, .content { padding: 20px; }
-              .header h1 { font-size: 20px; }
-              .header p { font-size: 14px; }
-              .task-card { padding: 15px; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>📋 New Task Assignment</h1>
-              <p>You have been assigned a new task</p>
-            </div>
-            <div class="content">
-              <h2 class="text-dark">Hi ${data.userName},</h2>
-              <p class="text-mid">You have been assigned a new task by <strong class="highlight">${data.assignedBy}</strong>.</p>
-              
-              <div class="task-card">
-                <h3>${data.taskName}</h3>
-                <p class="text-mid"><strong>Project:</strong> ${data.projectName}</p>
-                ${data.taskDescription ? `<p class="text-mid"><strong>Description:</strong> ${data.taskDescription}</p>` : ''}
-              </div>
-              
-              <div style="text-align: center;">
-                <a href="${data.dashboardUrl}" class="button">View Task in Dashboard</a>
-              </div>
-              
-              <p class="text-dark"><strong>What you can do:</strong></p>
-              <ul class="text-mid">
-                <li>Start tracking time on this task</li>
-                <li>Add notes and updates</li>
-                <li>Mark the task as complete when finished</li>
-                <li>View progress and time spent</li>
-              </ul>
-              
-              <p class="text-mid">If you have any questions about this task, please contact ${data.assignedBy}.</p>
-            </div>
-            <div class="footer">
-              <p>This is an automated message from Times10 Time Tracker</p>
-              <p>You can manage your email preferences in your account settings.</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `,
+      html: getStandardEmailTemplate({
+        title: '📋 New Task Assignment',
+        subtitle: 'You have been assigned a new task',
+        content: `
+          <h2 class="text-dark">Hi ${data.userName},</h2>
+          <p class="text-mid">You have been assigned a new task by <strong class="highlight">${data.assignedBy}</strong>.</p>
+          
+          ${createInfoCard('Task Details', [
+            {label: 'Task', value: data.taskName},
+            {label: 'Project', value: data.projectName},
+            ...(data.taskDescription ? [{label: 'Description', value: data.taskDescription}] : [])
+          ])}
+          
+          <p class="text-dark"><strong>What you can do:</strong></p>
+          <ul class="text-mid">
+            <li>Start tracking time on this task</li>
+            <li>Add notes and updates</li>
+            <li>Mark the task as complete when finished</li>
+            <li>View progress and time spent</li>
+          </ul>
+          
+          <p class="text-mid">If you have any questions about this task, please contact ${data.assignedBy}.</p>
+        `,
+        buttonText: 'View Task in Dashboard',
+        buttonUrl: data.dashboardUrl,
+        footerText: 'This is an automated message from Times10 Time Tracker. You can manage your email preferences in your account settings.'
+      }),
     });
 
     if (error) {
@@ -522,17 +259,20 @@ export async function sendPasswordResetEmail(data: PasswordResetEmailData) {
             .container { 
               max-width: 600px; 
               margin: 0 auto; 
-              padding: 20px; 
+              background-color: #FFFFFF; 
+              border-radius: 12px; 
+              overflow: hidden; 
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
             }
             
             /* Header with brand color */
             .header { 
-              background: #d63a2e; 
+              background: linear-gradient(135deg, #d63a2e 0%, #415058 100%); 
               color: white; 
-              padding: 30px; 
+              padding: 32px 24px; 
               text-align: center; 
-              border-radius: 10px 10px 0 0; 
-              box-shadow: 0 2px 4px rgba(214, 58, 46, 0.2);
+              border-radius: 12px 12px 0 0; 
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             }
             
             .header h1 {
@@ -550,8 +290,8 @@ export async function sendPasswordResetEmail(data: PasswordResetEmailData) {
             /* Content area */
             .content { 
               background: white; 
-              padding: 30px; 
-              border-radius: 0 0 10px 10px; 
+              padding: 32px 24px; 
+              border-radius: 0 0 12px 12px; 
               border: 1px solid #C8CDD0; 
               border-top: none;
             }
@@ -559,7 +299,7 @@ export async function sendPasswordResetEmail(data: PasswordResetEmailData) {
             /* Button styling */
             .button { 
               display: inline-block; 
-              background: #d63a2e; 
+              background: linear-gradient(135deg, #d63a2e 0%, #415058 100%); 
               color: #FFFFFF !important; 
               padding: 15px 30px; 
               text-decoration: none; 
@@ -567,7 +307,7 @@ export async function sendPasswordResetEmail(data: PasswordResetEmailData) {
               font-weight: bold; 
               margin: 20px 0; 
               transition: background-color 0.2s; 
-              box-shadow: 0 2px 4px rgba(214, 58, 46, 0.2);
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             }
             
             .button:hover { 
@@ -736,17 +476,20 @@ export async function sendCollaborationAssignmentEmail(data: CollaborationAssign
             .container { 
               max-width: 600px; 
               margin: 0 auto; 
-              padding: 20px; 
+              background-color: #FFFFFF; 
+              border-radius: 12px; 
+              overflow: hidden; 
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
             }
             
             /* Header with brand color */
             .header { 
-              background: #d63a2e; 
+              background: linear-gradient(135deg, #d63a2e 0%, #415058 100%); 
               color: white; 
-              padding: 30px; 
+              padding: 32px 24px; 
               text-align: center; 
-              border-radius: 10px 10px 0 0; 
-              box-shadow: 0 2px 4px rgba(214, 58, 46, 0.2);
+              border-radius: 12px 12px 0 0; 
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             }
             
             .header h1 {
@@ -764,8 +507,8 @@ export async function sendCollaborationAssignmentEmail(data: CollaborationAssign
             /* Content area */
             .content { 
               background: white; 
-              padding: 30px; 
-              border-radius: 0 0 10px 10px; 
+              padding: 32px 24px; 
+              border-radius: 0 0 12px 12px; 
               border: 1px solid #C8CDD0; 
               border-top: none;
             }
@@ -773,7 +516,7 @@ export async function sendCollaborationAssignmentEmail(data: CollaborationAssign
             /* Button styling */
             .button { 
               display: inline-block; 
-              background: #d63a2e; 
+              background: linear-gradient(135deg, #d63a2e 0%, #415058 100%); 
               color: #FFFFFF !important; 
               padding: 15px 30px; 
               text-decoration: none; 
@@ -781,7 +524,7 @@ export async function sendCollaborationAssignmentEmail(data: CollaborationAssign
               font-weight: bold; 
               margin: 20px 0; 
               transition: background-color 0.2s; 
-              box-shadow: 0 2px 4px rgba(214, 58, 46, 0.2);
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             }
             
             .button:hover { 
@@ -952,17 +695,20 @@ export async function sendSubtaskAssignmentEmail(data: SubtaskAssignmentEmailDat
             .container { 
               max-width: 600px; 
               margin: 0 auto; 
-              padding: 20px; 
+              background-color: #FFFFFF; 
+              border-radius: 12px; 
+              overflow: hidden; 
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
             }
             
             /* Header with brand color */
             .header { 
-              background: #d63a2e; 
+              background: linear-gradient(135deg, #d63a2e 0%, #415058 100%); 
               color: white; 
-              padding: 30px; 
+              padding: 32px 24px; 
               text-align: center; 
-              border-radius: 10px 10px 0 0; 
-              box-shadow: 0 2px 4px rgba(214, 58, 46, 0.2);
+              border-radius: 12px 12px 0 0; 
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             }
             
             .header h1 {
@@ -980,8 +726,8 @@ export async function sendSubtaskAssignmentEmail(data: SubtaskAssignmentEmailDat
             /* Content area */
             .content { 
               background: white; 
-              padding: 30px; 
-              border-radius: 0 0 10px 10px; 
+              padding: 32px 24px; 
+              border-radius: 0 0 12px 12px; 
               border: 1px solid #C8CDD0; 
               border-top: none;
             }
@@ -989,7 +735,7 @@ export async function sendSubtaskAssignmentEmail(data: SubtaskAssignmentEmailDat
             /* Button styling */
             .button { 
               display: inline-block; 
-              background: #d63a2e; 
+              background: linear-gradient(135deg, #d63a2e 0%, #415058 100%); 
               color: #FFFFFF !important; 
               padding: 15px 30px; 
               text-decoration: none; 
@@ -997,7 +743,7 @@ export async function sendSubtaskAssignmentEmail(data: SubtaskAssignmentEmailDat
               font-weight: bold; 
               margin: 20px 0; 
               transition: background-color 0.2s; 
-              box-shadow: 0 2px 4px rgba(214, 58, 46, 0.2);
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             }
             
             .button:hover { 
@@ -1175,7 +921,7 @@ export async function sendMentionNotificationEmail(data: MentionNotificationEmai
             }
             
             .header { 
-              background: linear-gradient(135deg, ${getPrimaryColor()} 0%, ${getSecondaryColor()} 100%); 
+              background: linear-gradient(135deg, #d63a2e 0%, #415058 100%); 
               padding: 32px 24px; 
               text-align: center; 
               color: white; 
@@ -1218,7 +964,7 @@ export async function sendMentionNotificationEmail(data: MentionNotificationEmai
             
             .button { 
               display: inline-block; 
-              background-color: ${getPrimaryColor()}; 
+              background-color: #d63a2e; 
               color: white !important; 
               padding: 12px 24px; 
               text-decoration: none; 
@@ -1229,7 +975,7 @@ export async function sendMentionNotificationEmail(data: MentionNotificationEmai
             }
             
             .button:hover { 
-              background-color: ${getSecondaryColor()}; 
+              background-color: #b52a24; 
             }
             
             .footer { 
@@ -1264,7 +1010,6 @@ export async function sendMentionNotificationEmail(data: MentionNotificationEmai
         <body>
           <div class="container">
             <div class="header">
-              <img src="${getLogoUrl()}" alt="Times10 Trackr" class="logo">
               <h1>You were mentioned!</h1>
             </div>
             
@@ -1484,9 +1229,6 @@ export async function sendCollaborationRemovalEmail(data: CollaborationRemovalEm
         </head>
         <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
           <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 20px;">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <img src="${getLogoUrl()}" alt="Times10 Logo" style="max-width: 200px; height: auto;">
-            </div>
             
             <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
               <h2 style="color: #856404; margin: 0 0 10px 0;">Access Removed from Collaboration</h2>
@@ -1564,9 +1306,6 @@ export async function sendTaskReassignmentEmail(data: TaskReassignmentEmailData)
         </head>
         <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
           <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 20px;">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <img src="${getLogoUrl()}" alt="Times10 Logo" style="max-width: 200px; height: auto;">
-            </div>
             
             <div style="background-color: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
               <h2 style="color: #0066cc; margin: 0 0 10px 0;">Task Reassigned</h2>
@@ -1645,9 +1384,6 @@ export async function sendDueSoonReminderEmail(data: DueSoonReminderEmailData) {
         </head>
         <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
           <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 20px;">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <img src="${getLogoUrl()}" alt="Times10 Logo" style="max-width: 200px; height: auto;">
-            </div>
             
             <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
               <h2 style="color: #856404; margin: 0 0 10px 0;">⏰ Due Soon Reminder</h2>
@@ -1728,9 +1464,6 @@ export async function sendOverdueNotificationEmail(data: OverdueNotificationEmai
         </head>
         <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
           <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 20px;">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <img src="${getLogoUrl()}" alt="Times10 Logo" style="max-width: 200px; height: auto;">
-            </div>
             
             <div style="background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
               <h2 style="color: #721c24; margin: 0 0 10px 0;">🚨 OVERDUE TASK</h2>
@@ -1746,7 +1479,7 @@ export async function sendOverdueNotificationEmail(data: OverdueNotificationEmai
             </div>
 
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${data.dashboardUrl}" style="background-color: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; margin-right: 10px;">
+              <a href="${data.dashboardUrl}" style="background-color: #d63a2e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; margin-right: 10px;">
                 Complete Task
               </a>
               <a href="${data.snoozeUrl}" style="background-color: ${getSecondaryColor()}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
@@ -1811,9 +1544,6 @@ export async function sendTaskStatusChangeEmail(data: TaskStatusChangeEmailData)
         </head>
         <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
           <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 20px;">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <img src="${getLogoUrl()}" alt="Times10 Logo" style="max-width: 200px; height: auto;">
-            </div>
             
             <div style="background-color: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
               <h2 style="color: #0066cc; margin: 0 0 10px 0;">📋 Status Update</h2>
@@ -1892,9 +1622,6 @@ export async function sendDueDateChangeEmail(data: DueDateChangeEmailData) {
         </head>
         <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
           <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 20px;">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <img src="${getLogoUrl()}" alt="Times10 Logo" style="max-width: 200px; height: auto;">
-            </div>
             
             <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
               <h2 style="color: #856404; margin: 0 0 10px 0;">📅 Due Date Updated</h2>
@@ -1973,9 +1700,6 @@ export async function sendTaskCompletionEmail(data: TaskCompletionEmailData) {
         </head>
         <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
           <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 20px;">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <img src="${getLogoUrl()}" alt="Times10 Logo" style="max-width: 200px; height: auto;">
-            </div>
             
             <div style="background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
               <h2 style="color: #155724; margin: 0 0 10px 0;">🎉 Task Completed!</h2>
@@ -2061,9 +1785,6 @@ export async function sendNewInsightEmail(data: NewInsightEmailData) {
         </head>
         <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
           <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 20px;">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <img src="${getLogoUrl()}" alt="Times10 Logo" style="max-width: 200px; height: auto;">
-            </div>
             
             <div style="background-color: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
               <h2 style="color: #0066cc; margin: 0 0 10px 0;">💡 New Insight</h2>
@@ -2145,9 +1866,6 @@ export async function sendInsightReplyEmail(data: InsightReplyEmailData) {
         </head>
         <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
           <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 20px;">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <img src="${getLogoUrl()}" alt="Times10 Logo" style="max-width: 200px; height: auto;">
-            </div>
             
             <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
               <h2 style="color: #856404; margin: 0 0 10px 0;">💬 Reply to Your Insight</h2>
@@ -2231,9 +1949,6 @@ export async function sendInsightLikedEmail(data: InsightLikedEmailData) {
         </head>
         <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
           <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 20px;">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <img src="${getLogoUrl()}" alt="Times10 Logo" style="max-width: 200px; height: auto;">
-            </div>
             
             <div style="background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
               <h2 style="color: #155724; margin: 0 0 10px 0;">👍 Insight Liked</h2>
@@ -2316,9 +2031,6 @@ export async function sendAttachmentAddedEmail(data: AttachmentAddedEmailData) {
         </head>
         <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
           <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 20px;">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <img src="${getLogoUrl()}" alt="Times10 Logo" style="max-width: 200px; height: auto;">
-            </div>
             
             <div style="background-color: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
               <h2 style="color: #0066cc; margin: 0 0 10px 0;">📎 New Attachment</h2>
@@ -2398,9 +2110,6 @@ export async function sendInsightResolvedEmail(data: InsightResolvedEmailData) {
         </head>
         <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
           <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 20px;">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <img src="${getLogoUrl()}" alt="Times10 Logo" style="max-width: 200px; height: auto;">
-            </div>
             
             <div style="background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
               <h2 style="color: #155724; margin: 0 0 10px 0;">✅ Insight Resolved</h2>
