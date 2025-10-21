@@ -1,0 +1,4169 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import StatusDropdown from '../../../components/StatusDropdown.tsx';
+import { db } from '../../../db/index';
+import { teams, teamMembers as teamMembersTable, projects, clients, users, taskNotes, taskDiscussions, taskFiles, taskLinks, tasks, taskAssignments, timeEntries } from '../../../db/schema';
+import { eq, and, desc, asc, count, sql } from 'drizzle-orm';
+import { getSessionUser } from '../../../utils/session';
+
+// Get current user
+const currentUser = await getSessionUser(Astro);
+if (!currentUser) {
+  return Astro.redirect('/login');
+}
+
+// Debug: Log the raw parameter
+console.log('Raw ID parameter:', Astro.params.id);
+
+const collaborationId = parseInt(Astro.params.id!);
+
+// Debug: Log the parsed ID
+console.log('Parsed collaboration ID:', collaborationId);
+
+// Validate that the ID is a valid number
+if (isNaN(collaborationId)) {
+  console.log('Invalid collaboration ID, redirecting to collaborations list');
+  return Astro.redirect('/dashboard/collaborations');
+}
+
+// Get collaboration details with error handling
+let collaboration: any = null;
+try {
+  console.log('🔍 DEBUG: Fetching collaboration with ID:', collaborationId);
+  
+  collaboration = await db.query.teams.findFirst({
+    where: eq(teams.id, collaborationId),
+    with: {
+      creator: true,
+      members: {
+        with: {
+          user: true
+        }
+      }
+    }
+  });
+  
+  console.log('🔍 DEBUG: Collaboration query result:', {
+    found: !!collaboration,
+    id: collaboration?.id,
+    name: collaboration?.name
+  });
+  
+} catch (error) {
+  console.error('❌ DEBUG: Error fetching collaboration:', error);
+  console.error('❌ DEBUG: Error details:', {
+    message: error instanceof Error ? error.message : 'Unknown error',
+    collaborationId,
+    error
+  });
+  
+  // Redirect to collaborations list on database error
+  return Astro.redirect('/dashboard/collaborations');
+}
+
+// Debug: Log the collaboration data
+console.log('🔍 DEBUG: Collaboration data:', {
+  id: collaboration?.id,
+  name: collaboration?.name,
+  description: collaboration?.description,
+  creator: collaboration?.creator?.name,
+  memberCount: collaboration?.members?.length
+});
+
+if (!collaboration) {
+  console.log('⚠️  DEBUG: Collaboration not found, redirecting to collaborations list');
+  return Astro.redirect('/dashboard/collaborations');
+}
+
+// Get project details if this collaboration is linked to a project
+let projectDetails: any = null;
+let projectTasks: any[] = [];
+
+// Check if collaboration has projectId (handle missing column gracefully)
+const hasProjectId = collaboration && 'projectId' in collaboration && collaboration.projectId;
+console.log('Collaboration projectId check:', {
+  hasProjectId,
+  projectId: collaboration?.projectId,
+  collaborationKeys: collaboration ? Object.keys(collaboration) : []
+});
+
+// Get project through direct team.project relationship
+if (hasProjectId) {
+  projectDetails = await db.query.projects.findFirst({
+    where: eq(projects.id, collaboration.projectId),
+    with: {
+      client: true
+    }
+  });
+  
+  console.log('Found linked project through direct relationship:', {
+    id: projectDetails?.id,
+    name: projectDetails?.name,
+    client: projectDetails?.client?.name
+  });
+} else if (collaboration && collaboration.name && collaboration.name.includes(' - ')) {
+  // Fallback: try to extract project name from collaboration name
+  const projectName = collaboration.name.split(' - ')[1];
+  console.log('Looking for project with name:', projectName);
+  
+  projectDetails = await db.query.projects.findFirst({
+    where: eq(projects.name, projectName),
+    with: {
+      client: true
+    }
+  });
+  
+  console.log('Found project:', {
+    id: projectDetails?.id,
+    name: projectDetails?.name,
+    client: projectDetails?.client?.name
+  });
+}
+  
+  // Get tasks for this project (excluding system-generated "General" tasks)
+  if (projectDetails) {
+    try {
+      projectTasks = await db.query.tasks.findMany({
+        where: and(
+          eq(tasks.projectId, projectDetails.id),
+          eq(tasks.archived, false),
+          eq(tasks.isSystem, false) // Exclude system-generated tasks like "General"
+        ),
+        orderBy: [
+          // First: Completed tasks go to the bottom
+          sql`CASE WHEN ${tasks.status} = 'completed' THEN 1 ELSE 0 END`,
+          // Second: Sort by due date ascending (soonest first), with null values last
+          sql`CASE WHEN ${tasks.dueDate} IS NULL THEN 1 ELSE 0 END`,
+          asc(tasks.dueDate),
+          // Third: Secondary sort by creation date for tasks with same due date or no due date
+          desc(tasks.createdAt)
+        ]
+      });
+    } catch (error) {
+      console.log('Error fetching tasks for project:', projectDetails.id, error instanceof Error ? error.message : 'Unknown error');
+      projectTasks = []; // Set empty array if query fails
+    }
+    
+    // Get task assignments and subtasks separately
+    for (const task of projectTasks) {
+      try {
+        const assignments = await db.query.taskAssignments.findMany({
+          where: eq(taskAssignments.taskId, task.id),
+          with: {
+            user: true
+          }
+        });
+        task.assignments = assignments;
+      } catch (error) {
+        console.log('Error fetching assignments for task:', task.id, error instanceof Error ? error.message : 'Unknown error');
+        task.assignments = []; // Set empty array if query fails
+      }
+      
+      try {
+        // Get subtask discussions for this task
+        const subtaskDiscussions = await db.query.taskDiscussions.findMany({
+          where: and(
+            eq(taskDiscussions.taskId, task.id),
+            eq(taskDiscussions.type, 'subtask')
+          )
+        });
+        
+        // Extract subtasks from the subtaskData field
+        const taskSubtasks = [];
+        for (const discussion of subtaskDiscussions) {
+          if (discussion.subtaskData) {
+            try {
+              const subtaskData = JSON.parse(discussion.subtaskData);
+              if (subtaskData.subtasks && Array.isArray(subtaskData.subtasks)) {
+                taskSubtasks.push(...subtaskData.subtasks);
+              }
+            } catch (parseError) {
+              console.log('Error parsing subtask data for discussion:', discussion.id, parseError);
+            }
+          }
+        }
+        
+        task.subtasks = taskSubtasks;
+        console.log(`Task ${task.id} (${task.name}) has ${taskSubtasks.length} subtasks:`, taskSubtasks);
+      } catch (error) {
+        console.log('Error fetching subtasks for task:', task.id, error instanceof Error ? error.message : 'Unknown error');
+        task.subtasks = []; // Set empty array if query fails
+      }
+    }
+  }
+
+// Get team members with error handling
+let teamMembers: any[] = [];
+try {
+  if (collaboration && collaboration.members && Array.isArray(collaboration.members)) {
+    teamMembers = collaboration.members.map((member: any) => ({
+      id: member.user?.id,
+      name: member.user?.name,
+      email: member.user?.email,
+      role: member.role,
+      joinedAt: member.joinedAt
+    }));
+    console.log('🔍 DEBUG: Team members mapped:', teamMembers.length, 'members');
+  } else {
+    console.log('⚠️  DEBUG: No members found for collaboration');
+    teamMembers = [];
+  }
+} catch (error) {
+  console.error('❌ DEBUG: Error mapping team members:', error);
+  teamMembers = [];
+}
+
+// Get recent notes (mock data for now - will be replaced with real data)
+const recentNotes = [
+  {
+    id: 1,
+    title: "Project Kickoff Notes",
+    content: "Outlined the QA checklist and assigned owners for each module. Please review before handoff.",
+    author: "Priya Shah",
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+    authorAvatar: "PS"
+  }
+];
+
+// Get recent discussions (mock data for now)
+const recentDiscussions = [
+  {
+    id: 1,
+    content: "Should we move the onboarding tooltip to appear after the user creates the first task?",
+    author: "Mark Chen",
+    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 hours ago
+    authorAvatar: "MC",
+    replies: [
+      {
+        id: 2,
+        content: "Yes, that reduces cognitive load on first run. Let's A/B test it this week.",
+        author: "Alex Rivera",
+        createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
+        authorAvatar: "AR"
+      }
+    ]
+  },
+  {
+    id: 3,
+    content: "Sharing final icons for review.",
+    author: "Lina Gomez",
+    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // Yesterday
+    authorAvatar: "LG",
+    replies: []
+  }
+];
+
+// Get recent files and links (mock data for now)
+const recentFiles = [
+  {
+    id: 1,
+    name: "Requirements v3.pdf",
+    type: "file",
+    author: "Priya",
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+    size: "1.2MB"
+  }
+];
+
+const recentLinks = [
+  {
+    id: 1,
+    title: "Figma Board",
+    url: "https://figma.com/design/example",
+    type: "link",
+    author: "Mark",
+    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
+  }
+];
+
+// Calculate total time tracked for the project
+let totalTimeTracked = "0h";
+let dueDate = "No due date";
+
+if (projectDetails && projectDetails.id) {
+  // Get time entries for this project with same filters as dashboard
+  const projectTimeEntries = await db.query.timeEntries.findMany({
+    where: and(
+      eq(timeEntries.projectId, projectDetails.id),
+      // Exclude ongoing timers (same as dashboard)
+      sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
+    ),
+    with: {
+      user: true,
+      project: true
+    }
+  });
+  
+  // Calculate total hours
+  let totalSeconds = 0;
+  for (const entry of projectTimeEntries) {
+    if (entry.durationManual) {
+      // Manual duration entry (stored in seconds)
+      totalSeconds += entry.durationManual;
+    } else if (entry.startTime && entry.endTime) {
+      // Timer-based entry
+      const start = new Date(entry.startTime);
+      const end = new Date(entry.endTime);
+      const durationMs = end.getTime() - start.getTime();
+      const durationSeconds = Math.floor(durationMs / 1000);
+      totalSeconds += durationSeconds;
+    }
+  }
+  
+  // Convert to hours and format
+  const totalHours = Math.floor(totalSeconds / 3600);
+  const remainingSeconds = totalSeconds % 3600;
+  const remainingMinutes = Math.floor(remainingSeconds / 60);
+  
+  if (totalHours > 0) {
+    totalTimeTracked = `${totalHours}h${remainingMinutes > 0 ? ` ${remainingMinutes}m` : ''}`;
+  } else if (remainingMinutes > 0) {
+    totalTimeTracked = `${remainingMinutes}m`;
+  }
+  
+  console.log('Time tracking calculation:', {
+    projectId: projectDetails.id,
+    projectName: projectDetails.name,
+    totalEntries: projectTimeEntries.length,
+    totalSeconds,
+    totalHours,
+    remainingMinutes,
+    formattedTime: totalTimeTracked,
+    entries: projectTimeEntries.map(entry => ({
+      id: entry.id,
+      durationManual: entry.durationManual,
+      startTime: entry.startTime,
+      endTime: entry.endTime,
+      hasManual: !!entry.durationManual,
+      hasTimer: !!(entry.startTime && entry.endTime)
+    }))
+  });
+}
+---
+
+<Layout title={`${collaboration.name} - Collaboration`}>
+  <div class="flex h-full">
+    <!-- Left Sidebar -->
+    <div class="w-1/4 bg-white border-r border-gray-200 p-6 rounded-xl sticky top-0 overflow-y-auto" style="height: calc(100vh - 120px); max-height: calc(100vh - 120px);">
+      <!-- Project Overview Card -->
+      <div class="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+        <div class="flex flex-col items-start justify-between mb-3">
+          <div class="flex justify-between items-center w-full mb-3">
+            
+            <!-- Team Members -->
+            <div class="flex items-center relative">
+              <div class="flex -space-x-2">
+                {teamMembers.slice(0, 4).map((member: any, index: number) => (
+                  <div 
+                    class="collaboration-member-avatar w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 border-2 border-white relative group hover:bg-gray-400 hover:z-50 transition-colors duration-200"
+                    title={member.name}
+                    data-member-id={member.id}
+                    data-member-name={member.name}
+                  >
+                    {member.name.charAt(0).toUpperCase()}
+                    <!-- Remove button (hidden by default) -->
+                    <button 
+                      class="remove-collaboration-member absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600 cursor-pointer"
+                      data-member-id={member.id}
+                      data-member-name={member.name}
+                      title={`Remove ${member.name} from collaboration`}
+                    >
+                      ×
+                    </button>
+                    <!-- Tooltip -->
+                    <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                      {member.name}
+                      <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                    </div>
+                  </div>
+                ))}
+                {teamMembers.length > 4 && (
+                  <div 
+                    class="expand-collaboration-members w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 border-2 border-white relative group cursor-pointer hover:bg-gray-200 transition-colors duration-200"
+                    title={`Show all ${teamMembers.length} members`}
+                  >
+                    +{teamMembers.length - 4}
+                    <!-- Tooltip -->
+                    <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                      <div class="flex flex-col space-y-1">
+                        {teamMembers.slice(4).map((member: any) => (
+                          <div class="whitespace-nowrap">{member.name}</div>
+                        ))}
+                      </div>
+                      <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <!-- Expanded Members List (hidden by default) -->
+              <div id="expandedCollaborationMembers" class="hidden absolute top-8 left-0 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-50 min-w-64">
+                <div class="flex flex-wrap gap-2">
+                  {teamMembers.map((member: any) => (
+                    <div 
+                      class="collaboration-member-avatar w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 border-2 border-white relative group cursor-pointer hover:bg-gray-400 transition-colors duration-200"
+                      title={member.name}
+                      data-member-id={member.id}
+                      data-member-name={member.name}
+                    >
+                      {member.name.charAt(0).toUpperCase()}
+                      <!-- Remove button (hidden by default) -->
+                      <button 
+                        class="remove-collaboration-member absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600 cursor-pointer"
+                        data-member-id={member.id}
+                        data-member-name={member.name}
+                        title={`Remove ${member.name} from collaboration`}
+                      >
+                        ×
+                      </button>
+                      <!-- Tooltip -->
+                      <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                        {member.name}
+                        <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div class="relative">
+              <button id="addUserBtn" class="inline-flex items-center justify-center w-4 h-4 text-gray-600 hover:text-gray-800 transition-colors duration-200" title="Add user to collaboration">
+                <svg fill="currentColor" height="16px" width="16px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" xml:space="preserve">
+                  <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                  <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                  <g id="SVGRepo_iconCarrier">
+                    <g>
+                      <g>
+                        <polygon points="451.368,229.053 451.368,168.421 410.947,168.421 410.947,229.053 350.316,229.053 350.316,269.474 410.947,269.474 410.947,330.105 451.368,330.105 451.368,269.474 512,269.474 512,229.053"></polygon>
+                      </g>
+                    </g>
+                    <g>
+                      <g>
+                        <path d="M239.915,276.724c33.652-18.238,56.506-53.864,56.506-94.829c0-59.531-48.259-107.789-107.789-107.789 S80.842,122.364,80.842,181.895c0,40.965,22.854,76.591,56.506,94.829C66.732,283.298,0,352.877,0,437.895h377.263 C377.263,352.877,310.531,283.298,239.915,276.724z"></path>
+                      </g>
+                    </g>
+                  </g>
+                </svg>
+              </button>
+              
+              <!-- User Search Dropdown -->
+              <div id="userSearchDropdown" class="absolute left-0 top-6 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-[99999] hidden" style="position: fixed; z-index: 99999;">
+                <div class="p-4">
+                  <div class="relative mb-3">
+                    <input 
+                      type="text" 
+                      id="userSearchInput" 
+                      placeholder="Search users by name or email..."
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <div id="userSearchSpinner" class="absolute right-3 top-1/2 transform -translate-y-1/2 hidden">
+                      <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    </div>
+                  </div>
+                  <div id="userSearchResults" class="max-h-60 overflow-y-auto space-y-2">
+                    <div class="text-center py-4 text-gray-500">Loading users...</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-start w-full">
+            <h2 class="text-lg font-semibold text-gray-900">{(collaboration as any).name}</h2>
+          </div>
+        </div>
+        
+        <div class="space-y-2 mb-4">
+          <div class="flex items-center text-sm text-gray-600">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            {totalTimeTracked} tracked
+          </div>
+        </div>
+
+        
+      </div>
+
+
+      <!-- Filters -->
+      <div>
+        <h3 class="text-sm font-semibold text-gray-900 mb-3">Filters</h3>
+        <div class="space-y-2">
+          <select id="priorityFilter" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="all">Priority: All</option>
+            <option value="low">Low</option>
+            <option value="regular">Regular</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+          </select>
+            <select id="statusFilter" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="all">Status: All</option>
+            <option value="pending">Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="on_hold">On Hold</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <select id="dueFilter" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="all">Due: All</option>
+            <option value="overdue">Overdue</option>
+            <option value="due_today">Due Today</option>
+            <option value="due_week">Due This Week</option>
+            <option value="due_month">Due This Month</option>
+            <option value="no_due_date">No Due Date</option>
+          </select>
+          
+          <!-- Reset Filters Button -->
+          <button id="resetFilters" class="w-full px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-md transition-colors duration-200 border border-gray-300">
+            Reset Filters
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 p-6 pt-0 overflow-y-auto" style="height: calc(100vh - 120px); max-height: calc(100vh - 120px);">
+      <!-- Header -->
+      <div class="flex justify-between gap-4 items-center mb-6">
+        <div class="flex items-center flex-1">
+          <!-- Breadcrumbs -->
+          <nav class="flex items-center space-x-2 text-sm">
+            <a href="/dashboard/collaborations" class="text-gray-500 hover:text-gray-700 underline">Collaborations</a>
+            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+            {projectDetails ? (
+              <span class="text-gray-500">{projectDetails.client?.name || 'Unknown Client'} - {projectDetails.name}</span>
+            ) : (
+              <span class="text-gray-500">{(collaboration as any).name}</span>
+            )}
+          </nav>
+        </div>
+        <div class="flex items-center space-x-3">
+          <button class="inline-flex items-center px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border border-gray-300 transition-all duration-200">
+            <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 512 512">
+              <path d="M435.95,287.525c32.51,0,58.87-26.343,58.87-58.853c0-32.51-26.361-58.871-58.87-58.871 c-32.502,0-58.863,26.361-58.863,58.871C377.088,261.182,403.448,287.525,435.95,287.525z"></path>
+              <path d="M511.327,344.251c-2.623-15.762-15.652-37.822-25.514-47.677c-1.299-1.306-7.105-1.608-8.673-0.636 c-11.99,7.374-26.074,11.714-41.19,11.714c-15.099,0-29.184-4.34-41.175-11.714c-1.575-0.972-7.373-0.67-8.672,0.636 c-2.757,2.757-5.765,6.427-8.698,10.683c7.935,14.94,14.228,30.81,16.499,44.476c2.27,13.7,1.533,26.67-2.138,38.494 c13.038,4.717,28.673,6.787,44.183,6.787C476.404,397.014,517.804,382.987,511.327,344.251z"></path>
+              <path d="M254.487,262.691c52.687,0,95.403-42.716,95.403-95.402c0-52.67-42.716-95.386-95.403-95.386 c-52.678,0-95.378,42.716-95.378,95.386C159.109,219.975,201.808,262.691,254.487,262.691z"></path>
+              <path d="M335.269,277.303c-2.07-2.061-11.471-2.588-14.027-1.006c-19.448,11.966-42.271,18.971-66.755,18.971 c-24.466,0-47.3-7.005-66.738-18.971c-2.555-1.583-11.956-1.055-14.026,1.006c-16.021,16.004-37.136,51.782-41.384,77.288 c-10.474,62.826,56.634,85.508,122.148,85.508c65.532,0,132.639-22.682,122.165-85.508 C372.404,329.085,351.289,293.307,335.269,277.303z"></path>
+              <path d="M76.049,287.525c32.502,0,58.862-26.343,58.862-58.853c0-32.51-26.36-58.871-58.862-58.871 c-32.511,0-58.871,26.361-58.871,58.871C17.178,261.182,43.538,287.525,76.049,287.525z"></path>
+              <path d="M115.094,351.733c2.414-14.353,9.225-31.253,17.764-46.88c-2.38-3.251-4.759-6.083-6.955-8.279 c-1.299-1.306-7.097-1.608-8.672-0.636c-11.991,7.374-26.076,11.714-41.182,11.714c-15.108,0-29.202-4.34-41.183-11.714 c-1.568-0.972-7.382-0.67-8.681,0.636c-9.887,9.854-22.882,31.915-25.514,47.677c-6.468,38.736,34.924,52.762,75.378,52.762 c14.437,0,29.016-1.777,41.459-5.84C113.587,379.108,112.757,365.835,115.094,351.733z"></path>
+            </svg>
+            Manage Team
+          </button>
+          <button class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            New Task
+          </button>
+        </div>
+      </div>
+
+      <!-- Tasks Table -->
+      <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-900">Tasks</h2>
+            <button 
+              id="toggle-all-subtasks-btn"
+              class="flex items-center space-x-2 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors duration-200"
+              title="Toggle all subtasks"
+            >
+              <svg class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+              <span id="toggle-all-text">Subtasks</span>
+            </button>
+          </div>
+        </div>
+        
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assignee</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              {projectTasks.length > 0 ? projectTasks.map((task: any) => (
+                <>
+                  <tr class="hover:bg-gray-50" data-task-id={task.id}>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center">
+                        <a href={`/dashboard/collaborations/${collaborationId}/task/${task.id}`} class="flex items-center flex-1 hover:bg-gray-50 rounded-md p-2 -m-2 transition-colors duration-200">
+                          <div class="flex-shrink-0 h-10 w-10">
+                            <div class={`h-10 w-10 rounded-full flex items-center justify-center ${
+                              task.status === 'completed' ? 'bg-green-300' :
+                              task.status === 'in_progress' ? 'bg-blue-300' :
+                              task.status === 'on_hold' ? 'bg-yellow-300' :
+                              task.status === 'cancelled' ? 'bg-red-300' :
+                              'bg-gray-300'
+                            }`}>
+                              {task.status === 'pending' ? (
+                                <svg class="h-5 w-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M5 22h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2h-2a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1H5c-1.103 0-2 .897-2 2v15c0 1.103.897 2 2 2zM5 5h2v2h10V5h2v15H5V5z"></path>
+                                  <text x="12" y="16" text-anchor="middle" font-size="10" font-weight="bold" fill="currentColor">...</text>
+                                </svg>
+                              ) : task.status === 'completed' ? (
+                                <svg class="h-5 w-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M5 22h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2h-2a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1H5c-1.103 0-2 .897-2 2v15c0 1.103.897 2 2 2zM5 5h2v2h10V5h2v15H5V5z"></path>
+                                  <path d="m11 13.586-1.793-1.793-1.414 1.414L11 16.414l5.207-5.207-1.414-1.414z"></path>
+                                </svg>
+                              ) : task.status === 'in_progress' ? (
+                                <svg class="h-5 w-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M5 22h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2h-2a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1H5c-1.103 0-2 .897-2 2v15c0 1.103.897 2 2 2zM5 5h2v2h10V5h2v15H5V5z"></path>
+                                  <path d="M10 9l6 4-6 4V9z"></path>
+                                </svg>
+                              ) : task.status === 'on_hold' ? (
+                                <svg class="h-5 w-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                              ) : task.status === 'cancelled' ? (
+                                <svg class="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                              ) : (
+                                <svg class="h-5 w-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M5 22h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2h-2a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1H5c-1.103 0-2 .897-2 2v15c0 1.103.897 2 2 2zM5 5h2v2h10V5h2v15H5V5z"></path>
+                                  <text x="12" y="16" text-anchor="middle" font-size="8" fill="currentColor">...</text>
+                                </svg>
+                              )}
+                            </div>
+                          </div>
+                          <div class="ml-4">
+                            <div class={`text-sm font-medium ${task.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                              {task.name}
+                            </div>
+                            {task.description && (
+                              <div class={`text-sm max-w-xs truncate ${task.status === 'completed' ? 'line-through text-gray-400' : 'text-gray-500'}`} title={task.description}>{task.description}</div>
+                            )}
+                          </div>
+                        </a>
+                        {/* Only show arrow if task has subtasks */}
+                        {task.subtasks && task.subtasks.length > 0 && (
+                          <button 
+                            class="expand-subtasks-btn ml-2 p-1 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                            data-task-id={task.id}
+                            title={`Toggle subtasks (${task.subtasks.length})`}
+                          >
+                            <svg class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center space-x-2 relative">
+                      {task.assignments && task.assignments.length > 0 ? (
+                        <div class="flex -space-x-2">
+                          {task.assignments.slice(0, 4).map((assignment: any) => (
+                            <div 
+                              class="task-member-avatar w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 border-2 border-white relative group hover:bg-gray-400 hover:z-50 transition-colors duration-200"
+                              title={assignment.user.name}
+                              data-task-id={task.id}
+                              data-user-id={assignment.user.id}
+                              data-user-name={assignment.user.name}
+                            >
+                              {assignment.user.name.charAt(0).toUpperCase()}
+                              <!-- Remove button (hidden by default) -->
+                              <button 
+                                class="remove-task-member absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600 cursor-pointer"
+                                data-task-id={task.id}
+                                data-user-id={assignment.user.id}
+                                data-user-name={assignment.user.name}
+                                title={`Remove ${assignment.user.name} from task`}
+                              >
+                                ×
+                              </button>
+                              <!-- Tooltip -->
+                              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                                {assignment.user.name}
+                                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                              </div>
+                            </div>
+                          ))}
+                          {task.assignments.length > 4 && (
+                            <div 
+                              class="expand-task-members w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 border-2 border-white relative group cursor-pointer hover:bg-gray-200 transition-colors duration-200"
+                              title={`Show all ${task.assignments.length} assignees`}
+                              data-task-id={task.id}
+                            >
+                              +{task.assignments.length - 4}
+                              <!-- Tooltip -->
+                              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                                <div class="flex flex-col space-y-1">
+                                  {task.assignments.slice(4).map((assignment: any) => (
+                                    <div class="whitespace-nowrap">{assignment.user.name}</div>
+                                  ))}
+                                </div>
+                                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span class="text-sm text-gray-500">Unassigned</span>
+                      )}
+                      
+                      <!-- Expanded Task Members List (hidden by default) -->
+                      <div class={`expanded-task-members-${task.id} hidden absolute top-8 left-0 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-50 min-w-64`}>
+                        <div class="flex flex-wrap gap-2">
+                          {task.assignments && task.assignments.map((assignment: any) => (
+                            <div 
+                              class="task-member-avatar w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 border-2 border-white relative group hover:bg-gray-400 hover:z-50 transition-colors duration-200"
+                              title={assignment.user.name}
+                              data-task-id={task.id}
+                              data-user-id={assignment.user.id}
+                              data-user-name={assignment.user.name}
+                            >
+                              {assignment.user.name.charAt(0).toUpperCase()}
+                              <!-- Remove button (hidden by default) -->
+                              <button 
+                                class="remove-task-member absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600 cursor-pointer"
+                                data-task-id={task.id}
+                                data-user-id={assignment.user.id}
+                                data-user-name={assignment.user.name}
+                                title={`Remove ${assignment.user.name} from task`}
+                              >
+                                ×
+                              </button>
+                              <!-- Tooltip -->
+                              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                                {assignment.user.name}
+                                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <!-- Add User Button for Task -->
+                      <div class="relative">
+                        <button 
+                          class="task-add-user-btn inline-flex items-center justify-center w-4 h-4 text-gray-600 hover:text-gray-800 transition-colors duration-200" 
+                          title="Add user to task"
+                          data-task-id={task.id}
+                        >
+                          <svg fill="currentColor" height="16px" width="16px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" xml:space="preserve">
+                            <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                            <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                            <g id="SVGRepo_iconCarrier">
+                              <g>
+                                <g>
+                                  <polygon points="451.368,229.053 451.368,168.421 410.947,168.421 410.947,229.053 350.316,229.053 350.316,269.474 410.947,269.474 410.947,330.105 451.368,330.105 451.368,269.474 512,269.474 512,229.053"></polygon>
+                                </g>
+                              </g>
+                              <g>
+                                <g>
+                                  <path d="M239.915,276.724c33.652-18.238,56.506-53.864,56.506-94.829c0-59.531-48.259-107.789-107.789-107.789 S80.842,122.364,80.842,181.895c0,40.965,22.854,76.591,56.506,94.829C66.732,283.298,0,352.877,0,437.895h377.263 C377.263,352.877,310.531,283.298,239.915,276.724z"></path>
+                                </g>
+                              </g>
+                            </g>
+                          </svg>
+                        </button>
+                        
+                        <!-- Task User Search Dropdown -->
+                        <div class="task-user-search-dropdown absolute left-0 top-6 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-[99999] hidden" style="position: fixed; z-index: 99999;">
+                          <div class="p-4">
+                            <div class="relative mb-3">
+                              <input 
+                                type="text" 
+                                class="task-user-search-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Search users by name or email..."
+                              />
+                              <div class="task-user-search-spinner absolute right-3 top-1/2 transform -translate-y-1/2 hidden">
+                                <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                              </div>
+                            </div>
+                            <div class="task-user-search-results max-h-60 overflow-y-auto space-y-2">
+                              <div class="text-center py-4 text-gray-500">Loading users...</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    {task.dueDate ? (() => {
+                      const dueDate = new Date(task.dueDate);
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      dueDate.setHours(0, 0, 0, 0);
+                      const isOverdue = dueDate < today && task.status !== 'completed';
+                      return (
+                        <span class={`${task.status === 'completed' ? 'line-through text-gray-400' : isOverdue ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+                          {dueDate.toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: '2-digit', 
+                            day: '2-digit',
+                            timeZone: 'UTC'
+                          })}
+                        </span>
+                      );
+                    })() : <span class="text-gray-500">No due date</span>}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      task.priority === 'urgent' ? 'bg-red-100 text-red-800' :
+                      task.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                      task.priority === 'regular' ? 'bg-blue-100 text-blue-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <StatusDropdown 
+                      currentStatus={task.status}
+                      onStatusChange={async (newStatus) => {
+                        console.log('🎯 StatusDropdown onStatusChange called:', { taskId: task.id, newStatus });
+                        // Update the main task status via API
+                        if (typeof window !== 'undefined' && (window as any).updateTaskStatus) {
+                          console.log('📞 Calling updateTaskStatus...');
+                          await (window as any).updateTaskStatus(task.id, newStatus);
+                        } else {
+                          console.error('❌ updateTaskStatus function not found on window object');
+                        }
+                      }}
+                      taskId={task.id}
+                      client:visible
+                    />
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <button 
+                      class="edit-task-btn inline-flex items-center px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white text-xs font-medium rounded-md transition-colors duration-200"
+                      data-task-id={task.id}
+                      data-task-name={task.name}
+                      data-task-description={task.description || ''}
+                      data-task-status={task.status}
+                      data-task-priority={task.priority}
+                      data-task-due-date={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''}
+                    >
+                      <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                      </svg>
+                      Edit
+                    </button>
+                  </td>
+                </tr>
+                
+                <!-- Subtask rows (hidden by default) -->
+                {/* Real subtasks if they exist */}
+                {task.subtasks && task.subtasks.length > 0 && task.subtasks.map((subtask: any) => (
+                  <tr class="subtask-row bg-gray-25 border-l-4 border-gray-300 hidden" data-task-id={task.id}>
+                    <td class="px-6 py-3 pl-12">
+                      <div class="flex items-center space-x-3">
+                        <button
+                          class={`subtask-toggle-btn w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 ${
+                            subtask.completed
+                              ? 'bg-green-500 text-white'
+                              : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                          }`}
+                          title={subtask.completed ? 'Mark as incomplete' : 'Mark as complete'}
+                          data-subtask-id={subtask.id}
+                          data-task-id={task.id}
+                          data-completed={subtask.completed}
+                        >
+                          {subtask.completed ? (
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <path d="M20 6L9 17l-5-5"/>
+                            </svg>
+                          ) : (
+                            <div class="w-4 h-4 rounded-full border-2 border-current"></div>
+                          )}
+                        </button>
+                        <div class={`${subtask.completed ? 'line-through text-gray-500' : ''}`}>
+                          <div class="font-medium text-sm text-gray-900">{subtask.name}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-6 py-3">
+                      <div class="flex items-center space-x-2 relative">
+                        {subtask.assignees && subtask.assignees.length > 0 ? (
+                          <div class="flex items-center">
+                            <div class="flex -space-x-2">
+                              {subtask.assignees.slice(0, 4).map((assignee: any, index: number) => (
+                                <div 
+                                  class={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium border-2 border-white relative group cursor-pointer transition-all duration-200 hover:z-20 hover:scale-110 ${
+                                    subtask.completed 
+                                      ? 'bg-gray-100 text-gray-400' 
+                                      : 'bg-gray-300 text-gray-700'
+                                  }`}
+                                  title={assignee}
+                                >
+                                  {assignee.charAt(0).toUpperCase()}
+                                  <!-- Tooltip -->
+                                  <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                                    {assignee}
+                                    <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                                  </div>
+                                </div>
+                              ))}
+                              {subtask.assignees.length > 4 && (
+                                <div class={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium border-2 border-white relative group cursor-pointer transition-all duration-200 hover:z-20 hover:scale-110 ${
+                                  subtask.completed 
+                                    ? 'bg-white text-gray-400' 
+                                    : 'bg-white text-gray-700'
+                                }`}>
+                                  +{subtask.assignees.length - 4}
+                                  <!-- Tooltip for remaining users -->
+                                  <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                                    {subtask.assignees.slice(4).join(', ')}
+                                    <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <span class="text-sm text-gray-400">Unassigned</span>
+                        )}
+                        
+                        <!-- Add User Button for Subtask -->
+                        <div class="relative">
+                          <button 
+                            class="subtask-add-user-btn inline-flex items-center justify-center w-4 h-4 text-gray-600 hover:text-gray-800 transition-colors duration-200" 
+                            title="Add user to subtask"
+                            data-subtask-id={subtask.id}
+                            data-task-id={task.id}
+                          >
+                            <svg fill="currentColor" height="16px" width="16px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" xml:space="preserve">
+                              <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                              <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                              <g id="SVGRepo_iconCarrier">
+                                <g>
+                                  <g>
+                                    <polygon points="451.368,229.053 451.368,168.421 410.947,168.421 410.947,229.053 350.316,229.053 350.316,269.474 410.947,269.474 410.947,330.105 451.368,330.105 451.368,269.474 512,269.474 512,229.053"></polygon>
+                                  </g>
+                                </g>
+                                <g>
+                                  <g>
+                                    <path d="M239.915,276.724c33.652-18.238,56.506-53.864,56.506-94.829c0-59.531-48.259-107.789-107.789-107.789 S80.842,122.364,80.842,181.895c0,40.965,22.854,76.591,56.506,94.829C66.732,283.298,0,352.877,0,437.895h377.263 C377.263,352.877,310.531,283.298,239.915,276.724z"></path>
+                                  </g>
+                                </g>
+                              </g>
+                            </svg>
+                          </button>
+                          
+                          <!-- Simple Subtask User Assignment -->
+                          <div class="subtask-user-assignment absolute left-0 top-6 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-[99999] hidden" style="position: fixed; z-index: 99999;">
+                            <div class="p-3">
+                              <div class="text-sm font-medium text-gray-700 mb-2">Assign to subtask:</div>
+                              <div class="subtask-user-list max-h-48 overflow-y-auto space-y-1">
+                                <!-- Parent task assignees will be populated here -->
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-6 py-3 text-sm">
+                      {subtask.dueDate ? (
+                        <span class={`text-sm ${subtask.completed ? 'text-gray-400' : 'text-gray-900'}`}>
+                          {new Date(subtask.dueDate).toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: '2-digit', 
+                            day: '2-digit',
+                            timeZone: 'UTC'
+                          })}
+                        </span>
+                      ) : (
+                        <span class="text-sm text-gray-400">No due date</span>
+                      )}
+                    </td>
+                    <td class="px-6 py-3">
+                      <!-- Priority column removed for subtasks -->
+                    </td>
+                    <td class="px-6 py-3">
+                      <StatusDropdown 
+                        currentStatus={subtask.status || (subtask.completed ? 'completed' : 'pending')}
+                        onStatusChange={async (newStatus) => {
+                          // Update the subtask status via API
+                          if (typeof window !== 'undefined' && (window as any).updateSubtaskStatus) {
+                            await (window as any).updateSubtaskStatus(subtask.id, task.id, newStatus);
+                          }
+                        }}
+                        taskId={parseInt(subtask.id)}
+                        completed={subtask.completed}
+                        client:visible
+                      />
+                    </td>
+                    <td class="px-6 py-3 text-sm text-gray-500">
+                      <button 
+                        class="delete-subtask-btn inline-flex items-center px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 text-xs font-medium rounded transition-colors duration-200"
+                        title="Delete subtask"
+                        data-subtask-id={subtask.id}
+                        data-task-id={task.id}
+                        data-subtask-name={subtask.name}
+                      >
+                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </>)) : (
+                <tr>
+                  <td colspan="6" class="px-6 py-12 text-center">
+                    <div class="flex flex-col items-center space-y-4">
+                      <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                        </svg>
+                      </div>
+                      <div class="text-center">
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">
+                          {projectDetails ? 'No collaboration tasks yet' : 'No project linked to this collaboration'}
+                        </h3>
+                        <p class="text-sm text-gray-500 mb-4">
+                          {projectDetails ? 'Create your first task to start collaborating with your team.' : 'Link this collaboration to a project to manage tasks.'}
+                        </p>
+                        {projectDetails && (
+                          <button class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-all duration-200">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Create First Task
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</Layout>
+
+<!-- Notification System -->
+<div id="notificationContainer" class="fixed w-full max-w-md top-4 right-4 z-50 space-y-2">
+  <!-- Notifications will be dynamically added here -->
+</div>
+
+<!-- Dialogue System -->
+<script src="/src/components/DialogueSystem.js"></script>
+
+<!-- Confirmation Modal -->
+<div id="confirmationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+  <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div class="mt-3">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900" id="confirmationTitle">Confirm Action</h3>
+        <button id="closeConfirmationModal" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Content -->
+      <div class="mb-6">
+        <p class="text-sm text-gray-500" id="confirmationMessage">Are you sure you want to perform this action?</p>
+      </div>
+
+      <!-- Modal Actions -->
+      <div class="flex items-center justify-end space-x-3">
+        <button 
+          type="button" 
+          id="cancelConfirmation" 
+          class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 font-medium rounded-md transition-colors duration-200"
+        >
+          Cancel
+        </button>
+        <button 
+          type="button" 
+          id="confirmAction" 
+          class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-md transition-colors duration-200"
+        >
+          Confirm
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Team Management Modal -->
+<div id="teamModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+  <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white">
+    <div class="mt-3">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Manage Team Members</h3>
+        <button id="closeTeamModal" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Current Team Members -->
+      <div class="mb-6">
+        <h4 class="text-sm font-medium text-gray-700 mb-3">Current Team Members</h4>
+        <div id="currentMembersList" class="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-3">
+          <!-- Current members will be populated here -->
+        </div>
+      </div>
+
+      <!-- Add New Members -->
+      <div class="mb-6">
+        <h4 class="text-sm font-medium text-gray-700 mb-3">Add New Members</h4>
+        <div class="flex space-x-2 mb-3">
+          <div class="flex-1 relative">
+            <input 
+              type="text" 
+              id="userSearch" 
+              placeholder="Search users by name or email..."
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <div id="searchSpinner" class="absolute right-3 top-1/2 transform -translate-y-1/2 hidden">
+              <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </div>
+          </div>
+          <button id="searchUsers" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors duration-200">
+            Search
+          </button>
+        </div>
+        <div id="searchResults" class="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-3 hidden">
+          <!-- Search results will be populated here -->
+        </div>
+      </div>
+
+      <!-- Modal Actions -->
+      <div class="flex items-center justify-end space-x-3 pt-4 border-t">
+        <button 
+          type="button" 
+          id="cancelTeamModal" 
+          class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 font-medium rounded-md transition-colors duration-200"
+        >
+          Cancel
+        </button>
+        <button 
+          type="button" 
+          id="saveTeamChanges" 
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors duration-200"
+        >
+          Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Task Edit Modal -->
+<div id="editTaskModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+  <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white">
+    <div class="mt-3">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Edit Task</h3>
+        <button id="closeEditTaskModal" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Form -->
+      <form id="editTaskForm" class="space-y-4">
+        <!-- Task Name -->
+        <div>
+          <label for="editTaskName" class="block text-sm font-medium text-gray-700 mb-1">Task Name *</label>
+          <input 
+            type="text" 
+            id="editTaskName" 
+            name="name" 
+            required 
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter task name"
+          />
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label for="editTaskDescription" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <textarea 
+            id="editTaskDescription" 
+            name="description" 
+            rows="3"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter task description"
+          ></textarea>
+        </div>
+
+        <!-- Status and Priority Row -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Status -->
+          <div>
+            <label for="editTaskStatus" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select 
+              id="editTaskStatus" 
+              name="status" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+
+          <!-- Priority -->
+          <div>
+            <label for="editTaskPriority" class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+            <select 
+              id="editTaskPriority" 
+              name="priority" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="low">Low</option>
+              <option value="regular">Regular</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Due Date -->
+        <div>
+          <label for="editTaskDueDate" class="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+          <input 
+            type="date" 
+            id="editTaskDueDate" 
+            name="dueDate" 
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+
+        <!-- Current Assignees -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Current Assignees</label>
+          <div id="editCurrentAssignees" class="space-y-2 max-h-32 overflow-y-auto border border-gray-200 rounded-md p-3">
+            <!-- Current assignees will be populated here -->
+          </div>
+        </div>
+
+        <!-- Add New Assignees -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Add New Assignees</label>
+          <div class="flex space-x-2 mb-3">
+            <div class="flex-1 relative">
+              <input 
+                type="text" 
+                id="editUserSearch" 
+                placeholder="Search users by name or email..."
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <div id="editSearchSpinner" class="absolute right-3 top-1/2 transform -translate-y-1/2 hidden">
+                <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+            </div>
+            <button id="editSearchUsers" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-md transition-colors duration-200">
+              Search
+            </button>
+          </div>
+          <div id="editSearchResults" class="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-3 hidden">
+            <!-- Search results will be populated here -->
+          </div>
+        </div>
+
+        <!-- Modal Actions -->
+        <div class="flex items-center justify-between pt-4 border-t">
+          <button 
+            type="button" 
+            id="deleteTaskBtn" 
+            class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-md transition-colors duration-200"
+          >
+            <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+            </svg>
+            Delete Task
+          </button>
+          <div class="flex space-x-3">
+            <button 
+              type="button" 
+              id="cancelEditTaskModal" 
+              class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 font-medium rounded-md transition-colors duration-200"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-md transition-colors duration-200"
+            >
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteConfirmationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+  <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 lg:w-1/3 shadow-lg rounded-md bg-white">
+    <div class="mt-3">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Confirm Deletion</h3>
+        <button id="closeDeleteConfirmationModal" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Content -->
+      <div class="mb-6">
+        <div class="flex items-center mb-4">
+          <div class="">
+            <h3 class="text-sm font-medium text-gray-900">Are you sure you want to delete this task?</h3>
+            <div class="mt-2 text-sm text-gray-500">
+              <p id="deleteConfirmationMessage">This action cannot be undone.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Actions -->
+      <div class="flex justify-end space-x-3">
+        <button 
+          id="cancelDeleteBtn" 
+          type="button" 
+          class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium rounded-md transition-colors duration-200"
+        >
+          Cancel
+        </button>
+        <button 
+          id="confirmDeleteBtn" 
+          type="button" 
+          class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-md transition-colors duration-200"
+        >
+          Delete Task
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Task Creation Modal -->
+<div id="taskModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+  <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white">
+    <div class="mt-3">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Create New Task</h3>
+        <button id="closeTaskModal" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Form -->
+      <form id="taskForm" class="space-y-4">
+        <!-- Task Name -->
+        <div>
+          <label for="taskName" class="block text-sm font-medium text-gray-700 mb-1">Task Name *</label>
+          <input 
+            type="text" 
+            id="taskName" 
+            name="name" 
+            required 
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter task name"
+          />
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label for="taskDescription" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <textarea 
+            id="taskDescription" 
+            name="description" 
+            rows="3"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter task description"
+          ></textarea>
+        </div>
+
+        <!-- Status and Priority Row -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Status -->
+          <div>
+            <label for="taskStatus" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select 
+              id="taskStatus" 
+              name="status" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+
+          <!-- Priority -->
+          <div>
+            <label for="taskPriority" class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+            <select 
+              id="taskPriority" 
+              name="priority" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="low">Low</option>
+              <option value="regular" selected>Regular</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Due Date -->
+        <div>
+          <label for="taskDueDate" class="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+          <input 
+            type="date" 
+            id="taskDueDate" 
+            name="dueDate" 
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+
+        <!-- Assignees -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Assign to Team Members</label>
+          <div id="assigneeList" class="space-y-2 max-h-32 overflow-y-auto border border-gray-200 rounded-md p-3">
+            <!-- Team members will be populated here -->
+          </div>
+        </div>
+
+        <!-- Modal Actions -->
+        <div class="flex items-center justify-end space-x-3 pt-4 border-t">
+          <button 
+            type="button" 
+            id="cancelTaskModal" 
+            class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 font-medium rounded-md transition-colors duration-200"
+          >
+            Cancel
+          </button>
+          <button 
+            type="submit" 
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors duration-200"
+          >
+            Create Task
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Data for client-side JavaScript -->
+<script define:vars={{ 
+  collaborationId: collaborationId,
+  teamMembersData: teamMembers.map((member: any) => ({
+    id: member.id,
+    name: member.name,
+    email: member.email
+  })), 
+  projectDetailsData: projectDetails ? {
+    id: projectDetails.id,
+    name: projectDetails.name
+  } : null, 
+  tasksData: projectTasks.map((task: any) => ({
+    id: task.id,
+    name: task.name,
+    description: task.description,
+    status: task.status,
+    priority: task.priority,
+    dueDate: task.dueDate,
+    assignments: task.assignments || [],
+    subtasks: task.subtasks || [],
+    createdAt: task.createdAt
+  }))
+}}>
+  // Notification system
+  function showNotification(message, type = 'success', duration = 5000) {
+    const container = document.getElementById('notificationContainer');
+    if (!container) return;
+
+    const notification = document.createElement('div');
+    const notificationId = 'notification-' + Date.now();
+    
+    const bgColor = type === 'success' ? 'bg-green-500' : 
+                   type === 'error' ? 'bg-red-500' : 
+                   type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500';
+    
+    const icon = type === 'success' ? 
+      '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>' :
+      type === 'error' ?
+      '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>' :
+      '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>';
+
+    notification.id = notificationId;
+    notification.className = `max-w-sm w-full ${bgColor} shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden transform transition-all duration-300 ease-in-out translate-x-full opacity-0`;
+    notification.innerHTML = `
+      <div class="p-4">
+        <div class="flex items-start">
+          <div class="flex-shrink-0">
+            ${icon}
+          </div>
+          <div class="ml-3 w-0 flex-1 pt-0.5">
+            <p class="text-sm font-medium text-white">
+              ${message}
+            </p>
+          </div>
+          <div class="ml-4 flex-shrink-0 flex">
+            <button class="bg-white rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" onclick="removeNotification('${notificationId}')">
+              <span class="sr-only">Close</span>
+              <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    container.appendChild(notification);
+
+    // Trigger animation
+    setTimeout(() => {
+      notification.classList.remove('translate-x-full', 'opacity-0');
+      notification.classList.add('translate-x-0', 'opacity-100');
+    }, 10);
+
+    // Auto remove after duration
+    if (duration > 0) {
+      setTimeout(() => {
+        removeNotification(notificationId);
+      }, duration);
+    }
+  }
+
+  function removeNotification(notificationId) {
+    const notification = document.getElementById(notificationId);
+    if (!notification) return;
+
+    notification.classList.remove('translate-x-0', 'opacity-100');
+    notification.classList.add('translate-x-full', 'opacity-0');
+
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 300);
+  }
+
+  // Utility function to update global toggle button state
+  function updateGlobalToggleButtonState() {
+    const allSubtaskRows = document.querySelectorAll('tr.subtask-row');
+    const toggleButton = document.getElementById('toggle-all-subtasks-btn');
+    const toggleText = document.getElementById('toggle-all-text');
+    const toggleArrow = toggleButton?.querySelector('svg');
+    
+    if (!toggleButton || !toggleText || !toggleArrow) return;
+    
+    // Count visible subtask rows
+    const visibleSubtaskRows = Array.from(allSubtaskRows).filter(row => 
+      !row.classList.contains('hidden')
+    );
+    
+    // Determine if all subtasks are expanded or collapsed
+    const allExpanded = visibleSubtaskRows.length === allSubtaskRows.length && allSubtaskRows.length > 0;
+    const allCollapsed = visibleSubtaskRows.length === 0;
+    
+    if (allExpanded) {
+      // All expanded - show "Close"
+      toggleText.textContent = 'Close';
+      toggleArrow.classList.add('rotate-180');
+    } else if (allCollapsed) {
+      // All collapsed - show "Subtasks"
+      toggleText.textContent = 'Subtasks';
+      toggleArrow.classList.remove('rotate-180');
+    } else {
+      // Mixed state - show "Subtasks" (default to expand)
+      toggleText.textContent = 'Subtasks';
+      toggleArrow.classList.remove('rotate-180');
+    }
+  }
+
+    // Make functions globally available
+    window.showNotification = showNotification;
+    window.removeNotification = removeNotification;
+    
+    // Confirmation modal functionality
+    let currentConfirmationAction = null;
+    
+    function showConfirmation(title, message, action) {
+      if (confirmationTitle) confirmationTitle.textContent = title;
+      if (confirmationMessage) confirmationMessage.textContent = message;
+      if (confirmationModal) confirmationModal.classList.remove('hidden');
+      currentConfirmationAction = action;
+    }
+    
+    function hideConfirmation() {
+      if (confirmationModal) confirmationModal.classList.add('hidden');
+      currentConfirmationAction = null;
+    }
+    
+    // Confirmation modal event handlers
+    if (closeConfirmationModal) {
+      closeConfirmationModal.addEventListener('click', hideConfirmation);
+    }
+    if (cancelConfirmation) {
+      cancelConfirmation.addEventListener('click', hideConfirmation);
+    }
+    if (confirmAction) {
+      confirmAction.addEventListener('click', function() {
+        if (currentConfirmationAction) {
+          currentConfirmationAction();
+        }
+        hideConfirmation();
+      });
+    }
+    
+    // Close confirmation modal when clicking outside
+    if (confirmationModal) {
+      confirmationModal.addEventListener('click', function(e) {
+        if (e.target === confirmationModal) {
+          hideConfirmation();
+        }
+      });
+    }
+
+  // Add any client-side functionality here
+  document.addEventListener('DOMContentLoaded', function() {
+    const taskModal = document.getElementById('taskModal');
+    const taskForm = document.getElementById('taskForm');
+    const closeTaskModal = document.getElementById('closeTaskModal');
+    const cancelTaskModal = document.getElementById('cancelTaskModal');
+    const assigneeList = document.getElementById('assigneeList');
+    
+    // Edit task modal elements
+    const editTaskModal = document.getElementById('editTaskModal');
+    const editTaskForm = document.getElementById('editTaskForm');
+    const closeEditTaskModal = document.getElementById('closeEditTaskModal');
+    const cancelEditTaskModal = document.getElementById('cancelEditTaskModal');
+    const editCurrentAssignees = document.getElementById('editCurrentAssignees');
+    const editUserSearch = document.getElementById('editUserSearch');
+    const editSearchUsers = document.getElementById('editSearchUsers');
+    const editSearchResults = document.getElementById('editSearchResults');
+    const editSearchSpinner = document.getElementById('editSearchSpinner');
+    const deleteTaskBtn = document.getElementById('deleteTaskBtn');
+    
+    // Team management modal elements
+    const teamModal = document.getElementById('teamModal');
+    const closeTeamModal = document.getElementById('closeTeamModal');
+    const cancelTeamModal = document.getElementById('cancelTeamModal');
+    const currentMembersList = document.getElementById('currentMembersList');
+    const userSearch = document.getElementById('userSearch');
+    const searchUsers = document.getElementById('searchUsers');
+    const searchResults = document.getElementById('searchResults');
+    const searchSpinner = document.getElementById('searchSpinner');
+    const saveTeamChanges = document.getElementById('saveTeamChanges');
+    
+    // Filter elements
+    const priorityFilter = document.getElementById('priorityFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    const dueFilter = document.getElementById('dueFilter');
+    const resetFiltersBtn = document.getElementById('resetFilters');
+    const tasksTableBody = document.querySelector('tbody');
+    
+    // User search dropdown elements
+    const addUserBtn = document.getElementById('addUserBtn');
+    const userSearchDropdown = document.getElementById('userSearchDropdown');
+    const userSearchInput = document.getElementById('userSearchInput');
+    const userSearchResults = document.getElementById('userSearchResults');
+    const userSearchSpinner = document.getElementById('userSearchSpinner');
+    
+    // Confirmation modal elements
+    const confirmationModal = document.getElementById('confirmationModal');
+    const confirmationTitle = document.getElementById('confirmationTitle');
+    const confirmationMessage = document.getElementById('confirmationMessage');
+    const closeConfirmationModal = document.getElementById('closeConfirmationModal');
+    const cancelConfirmation = document.getElementById('cancelConfirmation');
+    const confirmAction = document.getElementById('confirmAction');
+    
+    // Delete confirmation modal elements
+    const deleteConfirmationModal = document.getElementById('deleteConfirmationModal');
+    const deleteConfirmationMessage = document.getElementById('deleteConfirmationMessage');
+    const closeDeleteConfirmationModal = document.getElementById('closeDeleteConfirmationModal');
+    const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+    if (!taskModal || !taskForm || !closeTaskModal || !cancelTaskModal || !assigneeList || 
+        !deleteConfirmationModal || !deleteConfirmationMessage || !closeDeleteConfirmationModal || 
+        !cancelDeleteBtn || !confirmDeleteBtn) {
+      console.error('Required modal elements not found');
+      return;
+    }
+
+    if (!editTaskModal || !editTaskForm || !closeEditTaskModal || !cancelEditTaskModal || !editCurrentAssignees || !editUserSearch || !editSearchUsers || !editSearchResults || !deleteTaskBtn) {
+      console.error('Required edit modal elements not found');
+      return;
+    }
+
+    if (!teamModal || !closeTeamModal || !cancelTeamModal || !currentMembersList || !userSearch || !searchUsers || !searchResults || !saveTeamChanges) {
+      console.error('Required team modal elements not found');
+      return;
+    }
+
+    // Populate assignee list
+    function populateAssigneeList() {
+      if (!assigneeList) return;
+      assigneeList.innerHTML = '';
+      teamMembersData.forEach((member) => {
+        const assigneeItem = document.createElement('div');
+        assigneeItem.className = 'flex items-center space-x-3';
+        assigneeItem.innerHTML = `
+          <input 
+            type="checkbox" 
+            id="assignee-${member.id}" 
+            value="${member.id}" 
+            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <label for="assignee-${member.id}" class="flex items-center space-x-2 cursor-pointer">
+            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 relative group" title="${member.name}">
+              ${member.name.charAt(0).toUpperCase()}
+              <!-- Tooltip -->
+              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                ${member.name}
+                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+              </div>
+            </div>
+            <div>
+              <div class="text-sm font-medium text-gray-900">${member.name}</div>
+              <div class="text-xs text-gray-500">${member.email}</div>
+            </div>
+          </label>
+        `;
+        assigneeList.appendChild(assigneeItem);
+      });
+    }
+
+    // Team management functions
+    function populateCurrentMembers() {
+      if (!currentMembersList) return;
+      currentMembersList.innerHTML = '';
+      teamMembersData.forEach((member) => {
+        const memberItem = document.createElement('div');
+        memberItem.className = 'flex items-center justify-between p-2 bg-gray-50 rounded-md';
+        memberItem.innerHTML = `
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 relative group" title="${member.name}">
+              ${member.name.charAt(0).toUpperCase()}
+              <!-- Tooltip -->
+              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                ${member.name}
+                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+              </div>
+            </div>
+            <div>
+              <div class="text-sm font-medium text-gray-900">${member.name}</div>
+              <div class="text-xs text-gray-500">${member.email}</div>
+            </div>
+          </div>
+          <button 
+            class="remove-member-btn text-red-600 hover:text-red-800 text-sm font-medium"
+            data-member-id="${member.id}"
+          >
+            Remove
+          </button>
+        `;
+        currentMembersList.appendChild(memberItem);
+      });
+    }
+
+    // Debounce timer for search
+    let searchTimeout;
+
+    function searchUsersForTeam() {
+      const searchTerm = userSearch.value.trim();
+      if (!searchTerm) {
+        searchResults.classList.add('hidden');
+        if (searchSpinner) searchSpinner.classList.add('hidden');
+        return;
+      }
+
+      // Clear previous timeout
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+
+      // Show loading state
+      if (searchSpinner) searchSpinner.classList.remove('hidden');
+      searchResults.innerHTML = '<div class="text-center py-4 text-gray-500">Searching...</div>';
+      searchResults.classList.remove('hidden');
+
+      // Debounce the actual search
+      searchTimeout = setTimeout(() => {
+        // Search users via API
+        fetch(`/api/admin/users/search?q=${encodeURIComponent(searchTerm)}`)
+          .then(response => response.json())
+          .then(data => {
+            if (searchSpinner) searchSpinner.classList.add('hidden');
+            if (data.success && data.users) {
+              displaySearchResults(data.users);
+            } else {
+              searchResults.innerHTML = '<div class="text-center py-4 text-gray-500">No users found</div>';
+            }
+          })
+          .catch(error => {
+            console.error('Error searching users:', error);
+            if (searchSpinner) searchSpinner.classList.add('hidden');
+            searchResults.innerHTML = '<div class="text-center py-4 text-red-500">Error searching users</div>';
+          });
+      }, 300); // 300ms debounce delay
+    }
+
+    function displaySearchResults(users) {
+      if (!searchResults) return;
+      
+      searchResults.innerHTML = '';
+      
+      if (users.length === 0) {
+        searchResults.innerHTML = '<div class="text-center py-4 text-gray-500">No users found</div>';
+        return;
+      }
+
+      users.forEach(user => {
+        // Check if user is already a team member
+        const isAlreadyMember = teamMembersData.some(member => member.id === user.id);
+        
+        const userItem = document.createElement('div');
+        userItem.className = `flex items-center justify-between p-2 rounded-md cursor-pointer transition-colors duration-200 ${isAlreadyMember ? 'bg-gray-100 cursor-not-allowed' : 'bg-white hover:bg-blue-50 hover:border-blue-200 border border-transparent'}`;
+        
+        if (!isAlreadyMember) {
+          userItem.setAttribute('data-user-id', user.id);
+          userItem.setAttribute('data-user-name', user.name);
+          userItem.setAttribute('data-user-email', user.email);
+        }
+        
+        userItem.innerHTML = `
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 relative group" title="${user.name}">
+              ${user.name.charAt(0).toUpperCase()}
+              <!-- Tooltip -->
+              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                ${user.name}
+                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+              </div>
+            </div>
+            <div>
+              <div class="text-sm font-medium text-gray-900">${user.name}</div>
+              <div class="text-xs text-gray-500">${user.email}</div>
+            </div>
+          </div>
+          ${isAlreadyMember ? 
+            '<span class="text-sm text-gray-500">Already a member</span>' :
+            ''
+          }
+        `;
+        searchResults.appendChild(userItem);
+      });
+    }
+
+    function showTeamModal() {
+      if (!teamModal) return;
+      teamModal.classList.remove('hidden');
+      populateCurrentMembers();
+    }
+
+    function hideTeamModal() {
+      if (!teamModal) return;
+      teamModal.classList.add('hidden');
+      userSearch.value = '';
+      searchResults.classList.add('hidden');
+    }
+
+    // Show modal
+    function showTaskModal() {
+      if (!projectDetailsData || !projectDetailsData.id) {
+        showNotification('No project linked to this collaboration. Please link a project first.', 'warning');
+        return;
+      }
+      if (!taskModal) return;
+      taskModal.classList.remove('hidden');
+      populateAssigneeList();
+    }
+
+    // Hide modal
+    function hideTaskModal() {
+      if (!taskModal || !taskForm) return;
+      taskModal.classList.add('hidden');
+      taskForm.reset();
+    }
+
+    // Edit task modal functions
+    let currentEditTaskId = null;
+    let currentEditAssignees = [];
+
+    function showEditTaskModal(taskId) {
+      if (!editTaskModal) return;
+      
+      currentEditTaskId = taskId;
+      const task = tasksData.find(t => t.id === taskId);
+      if (!task) return;
+      
+      // Populate form fields
+      document.getElementById('editTaskName').value = task.name;
+      document.getElementById('editTaskDescription').value = task.description || '';
+      document.getElementById('editTaskStatus').value = task.status;
+      document.getElementById('editTaskPriority').value = task.priority;
+      document.getElementById('editTaskDueDate').value = task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '';
+      
+      // Load current assignees
+      loadCurrentAssignees(taskId);
+      
+      editTaskModal.classList.remove('hidden');
+    }
+
+    function hideEditTaskModal() {
+      if (!editTaskModal || !editTaskForm) return;
+      editTaskModal.classList.add('hidden');
+      editTaskForm.reset();
+      editUserSearch.value = '';
+      editSearchResults.classList.add('hidden');
+      if (editSearchSpinner) editSearchSpinner.classList.add('hidden');
+      currentEditTaskId = null;
+      currentEditAssignees = [];
+    }
+
+    // Delete confirmation modal functions
+    function showDeleteConfirmation(taskName) {
+      if (!deleteConfirmationModal || !deleteConfirmationMessage) return;
+      
+      deleteConfirmationMessage.textContent = `Are you sure you want to delete the task "${taskName}"? This action cannot be undone.`;
+      deleteConfirmationModal.classList.remove('hidden');
+    }
+
+    function hideDeleteConfirmation() {
+      if (!deleteConfirmationModal) return;
+      deleteConfirmationModal.classList.add('hidden');
+    }
+
+    async function loadCurrentAssignees(taskId) {
+      try {
+        const response = await fetch(`/api/admin/tasks/${taskId}/assignments`);
+        const assignments = await response.json();
+        
+        currentEditAssignees = assignments;
+        populateEditCurrentAssignees();
+      } catch (error) {
+        console.error('Error loading current assignees:', error);
+        currentEditAssignees = [];
+        populateEditCurrentAssignees();
+      }
+    }
+
+    function populateEditCurrentAssignees() {
+      if (!editCurrentAssignees) return;
+      editCurrentAssignees.innerHTML = '';
+      
+      if (currentEditAssignees.length === 0) {
+        editCurrentAssignees.innerHTML = '<div class="text-center py-4 text-gray-500">No assignees</div>';
+        return;
+      }
+      
+      currentEditAssignees.forEach(assignment => {
+        const assigneeItem = document.createElement('div');
+        assigneeItem.className = 'flex items-center justify-between p-2 bg-gray-50 rounded-md';
+        assigneeItem.innerHTML = `
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 relative group" title="${assignment.userName}">
+              ${assignment.userName.charAt(0).toUpperCase()}
+              <!-- Tooltip -->
+              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                ${assignment.userName}
+                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+              </div>
+            </div>
+            <div>
+              <div class="text-sm font-medium text-gray-900">${assignment.userName}</div>
+              <div class="text-xs text-gray-500">${assignment.userEmail}</div>
+            </div>
+          </div>
+          <button 
+            class="remove-assignee-btn text-red-600 hover:text-red-800 text-sm font-medium"
+            data-user-id="${assignment.userId}"
+          >
+            Remove
+          </button>
+        `;
+        
+        // Add direct event listener to the button
+        const removeButton = assigneeItem.querySelector('.remove-assignee-btn');
+        if (removeButton) {
+          removeButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const userId = this.getAttribute('data-user-id');
+            removeAssigneeFromTask(userId);
+          });
+        }
+        
+        editCurrentAssignees.appendChild(assigneeItem);
+      });
+    }
+
+    // Debounce timer for edit search
+    let editSearchTimeout;
+
+    function searchUsersForEditTask() {
+      const searchTerm = editUserSearch.value.trim();
+      if (!searchTerm) {
+        editSearchResults.classList.add('hidden');
+        if (editSearchSpinner) editSearchSpinner.classList.add('hidden');
+        return;
+      }
+
+      // Clear previous timeout
+      if (editSearchTimeout) {
+        clearTimeout(editSearchTimeout);
+      }
+
+      // Show loading state
+      if (editSearchSpinner) editSearchSpinner.classList.remove('hidden');
+      editSearchResults.innerHTML = '<div class="text-center py-4 text-gray-500">Searching...</div>';
+      editSearchResults.classList.remove('hidden');
+
+      // Debounce the actual search
+      editSearchTimeout = setTimeout(() => {
+        // Search users via API
+        fetch(`/api/admin/users/search?q=${encodeURIComponent(searchTerm)}`)
+          .then(response => response.json())
+          .then(data => {
+            if (editSearchSpinner) editSearchSpinner.classList.add('hidden');
+            if (data.success && data.users) {
+              displayEditSearchResults(data.users);
+            } else {
+              editSearchResults.innerHTML = '<div class="text-center py-4 text-gray-500">No users found</div>';
+            }
+          })
+          .catch(error => {
+            console.error('Error searching users:', error);
+            if (editSearchSpinner) editSearchSpinner.classList.add('hidden');
+            editSearchResults.innerHTML = '<div class="text-center py-4 text-red-500">Error searching users</div>';
+          });
+      }, 300); // 300ms debounce delay
+    }
+
+    function displayEditSearchResults(users) {
+      if (!editSearchResults) return;
+      
+      editSearchResults.innerHTML = '';
+      
+      if (users.length === 0) {
+        editSearchResults.innerHTML = '<div class="text-center py-4 text-gray-500">No users found</div>';
+        return;
+      }
+
+      users.forEach(user => {
+        // Check if user is already assigned
+        const isAlreadyAssigned = currentEditAssignees.some(assignment => assignment.userId === user.id);
+        
+        const userItem = document.createElement('div');
+        userItem.className = `flex items-center justify-between p-2 rounded-md cursor-pointer transition-colors duration-200 ${isAlreadyAssigned ? 'bg-gray-100 cursor-not-allowed' : 'bg-white hover:bg-gray-50 hover:border-gray-200 border border-transparent'}`;
+        
+        if (!isAlreadyAssigned) {
+          userItem.setAttribute('data-user-id', user.id);
+          userItem.setAttribute('data-user-name', user.name);
+          userItem.setAttribute('data-user-email', user.email);
+        }
+        
+        userItem.innerHTML = `
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 relative group" title="${user.name}">
+              ${user.name.charAt(0).toUpperCase()}
+              <!-- Tooltip -->
+              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                ${user.name}
+                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+              </div>
+            </div>
+            <div>
+              <div class="text-sm font-medium text-gray-900">${user.name}</div>
+              <div class="text-xs text-gray-500">${user.email}</div>
+            </div>
+          </div>
+          ${isAlreadyAssigned ? 
+            '<span class="text-sm text-gray-500">Already assigned</span>' :
+            '<span class="text-sm text-gray-600 font-medium">Click to add</span>'
+          }
+        `;
+        editSearchResults.appendChild(userItem);
+      });
+    }
+
+    // Handle new task buttons (both header and empty state)
+    const newTaskButtons = document.querySelectorAll('button');
+    newTaskButtons.forEach(button => {
+      if (button.textContent?.includes('New Task') || button.textContent?.includes('Create First Task')) {
+        button.addEventListener('click', showTaskModal);
+      }
+      if (button.textContent?.includes('Manage Team')) {
+        button.addEventListener('click', showTeamModal);
+      }
+    });
+
+    // Handle edit task buttons
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('edit-task-btn') || e.target.closest('.edit-task-btn')) {
+        const button = e.target.classList.contains('edit-task-btn') ? e.target : e.target.closest('.edit-task-btn');
+        const editTaskId = parseInt(button.getAttribute('data-task-id'));
+        showEditTaskModal(editTaskId);
+      }
+    });
+
+    // Close modal handlers
+    closeTaskModal.addEventListener('click', hideTaskModal);
+    cancelTaskModal.addEventListener('click', hideTaskModal);
+    
+    // Edit task modal handlers
+    closeEditTaskModal.addEventListener('click', hideEditTaskModal);
+    cancelEditTaskModal.addEventListener('click', hideEditTaskModal);
+    
+    // Delete confirmation modal handlers
+    closeDeleteConfirmationModal.addEventListener('click', hideDeleteConfirmation);
+    cancelDeleteBtn.addEventListener('click', hideDeleteConfirmation);
+    confirmDeleteBtn.addEventListener('click', async function() {
+      if (!currentEditTaskId) return;
+      
+      try {
+        const response = await fetch(`/api/admin/tasks/${currentEditTaskId}`, {
+          method: 'DELETE'
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to delete task');
+        }
+
+        showNotification('Task deleted successfully!', 'success');
+        hideDeleteConfirmation();
+        hideEditTaskModal();
+        window.location.reload();
+      } catch (error) {
+        console.error('Error deleting task:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        showNotification('Failed to delete task: ' + errorMessage, 'error');
+      }
+    });
+    
+    // Team modal handlers
+    closeTeamModal.addEventListener('click', hideTeamModal);
+    cancelTeamModal.addEventListener('click', hideTeamModal);
+
+    // Close modal when clicking outside
+    taskModal.addEventListener('click', function(e) {
+      if (e.target === taskModal) {
+        hideTaskModal();
+      }
+    });
+    
+    teamModal.addEventListener('click', function(e) {
+      if (e.target === teamModal) {
+        hideTeamModal();
+      }
+    });
+    
+    editTaskModal.addEventListener('click', function(e) {
+      if (e.target === editTaskModal) {
+        hideEditTaskModal();
+      }
+    });
+
+    // Handle form submission
+    taskForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(taskForm);
+      const taskData = {
+        name: formData.get('name'),
+        description: formData.get('description'),
+        status: formData.get('status'),
+        priority: formData.get('priority'),
+        dueDate: formData.get('dueDate') || null,
+        projectId: projectDetailsData.id
+      };
+
+      // Get selected assignees
+      const selectedAssignees = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
+        .map(checkbox => parseInt(checkbox.value));
+
+      try {
+        // Create the task
+        const taskResponse = await fetch('/api/admin/tasks', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(taskData)
+        });
+
+        if (!taskResponse.ok) {
+          const errorData = await taskResponse.json();
+          throw new Error(errorData.error || 'Failed to create task');
+        }
+
+        const newTask = await taskResponse.json();
+        console.log('Task created:', newTask);
+
+        // Assign users to the task if any were selected
+        if (selectedAssignees.length > 0) {
+          const assignResponse = await fetch('/api/admin/tasks/assign', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              taskId: newTask.id,
+              userIds: selectedAssignees
+            })
+          });
+
+          if (!assignResponse.ok) {
+            const errorData = await assignResponse.json();
+            console.error('Failed to assign users:', errorData.error);
+            // Don't throw here - task was created successfully
+          }
+        }
+
+        // Show success message and refresh page
+        showNotification('Task created successfully!', 'success');
+        hideTaskModal();
+        window.location.reload();
+
+      } catch (error) {
+        console.error('Error creating task:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        showNotification('Failed to create task: ' + errorMessage, 'error');
+      }
+    });
+
+    // Handle edit task form submission
+    editTaskForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      if (!currentEditTaskId) return;
+      
+      const formData = new FormData(editTaskForm);
+      const taskData = {
+        id: currentEditTaskId,
+        name: formData.get('name'),
+        description: formData.get('description'),
+        status: formData.get('status'),
+        priority: formData.get('priority'),
+        dueDate: formData.get('dueDate') || null,
+        projectId: projectDetailsData.id
+      };
+
+      try {
+        // Update the task
+        const taskResponse = await fetch('/api/admin/tasks', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(taskData)
+        });
+
+        if (!taskResponse.ok) {
+          const errorData = await taskResponse.json();
+          throw new Error(errorData.error || 'Failed to update task');
+        }
+
+        // Note: Assignments are now handled immediately when users are added/removed
+        // No need to update assignments here since they're managed in real-time
+
+        // Show success message and refresh page
+        showNotification('Task updated successfully!', 'success');
+        hideEditTaskModal();
+        window.location.reload();
+
+      } catch (error) {
+        console.error('Error updating task:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        showNotification('Failed to update task: ' + errorMessage, 'error');
+      }
+    });
+
+    // Handle delete task
+    deleteTaskBtn.addEventListener('click', async function() {
+      if (!currentEditTaskId) return;
+      
+      const task = tasksData.find(t => t.id === currentEditTaskId);
+      if (!task) return;
+      
+      // Show confirmation modal instead of alert
+      showDeleteConfirmation(task.name);
+    });
+
+    // Team management event handlers
+    searchUsers.addEventListener('click', searchUsersForTeam);
+    
+    // Edit task search event handlers
+    editSearchUsers.addEventListener('click', searchUsersForEditTask);
+    
+    // User search dropdown functionality
+    let userSearchTimeout;
+    let allUsers = []; // Store all users for filtering
+    
+    // Task user search functionality
+    let taskUserSearchTimeout;
+    let taskAllUsers = []; // Store all users for task filtering
+    
+    // Function to position dropdown correctly
+    function positionDropdown(dropdown, trigger) {
+      if (!dropdown || !trigger) return;
+      
+      const rect = trigger.getBoundingClientRect();
+      dropdown.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+      dropdown.style.left = (rect.left + window.scrollX) + 'px';
+    }
+
+    // Toggle dropdown visibility
+    if (addUserBtn && userSearchDropdown) {
+      addUserBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        userSearchDropdown.classList.toggle('hidden');
+        if (!userSearchDropdown.classList.contains('hidden')) {
+          positionDropdown(userSearchDropdown, addUserBtn);
+          userSearchInput.focus();
+          loadAllUsers(); // Load all users when dropdown opens
+        }
+      });
+    }
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+      if (userSearchDropdown && !userSearchDropdown.contains(e.target) && !addUserBtn.contains(e.target)) {
+        userSearchDropdown.classList.add('hidden');
+      }
+    });
+    
+    // Load all users when dropdown opens
+    async function loadAllUsers() {
+      if (allUsers.length > 0) {
+        // Users already loaded, just display them
+        displayUserSearchResults(allUsers);
+        return;
+      }
+
+      try {
+        // Show loading state
+        if (userSearchSpinner) userSearchSpinner.classList.remove('hidden');
+        userSearchResults.innerHTML = '<div class="text-center py-4 text-gray-500">Loading users...</div>';
+
+        // Fetch all users using the main users endpoint
+        const response = await fetch('/api/admin/users');
+        const users = await response.json();
+        
+        if (userSearchSpinner) userSearchSpinner.classList.add('hidden');
+        
+        if (Array.isArray(users) && users.length > 0) {
+          // Transform the data to match the expected format
+          allUsers = users.map(user => ({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role
+          }));
+          displayUserSearchResults(allUsers);
+        } else {
+          userSearchResults.innerHTML = '<div class="text-center py-4 text-gray-500">No users found</div>';
+        }
+      } catch (error) {
+        console.error('Error loading users:', error);
+        if (userSearchSpinner) userSearchSpinner.classList.add('hidden');
+        userSearchResults.innerHTML = '<div class="text-center py-4 text-red-500">Error loading users</div>';
+      }
+    }
+
+    // Handle user search input
+    if (userSearchInput) {
+      userSearchInput.addEventListener('input', function(e) {
+        const searchTerm = e.target.value.trim();
+        if (searchTerm.length >= 2) {
+          filterUsers(searchTerm);
+        } else if (searchTerm.length === 0) {
+          // Show all users when search is cleared
+          displayUserSearchResults(allUsers);
+        }
+      });
+      
+      userSearchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const searchTerm = userSearchInput.value.trim();
+          if (searchTerm.length >= 2) {
+            filterUsers(searchTerm);
+          }
+        }
+      });
+    }
+    
+    function filterUsers(searchTerm) {
+      if (!searchTerm || allUsers.length === 0) {
+        displayUserSearchResults(allUsers);
+        return;
+      }
+
+      // Filter users locally
+      const filteredUsers = allUsers.filter(user => 
+        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+
+      displayUserSearchResults(filteredUsers);
+    }
+    
+    function filterTaskUsers(searchTerm, taskId, dropdown) {
+      if (!searchTerm || taskAllUsers.length === 0) {
+        displayTaskUserSearchResults(taskAllUsers, taskId, dropdown);
+        return;
+      }
+
+      // Filter users locally
+      const filteredUsers = taskAllUsers.filter(user => 
+        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+
+      displayTaskUserSearchResults(filteredUsers, taskId, dropdown);
+    }
+    
+    function displayUserSearchResults(users) {
+      if (!userSearchResults) return;
+      
+      userSearchResults.innerHTML = '';
+      
+      if (users.length === 0) {
+        userSearchResults.innerHTML = '<div class="text-center py-4 text-gray-500">No users found</div>';
+        return;
+      }
+
+      users.forEach(user => {
+        // Check if user is already a team member
+        const isAlreadyMember = teamMembersData.some(member => member.id === user.id);
+        
+        // Skip users who are already members
+        if (isAlreadyMember) {
+          return;
+        }
+        
+        const userItem = document.createElement('div');
+        userItem.className = 'flex items-center justify-between p-3 rounded-md cursor-pointer transition-colors duration-200 bg-white hover:bg-blue-50 hover:border-blue-200 border border-transparent';
+        
+        userItem.setAttribute('data-user-id', user.id);
+        userItem.setAttribute('data-user-name', user.name);
+        userItem.setAttribute('data-user-email', user.email);
+        
+        userItem.innerHTML = `
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 relative group" title="${user.name}">
+              ${user.name.charAt(0).toUpperCase()}
+              <!-- Tooltip -->
+              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                ${user.name}
+                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+              </div>
+            </div>
+            <div>
+              <div class="text-sm font-medium text-gray-900">${user.name}</div>
+              <div class="text-xs text-gray-500">${user.email}</div>
+            </div>
+          </div>
+        `;
+        userSearchResults.appendChild(userItem);
+      });
+    }
+    
+    // Handle clicking on user search results
+    document.addEventListener('click', function(e) {
+      const userContainer = e.target.closest('[data-user-id]');
+      if (userContainer && 
+          userContainer.closest('#userSearchResults') && 
+          !userContainer.classList.contains('cursor-not-allowed') &&
+          !userContainer.classList.contains('task-member-avatar')) {
+        e.stopPropagation(); // Prevent event from bubbling to other listeners
+        const userId = userContainer.getAttribute('data-user-id');
+        addUserToCollaboration(userId);
+      }
+    });
+    
+    // Task user search dropdown functionality
+    document.addEventListener('click', function(e) {
+      // Handle task add user button clicks
+      if (e.target.classList.contains('task-add-user-btn') || e.target.closest('.task-add-user-btn')) {
+        e.stopPropagation();
+        const button = e.target.classList.contains('task-add-user-btn') ? e.target : e.target.closest('.task-add-user-btn');
+        const addUserTaskId = button.getAttribute('data-task-id');
+        const dropdown = button.parentElement.querySelector('.task-user-search-dropdown');
+        const input = dropdown.querySelector('.task-user-search-input');
+        
+        dropdown.classList.toggle('hidden');
+        if (!dropdown.classList.contains('hidden')) {
+          positionDropdown(dropdown, button);
+          input.focus();
+          loadTaskUsers(addUserTaskId, dropdown);
+        }
+      }
+      
+      // Handle subtask add user button clicks
+      if (e.target.classList.contains('subtask-add-user-btn') || e.target.closest('.subtask-add-user-btn')) {
+        e.stopPropagation();
+        const button = e.target.classList.contains('subtask-add-user-btn') ? e.target : e.target.closest('.subtask-add-user-btn');
+        const subtaskId = button.getAttribute('data-subtask-id');
+        const subtaskTaskId = button.getAttribute('data-task-id');
+        const dropdown = button.parentElement.querySelector('.subtask-user-assignment');
+        
+        dropdown.classList.toggle('hidden');
+        if (!dropdown.classList.contains('hidden')) {
+          positionDropdown(dropdown, button);
+          loadSubtaskUsersSimple(subtaskId, subtaskTaskId, dropdown);
+        }
+      }
+      
+      // Handle task user search result clicks
+      const taskUserContainer = e.target.closest('[data-task-user-id]');
+      if (taskUserContainer && taskUserContainer.closest('.task-user-search-results') && !taskUserContainer.classList.contains('cursor-not-allowed')) {
+        e.stopPropagation();
+        const userId = taskUserContainer.getAttribute('data-task-user-id');
+        const taskUserTaskId = taskUserContainer.getAttribute('data-task-id');
+        addUserToTask(userId, taskUserTaskId);
+      }
+      
+      // Handle subtask user assignment clicks
+      const subtaskUserContainer = e.target.closest('[data-subtask-user-id]');
+      if (subtaskUserContainer && subtaskUserContainer.closest('.subtask-user-list') && !subtaskUserContainer.classList.contains('cursor-not-allowed')) {
+        e.stopPropagation();
+        const userId = subtaskUserContainer.getAttribute('data-subtask-user-id');
+        const subtaskId = subtaskUserContainer.getAttribute('data-subtask-id');
+        const subtaskUserTaskId = subtaskUserContainer.getAttribute('data-task-id');
+        addUserToSubtask(userId, subtaskId, subtaskUserTaskId);
+      }
+    });
+    
+    // Close task and subtask dropdowns when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.task-add-user-btn') && !e.target.closest('.task-user-search-dropdown')) {
+        document.querySelectorAll('.task-user-search-dropdown').forEach(dropdown => {
+          dropdown.classList.add('hidden');
+        });
+      }
+      
+      if (!e.target.closest('.subtask-add-user-btn') && !e.target.closest('.subtask-user-assignment')) {
+        document.querySelectorAll('.subtask-user-assignment').forEach(dropdown => {
+          dropdown.classList.add('hidden');
+        });
+      }
+    });
+    
+    // Handle expand/collapse for collaboration members
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('expand-collaboration-members') || e.target.closest('.expand-collaboration-members')) {
+        e.stopPropagation();
+        const expandedList = document.getElementById('expandedCollaborationMembers');
+        if (expandedList) {
+          expandedList.classList.toggle('hidden');
+        }
+      }
+    });
+    
+    // Handle expand/collapse for task members
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('expand-task-members') || e.target.closest('.expand-task-members')) {
+        e.stopPropagation();
+        const expandTaskId = e.target.getAttribute('data-task-id') || e.target.closest('.expand-task-members').getAttribute('data-task-id');
+        const expandedList = document.querySelector(`.expanded-task-members-${expandTaskId}`);
+        if (expandedList) {
+          expandedList.classList.toggle('hidden');
+        }
+      }
+    });
+    
+    // Handle remove collaboration member
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('remove-collaboration-member') || e.target.closest('.remove-collaboration-member')) {
+        e.stopPropagation();
+        const button = e.target.classList.contains('remove-collaboration-member') ? e.target : e.target.closest('.remove-collaboration-member');
+        const memberId = button.getAttribute('data-member-id');
+        const memberName = button.getAttribute('data-member-name');
+        removeCollaborationMember(memberId, memberName);
+      }
+    });
+    
+    // Handle remove task member
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('remove-task-member') || e.target.closest('.remove-task-member')) {
+        e.stopPropagation();
+        const button = e.target.classList.contains('remove-task-member') ? e.target : e.target.closest('.remove-task-member');
+        const removeTaskId = button.getAttribute('data-task-id');
+        const userId = button.getAttribute('data-user-id');
+        const userName = button.getAttribute('data-user-name');
+        removeTaskMember(removeTaskId, userId, userName);
+      }
+    });
+    
+    // Close expanded lists when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.expand-collaboration-members') && !e.target.closest('#expandedCollaborationMembers')) {
+        const expandedList = document.getElementById('expandedCollaborationMembers');
+        if (expandedList) {
+          expandedList.classList.add('hidden');
+        }
+      }
+      
+      if (!e.target.closest('.expand-task-members') && !e.target.closest('[class*="expanded-task-members-"]')) {
+        document.querySelectorAll('[class*="expanded-task-members-"]').forEach(dropdown => {
+          dropdown.classList.add('hidden');
+        });
+      }
+    });
+    
+    async function addUserToCollaboration(userId) {
+      // Get user data from container attributes
+      const userContainer = document.querySelector(`#userSearchResults [data-user-id="${userId}"]`);
+      if (!userContainer) return;
+      
+      const userName = userContainer.getAttribute('data-user-name');
+      const userEmail = userContainer.getAttribute('data-user-email');
+      
+      try {
+        // Add user to collaboration team via API
+        const response = await fetch(`/api/admin/teams/${collaborationId}/members`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: parseInt(userId)
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to add user to collaboration');
+        }
+        
+        // Show success message
+        showNotification(`${userName} has been added to the collaboration!`, 'success');
+        
+        // Close dropdown and clear search
+        userSearchDropdown.classList.add('hidden');
+        userSearchInput.value = '';
+        userSearchResults.innerHTML = '<div class="text-center py-4 text-gray-500">Loading users...</div>';
+        
+        // Reload page to reflect changes
+        window.location.reload();
+        
+      } catch (error) {
+        console.error('Error adding user to collaboration:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        showNotification('Failed to add user: ' + errorMessage, 'error');
+      }
+    }
+    
+    // Task user search functions
+    async function loadTaskUsers(taskId, dropdown) {
+      if (taskAllUsers.length > 0) {
+        // Users already loaded, just display them
+        displayTaskUserSearchResults(taskAllUsers, taskId, dropdown);
+        return;
+      }
+
+      try {
+        // Show loading state
+        const spinner = dropdown.querySelector('.task-user-search-spinner');
+        const results = dropdown.querySelector('.task-user-search-results');
+        if (spinner) spinner.classList.remove('hidden');
+        results.innerHTML = '<div class="text-center py-4 text-gray-500">Loading team members...</div>';
+
+        // Use team members data instead of fetching all users
+        if (Array.isArray(teamMembersData) && teamMembersData.length > 0) {
+          // Transform the team members data to match the expected format
+          taskAllUsers = teamMembersData.map(member => ({
+            id: member.id,
+            name: member.name,
+            email: member.email,
+            role: 'team_member' // Team members don't have roles in the current structure
+          }));
+          
+          if (spinner) spinner.classList.add('hidden');
+          displayTaskUserSearchResults(taskAllUsers, taskId, dropdown);
+        } else {
+          if (spinner) spinner.classList.add('hidden');
+          results.innerHTML = '<div class="text-center py-4 text-gray-500">No team members found</div>';
+        }
+      } catch (error) {
+        console.error('Error loading team members:', error);
+        const spinner = dropdown.querySelector('.task-user-search-spinner');
+        const results = dropdown.querySelector('.task-user-search-results');
+        if (spinner) spinner.classList.add('hidden');
+        results.innerHTML = '<div class="text-center py-4 text-red-500">Error loading team members</div>';
+      }
+    }
+    
+    function displayTaskUserSearchResults(users, taskId, dropdown) {
+      const results = dropdown.querySelector('.task-user-search-results');
+      if (!results) return;
+      
+      results.innerHTML = '';
+      
+      if (users.length === 0) {
+        results.innerHTML = '<div class="text-center py-4 text-gray-500">No users found</div>';
+        return;
+      }
+
+      // Get current task assignments to filter out already assigned users
+      const task = tasksData.find(t => t.id === parseInt(taskId));
+      const assignedUserIds = task?.assignments?.map(a => a.userId) || [];
+
+      users.forEach(user => {
+        // Skip users who are already assigned to this task
+        if (assignedUserIds.includes(user.id)) {
+          return;
+        }
+        
+        const userItem = document.createElement('div');
+        userItem.className = 'flex items-center justify-between p-3 rounded-md cursor-pointer transition-colors duration-200 bg-white hover:bg-blue-50 hover:border-blue-200 border border-transparent';
+        
+        userItem.setAttribute('data-task-user-id', user.id);
+        userItem.setAttribute('data-task-id', taskId);
+        userItem.setAttribute('data-user-name', user.name);
+        userItem.setAttribute('data-user-email', user.email);
+        
+        userItem.innerHTML = `
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 relative group" title="${user.name}">
+              ${user.name.charAt(0).toUpperCase()}
+              <!-- Tooltip -->
+              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                ${user.name}
+                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+              </div>
+            </div>
+            <div>
+              <div class="text-sm font-medium text-gray-900">${user.name}</div>
+              <div class="text-xs text-gray-500">${user.email}</div>
+            </div>
+          </div>
+        `;
+        results.appendChild(userItem);
+      });
+    }
+    
+    async function addUserToTask(userId, taskId) {
+      // Get user data from container attributes
+      const userContainer = document.querySelector(`[data-task-user-id="${userId}"][data-task-id="${taskId}"]`);
+      if (!userContainer) return;
+      
+      const userName = userContainer.getAttribute('data-user-name');
+      const userEmail = userContainer.getAttribute('data-user-email');
+      
+      try {
+        // Get current task assignments first
+        const task = tasksData.find(t => t.id === parseInt(taskId));
+        const currentAssignments = task?.assignments || [];
+        const currentUserIds = currentAssignments.map(a => a.userId);
+        
+        // Add the new user to existing assignments
+        const allUserIds = [...currentUserIds, parseInt(userId)];
+        
+        // Update task assignments via API (this replaces ALL assignments)
+        const response = await fetch('/api/admin/tasks/assign', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            taskId: parseInt(taskId),
+            userIds: allUserIds
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to add user to task');
+        }
+        
+        // Show success message
+        showNotification(`${userName} has been added to the task!`, 'success');
+        
+        // Close dropdown and reload page
+        const dropdown = userContainer.closest('.task-user-search-dropdown');
+        if (dropdown) {
+          dropdown.classList.add('hidden');
+        }
+        
+        // Reload page to reflect changes
+        window.location.reload();
+        
+      } catch (error) {
+        console.error('Error adding user to task:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        showNotification('Failed to add user to task: ' + errorMessage, 'error');
+      }
+    }
+    
+    // Simple subtask user assignment function
+    async function loadSubtaskUsersSimple(subtaskId, taskId, dropdown) {
+      try {
+        const userList = dropdown.querySelector('.subtask-user-list');
+        userList.innerHTML = '<div class="text-center py-2 text-gray-500">Loading...</div>';
+
+        // Fetch users assigned to the parent task
+        const response = await fetch(`/api/admin/tasks/${taskId}/assignments`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch task assignments');
+        }
+        
+        const assignments = await response.json();
+        
+        if (assignments && assignments.length > 0) {
+          // Get current subtask data to find existing assignees
+          const task = tasksData.find(t => t.id === parseInt(taskId));
+          let currentAssignees = [];
+          
+          if (task && task.subtasks) {
+            const subtask = task.subtasks.find(s => s.id === subtaskId);
+            if (subtask && subtask.assignees) {
+              currentAssignees = [...subtask.assignees];
+            }
+          }
+          
+          // Create simple list of users
+          userList.innerHTML = assignments.map(assignment => {
+            const isAssigned = currentAssignees.includes(assignment.userName);
+            return `
+              <div 
+                class="flex items-center justify-between p-2 hover:bg-gray-50 cursor-pointer rounded ${isAssigned ? 'bg-green-50 text-green-700' : ''}"
+                data-subtask-user-id="${assignment.userId}"
+                data-subtask-id="${subtaskId}"
+                data-task-id="${taskId}"
+                data-user-name="${assignment.userName}"
+                data-user-email="${assignment.userEmail}"
+              >
+                <div class="flex items-center space-x-2">
+                  <div class="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
+                    <span class="text-xs font-medium text-gray-600">${assignment.userName.charAt(0).toUpperCase()}</span>
+                  </div>
+                  <div>
+                    <div class="text-sm font-medium">${assignment.userName}</div>
+                    <div class="text-xs text-gray-500">${assignment.userEmail}</div>
+                  </div>
+                </div>
+                <div class="text-xs">
+                  ${isAssigned ? '✓' : ''}
+                </div>
+              </div>
+            `;
+          }).join('');
+        } else {
+          userList.innerHTML = '<div class="text-center py-2 text-gray-500">No users assigned to this task.</div>';
+        }
+      } catch (error) {
+        console.error('Error loading subtask users:', error);
+        const userList = dropdown.querySelector('.subtask-user-list');
+        userList.innerHTML = '<div class="text-center py-2 text-red-500">Error loading users.</div>';
+      }
+    }
+
+    // Subtask user search functions
+    async function loadSubtaskUsers(subtaskId, taskId, dropdown) {
+      try {
+        // Show loading state
+        const spinner = dropdown.querySelector('.subtask-user-search-spinner');
+        const results = dropdown.querySelector('.subtask-user-search-results');
+        if (spinner) spinner.classList.remove('hidden');
+        results.innerHTML = '<div class="text-center py-4 text-gray-500">Loading task assignees...</div>';
+
+        // Fetch users assigned to the parent task only
+        const response = await fetch(`/api/admin/tasks/${taskId}/assignments`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch task assignments');
+        }
+        
+        const assignments = await response.json();
+        
+        if (spinner) spinner.classList.add('hidden');
+        
+        if (assignments && assignments.length > 0) {
+          // Transform the assignments data to match the expected format
+          const taskUsers = assignments.map(assignment => ({
+            id: assignment.userId,
+            name: assignment.userName,
+            email: assignment.userEmail,
+            role: 'task_assignee'
+          }));
+          
+          displaySubtaskUserSearchResults(taskUsers, subtaskId, taskId, dropdown);
+        } else {
+          results.innerHTML = '<div class="text-center py-4 text-gray-500">No users assigned to this task</div>';
+        }
+      } catch (error) {
+        console.error('Error loading task assignees:', error);
+        const spinner = dropdown.querySelector('.subtask-user-search-spinner');
+        const results = dropdown.querySelector('.subtask-user-search-results');
+        if (spinner) spinner.classList.add('hidden');
+        results.innerHTML = '<div class="text-center py-4 text-red-500">Error loading task assignees</div>';
+      }
+    }
+    
+    function displaySubtaskUserSearchResults(users, subtaskId, taskId, dropdown) {
+      const results = dropdown.querySelector('.subtask-user-search-results');
+      if (!results) return;
+      
+      results.innerHTML = '';
+      
+      if (users.length === 0) {
+        results.innerHTML = '<div class="text-center py-4 text-gray-500">No users found</div>';
+        return;
+      }
+
+      users.forEach(user => {
+        const userItem = document.createElement('div');
+        userItem.className = 'flex items-center justify-between p-3 rounded-md cursor-pointer transition-colors duration-200 bg-white hover:bg-blue-50 hover:border-blue-200 border border-transparent';
+        
+        userItem.setAttribute('data-subtask-user-id', user.id);
+        userItem.setAttribute('data-subtask-id', subtaskId);
+        userItem.setAttribute('data-task-id', taskId);
+        userItem.setAttribute('data-user-name', user.name);
+        userItem.setAttribute('data-user-email', user.email);
+        
+        userItem.innerHTML = `
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 relative group" title="${user.name}">
+              ${user.name.charAt(0).toUpperCase()}
+              <!-- Tooltip -->
+              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                ${user.name}
+                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+              </div>
+            </div>
+            <div>
+              <div class="text-sm font-medium text-gray-900">${user.name}</div>
+              <div class="text-xs text-gray-500">${user.email}</div>
+            </div>
+          </div>
+        `;
+        results.appendChild(userItem);
+      });
+    }
+    
+    function filterSubtaskUsers(searchTerm, subtaskId, taskId, dropdown) {
+      const results = dropdown.querySelector('.subtask-user-search-results');
+      if (!results) return;
+      
+      // Get all user items in the results
+      const userItems = results.querySelectorAll('[data-subtask-user-id]');
+      
+      if (!searchTerm) {
+        // Show all users
+        userItems.forEach(item => item.style.display = 'block');
+        return;
+      }
+
+      // Filter users locally based on search term
+      userItems.forEach(item => {
+        const userName = item.getAttribute('data-user-name') || '';
+        const userEmail = item.getAttribute('data-user-email') || '';
+        const searchLower = searchTerm.toLowerCase();
+        
+        const matches = userName.toLowerCase().includes(searchLower) || 
+                       userEmail.toLowerCase().includes(searchLower);
+        
+        item.style.display = matches ? 'block' : 'none';
+      });
+    }
+    
+    async function addUserToSubtask(userId, subtaskId, taskId) {
+      // Get user data from container attributes
+      const userContainer = document.querySelector(`[data-subtask-user-id="${userId}"][data-subtask-id="${subtaskId}"]`);
+      if (!userContainer) return;
+      
+      const userName = userContainer.getAttribute('data-user-name');
+      const userEmail = userContainer.getAttribute('data-user-email');
+      
+      try {
+        // Get current subtask data to find existing assignees
+        const task = tasksData.find(t => t.id === parseInt(taskId));
+        let currentAssignees = [];
+        
+        if (task && task.subtasks) {
+          const subtask = task.subtasks.find(s => s.id === subtaskId);
+          if (subtask && subtask.assignees) {
+            currentAssignees = [...subtask.assignees];
+          }
+        }
+        
+        // Add the new user to existing assignees (avoid duplicates)
+        if (!currentAssignees.includes(userName)) {
+          currentAssignees.push(userName);
+        }
+        
+        // Update subtask assignees via API
+        const response = await fetch(`/api/admin/tasks/${taskId}/subtasks/${subtaskId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            assignees: currentAssignees
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to assign user to subtask');
+        }
+        
+        // Show success message
+        showNotification(`${userName} has been assigned to the subtask!`, 'success');
+        
+        // Close dropdown and reload page
+        const dropdown = userContainer.closest('.subtask-user-search-dropdown');
+        if (dropdown) {
+          dropdown.classList.add('hidden');
+        }
+        
+        // Reload page to reflect changes
+        window.location.reload();
+        
+      } catch (error) {
+        console.error('Error assigning user to subtask:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        showNotification('Failed to assign user to subtask: ' + errorMessage, 'error');
+      }
+    }
+    
+    // Remove collaboration member function
+    async function removeCollaborationMember(memberId, memberName) {
+      showConfirmation(
+        'Remove Team Member',
+        `Are you sure you want to remove ${memberName} from the collaboration?`,
+        async function() {
+          try {
+            // Get current team member IDs (excluding the one to remove)
+            const updatedMemberIds = teamMembersData
+              .filter(member => member.id !== parseInt(memberId))
+              .map(member => member.id);
+            
+            // Update team members via API
+            const response = await fetch(`/api/admin/teams/${collaborationId}/members`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                memberIds: updatedMemberIds
+              })
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || 'Failed to remove member');
+            }
+            
+            // Show success message
+            showNotification(`${memberName} has been removed from the collaboration!`, 'success');
+            
+            // Reload page to reflect changes
+            window.location.reload();
+            
+          } catch (error) {
+            console.error('Error removing collaboration member:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            showNotification('Failed to remove member: ' + errorMessage, 'error');
+          }
+        }
+      );
+    }
+    
+    // Remove task member function - RULE-001: Use cascading removal API
+    async function removeTaskMember(taskId, userId, userName) {
+      showConfirmation(
+        'Remove Task Assignee',
+        `Are you sure you want to remove ${userName} from this task? This will also remove them from all subtasks.`,
+        async function() {
+          try {
+            // Use the new cascading removal API
+            const response = await fetch(`/api/admin/tasks/${taskId}/remove-assignment`, {
+              method: 'DELETE',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                userId: parseInt(userId)
+              })
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || 'Failed to remove user from task');
+            }
+            
+            const result = await response.json();
+            console.log('Cascading removal result:', result);
+            
+            // Show success message
+            showNotification(`${userName} has been removed from the task and all subtasks!`, 'success');
+            
+            // Reload page to reflect changes
+            window.location.reload();
+            
+          } catch (error) {
+            console.error('Error removing task member:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            showNotification('Failed to remove user from task: ' + errorMessage, 'error');
+          }
+        }
+      );
+    }
+    
+    // Search as user types
+    userSearch.addEventListener('input', function(e) {
+      const searchTerm = e.target.value.trim();
+      if (searchTerm.length >= 2) {
+        searchUsersForTeam();
+      } else if (searchTerm.length === 0) {
+        // Clear timeout if user clears the search
+        if (searchTimeout) {
+          clearTimeout(searchTimeout);
+        }
+        searchResults.classList.add('hidden');
+        if (searchSpinner) searchSpinner.classList.add('hidden');
+      }
+    });
+    
+    // Task user search input handling
+    document.addEventListener('input', function(e) {
+      if (e.target.classList.contains('task-user-search-input')) {
+        const searchTerm = e.target.value.trim();
+        const dropdown = e.target.closest('.task-user-search-dropdown');
+        const inputTaskId = dropdown.closest('tr').querySelector('.task-add-user-btn').getAttribute('data-task-id');
+        
+        if (searchTerm.length >= 2) {
+          filterTaskUsers(searchTerm, inputTaskId, dropdown);
+        } else if (searchTerm.length === 0) {
+          // Show all users when search is cleared
+          displayTaskUserSearchResults(taskAllUsers, inputTaskId, dropdown);
+        }
+      }
+      
+    });
+    
+    userSearch.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        searchUsersForTeam();
+      }
+    });
+
+    // Edit task search as user types
+    editUserSearch.addEventListener('input', function(e) {
+      const searchTerm = e.target.value.trim();
+      if (searchTerm.length >= 2) {
+        searchUsersForEditTask();
+      } else if (searchTerm.length === 0) {
+        // Clear timeout if user clears the search
+        if (editSearchTimeout) {
+          clearTimeout(editSearchTimeout);
+        }
+        editSearchResults.classList.add('hidden');
+        if (editSearchSpinner) editSearchSpinner.classList.add('hidden');
+      }
+    });
+    
+    editUserSearch.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        searchUsersForEditTask();
+      }
+    });
+
+    // Handle add/remove member buttons dynamically
+    document.addEventListener('click', function(e) {
+      // Handle clicking on entire user container (but not on remove buttons or task member avatars)
+      const userContainer = e.target.closest('[data-user-id]');
+      if (userContainer && 
+          !userContainer.classList.contains('cursor-not-allowed') &&
+          !userContainer.classList.contains('task-member-avatar') &&
+          !e.target.classList.contains('remove-collaboration-member') &&
+          !e.target.classList.contains('remove-task-member') &&
+          !e.target.closest('.remove-collaboration-member') &&
+          !e.target.closest('.remove-task-member')) {
+        const userId = userContainer.getAttribute('data-user-id');
+        addMemberToTeam(userId);
+        return;
+      }
+      
+      // Handle old add-member-btn (for backward compatibility)
+      if (e.target.classList.contains('add-member-btn')) {
+        const userId = e.target.getAttribute('data-user-id');
+        addMemberToTeam(userId);
+      }
+      
+      if (e.target.classList.contains('remove-member-btn')) {
+        const memberId = e.target.getAttribute('data-member-id');
+        removeMemberFromTeam(memberId);
+      }
+
+      // Handle edit task assignee actions
+      if (e.target.classList.contains('remove-assignee-btn')) {
+        const userId = e.target.getAttribute('data-user-id');
+        removeAssigneeFromTask(userId);
+      }
+    });
+
+    function addMemberToTeam(userId) {
+      // Get user data from container attributes
+      const userContainer = document.querySelector(`[data-user-id="${userId}"]`);
+      if (!userContainer) return;
+      
+      const userName = userContainer.getAttribute('data-user-name');
+      const userEmail = userContainer.getAttribute('data-user-email');
+      
+      // Add to team members data
+      const newMember = {
+        id: parseInt(userId),
+        name: userName,
+        email: userEmail,
+        role: 'member',
+        joinedAt: new Date()
+      };
+      teamMembersData.push(newMember);
+      
+      // Update UI
+      populateCurrentMembers();
+      
+      // Reset search
+      userSearch.value = '';
+      searchResults.classList.add('hidden');
+      if (searchSpinner) searchSpinner.classList.add('hidden');
+      
+      // Show success message
+      showNotification(`${userName} has been added to the team!`, 'success');
+    }
+
+    async function removeMemberFromTeam(memberId) {
+      const member = teamMembersData.find(m => m.id === parseInt(memberId));
+      if (!member) return;
+      
+      const confirmed = await window.DialogueSystem.confirm(
+        'Remove Team Member',
+        `Are you sure you want to remove ${member.name} from the team?`,
+        'Remove Member',
+        'Cancel'
+      );
+      
+      if (confirmed) {
+        // Remove from team members data
+        teamMembersData = teamMembersData.filter(m => m.id !== parseInt(memberId));
+        
+        // Update UI
+        populateCurrentMembers();
+        
+        // Show success message
+        showNotification(`${member.name} has been removed from the team!`, 'success');
+      }
+    }
+
+    async function removeAssigneeFromTask(userId) {
+      const assignee = currentEditAssignees.find(a => a.userId === parseInt(userId));
+      if (!assignee) return;
+      
+      const confirmed = await window.DialogueSystem.confirm(
+        'Remove Task Assignee',
+        `Are you sure you want to remove ${assignee.userName} from this task?`,
+        'Remove Assignee',
+        'Cancel'
+      );
+      
+      if (confirmed) {
+        try {
+          // Get current assignee IDs (excluding the one to remove)
+          const updatedUserIds = currentEditAssignees
+            .filter(a => a.userId !== parseInt(userId))
+            .map(a => a.userId);
+          
+          // Update assignments via API (this replaces ALL assignments)
+          const response = await fetch('/api/admin/tasks/assign', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              taskId: currentEditTaskId,
+              userIds: updatedUserIds
+            })
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to remove assignee');
+          }
+          
+          // Update local state
+          currentEditAssignees = currentEditAssignees.filter(a => a.userId !== parseInt(userId));
+          
+          // Update UI
+          populateEditCurrentAssignees();
+          
+          // Show success message
+          showNotification(`${assignee.userName} has been removed from the task!`, 'success');
+          
+        } catch (error) {
+          console.error('Error removing assignee:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+          showNotification('Failed to remove assignee: ' + errorMessage, 'error');
+          
+          // Reload current assignees to get the actual state from the server
+          await loadCurrentAssignees(currentEditTaskId);
+        }
+      }
+    }
+
+    // Handle clicking on search results in edit modal
+    document.addEventListener('click', function(e) {
+      const editUserContainer = e.target.closest('[data-user-id]');
+      if (editUserContainer && editUserContainer.closest('#editSearchResults') && !editUserContainer.classList.contains('cursor-not-allowed')) {
+        const userId = editUserContainer.getAttribute('data-user-id');
+        addAssigneeToTask(userId);
+      }
+    });
+
+    async function addAssigneeToTask(userId) {
+      // Get user data from container attributes
+      const userContainer = document.querySelector(`#editSearchResults [data-user-id="${userId}"]`);
+      if (!userContainer) return;
+      
+      const userName = userContainer.getAttribute('data-user-name');
+      const userEmail = userContainer.getAttribute('data-user-email');
+      
+      try {
+        // Add to current assignees
+        const newAssignee = {
+          userId: parseInt(userId),
+          userName: userName,
+          userEmail: userEmail
+        };
+        currentEditAssignees.push(newAssignee);
+        
+        // Get the updated list of user IDs
+        const updatedUserIds = currentEditAssignees.map(a => a.userId);
+        
+        // Update assignments via API
+        const response = await fetch('/api/admin/tasks/assign', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            taskId: currentEditTaskId,
+            userIds: updatedUserIds
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to add assignee');
+        }
+        
+        // Update UI
+        populateEditCurrentAssignees();
+        
+        // Reset search
+        editUserSearch.value = '';
+        editSearchResults.classList.add('hidden');
+        if (editSearchSpinner) editSearchSpinner.classList.add('hidden');
+        
+        // Show success message
+        showNotification(`${userName} has been added to the task!`, 'success');
+        
+      } catch (error) {
+        console.error('Error adding assignee:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        showNotification('Failed to add assignee: ' + errorMessage, 'error');
+        
+        // Remove from local state if API call failed
+        currentEditAssignees = currentEditAssignees.filter(a => a.userId !== parseInt(userId));
+        populateEditCurrentAssignees();
+      }
+    }
+
+    // Save team changes
+    saveTeamChanges.addEventListener('click', async function() {
+      try {
+        // Get current team member IDs
+        const currentMemberIds = teamMembersData.map(member => member.id);
+        
+        // Update team members via API
+        const response = await fetch(`/api/admin/teams/${collaborationId}/members`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            memberIds: currentMemberIds
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update team members');
+        }
+
+        showNotification('Team members updated successfully!', 'success');
+        hideTeamModal();
+        window.location.reload(); // Refresh to show updated team
+        
+      } catch (error) {
+        console.error('Error updating team members:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        showNotification('Failed to update team members: ' + errorMessage, 'error');
+      }
+    });
+
+    // Filter functionality
+    function filterTasks() {
+      if (!tasksTableBody || !tasksData) return;
+
+      const priorityValue = priorityFilter?.value || 'all';
+      const statusValue = statusFilter?.value || 'all';
+      const dueValue = dueFilter?.value || 'all';
+
+      // Get all task rows (excluding the empty state row)
+      const taskRows = Array.from(tasksTableBody.children).filter(row => 
+        !row.querySelector('td[colspan]') // Exclude empty state row
+      );
+
+      let visibleCount = 0;
+
+      taskRows.forEach(row => {
+        const filterTaskId = row.querySelector('a[href*="/task/"]')?.getAttribute('href')?.split('/').pop();
+        const task = tasksData.find(t => t.id.toString() === filterTaskId);
+        
+        if (!task) {
+          row.style.display = 'none';
+          return;
+        }
+
+        let showTask = true;
+
+        // Priority filter
+        if (priorityValue !== 'all' && task.priority !== priorityValue) {
+          showTask = false;
+        }
+
+        // Status filter
+        if (statusValue !== 'all' && task.status !== statusValue) {
+          showTask = false;
+        }
+
+        // Due date filter
+        if (dueValue !== 'all') {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          const taskDueDate = task.dueDate ? new Date(task.dueDate) : null;
+          
+          // Normalize dates to UTC for comparison
+          const normalizeDate = (date) => {
+            const normalized = new Date(date);
+            normalized.setHours(12, 0, 0, 0); // Set to noon UTC
+            return normalized;
+          };
+          
+          switch (dueValue) {
+            case 'overdue':
+              if (!taskDueDate || normalizeDate(taskDueDate) >= today) {
+                showTask = false;
+              }
+              break;
+            case 'due_today':
+              if (!taskDueDate || normalizeDate(taskDueDate).toDateString() !== today.toDateString()) {
+                showTask = false;
+              }
+              break;
+            case 'due_week':
+              const weekFromNow = new Date(today);
+              weekFromNow.setDate(today.getDate() + 7);
+              if (!taskDueDate || normalizeDate(taskDueDate) < today || normalizeDate(taskDueDate) > weekFromNow) {
+                showTask = false;
+              }
+              break;
+            case 'due_month':
+              const monthFromNow = new Date(today);
+              monthFromNow.setMonth(today.getMonth() + 1);
+              if (!taskDueDate || normalizeDate(taskDueDate) < today || normalizeDate(taskDueDate) > monthFromNow) {
+                showTask = false;
+              }
+              break;
+            case 'no_due_date':
+              if (taskDueDate) {
+                showTask = false;
+              }
+              break;
+          }
+        }
+
+        if (showTask) {
+          row.style.display = '';
+          visibleCount++;
+        } else {
+          row.style.display = 'none';
+        }
+      });
+
+      // Show/hide empty state based on visible tasks
+      const emptyStateRow = tasksTableBody.querySelector('td[colspan]')?.closest('tr');
+      if (emptyStateRow) {
+        if (visibleCount === 0 && tasksData.length > 0) {
+          emptyStateRow.style.display = '';
+          emptyStateRow.querySelector('h3').textContent = 'No tasks match the current filters';
+          emptyStateRow.querySelector('p').textContent = 'Try adjusting your filter criteria to see more tasks.';
+        } else if (visibleCount === 0 && tasksData.length === 0) {
+          emptyStateRow.style.display = '';
+          emptyStateRow.querySelector('h3').textContent = projectDetailsData ? 'No collaboration tasks yet' : 'No project linked to this collaboration';
+          emptyStateRow.querySelector('p').textContent = projectDetailsData ? 'Create your first task to start collaborating with your team.' : 'Link this collaboration to a project to manage tasks.';
+        } else {
+          emptyStateRow.style.display = 'none';
+        }
+      }
+    }
+
+    // Add event listeners for filters
+    if (priorityFilter) {
+      priorityFilter.addEventListener('change', filterTasks);
+    }
+    if (statusFilter) {
+      statusFilter.addEventListener('change', filterTasks);
+    }
+    if (dueFilter) {
+      dueFilter.addEventListener('change', filterTasks);
+    }
+
+    // Reset filters functionality
+    if (resetFiltersBtn) {
+      resetFiltersBtn.addEventListener('click', function() {
+        // Reset all filters to "all"
+        if (priorityFilter) priorityFilter.value = 'all';
+        if (statusFilter) statusFilter.value = 'all';
+        if (dueFilter) dueFilter.value = 'all';
+        
+        // Apply the reset filters
+        filterTasks();
+      });
+    }
+
+    // Initial filter application
+    filterTasks();
+
+
+    // Handle task status updates - reload page for simplicity
+    window.addEventListener('taskStatusUpdated', function(event) {
+      const { taskId: updatedTaskId, newStatus } = event.detail;
+      console.log('Task status updated:', { taskId: updatedTaskId, newStatus });
+      
+      // Simple solution: reload the page to show updated status
+      window.location.reload();
+    });
+
+    // Function to re-sort and re-render tasks based on current sorting logic
+    function reSortAndRenderTasks() {
+      if (!tasksTableBody || !tasksData) return;
+      
+      // Sort tasks according to the same logic as the server
+      const sortedTasks = [...tasksData].sort((a, b) => {
+        // First: Completed tasks go to the bottom
+        const aCompleted = a.status === 'completed' ? 1 : 0;
+        const bCompleted = b.status === 'completed' ? 1 : 0;
+        if (aCompleted !== bCompleted) return aCompleted - bCompleted;
+        
+        // Second: Sort by due date ascending (soonest first), with null values last
+        const aDueDate = a.dueDate ? new Date(a.dueDate) : null;
+        const bDueDate = b.dueDate ? new Date(b.dueDate) : null;
+        
+        if (!aDueDate && !bDueDate) {
+          // Both have no due date, sort by creation date (newest first)
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+        if (!aDueDate) return 1; // a goes to end
+        if (!bDueDate) return -1; // b goes to end
+        
+        const dueDateDiff = aDueDate.getTime() - bDueDate.getTime();
+        if (dueDateDiff !== 0) return dueDateDiff;
+        
+        // Third: Secondary sort by creation date for tasks with same due date
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+      
+      // Get all task rows (excluding subtask rows and empty state)
+      const taskRows = Array.from(tasksTableBody.children).filter(row => {
+        const isSubtaskRow = row.classList.contains('subtask-row');
+        const isEmptyState = row.querySelector('td[colspan]');
+        return !isSubtaskRow && !isEmptyState;
+      });
+      
+      // Create a map of task ID to row for quick lookup
+      const taskRowMap = new Map();
+      taskRows.forEach(row => {
+        const taskLink = row.querySelector('a[href*="/task/"]');
+        if (taskLink) {
+          const mapTaskId = parseInt(taskLink.getAttribute('href')?.split('/').pop() || '0');
+          taskRowMap.set(mapTaskId, row);
+        }
+      });
+      
+      // Re-append rows in the correct order
+      sortedTasks.forEach(task => {
+        const row = taskRowMap.get(task.id);
+        if (row) {
+          tasksTableBody.appendChild(row);
+        }
+      });
+      
+      console.log('Tasks re-sorted after status update');
+    }
+
+    // Subtask expand/collapse functionality
+    document.addEventListener('click', function(e) {
+      console.log('Click detected on:', e.target);
+      
+      if (e.target.classList.contains('expand-subtasks-btn') || e.target.closest('.expand-subtasks-btn')) {
+        console.log('Subtask button clicked!');
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const button = e.target.classList.contains('expand-subtasks-btn') ? e.target : e.target.closest('.expand-subtasks-btn');
+        const expandSubtaskTaskId = button.getAttribute('data-task-id');
+        const arrow = button.querySelector('svg');
+        const subtaskRows = document.querySelectorAll(`tr.subtask-row[data-task-id="${expandSubtaskTaskId}"]`);
+        
+        console.log('Task ID:', expandSubtaskTaskId);
+        console.log('Found subtask rows:', subtaskRows.length);
+        console.log('Arrow element:', arrow);
+        
+        // Toggle arrow rotation
+        if (arrow) {
+          arrow.classList.toggle('rotate-180');
+          console.log('Arrow rotated');
+        }
+        
+        // Toggle subtask rows visibility
+        subtaskRows.forEach((row, index) => {
+          console.log(`Toggling subtask row ${index}:`, row);
+          console.log('Before toggle - display:', row.style.display, 'hidden class:', row.classList.contains('hidden'));
+          
+          // Simple toggle - just flip the current state
+          if (row.classList.contains('hidden')) {
+            // Currently hidden, show it
+            row.classList.remove('hidden');
+            row.style.display = '';
+            row.style.visibility = 'visible';
+            console.log('Showing row');
+          } else {
+            // Currently visible, hide it
+            row.classList.add('hidden');
+            row.style.display = 'none';
+            row.style.visibility = 'hidden';
+            console.log('Hiding row');
+          }
+          
+          console.log('After toggle - display:', row.style.display, 'hidden class:', row.classList.contains('hidden'));
+          console.log('Row classes after toggle:', row.className);
+          
+        });
+        
+        // Update global toggle button state after individual toggle
+        updateGlobalToggleButtonState();
+      }
+      
+      // Handle toggle all subtasks button
+      if (e.target.id === 'toggle-all-subtasks-btn' || e.target.closest('#toggle-all-subtasks-btn')) {
+        console.log('Toggle all subtasks button clicked!');
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const button = e.target.id === 'toggle-all-subtasks-btn' ? e.target : e.target.closest('#toggle-all-subtasks-btn');
+        const arrow = button.querySelector('svg');
+        const textSpan = document.getElementById('toggle-all-text');
+        const allSubtaskRows = document.querySelectorAll('tr.subtask-row');
+        const allExpandButtons = document.querySelectorAll('.expand-subtasks-btn');
+        
+        console.log('Found subtask rows:', allSubtaskRows.length);
+        console.log('Found expand buttons:', allExpandButtons.length);
+        
+        // Determine current state by checking if any subtasks are visible
+        const visibleSubtaskRows = Array.from(allSubtaskRows).filter(row => 
+          !row.style.display === 'none' && !row.classList.contains('hidden')
+        );
+        const shouldExpand = visibleSubtaskRows.length === 0;
+        
+        console.log('Should expand:', shouldExpand);
+        
+        // Toggle arrow rotation
+        if (arrow) {
+          if (shouldExpand) {
+            arrow.classList.remove('rotate-180');
+          } else {
+            arrow.classList.add('rotate-180');
+          }
+        }
+        
+        // Update button text
+        if (textSpan) {
+          textSpan.textContent = shouldExpand ? 'Subtasks' : 'Close';
+        }
+        
+        // Toggle all subtask rows
+        allSubtaskRows.forEach((row, index) => {
+          console.log(`Toggling subtask row ${index}:`, row);
+          
+          if (shouldExpand) {
+            // Show the row
+            row.classList.remove('hidden');
+            row.style.display = '';
+            row.style.visibility = 'visible';
+            console.log('Showing row');
+          } else {
+            // Hide the row
+            row.classList.add('hidden');
+            row.style.display = 'none';
+            row.style.visibility = 'hidden';
+            console.log('Hiding row');
+          }
+        });
+        
+        // Update all individual expand buttons to match the global state
+        allExpandButtons.forEach(expandButton => {
+          const buttonArrow = expandButton.querySelector('svg');
+          if (buttonArrow) {
+            if (shouldExpand) {
+              buttonArrow.classList.remove('rotate-180');
+            } else {
+              buttonArrow.classList.add('rotate-180');
+            }
+          }
+        });
+      }
+      
+      // Handle subtask completion toggle
+      if (e.target.classList.contains('subtask-toggle-btn') || e.target.closest('.subtask-toggle-btn')) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const button = e.target.classList.contains('subtask-toggle-btn') ? e.target : e.target.closest('.subtask-toggle-btn');
+        const subtaskId = button.getAttribute('data-subtask-id');
+        const toggleTaskId = button.getAttribute('data-task-id');
+        const currentCompleted = button.getAttribute('data-completed') === 'true';
+        const newCompleted = !currentCompleted;
+        
+        console.log('Subtask toggle clicked:', { subtaskId, taskId: toggleTaskId, currentCompleted, newCompleted });
+        
+        // Show loading state
+        button.disabled = true;
+        button.classList.add('opacity-50', 'cursor-not-allowed');
+        
+        // Update subtask completion via API
+        updateSubtaskCompletion(subtaskId, toggleTaskId, newCompleted, button);
+      }
+      
+      // Handle subtask deletion
+      if (e.target.classList.contains('delete-subtask-btn') || e.target.closest('.delete-subtask-btn')) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const button = e.target.classList.contains('delete-subtask-btn') ? e.target : e.target.closest('.delete-subtask-btn');
+        const subtaskId = button.getAttribute('data-subtask-id');
+        const deleteTaskId = button.getAttribute('data-task-id');
+        const subtaskName = button.getAttribute('data-subtask-name');
+        
+        console.log('Subtask delete clicked:', { subtaskId, taskId: deleteTaskId, subtaskName });
+        
+        // Show confirmation dialog
+        const handleSubtaskDeletion = async () => {
+          const confirmed = await window.DialogueSystem.confirm(
+            'Delete Subtask',
+            `Are you sure you want to delete the subtask "${subtaskName}"? This action cannot be undone.`,
+            'Delete Subtask',
+            'Cancel'
+          );
+          
+          if (confirmed) {
+            // Show loading state
+            button.disabled = true;
+            button.classList.add('opacity-50', 'cursor-not-allowed');
+            button.innerHTML = `
+              <svg class="w-3 h-3 mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+              Deleting...
+            `;
+            
+            // Delete subtask via API
+            deleteSubtask(subtaskId, deleteTaskId, button);
+          }
+        };
+        
+        handleSubtaskDeletion();
+      }
+    });
+
+    // Function to update subtask completion status
+    async function updateSubtaskCompletion(subtaskId, taskId, completed, button) {
+      try {
+        console.log('Updating subtask completion:', { subtaskId, taskId, completed });
+        
+        // Make API call to update subtask completion
+        const response = await fetch(`/api/admin/tasks/${taskId}/subtasks/${subtaskId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            completed: completed
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update subtask');
+        }
+
+        // Update the button state
+        button.setAttribute('data-completed', completed.toString());
+        
+        // Update button appearance
+        if (completed) {
+          button.classList.remove('bg-gray-200', 'text-gray-600', 'hover:bg-gray-300');
+          button.classList.add('bg-green-500', 'text-white');
+          button.title = 'Mark as incomplete';
+          
+          // Update icon
+          button.innerHTML = `
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 6L9 17l-5-5"/>
+            </svg>
+          `;
+        } else {
+          button.classList.remove('bg-green-500', 'text-white');
+          button.classList.add('bg-gray-200', 'text-gray-600', 'hover:bg-gray-300');
+          button.title = 'Mark as complete';
+          
+          // Update icon
+          button.innerHTML = `
+            <div class="w-4 h-4 rounded-full border-2 border-current"></div>
+          `;
+        }
+        
+        // Update the subtask name styling
+        const subtaskRow = button.closest('tr');
+        const subtaskName = subtaskRow.querySelector('.font-medium');
+        if (subtaskName) {
+          if (completed) {
+            subtaskName.classList.add('line-through', 'text-gray-500');
+          } else {
+            subtaskName.classList.remove('line-through', 'text-gray-500');
+          }
+        }
+        
+        // Show success notification
+        showNotification(`Subtask ${completed ? 'completed' : 'marked as incomplete'}!`, 'success');
+        
+      } catch (error) {
+        console.error('Error updating subtask completion:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        showNotification('Failed to update subtask: ' + errorMessage, 'error');
+      } finally {
+        // Remove loading state
+        button.disabled = false;
+        button.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+    }
+
+    // Function to delete subtask
+    async function deleteSubtask(subtaskId, taskId, button) {
+      try {
+        console.log('Deleting subtask:', { subtaskId, taskId });
+        
+        // Make API call to delete subtask
+        const response = await fetch(`/api/admin/tasks/${taskId}/subtasks/${subtaskId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to delete subtask');
+        }
+
+        // Remove the subtask row from the DOM
+        const subtaskRow = button.closest('tr');
+        if (subtaskRow) {
+          subtaskRow.remove();
+        }
+        
+        // Show success notification
+        showNotification('Subtask deleted successfully!', 'success');
+        
+        // Update task subtask count if needed
+        const taskRow = subtaskRow?.closest('tbody')?.querySelector(`tr[data-task-id="${taskId}"]:not(.subtask-row)`);
+        if (taskRow) {
+          const expandButton = taskRow.querySelector('.expand-subtasks-btn');
+          if (expandButton) {
+            // Get remaining subtasks count
+            const remainingSubtasks = document.querySelectorAll(`tr.subtask-row[data-task-id="${taskId}"]`);
+            const newCount = remainingSubtasks.length;
+            
+            if (newCount === 0) {
+              // Hide expand button if no subtasks left
+              expandButton.style.display = 'none';
+            } else {
+              // Update tooltip
+              expandButton.setAttribute('title', `Toggle subtasks (${newCount})`);
+            }
+          }
+        }
+        
+      } catch (error) {
+        console.error('Error deleting subtask:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        showNotification('Failed to delete subtask: ' + errorMessage, 'error');
+        
+        // Reset button state on error
+        button.disabled = false;
+        button.classList.remove('opacity-50', 'cursor-not-allowed');
+        button.innerHTML = `
+          <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+          </svg>
+          Delete
+        `;
+      }
+    }
+
+    // Function to update subtask status
+    window.updateSubtaskStatus = async function(subtaskId, taskId, status) {
+      try {
+        console.log('Updating subtask status:', { subtaskId, taskId, status });
+        
+        // Make API call to update subtask status
+        const response = await fetch(`/api/admin/tasks/${taskId}/subtasks/${subtaskId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            status: status,
+            completed: status === 'completed'
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update subtask status');
+        }
+
+        // Update the subtask data in the local state
+        const subtaskRow = document.querySelector(`tr.subtask-row[data-task-id="${taskId}"] button[data-subtask-id="${subtaskId}"]`)?.closest('tr');
+        if (subtaskRow) {
+          // Update the completion toggle button if it exists
+          const toggleButton = subtaskRow.querySelector('.subtask-toggle-btn');
+          if (toggleButton) {
+            const isCompleted = status === 'completed';
+            toggleButton.setAttribute('data-completed', isCompleted.toString());
+            
+            // Update button appearance
+            if (isCompleted) {
+              toggleButton.classList.remove('bg-gray-200', 'text-gray-600', 'hover:bg-gray-300');
+              toggleButton.classList.add('bg-green-500', 'text-white');
+              toggleButton.title = 'Mark as incomplete';
+              toggleButton.innerHTML = `
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 6L9 17l-5-5"/>
+                </svg>
+              `;
+            } else {
+              toggleButton.classList.remove('bg-green-500', 'text-white');
+              toggleButton.classList.add('bg-gray-200', 'text-gray-600', 'hover:bg-gray-300');
+              toggleButton.title = 'Mark as complete';
+              toggleButton.innerHTML = `
+                <div class="w-4 h-4 rounded-full border-2 border-current"></div>
+              `;
+            }
+          }
+          
+          // Update the subtask name styling
+          const subtaskName = subtaskRow.querySelector('.font-medium');
+          if (subtaskName) {
+            if (status === 'completed') {
+              subtaskName.parentElement.classList.add('line-through', 'text-gray-500');
+            } else {
+              subtaskName.parentElement.classList.remove('line-through', 'text-gray-500');
+            }
+          }
+        }
+        
+        // Show success notification
+        showNotification('Subtask status updated successfully!', 'success');
+        
+      } catch (error) {
+        console.error('Error updating subtask status:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        showNotification('Failed to update subtask status: ' + errorMessage, 'error');
+      }
+    };
+
+    // Function to update main task status
+    window.updateTaskStatus = async function(taskId, status) {
+      try {
+        console.log('🔄 updateTaskStatus called:', { taskId, status });
+        
+        // Make API call to update task status
+        const response = await fetch(`/api/admin/tasks/${taskId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({ status: status })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update task status');
+        }
+
+        const result = await response.json();
+        console.log('Task status updated successfully:', result);
+        
+        // Dispatch custom event for real-time updates
+        window.dispatchEvent(new CustomEvent('taskStatusUpdated', {
+          detail: { taskId, newStatus: status }
+        }));
+        
+        // Show success notification
+        showNotification('Task status updated successfully!', 'success');
+        
+      } catch (error) {
+        console.error('Error updating task status:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        showNotification('Failed to update task status: ' + errorMessage, 'error');
+      }
+    };
+  });
+</script>
+
+<style>
+  /* Subtask row styling */
+  .subtask-row {
+    background-color: #fefefe;
+    border-left: 4px solid #d1d5db;
+  }
+  
+  .subtask-row:hover {
+    background-color: #f9fafb;
+  }
+  
+  /* Arrow rotation animation */
+  .expand-subtasks-btn svg {
+    transition: transform 0.2s ease-in-out;
+  }
+  
+  .expand-subtasks-btn svg.rotate-180 {
+    transform: rotate(180deg);
+  }
+  
+  /* Subtask indentation */
+  .subtask-row td:first-child {
+    padding-left: 3rem;
+  }
+  
+  /* Comprehensive dropdown clipping prevention */
+  .task-user-search-dropdown,
+  .userSearchDropdown,
+  .subtask-user-assignment,
+  .expanded-task-members,
+  .expandedCollaborationMembers {
+    position: fixed !important;
+    z-index: 99999 !important;
+    overflow: visible !important;
+  }
+  
+  /* Ensure all containers don't clip dropdowns */
+  .overflow-x-auto,
+  .overflow-y-auto,
+  .overflow-auto,
+  .overflow-hidden,
+  table,
+  tbody,
+  tr,
+  td,
+  .flex,
+  .grid {
+    overflow: visible !important;
+  }
+  
+  /* Force visibility for all dropdown menus */
+  .dropdown-menu,
+  .popup-menu,
+  .user-search-dropdown,
+  .task-user-search-dropdown {
+    position: fixed !important;
+    z-index: 99999 !important;
+    overflow: visible !important;
+  }
+  
+  /* Override any overflow hidden that might be applied */
+  * {
+    box-sizing: border-box;
+  }
+  
+  /* Specific fixes for common clipping scenarios */
+  .overflow-hidden {
+    overflow: visible !important;
+  }
+  
+  .overflow-auto {
+    overflow: visible !important;
+  }
+  
+  .overflow-y-auto {
+    overflow: visible !important;
+  }
+</style>

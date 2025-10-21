@@ -1,0 +1,248 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { neon } from '@neondatabase/serverless';
+import { getSessionUser } from '../../utils/session';
+
+// Get current user
+const currentUser = await getSessionUser(Astro);
+if (!currentUser) {
+  return Astro.redirect('/login');
+}
+
+// Get database connection
+const databaseUrl = import.meta.env.DATABASE_URL || process.env.DATABASE_URL;
+if (!databaseUrl) {
+  throw new Error('DATABASE_URL environment variable is not set');
+}
+
+const sql = neon(databaseUrl);
+
+let teamsData: any[] = [];
+let memberCounts: any[] = [];
+let teamCreators: any[] = [];
+let teamClients: any[] = [];
+let error: string | null = null;
+
+try {
+  // Check if teams table exists first
+  const tableExists = await sql`
+    SELECT EXISTS (
+      SELECT FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name = 'teams'
+    );
+  `;
+
+  if (!tableExists[0]?.exists) {
+    throw new Error('Teams table does not exist. Please run database migrations.');
+  }
+
+  // Get all teams with their associated clients using direct SQL
+  teamsData = await sql`
+    SELECT 
+      t.id, 
+      t.name, 
+      t.description, 
+      t.created_by, 
+      t.created_at, 
+      t.updated_at, 
+      t.archived,
+      t.project_id,
+      c.id as client_id,
+      c.name as client_name
+    FROM teams t
+    LEFT JOIN projects p ON t.project_id = p.id
+    LEFT JOIN clients c ON p.client_id = c.id
+    WHERE t.archived = false 
+    ORDER BY c.name ASC, t.created_at DESC
+  `;
+
+  // Get member counts for each team using direct SQL
+  memberCounts = await sql`
+    SELECT team_id, COUNT(user_id) as member_count
+    FROM team_members 
+    GROUP BY team_id
+  `;
+
+  // Get team creators using direct SQL
+  teamCreators = await sql`
+    SELECT t.id as team_id, u.name as creator_name, u.email as creator_email
+    FROM teams t
+    INNER JOIN users u ON t.created_by = u.id
+    WHERE t.archived = false
+  `;
+
+} catch (err) {
+  console.error('Database error:', err);
+  error = err instanceof Error ? err.message : 'Unknown database error';
+}
+
+// Create a map of team ID to member count
+const memberCountMap = new Map();
+memberCounts.forEach(mc => {
+  memberCountMap.set(mc.team_id, mc.member_count);
+});
+
+// Add member counts to teams
+const allTeams = teamsData.map(team => ({
+  ...team,
+  memberCount: memberCountMap.get(team.id) || 0
+}));
+
+const creatorMap = new Map(teamCreators.map(creator => [creator.team_id, creator]));
+
+// Group teams by client
+const teamsByClient = new Map();
+allTeams.forEach(team => {
+  const clientKey = team.client_name || 'No Client';
+  if (!teamsByClient.has(clientKey)) {
+    teamsByClient.set(clientKey, {
+      clientName: clientKey,
+      clientId: team.client_id,
+      teams: []
+    });
+  }
+  teamsByClient.get(clientKey).teams.push(team);
+});
+
+// Convert to array and sort by client name
+const groupedTeams = Array.from(teamsByClient.values()).sort((a, b) => 
+  a.clientName.localeCompare(b.clientName)
+);
+---
+
+<Layout title="Collaborations">
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Collaborations</h1>
+        <p class="text-gray-600">View and manage your collaborative work</p>
+      </div>
+    </div>
+
+    {error ? (
+      <!-- Error State -->
+      <div class="bg-red-50 border border-red-200 rounded-lg p-6">
+        <div class="flex items-center">
+          <svg class="h-8 w-8 text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z"></path>
+          </svg>
+          <div>
+            <h3 class="text-lg font-medium text-red-800">Database Error</h3>
+            <p class="text-red-700 mt-1">{error}</p>
+            <div class="mt-4">
+              <p class="text-sm text-red-600">
+                This usually means the collaborative features tables haven't been created yet. 
+                Please run the database migration to create the required tables.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    ) : (
+      <!-- Collaborations by Client -->
+      <div class="space-y-6">
+        {groupedTeams.length === 0 ? (
+          <div class="bg-white rounded-lg shadow border border-gray-300 p-8">
+            <div class="text-center">
+              <div class="mx-auto h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <svg class="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+              </div>
+              <h3 class="text-lg font-medium text-gray-900 mb-2">No collaborations yet</h3>
+              <p class="text-gray-600 mb-4">You haven't been added to any collaborations yet.</p>
+            </div>
+          </div>
+        ) : (
+          groupedTeams.map((clientGroup) => (
+            <div class="bg-white rounded-lg shadow border border-gray-300 overflow-hidden hover:shadow-lg transition-all duration-200 hover:border-gray-400">
+              <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                <div class="flex justify-between items-center">
+                  <div class="flex-1">
+                    <div class="flex items-center justify-between">
+                      <h3 class="text-lg font-medium text-gray-900">{clientGroup.clientName}</h3>
+                      <span class="text-sm text-gray-600 mr-8">{clientGroup.teams.length} collaboration{clientGroup.teams.length !== 1 ? 's' : ''}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                        Collaboration Name
+                      </th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                        Members
+                      </th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                        Created By
+                      </th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                        Created Date
+                      </th>
+                      <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody class="bg-white divide-y divide-gray-200">
+                    {clientGroup.teams.map((team: any) => {
+                      const creator = creatorMap.get(team.id);
+                      return (
+                        <tr class="hover:bg-gray-50">
+                          <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                              <div class="h-8 w-8 bg-gray-200 rounded-lg flex items-center justify-center mr-3">
+                                <svg class="h-4 w-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                </svg>
+                              </div>
+                              <div>
+                                <div class="text-sm font-medium text-gray-900">{team.name}</div>
+                                <div class="text-sm text-gray-500">{team.description || 'No description'}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              {team.memberCount} members
+                            </span>
+                          </td>
+                          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {creator?.creator_name || 'Unknown'}
+                          </td>
+                          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {new Date(team.created_at).toLocaleDateString()}
+                          </td>
+                          <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div class="flex justify-end space-x-2">
+                              <a 
+                                href={`/dashboard/collaborations/${team.id}`}
+                                class="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
+                              >
+                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                                View
+                              </a>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    )}
+  </div>
+</Layout>

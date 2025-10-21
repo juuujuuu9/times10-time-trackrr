@@ -2,7 +2,7 @@
  * Centralized validation service for time entries
  */
 
-import type { CreateTimeEntryRequest, UpdateTimeEntryRequest, ValidationResult, ParsedTime } from './types';
+import { CreateTimeEntryRequest, UpdateTimeEntryRequest, ValidationResult, ParsedTime } from './types';
 
 export class ValidationService {
   /**

@@ -1,0 +1,503 @@
+---
+import Layout from '../../../../../layouts/Layout.astro';
+import TaskStream from '../../../../../components/TaskStream.tsx';
+import StatusDropdown from '../../../../../components/StatusDropdown.tsx';
+import TaskTimer from '../../../../../components/TaskTimer.tsx';
+import { db } from '../../../../../db/index';
+import { teams, teamMembers as teamMembersTable, projects, clients, users, taskNotes, taskDiscussions, taskFiles, taskLinks, tasks, taskAssignments, timeEntries } from '../../../../../db/schema';
+import { eq, and, desc, count, sql } from 'drizzle-orm';
+import { getSessionUser } from '../../../../../utils/session';
+
+// Get current user
+const currentUser = await getSessionUser(Astro);
+if (!currentUser) {
+  return Astro.redirect('/login');
+}
+
+// Get collaboration and task IDs
+const collaborationId = parseInt(Astro.params.id!);
+const taskId = parseInt(Astro.params.taskId!);
+
+// Debug: Log the parameters
+console.log('Collaboration ID:', collaborationId);
+console.log('Task ID:', taskId);
+
+// Validate IDs
+if (isNaN(collaborationId) || isNaN(taskId)) {
+  console.log('Invalid IDs, redirecting to collaborations list');
+  return Astro.redirect('/dashboard/collaborations');
+}
+
+// Get collaboration details
+let collaboration;
+try {
+  collaboration = await db.query.teams.findFirst({
+    where: eq(teams.id, collaborationId),
+    with: {
+      creator: true,
+      members: {
+        with: {
+          user: true
+        }
+      }
+    }
+  });
+} catch (error) {
+  console.error('Error fetching collaboration:', error);
+  return Astro.redirect('/dashboard/collaborations');
+}
+
+if (!collaboration) {
+  console.log('Collaboration not found, redirecting to collaborations list');
+  return Astro.redirect('/dashboard/collaborations');
+}
+
+// Get task details
+let task;
+try {
+  task = await db.query.tasks.findFirst({
+    where: eq(tasks.id, taskId),
+    with: {
+      project: {
+        with: {
+          client: true
+        }
+      },
+      taskAssignments: {
+        with: {
+          user: true
+        }
+      }
+    }
+  });
+} catch (error) {
+  console.error('Error fetching task:', error);
+  return Astro.redirect(`/dashboard/collaborations/${collaborationId}`);
+}
+
+if (!task) {
+  console.log('Task not found, redirecting to collaboration page');
+  return Astro.redirect(`/dashboard/collaborations/${collaborationId}`);
+}
+
+// Debug: Log task data
+console.log('Task found:', {
+  id: task.id,
+  name: task.name,
+  projectId: task.projectId,
+  assignments: task.taskAssignments?.length || 0
+});
+
+// Get team members
+const teamMembers = (collaboration as any).members.map((member: any) => ({
+  id: member.user.id,
+  name: member.user.name,
+  email: member.user.email,
+  role: member.role,
+  joinedAt: member.joinedAt
+}));
+
+// Get task assignees
+const taskAssignees = task.taskAssignments.map((assignment: any) => ({
+  id: assignment.user.id,
+  name: assignment.user.name,
+  email: assignment.user.email
+}));
+
+// Calculate total time tracked for this task
+let totalTimeTracked = "0h";
+
+const taskTimeEntries = await db.query.timeEntries.findMany({
+  where: and(
+    eq(timeEntries.projectId, task.projectId),
+    // Add task-specific filtering when task field is available
+    // For now, we'll use project time entries
+    sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
+  ),
+  with: {
+    user: true,
+    project: true
+  }
+});
+
+// Calculate total hours
+let totalSeconds = 0;
+for (const entry of taskTimeEntries) {
+  if (entry.durationManual) {
+    totalSeconds += entry.durationManual;
+  } else if (entry.startTime && entry.endTime) {
+    const start = new Date(entry.startTime);
+    const end = new Date(entry.endTime);
+    const durationMs = end.getTime() - start.getTime();
+    const durationSeconds = Math.floor(durationMs / 1000);
+    totalSeconds += durationSeconds;
+  }
+}
+
+// Convert to hours and format
+const totalHours = Math.floor(totalSeconds / 3600);
+const remainingSeconds = totalSeconds % 3600;
+const remainingMinutes = Math.floor(remainingSeconds / 60);
+
+if (totalHours > 0) {
+  totalTimeTracked = `${totalHours}h${remainingMinutes > 0 ? ` ${remainingMinutes}m` : ''}`;
+} else if (remainingMinutes > 0) {
+  totalTimeTracked = `${remainingMinutes}m`;
+}
+---
+
+<Layout title={`${task.name} - Task Stream`}>
+  <div class="flex">
+    <!-- Left Sidebar -->
+    <div class="w-1/4 bg-white border-r rounded-xl border-gray-200 p-6 status-dropdown-container sticky top-0" style="overflow: visible; min-height: calc(100vh - 120px); height: auto; max-height: none;">
+      <!-- Task Overview Card -->
+      <div class="bg-white rounded-lg border border-gray-200 p-4 mb-6 h-auto">
+        <div class="flex flex-col items-start justify-between mb-3">
+          <div class="flex justify-between items-center w-full mb-3">
+            <!-- Team Members -->
+            <div class="flex items-center">
+              <div class="flex -space-x-2">
+                {teamMembers.slice(0, 4).map((member: any, index: number) => (
+                  <div 
+                    class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 border-2 border-white relative group cursor-pointer"
+                    title={member.name}
+                  >
+                    {member.name.charAt(0).toUpperCase()}
+                    <!-- Tooltip -->
+                    <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                      {member.name}
+                      <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                    </div>
+                  </div>
+                ))}
+                {teamMembers.length > 4 && (
+                  <div 
+                    class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 border-2 border-white relative group cursor-pointer"
+                    title={teamMembers.slice(4).map((member: any) => member.name).join(', ')}
+                  >
+                    +{teamMembers.length - 4}
+                    <!-- Tooltip -->
+                    <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                      <div class="flex flex-col space-y-1">
+                        {teamMembers.slice(4).map((member: any) => (
+                          <div class="whitespace-nowrap">{member.name}</div>
+                        ))}
+                      </div>
+                      <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <StatusDropdown 
+              currentStatus={task.status}
+              onStatusChange={(newStatus) => {
+                // Update the task status in the UI
+                task.status = newStatus;
+              }}
+              taskId={task.id}
+              client:load
+            />
+          </div>
+          <div class="flex items-start w-full">
+            <h2 class="text-lg font-semibold text-gray-900">{task.name}</h2>
+          </div>
+        </div>
+        
+        <div class="space-y-2 mb-4">
+          {task.description && (
+            <div class="text-sm text-gray-600">
+              <p>{task.description}</p>
+            </div>
+          )}
+          <div class="flex items-center text-sm text-gray-600">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            {totalTimeTracked} tracked
+          </div>
+          <div class="text-sm text-gray-600">
+            <p class="font-medium">{(task.project as any)?.name}</p>
+            <p class="text-gray-500">{(task.project as any)?.client?.name}</p>
+          </div>
+        </div>
+
+        <!-- Timer Component -->
+        <div class="pt-4 border-t border-gray-200">
+          <TaskTimer 
+            taskId={taskId}
+            taskName={task.name}
+            projectName={(task.project as any)?.name || 'Unknown Project'}
+            currentUser={{
+              id: currentUser.id,
+              name: currentUser.name,
+              email: currentUser.email
+            }}
+            client:load
+          />
+        </div>
+      </div>
+
+      <!-- Quick Filters -->
+      <div class="mb-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-3">Quick Filters</h3>
+        <div class="space-y-2">
+          <button data-filter="all" class="w-full flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-md transition-colors border border-transparent">
+            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+            </svg>
+            Show All
+          </button>
+          <button data-filter="insight" class="w-full flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-md transition-colors border border-transparent">
+            <svg class="w-4 h-4 mr-3" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+              <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+              <g id="SVGRepo_iconCarrier">
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2.75C8.27208 2.75 5.25 5.77208 5.25 9.5C5.25 11.4985 6.11758 13.2934 7.49907 14.5304L7.50342 14.5343C8.06008 15.0328 8.48295 15.4114 8.78527 15.6886C9.06989 15.9495 9.29537 16.1628 9.41353 16.3086L9.42636 16.3244C9.64763 16.5974 9.84045 16.8353 9.9676 17.1199C10.0948 17.4044 10.1434 17.7067 10.1992 18.0537L10.2024 18.0738C10.231 18.2517 10.2425 18.4701 10.247 18.75H13.753C13.7575 18.4701 13.769 18.2517 13.7976 18.0738L13.8008 18.0537C13.8566 17.7067 13.9052 17.4044 14.0324 17.1199C14.1596 16.8353 14.3524 16.5974 14.5736 16.3244L14.5865 16.3086C14.7046 16.1628 14.9301 15.9495 15.2147 15.6886C15.5171 15.4114 15.94 15.0327 16.4966 14.5343L16.5009 14.5304C17.8824 13.2934 18.75 11.4985 18.75 9.5C18.75 5.77208 15.7279 2.75 12 2.75ZM13.7436 20.25H10.2564C10.2597 20.3542 10.2646 20.4453 10.2721 20.5273C10.2925 20.7524 10.3269 20.8341 10.3505 20.875C10.4163 20.989 10.511 21.0837 10.625 21.1495C10.6659 21.1731 10.7476 21.2075 10.9727 21.2279C11.2082 21.2493 11.5189 21.25 12 21.25C12.4811 21.25 12.7918 21.2493 13.0273 21.2279C13.2524 21.2075 13.3341 21.1731 13.375 21.1495C13.489 21.0837 13.5837 20.989 13.6495 20.875C13.6731 20.8341 13.7075 20.7524 13.7279 20.5273C13.7354 20.4453 13.7403 20.3542 13.7436 20.25ZM3.75 9.5C3.75 4.94365 7.44365 1.25 12 1.25C16.5563 1.25 20.25 4.94365 20.25 9.5C20.25 11.9428 19.1874 14.1384 17.5016 15.6479C16.9397 16.151 16.5234 16.5238 16.2284 16.7942C16.0809 16.9295 15.9681 17.0351 15.8849 17.1162C15.8434 17.1566 15.8117 17.1886 15.788 17.2134C15.7763 17.2256 15.7675 17.2352 15.7611 17.2423C15.7546 17.2496 15.7519 17.2529 15.7519 17.2529C15.4917 17.574 15.4354 17.6568 15.4019 17.7319C15.3683 17.8069 15.3442 17.9041 15.2786 18.3121C15.2527 18.4732 15.25 18.7491 15.25 19.5V19.5322C15.25 19.972 15.25 20.3514 15.2218 20.6627C15.192 20.9918 15.1259 21.3178 14.9486 21.625C14.7511 21.967 14.467 22.2511 14.125 22.4486C13.8178 22.6259 13.4918 22.692 13.1627 22.7218C12.8514 22.75 12.472 22.75 12.0322 22.75H11.9678C11.528 22.75 11.1486 22.75 10.8374 22.7218C10.5082 22.692 10.1822 22.6259 9.875 22.4486C9.53296 22.2511 9.24892 21.967 9.05144 21.625C8.87407 21.3178 8.80802 20.9918 8.77818 20.6627C8.74997 20.3514 8.74998 19.972 8.75 19.5322L8.75 19.5C8.75 18.7491 8.74735 18.4732 8.72144 18.3121C8.6558 17.9041 8.63166 17.8069 8.59812 17.7319C8.56459 17.6568 8.50828 17.574 8.24812 17.2529C8.24812 17.2529 8.24514 17.2493 8.23888 17.2423C8.23249 17.2352 8.22369 17.2256 8.21199 17.2134C8.18835 17.1886 8.15661 17.1566 8.11513 17.1162C8.03189 17.0351 7.91912 16.9295 7.77161 16.7942C7.4766 16.5238 7.06034 16.151 6.49845 15.6479C4.81263 14.1384 3.75 11.9428 3.75 9.5Z" fill="currentColor"></path>
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M13.2215 7.8897C13.5586 8.13046 13.6366 8.59887 13.3959 8.93593L12.1001 10.75H13.6427C13.9237 10.75 14.181 10.907 14.3096 11.1568C14.4382 11.4066 14.4163 11.7073 14.253 11.9359L12.1102 14.9359C11.8694 15.273 11.401 15.3511 11.0639 15.1103C10.7269 14.8695 10.6488 14.4011 10.8896 14.0641L12.1853 12.25H10.6427C10.3618 12.25 10.1044 12.093 9.97585 11.8432C9.84729 11.5934 9.86913 11.2927 10.0324 11.0641L12.1753 8.06407C12.416 7.72701 12.8844 7.64894 13.2215 7.8897Z" fill="currentColor"></path>
+              </g>
+            </svg>
+            Insights
+          </button>
+          <button data-filter="media" class="w-full flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-md transition-colors border border-transparent">
+            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            Media/Files
+          </button>
+          <button data-filter="link" class="w-full flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-md transition-colors border border-transparent">
+            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+            </svg>
+            Links
+          </button>
+          <button data-filter="mentions" class="w-full flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-md transition-colors border border-transparent">
+            <svg class="w-4 h-4 mr-3" fill="#000000" viewBox="0 0 24 24" id="at-2" data-name="Line Color" xmlns="http://www.w3.org/2000/svg" ><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path id="primary" d="M16,12a4.65,4.65,0,0,1-4.49,4A3.47,3.47,0,0,1,8,12a4.6,4.6,0,0,1,4.44-4A3.51,3.51,0,0,1,16,12Zm.33-3,0,0-.75,6.32A1.5,1.5,0,0,0,17.12,17h0a3.58,3.58,0,0,0,3.56-3.13l.2-1.58c.81-5.68-2.47-9-7.2-9.27A10.35,10.35,0,0,0,3.06,12,7.83,7.83,0,0,0,11,21a9.31,9.31,0,0,0,3-.52" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path></g></svg>
+            @mentions
+          </button>
+        </div>
+      </div>
+
+
+      <!-- Dropdown Filters -->
+      <div>
+        <div class="space-y-2">
+          <select id="member-filter" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="all">All Members</option>
+            {teamMembers.map((member: any) => (
+              <option value={member.id}>{member.name}</option>
+            ))}
+          </select>
+          <select id="time-filter" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="all">All Time</option>
+            <option value="today">Today</option>
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 p-6 pt-0 overflow-y-auto" style="height: calc(100vh - 120px); max-height: calc(100vh - 120px);">
+      <!-- Header with Breadcrumbs -->
+      <div class="flex justify-between gap-4 items-center mb-6">
+        <div class="flex items-center flex-1">
+          <!-- Breadcrumbs -->
+          <nav class="flex items-center space-x-2 text-sm">
+            <a href="/dashboard/collaborations" class="text-gray-500 hover:text-gray-700 underline">Collaborations</a>
+            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+            <a href={`/dashboard/collaborations/${collaborationId}`} class="text-gray-500 hover:text-gray-700 underline">
+              {(task.project as any)?.client?.name || 'Unknown Client'} - {(task.project as any)?.name || 'Unknown Project'}
+            </a>
+            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+            <span class="text-gray-500">{task.name}</span>
+          </nav>
+        </div>
+      </div>
+
+      <!-- Main Stream Interface -->
+      <div class="space-y-6">
+        <div data-task-stream>
+          <TaskStream 
+            taskId={taskId}
+            collaborationId={collaborationId}
+            currentUser={{
+              id: currentUser.id,
+              name: currentUser.name,
+              email: currentUser.email,
+              avatar: (currentUser as any).avatar || ''
+            }}
+            teamMembers={teamMembers}
+            client:load
+          />
+        </div>
+        
+        <script define:vars={{ currentUser }}>
+          console.log('🔍 Current user data:', {
+            id: currentUser.id,
+            name: currentUser.name,
+            email: currentUser.email,
+            role: currentUser.role
+          });
+
+          // Quick Filters functionality - Simple approach
+          let activeFilter = 'all';
+          let taskStreamInstance = null;
+
+          // Set up filter buttons with direct approach
+          const setupFilterButtons = () => {
+            console.log('🔧 Setting up filter buttons...');
+            const filterButtons = document.querySelectorAll('[data-filter]');
+            console.log('🔧 Found filter buttons:', filterButtons.length);
+            
+            filterButtons.forEach(button => {
+              button.addEventListener('click', (e) => {
+                e.preventDefault();
+                const filterType = button.getAttribute('data-filter');
+                console.log('🔧 Filter clicked:', filterType);
+                
+                // Update active filter
+                activeFilter = filterType;
+                
+                // Update button states
+                filterButtons.forEach(btn => {
+                  btn.classList.remove('bg-gray-100', 'text-gray-800', 'border-gray-300');
+                  btn.classList.add('text-gray-600', 'hover:bg-gray-50');
+                });
+                
+                // Highlight active button
+                button.classList.remove('text-gray-600', 'hover:bg-gray-50');
+                button.classList.add('bg-gray-100', 'text-gray-800', 'border-gray-300');
+                
+                // Dispatch custom event for TaskStream to listen to
+                console.log('🔧 Dispatching taskStreamFilterChange event with:', activeFilter);
+                const event = new CustomEvent('taskStreamFilterChange', {
+                  detail: { activeFilter }
+                });
+                document.dispatchEvent(event);
+                console.log('🔧 Event dispatched successfully');
+              });
+            });
+          };
+
+          // Set up dropdown filters
+          const setupDropdownFilters = () => {
+            console.log('🔧 Setting up dropdown filters...');
+            
+            // Member filter
+            const memberFilter = document.getElementById('member-filter');
+            if (memberFilter) {
+              memberFilter.addEventListener('change', (e) => {
+                const memberId = e.target.value;
+                console.log('🔧 Member filter changed:', memberId);
+                
+                // Dispatch member filter change event
+                document.dispatchEvent(new CustomEvent('taskStreamMemberFilterChange', {
+                  detail: { memberId }
+                }));
+              });
+            }
+            
+            // Time filter
+            const timeFilter = document.getElementById('time-filter');
+            if (timeFilter) {
+              timeFilter.addEventListener('change', (e) => {
+                const timeRange = e.target.value;
+                console.log('🔧 Time filter changed:', timeRange);
+                
+                // Dispatch time filter change event
+                document.dispatchEvent(new CustomEvent('taskStreamTimeFilterChange', {
+                  detail: { timeRange }
+                }));
+              });
+            }
+          };
+
+          // Initialize when DOM is ready
+          document.addEventListener('DOMContentLoaded', () => {
+            console.log('🔧 DOM loaded, setting up filters...');
+            setupFilterButtons();
+            setupDropdownFilters();
+            
+            // Set "Show All" as active by default
+            const showAllButton = document.querySelector('[data-filter="all"]');
+            if (showAllButton) {
+              showAllButton.classList.remove('text-gray-600', 'hover:bg-gray-50');
+              showAllButton.classList.add('bg-gray-100', 'text-gray-800', 'border-gray-300');
+            }
+          });
+        </script>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  /* Comprehensive dropdown clipping prevention */
+  .status-dropdown-container,
+  .assignee-dropdown-container,
+  .dropdown-container {
+    overflow: visible !important;
+    position: relative;
+  }
+  
+  /* Allow all dropdowns to escape parent overflow constraints */
+  [data-status-dropdown],
+  [data-assignee-dropdown],
+  [data-dropdown] {
+    position: relative;
+    z-index: 99999;
+    overflow: visible !important;
+  }
+  
+  /* Ensure all containers don't clip dropdowns */
+  .w-1\/4,
+  .flex,
+  .grid,
+  table,
+  tbody,
+  tr,
+  td,
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+  
+  /* Force visibility for all dropdown menus */
+  .dropdown-menu,
+  .status-dropdown-menu,
+  .assignee-popup-container,
+  .popup-menu {
+    position: absolute !important;
+    z-index: 99999 !important;
+    overflow: visible !important;
+  }
+  
+  /* Ensure fixed positioning works properly */
+  .fixed {
+    position: fixed !important;
+    z-index: 99999 !important;
+  }
+  
+  /* Override any overflow hidden that might be applied */
+  * {
+    box-sizing: border-box;
+  }
+  
+  /* Specific fixes for common clipping scenarios */
+  .overflow-hidden {
+    overflow: visible !important;
+  }
+  
+  .overflow-auto {
+    overflow: visible !important;
+  }
+  
+  .overflow-y-auto {
+    overflow: visible !important;
+  }
+</style>

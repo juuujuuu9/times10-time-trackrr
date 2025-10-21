@@ -1,0 +1,175 @@
+---
+// Email Debug Interface
+// This page provides a simple interface for testing emails locally
+---
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Debug Interface - Times10 Time Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <!-- Header -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h1 class="text-3xl font-bold text-gray-800 mb-2">📧 Email Debug Interface</h1>
+                <p class="text-gray-600">Test email notifications locally without external services</p>
+                <div class="mt-4 p-4 bg-blue-50 rounded-lg">
+                    <h3 class="font-semibold text-blue-800 mb-2">🔧 Setup Instructions:</h3>
+                    <ol class="list-decimal list-inside text-blue-700 space-y-1">
+                        <li>Run <code class="bg-blue-100 px-2 py-1 rounded">node local-email-debug.js</code> in terminal</li>
+                        <li>Start your Astro app with <code class="bg-blue-100 px-2 py-1 rounded">npm run dev</code></li>
+                        <li>View captured emails at <a href="http://localhost:1080" target="_blank" class="text-blue-600 underline">http://localhost:1080</a></li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Email Test Form -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Send Test Emails</h2>
+                
+                <form id="emailTestForm" class="space-y-4">
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+                            Test Email Address
+                        </label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            name="email" 
+                            required
+                            placeholder="test@example.com"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                    </div>
+
+                    <div>
+                        <label for="testType" class="block text-sm font-medium text-gray-700 mb-2">
+                            Email Type
+                        </label>
+                        <select 
+                            id="testType" 
+                            name="testType"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="all">All Email Types</option>
+                            <option value="invitation">Invitation Email</option>
+                            <option value="collaboration">Collaboration Assignment</option>
+                            <option value="task">Task Assignment</option>
+                            <option value="subtask">Subtask Assignment</option>
+                            <option value="mention">Mention Notification</option>
+                            <option value="reassignment">Task Reassignment</option>
+                            <option value="due-soon">Due Soon Reminder</option>
+                            <option value="completion">Task Completion</option>
+                            <option value="insight">New Insight</option>
+                        </select>
+                    </div>
+
+                    <button 
+                        type="submit"
+                        class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                    >
+                        Send Test Emails
+                    </button>
+                </form>
+            </div>
+
+            <!-- Results -->
+            <div id="results" class="bg-white rounded-lg shadow-md p-6 hidden">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Test Results</h2>
+                <div id="resultsContent"></div>
+            </div>
+
+            <!-- Quick Links -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Quick Links</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <a 
+                        href="http://localhost:1080" 
+                        target="_blank"
+                        class="p-4 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
+                    >
+                        <h3 class="font-semibold text-green-800">📧 MailDev Interface</h3>
+                        <p class="text-green-600 text-sm">View captured emails</p>
+                    </a>
+                    <a 
+                        href="/api/debug-emails" 
+                        target="_blank"
+                        class="p-4 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors"
+                    >
+                        <h3 class="font-semibold text-purple-800">🔗 API Endpoint</h3>
+                        <p class="text-purple-600 text-sm">Direct API access</p>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('emailTestForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const email = formData.get('email');
+            const testType = formData.get('testType');
+            
+            const resultsDiv = document.getElementById('results');
+            const resultsContent = document.getElementById('resultsContent');
+            
+            // Show loading state
+            resultsDiv.classList.remove('hidden');
+            resultsContent.innerHTML = `
+                <div class="flex items-center space-x-2 text-blue-600">
+                    <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    <span>Sending test emails...</span>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch('/api/debug-emails', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, testType })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultsContent.innerHTML = `
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                            <h3 class="font-semibold text-green-800 mb-2">✅ Success!</h3>
+                            <p class="text-green-700 mb-2">${data.message}</p>
+                            <div class="text-sm text-green-600">
+                                <p><strong>Debug Mode:</strong> ${data.debugMode ? 'Enabled' : 'Disabled'}</p>
+                                <p><strong>Web Interface:</strong> <a href="${data.webInterface}" target="_blank" class="underline">${data.webInterface}</a></p>
+                                <p><strong>Emails Sent:</strong> ${data.results?.length || 0}</p>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    resultsContent.innerHTML = `
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                            <h3 class="font-semibold text-red-800 mb-2">❌ Error</h3>
+                            <p class="text-red-700">${data.error}</p>
+                            ${data.details ? `<p class="text-red-600 text-sm mt-2">${data.details}</p>` : ''}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultsContent.innerHTML = `
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <h3 class="font-semibold text-red-800 mb-2">❌ Network Error</h3>
+                        <p class="text-red-700">Failed to send test emails. Make sure your app is running.</p>
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
+

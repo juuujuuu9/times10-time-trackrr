@@ -3,7 +3,7 @@
  * Ensures consistent timezone conversion across the application
  */
 
-import type { ParsedTime, TimezoneInfo } from './types';
+import { ParsedTime, TimezoneInfo } from './types';
 
 export class TimezoneService {
   /**

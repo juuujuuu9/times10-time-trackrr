@@ -31,7 +31,7 @@ export const emailConfig: EmailConfig = {
   
   // Branding
   companyName: 'Times10',
-  logoUrl: 'https://trackr.times10.net/trackr-logo.png', // Your logo URL
+  logoUrl: '/tracker-logo-white.png', // Local trackr logo with red circular icon
   primaryColor: '#d63a2e',
   secondaryColor: '#415058',
   
@@ -58,7 +58,20 @@ export function getReplyToString(): string {
  * Get the company logo URL
  */
 export function getLogoUrl(): string {
-  return emailConfig.logoUrl || `${emailConfig.websiteUrl}/trackr-logo.png`;
+  const logoUrl = emailConfig.logoUrl || '/tracker-logo-white.png';
+  
+  // If it's already an absolute URL, return it
+  if (logoUrl.startsWith('http')) {
+    return logoUrl;
+  }
+  
+  // For local development, use localhost
+  if (process.env.NODE_ENV === 'development' || !process.env.VERCEL_URL) {
+    return `http://localhost:4321${logoUrl}`;
+  }
+  
+  // For production, use the website URL
+  return `${emailConfig.websiteUrl}${logoUrl}`;
 }
 
 /**
