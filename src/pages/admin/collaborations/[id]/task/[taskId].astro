@@ -226,6 +226,7 @@ if (totalHours > 0) {
         <div class="pt-4 border-t border-gray-200">
           <TaskTimer 
             taskId={taskId}
+            projectId={task.projectId}
             taskName={task.name}
             projectName={(task.project as any)?.name || 'Unknown Project'}
             currentUser={{

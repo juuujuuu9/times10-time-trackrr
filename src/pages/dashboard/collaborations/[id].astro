@@ -1,6 +1,7 @@
 ---
 import DashboardLayout from '../../../layouts/DashboardLayout.astro';
 import StatusDropdown from '../../../components/StatusDropdown.tsx';
+import TaskTimer from '../../../components/TaskTimer.tsx';
 import { db } from '../../../db/index';
 import { teams, teamMembers as teamMembersTable, projects, clients, users, taskNotes, taskDiscussions, taskFiles, taskLinks, tasks, taskAssignments, timeEntries } from '../../../db/schema';
 import { eq, and, desc, asc, count, sql } from 'drizzle-orm';
@@ -490,8 +491,31 @@ if (projectDetails && projectDetails.id) {
             </svg>
             {totalTimeTracked} tracked
           </div>
+          {projectDetails && (
+            <div class="text-sm text-gray-600">
+              <p class="font-medium">{projectDetails.name}</p>
+              <p class="text-gray-500">{projectDetails.client?.name}</p>
+            </div>
+          )}
         </div>
 
+        <!-- Timer Component (only show if project is linked) -->
+        {projectDetails && (
+          <div class="pt-4 border-t border-gray-200">
+            <TaskTimer 
+              taskId={0}
+              projectId={projectDetails.id}
+              taskName={projectDetails.name}
+              projectName={projectDetails.name}
+              currentUser={{
+                id: currentUser.id,
+                name: currentUser.name,
+                email: currentUser.email
+              }}
+              client:load
+            />
+          </div>
+        )}
         
       </div>
 

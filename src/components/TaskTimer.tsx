@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRealtimeTimer } from '../utils/useRealtimeTimer';
 
 interface TaskTimerProps {
-  taskId: number; // This is actually the projectId from the task
+  taskId: number;
+  projectId: number; // The actual projectId needed for the timer
   taskName: string;
   projectName: string;
   currentUser: {
@@ -12,7 +13,7 @@ interface TaskTimerProps {
   };
 }
 
-export default function TaskTimer({ taskId, taskName, projectName, currentUser }: TaskTimerProps) {
+export default function TaskTimer({ taskId, projectId, taskName, projectName, currentUser }: TaskTimerProps) {
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -21,6 +22,7 @@ export default function TaskTimer({ taskId, taskName, projectName, currentUser }
   // Debug: Log what TaskTimer received
   console.log('🔍 [TASK TIMER DEBUG] TaskTimer received props:', {
     taskId,
+    projectId,
     taskName,
     projectName,
     currentUserId: currentUser.id
@@ -35,9 +37,13 @@ export default function TaskTimer({ taskId, taskName, projectName, currentUser }
     error: timerError 
   } = useRealtimeTimer(1000);
 
+  // Check if there's an active timer for a different project
+  const isTrackingDifferentProject = timerData && timerData.projectId !== projectId;
+  const isTrackingCurrentProject = timerData && timerData.projectId === projectId;
+
   // Update local state when timer data changes
   useEffect(() => {
-    if (timerData) {
+    if (isTrackingCurrentProject) {
       setIsRunning(true);
       const startTime = new Date(timerData.startTime);
       const now = new Date();
@@ -47,14 +53,14 @@ export default function TaskTimer({ taskId, taskName, projectName, currentUser }
       setIsRunning(false);
       setElapsedTime(0);
     }
-  }, [timerData]);
+  }, [timerData, isTrackingCurrentProject]);
 
   // Update elapsed time every second when timer is running
   useEffect(() => {
-    if (!isRunning) return;
+    if (!isRunning || !isTrackingCurrentProject) return;
 
     const interval = setInterval(() => {
-      if (timerData) {
+      if (timerData && isTrackingCurrentProject) {
         const startTime = new Date(timerData.startTime);
         const now = new Date();
         const elapsed = Math.floor((now.getTime() - startTime.getTime()) / 1000);
@@ -63,7 +69,7 @@ export default function TaskTimer({ taskId, taskName, projectName, currentUser }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isRunning, timerData]);
+  }, [isRunning, timerData, isTrackingCurrentProject]);
 
   // Format time as HH:MM:SS
   const formatTime = (seconds: number): string => {
@@ -79,7 +85,7 @@ export default function TaskTimer({ taskId, taskName, projectName, currentUser }
     setError(null);
     
     try {
-      const success = await startTimer(taskId, '');
+      const success = await startTimer(projectId, '');
       if (success) {
         console.log('✅ Timer started successfully');
       } else {
@@ -91,7 +97,37 @@ export default function TaskTimer({ taskId, taskName, projectName, currentUser }
     } finally {
       setIsLoading(false);
     }
-  }, [startTimer, taskId]);
+  }, [startTimer, projectId]);
+
+  // Handle switching to this project's timer
+  const handleSwitchTimer = useCallback(async () => {
+    if (!timerData) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // First stop the current timer
+      const stopSuccess = await stopTimer(timerData.id);
+      if (!stopSuccess) {
+        setError('Failed to stop current timer');
+        return;
+      }
+      
+      // Then start the new timer for this project
+      const startSuccess = await startTimer(projectId, '');
+      if (startSuccess) {
+        console.log('✅ Timer switched successfully');
+      } else {
+        setError('Failed to start new timer');
+      }
+    } catch (err) {
+      console.error('❌ Error switching timer:', err);
+      setError(err instanceof Error ? err.message : 'Failed to switch timer');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [timerData, stopTimer, startTimer, projectId]);
 
 
   const handleStop = useCallback(async () => {
@@ -120,9 +156,26 @@ export default function TaskTimer({ taskId, taskName, projectName, currentUser }
   return (
     <div>
       <div className="flex items-center justify-between">
-        {/* Start/Stop Button */}
+        {/* Start/Stop/Switch Button */}
         <div className="flex-shrink-0">
-          {isRunning ? (
+          {isTrackingDifferentProject ? (
+            // Grayed out button for different project
+            <button
+              onClick={handleSwitchTimer}
+              disabled={isDisabled}
+              className="w-8 h-8 bg-gray-200 text-gray-500 rounded-full hover:bg-gray-300 transition-colors disabled:bg-gray-200 disabled:cursor-not-allowed flex items-center justify-center"
+              title="Switch to tracking time for this project"
+            >
+              {isDisabled ? (
+                <div className="w-3 h-3 border-2 border-gray-500 border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+              )}
+            </button>
+          ) : isRunning ? (
+            // Stop button for current project
             <button
               onClick={handleStop}
               disabled={isDisabled}
@@ -138,6 +191,7 @@ export default function TaskTimer({ taskId, taskName, projectName, currentUser }
               )}
             </button>
           ) : (
+            // Start button for current project
             <button
               onClick={handleStart}
               disabled={isDisabled}
@@ -155,18 +209,25 @@ export default function TaskTimer({ taskId, taskName, projectName, currentUser }
           )}
         </div>
 
-        {/* Timer Display */}
+        {/* Timer Display or Switch Message */}
         <div className="flex-shrink-0">
-          <div 
-            className="text-2xl text-black"
-            style={{ 
-              fontFamily: 'RadiolandTest, monospace',
-              fontWeight: 'bold',
-              fontStyle: 'normal'
-            }}
-          >
-            {formatTime(elapsedTime)}
-          </div>
+          {isTrackingDifferentProject ? (
+            <div className="text-sm text-gray-500 text-center">
+              <div className="font-medium">Switch to {projectName}</div>
+              <div className="text-xs">Click to track time here</div>
+            </div>
+          ) : (
+            <div 
+              className="text-2xl text-black"
+              style={{ 
+                fontFamily: 'RadiolandTest, monospace',
+                fontWeight: 'bold',
+                fontStyle: 'normal'
+              }}
+            >
+              {formatTime(elapsedTime)}
+            </div>
+          )}
         </div>
       </div>
 
