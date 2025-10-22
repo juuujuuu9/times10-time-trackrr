@@ -115,6 +115,42 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
     setLocalStatus(currentStatus);
   }, [currentStatus]);
 
+  // Restore expanded rows after page reload
+  useEffect(() => {
+    const restoreExpandedRows = () => {
+      try {
+        const expandedRowsData = sessionStorage.getItem('expandedRows');
+        if (expandedRowsData) {
+          const expandedIds = JSON.parse(expandedRowsData);
+          console.log('Restoring expanded rows:', expandedIds);
+          
+          // Restore expanded state for each row
+          expandedIds.forEach((id: string) => {
+            const row = document.querySelector(`[data-task-id="${id}"], [data-subtask-id="${id}"]`);
+            if (row) {
+              row.setAttribute('data-expanded', 'true');
+              // Trigger any expansion logic if needed
+              const expandButton = row.querySelector('[data-expand-button]');
+              if (expandButton) {
+                (expandButton as HTMLElement).click();
+              }
+            }
+          });
+          
+          // Clear the stored data after restoration
+          sessionStorage.removeItem('expandedRows');
+        }
+      } catch (error) {
+        console.error('Error restoring expanded rows:', error);
+        sessionStorage.removeItem('expandedRows');
+      }
+    };
+
+    // Run restoration after a short delay to ensure DOM is ready
+    const timeoutId = setTimeout(restoreExpandedRows, 100);
+    return () => clearTimeout(timeoutId);
+  }, []);
+
   // Update dropdown position when opening
   useEffect(() => {
     if (isOpen && buttonRef.current) {
@@ -140,19 +176,22 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
     setIsOpen(false);
     setIsUpdating(true);
     
+    // Update local status immediately for better UX
+    setLocalStatus(newStatus);
+    
     try {
       // If onStatusChange callback is provided, use it (for subtasks)
       if (onStatusChange) {
         await onStatusChange(newStatus);
-        setLocalStatus(newStatus);
         
         // Dispatch custom event for real-time updates
         window.dispatchEvent(new CustomEvent('taskStatusUpdated', {
           detail: { taskId, newStatus }
         }));
       } else {
-        // Fallback to direct API call (for main tasks)
-        const response = await fetch(`/api/admin/tasks/${taskId}`, {
+        // Use the regular user API endpoint for main tasks
+        console.log('📞 Using regular user API endpoint for main task status update');
+        const response = await fetch(`/api/tasks/${taskId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -162,20 +201,40 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
         });
 
         if (response.ok) {
-          setLocalStatus(newStatus);
+          const result = await response.json();
+          console.log('Task status updated successfully:', result);
           
           // Dispatch custom event for real-time updates
           window.dispatchEvent(new CustomEvent('taskStatusUpdated', {
             detail: { taskId, newStatus }
           }));
+          
+          // Reload page to update task display while preserving expanded rows
+          setTimeout(() => {
+            // Store expanded state before reload
+            const expandedRows = document.querySelectorAll('[data-expanded="true"]');
+            const expandedIds = Array.from(expandedRows).map(row => 
+              row.getAttribute('data-task-id') || row.getAttribute('data-subtask-id')
+            ).filter(Boolean);
+            
+            if (expandedIds.length > 0) {
+              sessionStorage.setItem('expandedRows', JSON.stringify(expandedIds));
+            }
+            
+            window.location.reload();
+          }, 100);
         } else {
           const errorData = await response.json();
           console.error('Failed to update task status:', errorData);
-          // You could add a toast notification here
+          // Revert local status on error
+          setLocalStatus(currentStatus);
+          throw new Error(errorData.error || 'Failed to update task status');
         }
       }
     } catch (error) {
       console.error('Error updating task status:', error);
+      // Revert local status on error
+      setLocalStatus(currentStatus);
       // You could add a toast notification here
     } finally {
       setIsUpdating(false);

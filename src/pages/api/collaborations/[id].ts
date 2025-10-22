@@ -245,9 +245,16 @@ export const DELETE: APIRoute = async (context) => {
       });
     }
 
-    // Check if collaboration exists
+    // Check if collaboration exists and user is a member
     const existingCollaboration = await db.query.teams.findFirst({
-      where: eq(teams.id, collaborationId)
+      where: eq(teams.id, collaborationId),
+      with: {
+        members: {
+          with: {
+            user: true
+          }
+        }
+      }
     });
 
     if (!existingCollaboration) {
@@ -256,6 +263,18 @@ export const DELETE: APIRoute = async (context) => {
         error: 'Collaboration not found'
       }), {
         status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Check if current user is a member of this collaboration
+    const isMember = existingCollaboration.members.some((member: any) => member.user.id === currentUser.id);
+    if (!isMember) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Access denied'
+      }), {
+        status: 403,
         headers: { 'Content-Type': 'application/json' }
       });
     }

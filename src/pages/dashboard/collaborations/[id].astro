@@ -3600,13 +3600,44 @@ if (projectDetails && projectDetails.id) {
     filterTasks();
 
 
-    // Handle task status updates - reload page for simplicity
+    // Handle task status updates - update UI in real-time
     window.addEventListener('taskStatusUpdated', function(event) {
       const { taskId: updatedTaskId, newStatus } = event.detail;
       console.log('Task status updated:', { taskId: updatedTaskId, newStatus });
       
-      // Simple solution: reload the page to show updated status
-      window.location.reload();
+      // Update the task data in memory
+      if (tasksData) {
+        const taskIndex = tasksData.findIndex(task => task.id === updatedTaskId);
+        if (taskIndex !== -1) {
+          tasksData[taskIndex].status = newStatus;
+          console.log('Updated task status in memory:', tasksData[taskIndex]);
+          
+          // Re-render the tasks table to show updated status
+          reSortAndRenderTasks();
+        }
+      }
+    });
+
+    // Handle subtask status updates - update UI in real-time
+    window.addEventListener('subtaskStatusUpdated', function(event) {
+      const { subtaskId, taskId, newStatus } = event.detail;
+      console.log('Subtask status updated:', { subtaskId, taskId, newStatus });
+      
+      // Update the subtask data in memory
+      if (tasksData) {
+        const taskIndex = tasksData.findIndex(task => task.id === taskId);
+        if (taskIndex !== -1 && tasksData[taskIndex].subtasks) {
+          const subtaskIndex = tasksData[taskIndex].subtasks.findIndex(subtask => subtask.id === subtaskId);
+          if (subtaskIndex !== -1) {
+            tasksData[taskIndex].subtasks[subtaskIndex].status = newStatus;
+            tasksData[taskIndex].subtasks[subtaskIndex].completed = newStatus === 'completed';
+            console.log('Updated subtask status in memory:', tasksData[taskIndex].subtasks[subtaskIndex]);
+            
+            // Re-render the tasks table to show updated status
+            reSortAndRenderTasks();
+          }
+        }
+      }
     });
 
     // Function to re-sort and re-render tasks based on current sorting logic
@@ -4047,6 +4078,11 @@ if (projectDetails && projectDetails.id) {
           }
         }
         
+        // Dispatch custom event for real-time updates
+        window.dispatchEvent(new CustomEvent('subtaskStatusUpdated', {
+          detail: { subtaskId, taskId, newStatus: status }
+        }));
+        
         // Show success notification
         showNotification('Subtask status updated successfully!', 'success');
         
@@ -4062,8 +4098,8 @@ if (projectDetails && projectDetails.id) {
       try {
         console.log('🔄 updateTaskStatus called:', { taskId, status });
         
-        // Make API call to update task status
-        const response = await fetch(`/api/admin/tasks/${taskId}`, {
+        // Make API call to update task status using regular user endpoint
+        const response = await fetch(`/api/tasks/${taskId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
