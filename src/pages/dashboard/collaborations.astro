@@ -125,15 +125,17 @@ const groupedTeams = Array.from(teamsByClient.values()).sort((a, b) =>
         <h1 class="text-2xl font-bold text-gray-900">Collaborations</h1>
         <p class="text-gray-600">View and manage your collaborative teams</p>
       </div>
-      <button
-        id="startCollabBtn"
-        class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors duration-200"
-      >
-        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-        </svg>
-        Start A Collab
-      </button>
+      {currentUser.role !== 'user' && (
+        <button
+          id="startCollabBtn"
+          class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors duration-200"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+          </svg>
+          Start A Collab
+        </button>
+      )}
     </div>
 
     {error ? (
@@ -246,16 +248,18 @@ const groupedTeams = Array.from(teamsByClient.values()).sort((a, b) =>
                                 </svg>
                                 View
                               </a>
-                              <button 
-                                data-team-id={team.id}
-                                data-team-name={team.name}
-                                class="delete-collaboration-btn inline-flex items-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
-                              >
-                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                </svg>
-                                Delete
-                              </button>
+                              {currentUser.role !== 'user' && (
+                                <button 
+                                  data-team-id={team.id}
+                                  data-team-name={team.name}
+                                  class="delete-collaboration-btn inline-flex items-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+                                >
+                                  <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                  </svg>
+                                  Delete
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -387,8 +391,8 @@ const groupedTeams = Array.from(teamsByClient.values()).sort((a, b) =>
       loadProjects();
       loadUsers();
 
-      // Modal open/close functionality
-      if (startCollabBtn) {
+      // Modal open/close functionality (only for non-user roles)
+      if (startCollabBtn && currentUser.role !== 'user') {
         startCollabBtn.addEventListener('click', () => {
           startCollabModal.classList.remove('hidden');
           loadProjects();
@@ -450,8 +454,8 @@ const groupedTeams = Array.from(teamsByClient.values()).sort((a, b) =>
         }
       });
 
-      // Form submission
-      if (startCollabForm) {
+      // Form submission (only for non-user roles)
+      if (startCollabForm && currentUser.role !== 'user') {
         startCollabForm.addEventListener('submit', async (e) => {
           e.preventDefault();
           await createCollaboration();
@@ -740,9 +744,10 @@ const groupedTeams = Array.from(teamsByClient.values()).sort((a, b) =>
         renderMembers();
       }
 
-      // Handle Delete Collaboration button clicks
-      const deleteButtons = document.querySelectorAll('.delete-collaboration-btn');
-      deleteButtons.forEach(button => {
+      // Handle Delete Collaboration button clicks (only for non-user roles)
+      if (currentUser.role !== 'user') {
+        const deleteButtons = document.querySelectorAll('.delete-collaboration-btn');
+        deleteButtons.forEach(button => {
         button.addEventListener('click', async function(e) {
           e.preventDefault();
           
@@ -798,7 +803,8 @@ const groupedTeams = Array.from(teamsByClient.values()).sort((a, b) =>
             target.disabled = false;
           }
         });
-      });
+        });
+      }
     });
   </script>
 </DashboardLayout>
