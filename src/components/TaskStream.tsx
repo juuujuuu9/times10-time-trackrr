@@ -668,14 +668,18 @@ const TaskStream: React.FC<TaskStreamProps> = ({
 
   // Handle subtask status update
   const handleSubtaskStatusUpdate = async (subtaskId: string, status: string) => {
+    console.log('🔄 TaskStream handleSubtaskStatusUpdate called:', { subtaskId, status });
+    
     try {
       // Find the discussion that contains this subtask
       const discussionWithSubtask = posts.find(post => 
         post.subtasks && post.subtasks.some(subtask => subtask.id === subtaskId)
       );
 
+      console.log('🔍 Found discussion with subtask:', { discussionWithSubtask: !!discussionWithSubtask, discussionId: discussionWithSubtask?.id });
+
       if (!discussionWithSubtask) {
-        console.error('Discussion with subtask not found');
+        console.error('❌ Discussion with subtask not found');
         return;
       }
 
@@ -683,6 +687,13 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       const updatedSubtasks = discussionWithSubtask.subtasks?.map(subtask => 
         subtask.id === subtaskId ? { ...subtask, status: status as 'pending' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled' } : subtask
       ) || [];
+
+      console.log('📞 Making API call to update subtask status:', {
+        url: `/api/collaborations/${collaborationId}/discussions/${discussionWithSubtask.id}`,
+        collaborationId,
+        discussionId: discussionWithSubtask.id,
+        updatedSubtasks: updatedSubtasks.length
+      });
 
       // Update the discussion in the database
       const response = await fetch(`/api/collaborations/${collaborationId}/discussions/${discussionWithSubtask.id}`, {
@@ -698,7 +709,9 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         }),
       });
 
+      console.log('📞 API response status:', response.status);
       const data = await response.json();
+      console.log('📞 API response data:', data);
       
       if (data.success) {
         // Update the local state
@@ -717,7 +730,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         
         addNotification('success', 'Subtask status updated successfully');
       } else {
-        console.error('Failed to update subtask status:', data);
+        console.error('❌ Failed to update subtask status:', data);
         addNotification('error', 'Failed to update subtask status');
       }
     } catch (error) {

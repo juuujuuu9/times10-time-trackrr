@@ -1,0 +1,87 @@
+---
+// This page handles logout by calling the API and redirecting
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logging out...</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #f9fafb;
+    }
+    .logout-container {
+      text-align: center;
+      padding: 2rem;
+    }
+    .spinner {
+      border: 3px solid #f3f4f6;
+      border-top: 3px solid #3b82f6;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="logout-container">
+    <div class="spinner"></div>
+    <h2>Logging out...</h2>
+    <p>Please wait while we sign you out.</p>
+  </div>
+
+  <script>
+    async function performLogout() {
+      try {
+        // Clear any timer state from localStorage
+        const userId = localStorage.getItem('currentUserId');
+        if (userId) {
+          const timerStateKey = `timerState_${userId}`;
+          localStorage.removeItem(timerStateKey);
+        }
+
+        // Call logout API
+        const response = await fetch('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'include'
+        });
+
+        console.log('Logout response:', response.status);
+
+        if (response.ok) {
+          console.log('Logout successful, redirecting to login...');
+          // Clear any remaining localStorage data
+          localStorage.clear();
+          // Redirect to home page
+          window.location.replace('/');
+        } else {
+          console.error('Logout failed:', response.status);
+          // Still redirect to login even if logout API fails
+          window.location.replace('/');
+        }
+      } catch (error) {
+        console.error('Logout error:', error);
+        // Redirect to login even if there's an error
+        window.location.replace('/');
+      }
+    }
+
+    // Perform logout immediately when page loads
+    document.addEventListener('DOMContentLoaded', performLogout);
+  </script>
+</body>
+</html>

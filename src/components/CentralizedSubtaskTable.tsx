@@ -198,7 +198,12 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
   };
 
   const handleStatusUpdate = async (subtaskId: string, newStatus: string) => {
-    if (!onStatusUpdate) return;
+    console.log('🔄 CentralizedSubtaskTable handleStatusUpdate called:', { subtaskId, newStatus, hasOnStatusUpdate: !!onStatusUpdate });
+    
+    if (!onStatusUpdate) {
+      console.error('❌ onStatusUpdate callback not provided');
+      return;
+    }
     
     try {
       await onStatusUpdate(subtaskId, newStatus);

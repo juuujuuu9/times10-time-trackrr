@@ -201,21 +201,10 @@ export const PUT: APIRoute = async (context) => {
       });
     }
 
-    // Only the author can edit their own discussion
-    if (discussion.userId !== currentUser.id) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Only the author can edit this discussion'
-      }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
     const body = await context.request.json().catch(() => ({}));
     const { content, subtaskData } = body;
 
-    // Handle subtask completion updates
+    // Handle subtask completion updates - allow any team member to update subtasks
     if (subtaskData) {
       // Update subtask data in the discussion
       await db
@@ -231,6 +220,17 @@ export const PUT: APIRoute = async (context) => {
         message: 'Subtask completion updated successfully'
       }), {
         status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Only the author can edit the discussion content (not subtasks)
+    if (discussion.userId !== currentUser.id) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Only the author can edit this discussion'
+      }), {
+        status: 403,
         headers: { 'Content-Type': 'application/json' }
       });
     }

@@ -182,6 +182,7 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
     try {
       // If onStatusChange callback is provided, use it (for subtasks)
       if (onStatusChange) {
+        console.log('📞 Using onStatusChange callback for subtask status update:', { taskId, newStatus });
         await onStatusChange(newStatus);
         
         // Dispatch custom event for real-time updates
