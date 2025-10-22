@@ -1616,7 +1616,7 @@ export default function Timer() {
           <div 
             className="text-[2.5rem] text-black"
             style={{ 
-              fontFamily: 'RadiolandTest, monospace',
+              fontFamily: '"Istok Web", system-ui, sans-serif',
               fontWeight: 'bold',
               fontStyle: 'normal'
             }}
@@ -2275,7 +2275,7 @@ export default function Timer() {
         <div 
           className="text-[3rem] text-center mb-6 text-black"
           style={{ 
-            fontFamily: 'RadiolandTest, monospace',
+            fontFamily: '"Istok Web", system-ui, sans-serif',
             fontWeight: 'bold',
             fontStyle: 'normal',
             marginTop: '3rem'

@@ -220,7 +220,7 @@ export default function TaskTimer({ taskId, projectId, taskName, projectName, cu
             <div 
               className="text-2xl text-black"
               style={{ 
-                fontFamily: 'RadiolandTest, monospace',
+                fontFamily: '"Istok Web", system-ui, sans-serif',
                 fontWeight: 'bold',
                 fontStyle: 'normal'
               }}

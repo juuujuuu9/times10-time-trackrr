@@ -487,7 +487,7 @@ export default function AdminTimer() {
       {/* Timer Display */}
       <div className="text-center mb-3">
         <div 
-          className="text-2xl font-mono font-bold text-gray-900"
+          className="text-2xl font-bold text-gray-900"
           style={{ 
             fontFamily: '"Istok Web", system-ui, sans-serif',
             fontWeight: 'bold'

@@ -118,6 +118,28 @@ div[class*="text-[4.5rem]"][class*="font-radioland"] {
   font-family: 'Radioland', monospace !important;
 }
 
+/* Timer counter font overrides - ensure all timer displays use Istok Web */
+div[style*="fontFamily"][style*="RadiolandTest"],
+div[style*="fontFamily"][style*="Radioland"],
+div[style*="fontFamily"][style*="VT323"] {
+  font-family: 'Istok Web', system-ui, sans-serif !important;
+}
+
+/* Specific overrides for timer displays with inline styles */
+div[style*="fontFamily: 'RadiolandTest"],
+div[style*="fontFamily: 'Radioland"],
+div[style*="fontFamily: 'VT323"] {
+  font-family: 'Istok Web', system-ui, sans-serif !important;
+}
+
+/* Override any timer display elements */
+div.text-\[2\.5rem\],
+div.text-\[3rem\],
+div.text-\[4\.5rem\],
+div.text-2xl {
+  font-family: 'Istok Web', system-ui, sans-serif !important;
+}
+
 
 
 /* Reset heading margins */
