@@ -470,6 +470,10 @@ const user = await requireAuth('/')(Astro) as any;
   
   // Show dashboard content after a brief delay to prevent flash
   document.addEventListener('DOMContentLoaded', () => {
+    // Mobile optimization: reduce delay for faster loading
+    const isMobile = window.innerWidth <= 768;
+    const delay = isMobile ? 50 : 100;
+    
     setTimeout(() => {
       const loadingState = document.getElementById('loadingState');
       const dashboardContent = document.getElementById('dashboardContent');
@@ -478,7 +482,7 @@ const user = await requireAuth('/')(Astro) as any;
         loadingState.classList.add('hidden');
         dashboardContent.classList.remove('hidden');
       }
-    }, 100); // Brief delay to ensure smooth transition
+    }, delay);
   });
 
   // Get current user ID from session
@@ -3502,45 +3506,56 @@ const user = await requireAuth('/')(Astro) as any;
 
     // Function to initialize Flatpickr date pickers
     function initializeFlatpickr() {
-      const dateInputs = document.querySelectorAll('.date-input');
+      const dateInputs = document.querySelectorAll('.date-input:not([data-flatpickr-initialized])');
+      
+      if (dateInputs.length === 0) {
+        return; // No new inputs to initialize
+      }
       
       dateInputs.forEach((input: Element) => {
         const dateInput = input as HTMLInputElement;
         const entryId = dateInput.getAttribute('data-entry-id');
         const currentDate = dateInput.getAttribute('data-current-date');
         
-        if (!dateInput || dateInput.hasAttribute('data-flatpickr-initialized')) {
-          return;
+        if (!dateInput || !entryId) {
+          return; // Skip inputs without proper data
         }
         
-        // Initialize Flatpickr
-        console.log('🔧 DASHBOARD: Initializing Flatpickr for entry:', entryId, 'currentDate:', currentDate);
-        const flatpickrInstance = flatpickr(dateInput, {
-          dateFormat: 'm/d/Y',
-          defaultDate: currentDate ? new Date(currentDate + 'T00:00:00') : new Date(),
-          allowInput: true,
-          clickOpens: true,
-          static: true,
-          monthSelectorType: 'static',
-          onChange: function(selectedDates, dateStr, instance) {
-            console.log('🔧 DASHBOARD: Flatpickr onChange triggered:', { selectedDates, dateStr, entryId });
-            if (selectedDates.length > 0) {
-              const selectedDate = selectedDates[0];
-              const isoDate = selectedDate.toISOString().split('T')[0];
-              console.log('🔧 DASHBOARD: Calling saveDateChange with:', { isoDate, entryId });
-              dateInput.setAttribute('data-current-date', isoDate);
-              
-              // Manually trigger the save logic instead of blur event
-              // to avoid conflicts with the existing blur handler
-              if (entryId) {
-                saveDateChange(dateInput, entryId!, isoDate);
+        // Initialize Flatpickr with proper error handling
+        try {
+          console.log('🔧 DASHBOARD: Initializing Flatpickr for entry:', entryId, 'currentDate:', currentDate);
+          
+          const flatpickrInstance = flatpickr(dateInput, {
+            dateFormat: 'm/d/Y',
+            defaultDate: currentDate ? new Date(currentDate + 'T00:00:00') : new Date(),
+            allowInput: true,
+            clickOpens: true,
+            static: true,
+            monthSelectorType: 'static',
+            onChange: function(selectedDates, dateStr, instance) {
+              console.log('🔧 DASHBOARD: Flatpickr onChange triggered:', { selectedDates, dateStr, entryId });
+              if (selectedDates.length > 0) {
+                const selectedDate = selectedDates[0];
+                const isoDate = selectedDate.toISOString().split('T')[0];
+                console.log('🔧 DASHBOARD: Calling saveDateChange with:', { isoDate, entryId });
+                dateInput.setAttribute('data-current-date', isoDate);
+                
+                // Manually trigger the save logic instead of blur event
+                // to avoid conflicts with the existing blur handler
+                if (entryId) {
+                  saveDateChange(dateInput, entryId!, isoDate);
+                }
               }
             }
-          }
-        });
-        
-        // Mark as initialized
-        dateInput.setAttribute('data-flatpickr-initialized', 'true');
+          });
+          
+          // Mark as initialized
+          dateInput.setAttribute('data-flatpickr-initialized', 'true');
+        } catch (error) {
+          console.error('🔧 DASHBOARD: Error initializing Flatpickr for entry:', entryId, error);
+          // Still mark as initialized to prevent retry loops
+          dateInput.setAttribute('data-flatpickr-initialized', 'true');
+        }
       });
     }
 
@@ -3551,44 +3566,64 @@ const user = await requireAuth('/')(Astro) as any;
     handleNotesInputChange();
     initializeFlatpickr();
 
-      // Re-setup after data reload using a MutationObserver
-  const observer = new MutationObserver(function(mutations) {
-    mutations.forEach(function(mutation) {
-      if (mutation.type === 'childList') {
-        console.log('MutationObserver: DOM changed, re-attaching event listeners');
-        // Check if time inputs were added
-        const timeInputs = document.querySelectorAll('.time-input');
-        if (timeInputs.length > 0) {
-          console.log('MutationObserver: Re-attaching time input handlers');
-          handleTimeInputChange();
+      // Re-setup after data reload using a MutationObserver with proper guards
+      let isProcessing = false;
+      const observer = new MutationObserver(function(mutations) {
+        // Prevent infinite loops by checking if we're already processing
+        if (isProcessing) return;
+        
+        // Only process if there are actual new nodes added
+        const hasNewNodes = mutations.some(mutation => 
+          mutation.type === 'childList' && mutation.addedNodes.length > 0
+        );
+        
+        if (!hasNewNodes) return;
+        
+        isProcessing = true;
+        
+        try {
+          console.log('MutationObserver: DOM changed, re-attaching event listeners');
+          
+          // Check if time inputs were added (only new ones without listeners)
+          const timeInputs = document.querySelectorAll('.time-input:not([data-listeners-attached])');
+          if (timeInputs.length > 0) {
+            console.log('MutationObserver: Re-attaching time input handlers');
+            handleTimeInputChange();
+          }
+          
+          // Check if duration inputs were added (only new ones without listeners)
+          const durationInputs = document.querySelectorAll('.duration-input:not([data-listeners-attached])');
+          if (durationInputs.length > 0) {
+            console.log('MutationObserver: Re-attaching duration input handlers');
+            handleDurationInputChange();
+          }
+          
+          // Check if date inputs were added (only new ones without Flatpickr)
+          const dateInputs = document.querySelectorAll('.date-input:not([data-flatpickr-initialized])');
+          if (dateInputs.length > 0) {
+            console.log('MutationObserver: Re-attaching date input handlers');
+            handleDateInputChange();
+            initializeFlatpickr();
+          }
+          
+          // Check if notes inputs were added (only new ones without listeners)
+          const notesInputs = document.querySelectorAll('.notes-input:not([data-listeners-attached])');
+          if (notesInputs.length > 0) {
+            console.log('MutationObserver: Re-attaching notes input handlers');
+            handleNotesInputChange();
+          }
+        } finally {
+          // Reset processing flag after a short delay to prevent rapid re-processing
+          setTimeout(() => {
+            isProcessing = false;
+          }, 100);
         }
-        // Check if duration inputs were added
-        const durationInputs = document.querySelectorAll('.duration-input');
-        if (durationInputs.length > 0) {
-          console.log('MutationObserver: Re-attaching duration input handlers');
-          handleDurationInputChange();
-        }
-        // Check if date inputs were added
-        const dateInputs = document.querySelectorAll('.date-input');
-        if (dateInputs.length > 0) {
-          console.log('MutationObserver: Re-attaching date input handlers');
-          handleDateInputChange();
-          initializeFlatpickr();
-        }
-        // Check if notes inputs were added
-        const notesInputs = document.querySelectorAll('.notes-input');
-        if (notesInputs.length > 0) {
-          console.log('MutationObserver: Re-attaching notes input handlers');
-          handleNotesInputChange();
-        }
-      }
-    });
-  });
+      });
 
-  // Start observing the recent entries container
-  const recentEntriesContainer = document.getElementById('recentEntries');
-  if (recentEntriesContainer) {
-    observer.observe(recentEntriesContainer, { childList: true, subtree: true });
-  }
+      // Start observing the recent entries container
+      const recentEntriesContainer = document.getElementById('recentEntries');
+      if (recentEntriesContainer) {
+        observer.observe(recentEntriesContainer, { childList: true, subtree: true });
+      }
   });
 </script> 
