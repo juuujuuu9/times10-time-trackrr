@@ -50,10 +50,10 @@ const isCollaborationsPage = Astro.url.pathname.includes('/collaborations');
                   : currentUser?.role === 'developer'
                   ? 'bg-red-600 text-white'
                   : currentUser?.role === 'team_manager'
-                  ? 'bg-green-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'bg-gray-100 text-gray-800'
               }`}>
-                {currentUser?.role === 'admin' ? 'Admin' : currentUser?.role === 'developer' ? 'Developer' : currentUser?.role === 'team_manager' ? 'Team Manager' : 'Team Member'}
+                {currentUser?.role === 'admin' ? 'Admin' : currentUser?.role === 'developer' ? 'Developer' : currentUser?.role === 'team_manager' ? 'Collab Lead' : 'Team Member'}
               </span>
               
               <!-- Notification Bell Icon -->
@@ -146,10 +146,10 @@ const isCollaborationsPage = Astro.url.pathname.includes('/collaborations');
                       : currentUser?.role === 'developer'
                       ? 'bg-red-600 text-white'
                       : currentUser?.role === 'team_manager'
-                      ? 'bg-green-600 text-white'
+                      ? 'bg-red-600 text-white'
                       : 'bg-gray-100 text-gray-800'
                   }`}>
-                    {currentUser?.role === 'admin' ? 'Admin' : currentUser?.role === 'developer' ? 'Developer' : currentUser?.role === 'team_manager' ? 'Team Manager' : 'Team Member'}
+                    {currentUser?.role === 'admin' ? 'Admin' : currentUser?.role === 'developer' ? 'Developer' : currentUser?.role === 'team_manager' ? 'Collab Lead' : 'Team Member'}
                   </span>
                 </div>
 
