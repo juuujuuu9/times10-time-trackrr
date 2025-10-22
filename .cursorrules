@@ -69,7 +69,15 @@ This file defines how Cursor should interpret, enforce, and adapt to this projec
 **Severity:** Warning
 **Applies to:** All code
 
-### RULE-005: Security Requirements
+### RULE-005: UI Design Standards
+- **NO BLUE BUTTONS**: Use `bg-gray-600` for prominent buttons, not blue
+- **NO HOVER SCALE EFFECTS**: Never use `hover:scale-105` or similar transform effects
+- Keep hover effects simple: color changes only (`hover:bg-gray-700`)
+- Avoid `transform` and `scale` classes in hover states
+**Severity:** Error
+**Applies to:** All UI components and buttons
+
+### RULE-006: Security Requirements
 - No secrets in client-side code
 - Use parameterized queries only (no string concatenation)
 - Sanitize user-generated content
@@ -77,7 +85,7 @@ This file defines how Cursor should interpret, enforce, and adapt to this projec
 **Severity:** Error
 **Applies to:** All security-sensitive code
 
-### RULE-006: Performance Guidelines
+### RULE-007: Performance Guidelines
 - Optimize images before commit
 - Limit client-side hydration (`client:load` sparingly)
 - Lazy load heavy components
@@ -85,7 +93,7 @@ This file defines how Cursor should interpret, enforce, and adapt to this projec
 **Severity:** Warning
 **Applies to:** Performance-critical code
 
-### RULE-007: Accessibility Standards
+### RULE-008: Accessibility Standards
 - Enforce keyboard navigation support
 - Include ARIA attributes where semantic HTML insufficient
 - Test focus management in interactive components
@@ -93,7 +101,7 @@ This file defines how Cursor should interpret, enforce, and adapt to this projec
 **Severity:** Error
 **Applies to:** All user-facing code
 
-### RULE-008: Testing Requirements
+### RULE-009: Testing Requirements
 - Write tests for behavior, not implementation
 - Avoid brittle tests that break with refactoring
 - Test critical user flows
@@ -101,7 +109,7 @@ This file defines how Cursor should interpret, enforce, and adapt to this projec
 **Severity:** Warning
 **Applies to:** All feature development
 
-### RULE-009: Documentation Standards
+### RULE-010: Documentation Standards
 - Document complex business logic
 - Include "why" explanations for non-obvious decisions
 - Keep README files current
@@ -109,7 +117,7 @@ This file defines how Cursor should interpret, enforce, and adapt to this projec
 **Severity:** Warning
 **Applies to:** All code and features
 
-### RULE-010: Deployment Safety
+### RULE-011: Deployment Safety
 - Use conventional commits (feat:, fix:, docs:, etc.)
 - Include "Rule Impact: RULE-###" in PR descriptions when relevant
 - Test in staging before production

@@ -72,7 +72,7 @@ export const User = z.object({
   id: UserId,
   email: z.string().email(),
   name: z.string(),
-  role: z.enum(['admin', 'user']),
+  role: z.enum(['admin', 'developer', 'team_manager', 'user']),
   status: z.enum(['active', 'inactive', 'pending']),
   payRate: z.number().nonnegative().default(0),
   createdAt: z.string().datetime(),

@@ -33,7 +33,14 @@ export const GET: APIRoute = async (context) => {
 
     // Get collaboration details
     const collaboration = await db.query.teams.findFirst({
-      where: eq(teams.id, collaborationId)
+      where: eq(teams.id, collaborationId),
+      with: {
+        members: {
+          with: {
+            user: true
+          }
+        }
+      }
     });
 
     if (!collaboration) {
@@ -42,6 +49,18 @@ export const GET: APIRoute = async (context) => {
         error: 'Collaboration not found'
       }), {
         status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Check if current user is a member of this collaboration
+    const isMember = collaboration.members.some((member: any) => member.user.id === currentUser.id);
+    if (!isMember) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Access denied'
+      }), {
+        status: 403,
         headers: { 'Content-Type': 'application/json' }
       });
     }
@@ -100,9 +119,16 @@ export const PUT: APIRoute = async (context) => {
     const body = await context.request.json().catch(() => ({}));
     ({ projectId, description, teamMembers = [] } = body);
 
-    // Check if collaboration exists
+    // Check if collaboration exists and user is a member
     const existingCollaboration = await db.query.teams.findFirst({
-      where: eq(teams.id, collaborationId)
+      where: eq(teams.id, collaborationId),
+      with: {
+        members: {
+          with: {
+            user: true
+          }
+        }
+      }
     });
 
     if (!existingCollaboration) {
@@ -111,6 +137,18 @@ export const PUT: APIRoute = async (context) => {
         error: 'Collaboration not found'
       }), {
         status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Check if current user is a member of this collaboration
+    const isMember = existingCollaboration.members.some((member: any) => member.user.id === currentUser.id);
+    if (!isMember) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Access denied'
+      }), {
+        status: 403,
         headers: { 'Content-Type': 'application/json' }
       });
     }

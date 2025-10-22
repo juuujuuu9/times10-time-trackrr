@@ -86,6 +86,17 @@ export const POST: APIRoute = async (context) => {
       });
     }
 
+    // Check if user can create collaborations
+    if (!['admin', 'developer', 'team_manager'].includes(currentUser.role)) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Insufficient permissions to create collaborations'
+      }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     const body = await context.request.json().catch((error) => {
       console.error('Error parsing request body:', error);
       return {};
@@ -149,6 +160,7 @@ export const POST: APIRoute = async (context) => {
     const newCollaboration = await db.insert(teams).values({
       name: project.name,
       description: description?.trim() || null,
+      projectId: projectId, // Include projectId in the initial insert
       createdBy: currentUser.id,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -157,13 +169,21 @@ export const POST: APIRoute = async (context) => {
 
     const collaborationId = newCollaboration[0].id;
 
-    // Add the creator as a collaboration lead
+    // Add the creator as a collaboration lead (team manager is automatically included)
+    console.log('Adding creator as team lead:', {
+      teamId: collaborationId,
+      userId: currentUser.id,
+      role: 'lead'
+    });
+    
     await db.insert(teamMembersTable).values({
       teamId: collaborationId,
       userId: currentUser.id,
       role: 'lead',
       joinedAt: new Date()
     });
+    
+    console.log('Creator added as team lead successfully');
 
     // Add team members if provided (exclude the creator since they're already added as lead)
     if (teamMembers && teamMembers.length > 0) {
@@ -191,10 +211,7 @@ export const POST: APIRoute = async (context) => {
       console.log('No team members to add');
     }
 
-    // Update team with project assignment (direct relationship)
-    await db.update(teams).set({
-      projectId: projectId
-    }).where(eq(teams.id, collaborationId));
+    // Project assignment is already included in the initial insert
 
     return new Response(JSON.stringify({
       success: true,

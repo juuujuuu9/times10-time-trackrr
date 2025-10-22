@@ -75,6 +75,13 @@ if (!collaboration) {
   return Astro.redirect('/dashboard/collaborations');
 }
 
+// Check if current user is a member of this collaboration
+const isMember = collaboration.members.some((member: any) => member.user.id === currentUser.id);
+if (!isMember) {
+  console.log('⚠️  DEBUG: User is not a member of this collaboration, redirecting to collaborations list');
+  return Astro.redirect('/dashboard/collaborations');
+}
+
 // Get project details if this collaboration is linked to a project
 let projectDetails: any = null;
 let projectTasks: any[] = [];

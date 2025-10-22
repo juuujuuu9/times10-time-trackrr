@@ -72,6 +72,17 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
+    // Check if user can create teams
+    if (!['admin', 'developer', 'team_manager'].includes(currentUser.role)) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Insufficient permissions to create teams'
+      }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     const body = await request.json().catch(() => ({}));
     const { name, description } = body;
 

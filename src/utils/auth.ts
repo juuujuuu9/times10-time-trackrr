@@ -39,6 +39,7 @@ export function isTokenExpired(expiresAt: Date): boolean {
 export const ROLES = {
   ADMIN: 'admin',
   DEVELOPER: 'developer',
+  TEAM_MANAGER: 'team_manager',
   USER: 'user',
 } as const;
 
@@ -48,6 +49,7 @@ export function hasPermission(userRole: UserRole, requiredRole: UserRole): boole
   const roleHierarchy = {
     [ROLES.ADMIN]: 3,
     [ROLES.DEVELOPER]: 3, // Same level as admin but with financial restrictions
+    [ROLES.TEAM_MANAGER]: 2, // Can manage teams and collaborative features
     [ROLES.USER]: 1,
   };
   
@@ -60,4 +62,12 @@ export function canAccessAdmin(userRole: UserRole): boolean {
 
 export function canViewFinancialData(userRole: UserRole): boolean {
   return userRole === ROLES.ADMIN;
+}
+
+export function canManageTeams(userRole: UserRole): boolean {
+  return userRole === ROLES.ADMIN || userRole === ROLES.DEVELOPER || userRole === ROLES.TEAM_MANAGER;
+}
+
+export function canCreateTeams(userRole: UserRole): boolean {
+  return userRole === ROLES.ADMIN || userRole === ROLES.DEVELOPER || userRole === ROLES.TEAM_MANAGER;
 }

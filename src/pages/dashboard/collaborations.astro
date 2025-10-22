@@ -1,6 +1,13 @@
 ---
 import DashboardLayout from '../../layouts/DashboardLayout.astro';
 import { neon } from '@neondatabase/serverless';
+import { getSessionUser } from '../../utils/session';
+
+// Get current user
+const currentUser = await getSessionUser(Astro);
+if (!currentUser) {
+  return Astro.redirect('/login');
+}
 
 // Get database connection
 const databaseUrl = import.meta.env.DATABASE_URL || process.env.DATABASE_URL;
@@ -30,7 +37,7 @@ try {
     throw new Error('Teams table does not exist. Please run database migrations.');
   }
 
-  // Get all teams with their associated clients using direct SQL
+  // Get teams where current user is a member with their associated clients using direct SQL
   teamsData = await sql`
     SELECT 
       t.id, 
@@ -46,23 +53,29 @@ try {
     FROM teams t
     LEFT JOIN projects p ON t.project_id = p.id
     LEFT JOIN clients c ON p.client_id = c.id
+    INNER JOIN team_members tm ON t.id = tm.team_id
     WHERE t.archived = false 
+      AND tm.user_id = ${currentUser.id}
     ORDER BY c.name ASC, t.created_at DESC
   `;
 
-  // Get member counts for each team using direct SQL
+  // Get member counts for teams where current user is a member using direct SQL
   memberCounts = await sql`
-    SELECT team_id, COUNT(user_id) as member_count
-    FROM team_members 
-    GROUP BY team_id
+    SELECT tm.team_id, COUNT(tm2.user_id) as member_count
+    FROM team_members tm
+    INNER JOIN team_members tm2 ON tm.team_id = tm2.team_id
+    WHERE tm.user_id = ${currentUser.id}
+    GROUP BY tm.team_id
   `;
 
-  // Get team creators using direct SQL
+  // Get team creators for teams where current user is a member using direct SQL
   teamCreators = await sql`
     SELECT t.id as team_id, u.name as creator_name, u.email as creator_email
     FROM teams t
     INNER JOIN users u ON t.created_by = u.id
+    INNER JOIN team_members tm ON t.id = tm.team_id
     WHERE t.archived = false
+      AND tm.user_id = ${currentUser.id}
   `;
 
 } catch (err) {
@@ -112,6 +125,15 @@ const groupedTeams = Array.from(teamsByClient.values()).sort((a, b) =>
         <h1 class="text-2xl font-bold text-gray-900">Collaborations</h1>
         <p class="text-gray-600">View and manage your collaborative teams</p>
       </div>
+      <button
+        id="startCollabBtn"
+        class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors duration-200"
+      >
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+        </svg>
+        Start A Collab
+      </button>
     </div>
 
     {error ? (
@@ -238,4 +260,441 @@ const groupedTeams = Array.from(teamsByClient.values()).sort((a, b) =>
       </div>
     )}
   </div>
+
+  <!-- Start Collaboration Modal -->
+  <div id="startCollabModal" class="fixed inset-0 bg-black/50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] border border-gray-300 flex flex-col">
+        <div class="px-6 rounded-t-lg py-4 bg-gray-50 border-b border-gray-200 flex-shrink-0">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900">Start Collaboration</h3>
+            <button
+              class="close-collab-modal-btn text-gray-400 hover:text-gray-600 transition-colors p-1"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="flex-1 overflow-y-auto">
+          <form id="startCollabForm" class="p-6">
+            <!-- Project Selection -->
+            <div class="mb-6">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Project</label>
+              <div class="relative">
+                <button
+                  type="button"
+                  id="projectDropdownBtn"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-gray-900 text-left flex items-center justify-between"
+                >
+                  <span id="selectedProjectText" class="text-gray-500">Select a project...</span>
+                  <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </button>
+                <div id="projectDropdown" class="hidden absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  <div id="projectList" class="py-1">
+                    <!-- Projects will be loaded here -->
+                  </div>
+                </div>
+              </div>
+              <p class="text-sm text-gray-500 mt-1">This collaboration will be automatically linked to the selected project.</p>
+              <input type="hidden" id="selectedProjectId" />
+            </div>
+
+            <!-- Team Members Selection -->
+            <div class="mb-6">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Team Members</label>
+              <div class="relative">
+                <input
+                  type="text"
+                  id="memberSearch"
+                  placeholder="Search team members..."
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-gray-900"
+                />
+                <div id="memberDropdown" class="hidden absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  <div id="memberList" class="py-1">
+                    <!-- Team members will be loaded here -->
+                  </div>
+                </div>
+              </div>
+              <div id="selectedMembers" class="mt-3 flex flex-wrap gap-2">
+                <!-- Selected members will be displayed here -->
+              </div>
+              <p class="text-sm text-gray-500 mt-1">Select team members who will participate in this collaboration. You can add more members later.</p>
+            </div>
+
+            <!-- Description (Optional) -->
+            <div class="mb-6">
+              <label for="collabDescription" class="block text-sm font-medium text-gray-700 mb-2">Description (Optional)</label>
+              <textarea
+                id="collabDescription"
+                rows="3"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-gray-900"
+                placeholder="Describe the purpose of this collaboration..."
+              ></textarea>
+            </div>
+
+            <div class="flex justify-end space-x-3">
+              <button
+                type="button"
+                class="close-collab-modal-btn px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-md transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors font-medium"
+              >
+                Create Collaboration
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script define:vars={{ currentUser }}>
+    // Collaboration modal functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      const startCollabBtn = document.getElementById('startCollabBtn');
+      const startCollabModal = document.getElementById('startCollabModal');
+      const closeModalBtns = document.querySelectorAll('.close-collab-modal-btn');
+      const projectDropdownBtn = document.getElementById('projectDropdownBtn');
+      const projectDropdown = document.getElementById('projectDropdown');
+      const memberSearch = document.getElementById('memberSearch');
+      const memberDropdown = document.getElementById('memberDropdown');
+      const startCollabForm = document.getElementById('startCollabForm');
+      
+      let projects = [];
+      let allUsers = [];
+      let selectedMembers = [];
+      let selectedProject = null;
+
+      // Load projects and users on page load
+      loadProjects();
+      loadUsers();
+
+      // Modal open/close functionality
+      if (startCollabBtn) {
+        startCollabBtn.addEventListener('click', () => {
+          startCollabModal.classList.remove('hidden');
+          loadProjects();
+          loadUsers();
+        });
+      }
+
+      closeModalBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          startCollabModal.classList.add('hidden');
+          resetForm();
+        });
+      });
+
+      // Close modal when clicking outside
+      startCollabModal.addEventListener('click', (e) => {
+        if (e.target === startCollabModal) {
+          startCollabModal.classList.add('hidden');
+          resetForm();
+        }
+      });
+
+      // Project dropdown functionality
+      if (projectDropdownBtn) {
+        projectDropdownBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          projectDropdown.classList.toggle('hidden');
+        });
+      }
+
+      // Close project dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!projectDropdownBtn.contains(e.target) && !projectDropdown.contains(e.target)) {
+          projectDropdown.classList.add('hidden');
+        }
+      });
+
+      // Member search functionality
+      if (memberSearch) {
+        memberSearch.addEventListener('input', (e) => {
+          const searchTerm = e.target.value.toLowerCase();
+          filterMembers(searchTerm);
+          memberDropdown.classList.remove('hidden');
+        });
+
+        memberSearch.addEventListener('focus', () => {
+          memberDropdown.classList.remove('hidden');
+        });
+
+        memberSearch.addEventListener('click', () => {
+          memberDropdown.classList.remove('hidden');
+        });
+      }
+
+      // Close member dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!memberSearch.contains(e.target) && !memberDropdown.contains(e.target)) {
+          memberDropdown.classList.add('hidden');
+        }
+      });
+
+      // Form submission
+      if (startCollabForm) {
+        startCollabForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          await createCollaboration();
+        });
+      }
+
+      // Load projects
+      async function loadProjects() {
+        try {
+          const response = await fetch('/api/projects');
+          if (response.ok) {
+            const data = await response.json();
+            projects = data.data || [];
+            renderProjects();
+          }
+        } catch (error) {
+          console.error('Error loading projects:', error);
+        }
+      }
+
+      // Load users
+      async function loadUsers() {
+        try {
+          const response = await fetch('/api/users');
+          if (response.ok) {
+            const data = await response.json();
+            allUsers = data.data || [];
+            renderMembers();
+          }
+        } catch (error) {
+          console.error('Error loading users:', error);
+        }
+      }
+
+      // Render projects in dropdown
+      function renderProjects() {
+        const projectList = document.getElementById('projectList');
+        if (!projectList) return;
+
+        projectList.innerHTML = projects.map(project => `
+          <button
+            type="button"
+            class="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+            data-project-id="${project.id}"
+            data-project-name="${project.name}"
+            data-client-name="${project.clientName || 'No Client'}"
+          >
+            <div class="font-medium text-gray-900">${project.name}</div>
+            <div class="text-sm text-gray-500">${project.clientName || 'No Client'}</div>
+          </button>
+        `).join('');
+
+        // Add click handlers to project buttons
+        projectList.querySelectorAll('button').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const projectId = btn.getAttribute('data-project-id');
+            const projectName = btn.getAttribute('data-project-name');
+            const clientName = btn.getAttribute('data-client-name');
+            
+            selectedProject = { id: parseInt(projectId), name: projectName, clientName };
+            document.getElementById('selectedProjectText').textContent = `${clientName} - ${projectName}`;
+            document.getElementById('selectedProjectId').value = projectId;
+            projectDropdown.classList.add('hidden');
+          });
+        });
+      }
+
+      // Render members in dropdown
+      function renderMembers() {
+        const memberList = document.getElementById('memberList');
+        if (!memberList) return;
+
+        memberList.innerHTML = allUsers
+          .filter(user => user.id !== currentUser.id) // Exclude current user
+          .map(user => `
+            <button
+              type="button"
+              class="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none flex items-center"
+              data-user-id="${user.id}"
+              data-user-name="${user.name}"
+              data-user-email="${user.email}"
+              data-user-role="${user.role}"
+            >
+              <input type="checkbox" class="mr-3 rounded border-gray-300 text-blue-600 focus:ring-blue-500" ${selectedMembers.includes(user.id) ? 'checked' : ''}>
+              <div>
+                <div class="font-medium text-gray-900">${user.name}</div>
+                <div class="text-sm text-gray-500">${user.email}</div>
+              </div>
+            </button>
+          `).join('');
+
+        // Add click handlers to member buttons
+        memberList.querySelectorAll('button').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const userId = parseInt(btn.getAttribute('data-user-id'));
+            const userName = btn.getAttribute('data-user-name');
+            const userEmail = btn.getAttribute('data-user-email');
+            const userRole = btn.getAttribute('data-user-role');
+            const checkbox = btn.querySelector('input[type="checkbox"]');
+            
+            if (selectedMembers.includes(userId)) {
+              // Remove member
+              selectedMembers = selectedMembers.filter(id => id !== userId);
+              checkbox.checked = false;
+            } else {
+              // Add member
+              selectedMembers.push(userId);
+              checkbox.checked = true;
+            }
+            
+            // Clear search input and repopulate dropdown
+            memberSearch.value = '';
+            renderMembers();
+            updateSelectedMembersDisplay();
+          });
+        });
+      }
+
+      // Filter members based on search
+      function filterMembers(searchTerm) {
+        const memberList = document.getElementById('memberList');
+        if (!memberList) return;
+
+        const buttons = memberList.querySelectorAll('button');
+        buttons.forEach(btn => {
+          const userName = btn.getAttribute('data-user-name').toLowerCase();
+          const userEmail = btn.getAttribute('data-user-email').toLowerCase();
+          const matches = userName.includes(searchTerm) || userEmail.includes(searchTerm);
+          btn.style.display = matches ? 'flex' : 'none';
+        });
+      }
+
+      // Update selected members display
+      function updateSelectedMembersDisplay() {
+        const selectedMembersContainer = document.getElementById('selectedMembers');
+        if (!selectedMembersContainer) return;
+
+        selectedMembersContainer.innerHTML = selectedMembers.map(userId => {
+          const user = allUsers.find(u => u.id === userId);
+          if (!user) return '';
+          
+          return `
+            <div class="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm">
+              <span class="mr-2">${user.name}</span>
+              <button
+                type="button"
+                class="ml-1 text-gray-600 hover:text-gray-800"
+                onclick="removeMember(${userId})"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Remove member function (global for onclick)
+      window.removeMember = function(userId) {
+        selectedMembers = selectedMembers.filter(id => id !== userId);
+        updateSelectedMembersDisplay();
+        renderMembers(); // Re-render to update checkboxes
+      };
+
+      // Create collaboration
+      async function createCollaboration() {
+        if (!selectedProject) {
+          alert('Please select a project');
+          return;
+        }
+
+        if (selectedMembers.length === 0) {
+          alert('Please select at least one team member');
+          return;
+        }
+
+        const description = document.getElementById('collabDescription').value;
+
+        const payload = {
+          projectId: selectedProject.id,
+          description: description,
+          teamMembers: selectedMembers
+        };
+
+        console.log('Creating collaboration with payload:', payload);
+
+        try {
+          const response = await fetch('/api/collaborations', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+          });
+
+          console.log('API response status:', response.status);
+
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+              // Dispatch notification event
+              const notificationEvent = new CustomEvent('collaborationCreated', {
+                detail: {
+                  collaborationName: selectedProject.name,
+                  teamMembers: selectedMembers.length,
+                  projectName: selectedProject.name
+                }
+              });
+              document.dispatchEvent(notificationEvent);
+              
+              // Show success message
+              alert('Collaboration created successfully!');
+              
+              // Close modal and reset form
+              startCollabModal.classList.add('hidden');
+              resetForm();
+              
+              // Reload page to show new collaboration
+              window.location.reload();
+            } else {
+              alert('Error creating collaboration: ' + (result.error || 'Unknown error'));
+            }
+          } else {
+            const errorText = await response.text();
+            console.error('API error response:', errorText);
+            let errorData;
+            try {
+              errorData = JSON.parse(errorText);
+            } catch (e) {
+              errorData = { error: errorText };
+            }
+            alert('Error creating collaboration: ' + (errorData.error || errorData.details || 'Unknown error'));
+          }
+        } catch (error) {
+          console.error('Error creating collaboration:', error);
+          alert('Error creating collaboration: ' + error.message);
+        }
+      }
+
+      // Reset form
+      function resetForm() {
+        selectedProject = null;
+        selectedMembers = [];
+        document.getElementById('selectedProjectText').textContent = 'Select a project...';
+        document.getElementById('selectedProjectId').value = '';
+        document.getElementById('collabDescription').value = '';
+        document.getElementById('memberSearch').value = '';
+        updateSelectedMembersDisplay();
+        renderMembers();
+      }
+    });
+  </script>
 </DashboardLayout>

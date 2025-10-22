@@ -1,0 +1,44 @@
+{
+  "summary": {
+    "timestamp": "2025-10-22T19:04:32.797Z",
+    "local_tables": 21,
+    "prod_tables": 20,
+    "critical_differences": 1,
+    "warnings": 0
+  },
+  "differences": {
+    "tables": {
+      "missing_in_prod": [
+        "subtasks"
+      ],
+      "missing_in_local": [],
+      "different_columns": {},
+      "different_constraints": {},
+      "different_indexes": {}
+    },
+    "sequences": {
+      "missing_in_prod": [
+        "subtasks_id_seq"
+      ],
+      "missing_in_local": [],
+      "different": {}
+    },
+    "functions": {
+      "missing_in_prod": [],
+      "missing_in_local": [],
+      "different": {}
+    },
+    "triggers": {
+      "missing_in_prod": [],
+      "missing_in_local": [],
+      "different": {}
+    }
+  },
+  "recommendations": [
+    {
+      "type": "CRITICAL",
+      "message": "Tables missing in production: subtasks",
+      "action": "Run database migrations to create missing tables"
+    }
+  ]
+}

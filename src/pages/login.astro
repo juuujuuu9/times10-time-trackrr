@@ -148,8 +148,10 @@ if (user) {
         // Redirect based on user role
         if (data.user.role === 'admin') {
           window.location.href = '/admin';
-        } else if (data.user.role === 'manager') {
-          window.location.href = '/manager';
+        } else if (data.user.role === 'developer') {
+          window.location.href = '/admin';
+        } else if (data.user.role === 'team_manager') {
+          window.location.href = '/team-manager';
         } else {
           window.location.href = '/dashboard';
         }

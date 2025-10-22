@@ -9,8 +9,10 @@ const user = await getSessionUser(Astro);
 if (user) {
   if (user.role === 'admin') {
     return Astro.redirect('/admin');
-  } else if (user.role === 'manager') {
-    return Astro.redirect('/manager');
+  } else if (user.role === 'developer') {
+    return Astro.redirect('/admin');
+  } else if (user.role === 'team_manager') {
+    return Astro.redirect('/team-manager');
   } else {
     return Astro.redirect('/dashboard');
   }
