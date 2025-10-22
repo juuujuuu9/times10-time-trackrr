@@ -448,13 +448,33 @@ const groupedTeams = Array.from(teamsByClient.values()).sort((a, b) =>
         });
       }
 
-      // Load projects
+      // Load projects (excluding those with existing collaborations)
       async function loadProjects() {
         try {
-          const response = await fetch('/api/projects');
-          if (response.ok) {
-            const data = await response.json();
-            projects = data.data || [];
+          // Fetch both projects and collaborations in parallel
+          const [projectsResponse, collaborationsResponse] = await Promise.all([
+            fetch('/api/projects'),
+            fetch('/api/collaborations')
+          ]);
+
+          if (projectsResponse.ok && collaborationsResponse.ok) {
+            const projectsData = await projectsResponse.json();
+            const collaborationsData = await collaborationsResponse.json();
+            
+            const allProjects = projectsData.data || [];
+            const existingCollaborations = collaborationsData.data || [];
+            
+            // Get project IDs that already have collaborations
+            const projectsWithCollaborations = new Set(
+              existingCollaborations.map(collab => collab.projectId).filter(id => id)
+            );
+            
+            // Filter out projects that already have collaborations
+            projects = allProjects.filter(project => !projectsWithCollaborations.has(project.id));
+            
+            console.log('Available projects for collaboration:', projects.length);
+            console.log('Projects with existing collaborations:', projectsWithCollaborations.size);
+            
             renderProjects();
           }
         } catch (error) {
@@ -480,6 +500,16 @@ const groupedTeams = Array.from(teamsByClient.values()).sort((a, b) =>
       function renderProjects() {
         const projectList = document.getElementById('projectList');
         if (!projectList) return;
+
+        if (projects.length === 0) {
+          projectList.innerHTML = `
+            <div class="px-4 py-3 text-center text-gray-500">
+              <p class="text-sm">No projects available for collaboration</p>
+              <p class="text-xs text-gray-400 mt-1">All projects already have active collaborations</p>
+            </div>
+          `;
+          return;
+        }
 
         projectList.innerHTML = projects.map(project => `
           <button
@@ -612,7 +642,11 @@ const groupedTeams = Array.from(teamsByClient.values()).sort((a, b) =>
       // Create collaboration
       async function createCollaboration() {
         if (!selectedProject) {
-          alert('Please select a project');
+          if (projects.length === 0) {
+            alert('No projects are available for collaboration. All projects already have active collaborations.');
+          } else {
+            alert('Please select a project');
+          }
           return;
         }
 
