@@ -222,7 +222,54 @@ This file defines how Cursor should interpret, enforce, and adapt to this projec
 **Severity:** Error
 **Applies to:** Production deployments
 
-### RULE-021: Frontend Terminology
+### RULE-021: API Endpoint Structure
+- **CRITICAL**: Always use Astro context pattern: `async (context)` not `async ({ request, cookies })`
+- Use `context.request.json()` not `request.json()`
+- Use `getSessionUser(context)` not `getSessionUser({ cookies } as any)`
+- All API endpoints must follow consistent error response format
+- Include detailed logging for database operations
+- Test API endpoints with proper context structure
+**Severity:** Error
+**Applies to:** All API endpoint development
+
+### RULE-022: Permission System Patterns
+- **CRITICAL**: Create collaboration-specific endpoints instead of reusing admin endpoints
+- Check collaboration membership, not just admin roles for collaboration features
+- Use direct database queries for team members instead of complex relationship queries
+- Validate team membership with explicit user ID checks
+- Include detailed debugging for permission validation
+- Never assume relationship queries work - test with direct queries
+**Severity:** Error
+**Applies to:** All permission-sensitive features
+
+### RULE-023: Database Relationship Queries
+- **CRITICAL**: When relationship queries fail, use direct table queries as fallback
+- Always test relationship queries with actual data
+- Include debugging logs for relationship query results
+- Prefer explicit joins over complex relationship queries for critical operations
+- Validate that relationship queries return expected data structure
+**Severity:** Warning
+**Applies to:** All database operations using relationships
+
+### RULE-024: Error Handling and Debugging
+- **CRITICAL**: Include detailed error logging with error names, messages, and stack traces
+- Log database operation inputs and outputs for debugging
+- Provide specific error messages that help identify the root cause
+- Include debugging information in error responses (in development)
+- Test error scenarios to ensure proper error handling
+**Severity:** Error
+**Applies to:** All error handling code
+
+### RULE-025: Task Assignment Validation
+- **CRITICAL**: Validate that users are team members before task assignment
+- Use direct team member queries, not relationship queries
+- Include detailed logging for team member validation
+- Check both direct team association and project association for tasks
+- Provide clear error messages for invalid user assignments
+**Severity:** Error
+**Applies to:** All task assignment operations
+
+### RULE-026: Frontend Terminology
 - **CRITICAL**: Never use "Discussions" in frontend text - use "Insights" instead
 - All user-facing text must use "Insights" for collaborative content
 - API responses and error messages must use "Insights" terminology
@@ -230,6 +277,16 @@ This file defines how Cursor should interpret, enforce, and adapt to this projec
 - Database schema names can remain as `taskDiscussions` for consistency
 **Severity:** Error
 **Applies to:** All frontend development and API responses
+
+### RULE-027: Collaboration System Architecture
+- **CRITICAL**: Tasks created in collaborations may not have direct teamId association
+- Use project-based association for task validation when teamId is null
+- Create collaboration-specific API endpoints for all collaboration operations
+- Never reuse admin endpoints for collaboration features
+- Include both teamId and projectId validation for task operations
+- Test task operations with both direct team association and project association
+**Severity:** Error
+**Applies to:** All collaboration-related features
 
 ### RULE-022: Database Synchronization Workflow
 - **CRITICAL**: Always run `node comprehensive-db-audit.js` before making schema changes

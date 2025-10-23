@@ -456,14 +456,14 @@ if (projectDetails && projectDetails.id) {
               </button>
               
               <!-- User Search Dropdown -->
-              <div id="userSearchDropdown" class="absolute left-0 top-6 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-[99999] hidden" style="position: fixed; z-index: 99999;">
-                <div class="p-4">
-                  <div class="relative mb-3">
+              <div id="userSearchDropdown" class="fixed bg-white border border-gray-200 rounded-lg shadow-lg z-[9999] max-w-80 hidden z-100" style="z-index: 9999;">
+                <div class="p-3 border-b border-gray-200">
+                  <div class="relative">
                     <input 
                       type="text" 
                       id="userSearchInput" 
                       placeholder="Search users by name or email..."
-                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <div id="userSearchSpinner" class="absolute right-3 top-1/2 transform -translate-y-1/2 hidden">
                       <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -472,9 +472,17 @@ if (projectDetails && projectDetails.id) {
                       </svg>
                     </div>
                   </div>
-                  <div id="userSearchResults" class="max-h-60 overflow-y-auto space-y-2">
-                    <div class="text-center py-4 text-gray-500">Loading users...</div>
-                  </div>
+                </div>
+                <div id="userSearchResults" class="max-h-32 overflow-y-auto">
+                  <div class="text-center py-4 text-gray-500 text-sm">Loading users...</div>
+                </div>
+                <div class="p-2 border-t border-gray-200">
+                  <button
+                    id="userSearchCancel"
+                    class="w-full px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                  >
+                    Cancel
+                  </button>
                 </div>
               </div>
             </div>
@@ -807,12 +815,12 @@ if (projectDetails && projectDetails.id) {
                         </button>
                         
                         <!-- Task User Search Dropdown -->
-                        <div class="task-user-search-dropdown absolute left-0 top-6 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-[99999] hidden" style="position: fixed; z-index: 99999;">
-                          <div class="p-4">
-                            <div class="relative mb-3">
+                        <div class="task-user-search-dropdown fixed bg-white border border-gray-200 rounded-lg shadow-lg z-[9999] max-w-80 hidden" style="z-index: 9999;">
+                          <div class="p-3 border-b border-gray-200">
+                            <div class="relative">
                               <input 
                                 type="text" 
-                                class="task-user-search-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                class="task-user-search-input w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder="Search users by name or email..."
                               />
                               <div class="task-user-search-spinner absolute right-3 top-1/2 transform -translate-y-1/2 hidden">
@@ -822,9 +830,16 @@ if (projectDetails && projectDetails.id) {
                                 </svg>
                               </div>
                             </div>
-                            <div class="task-user-search-results max-h-60 overflow-y-auto space-y-2">
-                              <div class="text-center py-4 text-gray-500">Loading users...</div>
-                            </div>
+                          </div>
+                          <div class="task-user-search-results max-h-32 overflow-y-auto">
+                            <div class="text-center py-4 text-gray-500 text-sm">Loading users...</div>
+                          </div>
+                          <div class="p-2 border-t border-gray-200">
+                            <button
+                              class="task-user-search-cancel w-full px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                            >
+                              Cancel
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -2278,7 +2293,7 @@ if (projectDetails && projectDetails.id) {
 
         // Assign users to the task if any were selected
         if (selectedAssignees.length > 0) {
-          const assignResponse = await fetch('/api/admin/tasks/assign', {
+          const assignResponse = await fetch(`/api/collaborations/${collaborationId}/tasks/assign`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -2402,6 +2417,17 @@ if (projectDetails && projectDetails.id) {
       });
     }
     
+    // Cancel button handler
+    const userSearchCancel = document.getElementById('userSearchCancel');
+    if (userSearchCancel && userSearchDropdown) {
+      userSearchCancel.addEventListener('click', function(e) {
+        e.stopPropagation();
+        userSearchDropdown.classList.add('hidden');
+        userSearchInput.value = '';
+        userSearchResults.innerHTML = '<div class="text-center py-4 text-gray-500 text-sm">Loading users...</div>';
+      });
+    }
+    
     // Close dropdown when clicking outside
     document.addEventListener('click', function(e) {
       if (userSearchDropdown && !userSearchDropdown.contains(e.target) && !addUserBtn.contains(e.target)) {
@@ -2506,7 +2532,7 @@ if (projectDetails && projectDetails.id) {
       userSearchResults.innerHTML = '';
       
       if (users.length === 0) {
-        userSearchResults.innerHTML = '<div class="text-center py-4 text-gray-500">No users found</div>';
+        userSearchResults.innerHTML = '<div class="text-center py-4 text-gray-500 text-sm">No users found</div>';
         return;
       }
 
@@ -2519,28 +2545,17 @@ if (projectDetails && projectDetails.id) {
           return;
         }
         
-        const userItem = document.createElement('div');
-        userItem.className = 'flex items-center justify-between p-3 rounded-md cursor-pointer transition-colors duration-200 bg-white hover:bg-blue-50 hover:border-blue-200 border border-transparent';
+        const userItem = document.createElement('button');
+        userItem.className = 'w-full px-3 py-2 text-left hover:bg-gray-100 text-sm border-b border-gray-100 last:border-b-0 transition-colors';
+        userItem.type = 'button';
         
         userItem.setAttribute('data-user-id', user.id);
         userItem.setAttribute('data-user-name', user.name);
         userItem.setAttribute('data-user-email', user.email);
         
         userItem.innerHTML = `
-          <div class="flex items-center space-x-3">
-            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 relative group" title="${user.name}">
-              ${user.name.charAt(0).toUpperCase()}
-              <!-- Tooltip -->
-              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                ${user.name}
-                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-              </div>
-            </div>
-            <div>
-              <div class="text-sm font-medium text-gray-900">${user.name}</div>
-              <div class="text-xs text-gray-500">${user.email}</div>
-            </div>
-          </div>
+          <div class="font-medium text-gray-900">${user.name}</div>
+          <div class="text-xs text-gray-500">${user.email}</div>
         `;
         userSearchResults.appendChild(userItem);
       });
@@ -2627,6 +2642,21 @@ if (projectDetails && projectDetails.id) {
       }
     });
     
+    // Task user search cancel button handlers
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('task-user-search-cancel')) {
+        e.stopPropagation();
+        const dropdown = e.target.closest('.task-user-search-dropdown');
+        if (dropdown) {
+          dropdown.classList.add('hidden');
+          const input = dropdown.querySelector('.task-user-search-input');
+          const results = dropdown.querySelector('.task-user-search-results');
+          if (input) input.value = '';
+          if (results) results.innerHTML = '<div class="text-center py-4 text-gray-500 text-sm">Loading users...</div>';
+        }
+      }
+    });
+    
     // Handle expand/collapse for collaboration members
     document.addEventListener('click', function(e) {
       if (e.target.classList.contains('expand-collaboration-members') || e.target.closest('.expand-collaboration-members')) {
@@ -2699,7 +2729,7 @@ if (projectDetails && projectDetails.id) {
       
       try {
         // Add user to collaboration team via API
-        const response = await fetch(`/api/admin/teams/${collaborationId}/members`, {
+        const response = await fetch(`/api/collaborations/${collaborationId}/members`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -2779,7 +2809,7 @@ if (projectDetails && projectDetails.id) {
       results.innerHTML = '';
       
       if (users.length === 0) {
-        results.innerHTML = '<div class="text-center py-4 text-gray-500">No users found</div>';
+        results.innerHTML = '<div class="text-center py-4 text-gray-500 text-sm">No users found</div>';
         return;
       }
 
@@ -2793,8 +2823,9 @@ if (projectDetails && projectDetails.id) {
           return;
         }
         
-        const userItem = document.createElement('div');
-        userItem.className = 'flex items-center justify-between p-3 rounded-md cursor-pointer transition-colors duration-200 bg-white hover:bg-blue-50 hover:border-blue-200 border border-transparent';
+        const userItem = document.createElement('button');
+        userItem.className = 'w-full px-3 py-2 text-left hover:bg-gray-100 text-sm border-b border-gray-100 last:border-b-0 transition-colors';
+        userItem.type = 'button';
         
         userItem.setAttribute('data-task-user-id', user.id);
         userItem.setAttribute('data-task-id', taskId);
@@ -2802,20 +2833,8 @@ if (projectDetails && projectDetails.id) {
         userItem.setAttribute('data-user-email', user.email);
         
         userItem.innerHTML = `
-          <div class="flex items-center space-x-3">
-            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 relative group" title="${user.name}">
-              ${user.name.charAt(0).toUpperCase()}
-              <!-- Tooltip -->
-              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                ${user.name}
-                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-              </div>
-            </div>
-            <div>
-              <div class="text-sm font-medium text-gray-900">${user.name}</div>
-              <div class="text-xs text-gray-500">${user.email}</div>
-            </div>
-          </div>
+          <div class="font-medium text-gray-900">${user.name}</div>
+          <div class="text-xs text-gray-500">${user.email}</div>
         `;
         results.appendChild(userItem);
       });
@@ -2839,7 +2858,7 @@ if (projectDetails && projectDetails.id) {
         const allUserIds = [...currentUserIds, parseInt(userId)];
         
         // Update task assignments via API (this replaces ALL assignments)
-        const response = await fetch('/api/admin/tasks/assign', {
+        const response = await fetch(`/api/collaborations/${collaborationId}/tasks/assign`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -3118,7 +3137,7 @@ if (projectDetails && projectDetails.id) {
               .map(member => member.id);
             
             // Update team members via API
-            const response = await fetch(`/api/admin/teams/${collaborationId}/members`, {
+            const response = await fetch(`/api/collaborations/${collaborationId}/members`, {
               method: 'PUT',
               headers: {
                 'Content-Type': 'application/json',
@@ -3156,13 +3175,14 @@ if (projectDetails && projectDetails.id) {
         async function() {
           try {
             // Use the new cascading removal API
-            const response = await fetch(`/api/admin/tasks/${taskId}/remove-assignment`, {
+            const response = await fetch(`/api/collaborations/${collaborationId}/tasks/remove-assignment`, {
               method: 'DELETE',
               headers: {
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
-                userId: parseInt(userId)
+                userId: parseInt(userId),
+                taskId: parseInt(taskId)
               })
             });
 
@@ -3356,7 +3376,7 @@ if (projectDetails && projectDetails.id) {
             .map(a => a.userId);
           
           // Update assignments via API (this replaces ALL assignments)
-          const response = await fetch('/api/admin/tasks/assign', {
+          const response = await fetch(`/api/collaborations/${collaborationId}/tasks/assign`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -3422,7 +3442,7 @@ if (projectDetails && projectDetails.id) {
         const updatedUserIds = currentEditAssignees.map(a => a.userId);
         
         // Update assignments via API
-        const response = await fetch('/api/admin/tasks/assign', {
+        const response = await fetch(`/api/collaborations/${collaborationId}/tasks/assign`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -4189,14 +4209,34 @@ if (projectDetails && projectDetails.id) {
   }
   
   /* Comprehensive dropdown clipping prevention */
-  .task-user-search-dropdown,
-  .userSearchDropdown,
   .subtask-user-assignment,
   .expanded-task-members,
   .expandedCollaborationMembers {
     position: fixed !important;
     z-index: 99999 !important;
     overflow: visible !important;
+  }
+  
+  /* User search dropdown specific styling */
+  #userSearchDropdown {
+    position: fixed !important;
+    z-index: 99999 !important;
+  }
+  
+  #userSearchResults {
+    max-height: 8rem !important; /* 128px - equivalent to max-h-32 */
+    overflow-y: auto !important;
+  }
+  
+  /* Task user search dropdown specific styling */
+  .task-user-search-dropdown {
+    position: fixed !important;
+    z-index: 99999 !important;
+  }
+  
+  .task-user-search-results {
+    max-height: 8rem !important; /* 128px - equivalent to max-h-32 */
+    overflow-y: auto !important;
   }
   
   /* Ensure all containers don't clip dropdowns */
