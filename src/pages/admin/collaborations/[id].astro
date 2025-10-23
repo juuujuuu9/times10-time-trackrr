@@ -447,14 +447,14 @@ if (projectDetails && projectDetails.id) {
               </button>
               
               <!-- User Search Dropdown -->
-              <div id="userSearchDropdown" class="absolute left-0 top-6 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-[99999] hidden" style="position: fixed; z-index: 99999;">
-                <div class="p-4">
-                  <div class="relative mb-3">
+              <div id="userSearchDropdown" class="fixed bg-white border border-gray-200 rounded-lg shadow-lg z-[9999] max-w-80 hidden" style="z-index: 9999;">
+                <div class="p-3 border-b border-gray-200">
+                  <div class="relative">
                     <input 
                       type="text" 
                       id="userSearchInput" 
                       placeholder="Search users by name or email..."
-                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <div id="userSearchSpinner" class="absolute right-3 top-1/2 transform -translate-y-1/2 hidden">
                       <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -463,9 +463,16 @@ if (projectDetails && projectDetails.id) {
                       </svg>
                     </div>
                   </div>
-                  <div id="userSearchResults" class="max-h-60 overflow-y-auto space-y-2">
-                    <div class="text-center py-4 text-gray-500">Loading users...</div>
-                  </div>
+                </div>
+                <div id="userSearchResults" class="max-h-32 overflow-y-auto">
+                  <div class="text-center py-4 text-gray-500 text-sm">Loading users...</div>
+                </div>
+                <div class="p-2 border-t border-gray-200">
+                  <button
+                    class="user-search-cancel w-full px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                  >
+                    Cancel
+                  </button>
                 </div>
               </div>
             </div>
@@ -773,12 +780,12 @@ if (projectDetails && projectDetails.id) {
                         </button>
                         
                         <!-- Task User Search Dropdown -->
-                        <div class="task-user-search-dropdown absolute left-0 top-6 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-[99999] hidden" style="position: fixed; z-index: 99999;">
-                          <div class="p-4">
-                            <div class="relative mb-3">
+                        <div class="task-user-search-dropdown fixed bg-white border border-gray-200 rounded-lg shadow-lg z-[9999] max-w-80 hidden" style="z-index: 9999;">
+                          <div class="p-3 border-b border-gray-200">
+                            <div class="relative">
                               <input 
                                 type="text" 
-                                class="task-user-search-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                class="task-user-search-input w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder="Search users by name or email..."
                               />
                               <div class="task-user-search-spinner absolute right-3 top-1/2 transform -translate-y-1/2 hidden">
@@ -788,9 +795,16 @@ if (projectDetails && projectDetails.id) {
                                 </svg>
                               </div>
                             </div>
-                            <div class="task-user-search-results max-h-60 overflow-y-auto space-y-2">
-                              <div class="text-center py-4 text-gray-500">Loading users...</div>
-                            </div>
+                          </div>
+                          <div class="task-user-search-results max-h-32 overflow-y-auto">
+                            <div class="text-center py-4 text-gray-500 text-sm">Loading users...</div>
+                          </div>
+                          <div class="p-2 border-t border-gray-200">
+                            <button
+                              class="task-user-search-cancel w-full px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                            >
+                              Cancel
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -2486,7 +2500,7 @@ if (projectDetails && projectDetails.id) {
         }
         
         const userItem = document.createElement('div');
-        userItem.className = 'flex items-center justify-between p-3 rounded-md cursor-pointer transition-colors duration-200 bg-white hover:bg-blue-50 hover:border-blue-200 border border-transparent';
+        userItem.className = 'flex items-center justify-between p-2 hover:bg-gray-50 cursor-pointer transition-colors duration-200';
         
         userItem.setAttribute('data-user-id', user.id);
         userItem.setAttribute('data-user-name', user.name);
@@ -2494,13 +2508,8 @@ if (projectDetails && projectDetails.id) {
         
         userItem.innerHTML = `
           <div class="flex items-center space-x-3">
-            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 relative group" title="${user.name}">
+            <div class="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700">
               ${user.name.charAt(0).toUpperCase()}
-              <!-- Tooltip -->
-              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                ${user.name}
-                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-              </div>
             </div>
             <div>
               <div class="text-sm font-medium text-gray-900">${user.name}</div>
@@ -2590,6 +2599,27 @@ if (projectDetails && projectDetails.id) {
         document.querySelectorAll('.subtask-user-assignment').forEach(dropdown => {
           dropdown.classList.add('hidden');
         });
+      }
+    });
+
+    // Handle cancel button clicks for task user search dropdowns
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('task-user-search-cancel')) {
+        e.stopPropagation();
+        const dropdown = e.target.closest('.task-user-search-dropdown');
+        if (dropdown) {
+          dropdown.classList.add('hidden');
+        }
+      }
+    });
+
+    // Handle cancel button clicks for main user search dropdown
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('user-search-cancel')) {
+        e.stopPropagation();
+        if (userSearchDropdown) {
+          userSearchDropdown.classList.add('hidden');
+        }
       }
     });
     
@@ -2760,7 +2790,7 @@ if (projectDetails && projectDetails.id) {
         }
         
         const userItem = document.createElement('div');
-        userItem.className = 'flex items-center justify-between p-3 rounded-md cursor-pointer transition-colors duration-200 bg-white hover:bg-blue-50 hover:border-blue-200 border border-transparent';
+        userItem.className = 'flex items-center justify-between p-2 hover:bg-gray-50 cursor-pointer transition-colors duration-200';
         
         userItem.setAttribute('data-task-user-id', user.id);
         userItem.setAttribute('data-task-id', taskId);
@@ -2769,13 +2799,8 @@ if (projectDetails && projectDetails.id) {
         
         userItem.innerHTML = `
           <div class="flex items-center space-x-3">
-            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 relative group" title="${user.name}">
+            <div class="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700">
               ${user.name.charAt(0).toUpperCase()}
-              <!-- Tooltip -->
-              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                ${user.name}
-                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-              </div>
             </div>
             <div>
               <div class="text-sm font-medium text-gray-900">${user.name}</div>
