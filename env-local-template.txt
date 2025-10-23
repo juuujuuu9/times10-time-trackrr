@@ -1,0 +1,87 @@
+# =============================================================================
+# TIMES10 TIME TRACKER - LOCAL DEVELOPMENT ENVIRONMENT
+# =============================================================================
+# This file contains local development environment variables.
+# DO NOT commit this file to git - it contains sensitive credentials.
+# =============================================================================
+
+# =============================================================================
+# DATABASE CONFIGURATION
+# =============================================================================
+# Database connection settings for local development
+# DATABASE_URL=postgresql://username:password@localhost:5432/times10_dev
+# DATABASE_HOST=localhost
+# DATABASE_PORT=5432
+# DATABASE_NAME=times10_dev
+# DATABASE_USER=your_db_user
+# DATABASE_PASSWORD=your_db_password
+
+# =============================================================================
+# BUNNY CDN CONFIGURATION
+# =============================================================================
+# File storage and CDN settings for uploaded files
+# Get these credentials from your Bunny CDN dashboard: https://bunny.net
+# 1. Go to "Storage" → Create/select storage zone
+# 2. Copy the Storage Zone Name and Password
+# 3. Your CDN URL is already configured: trackr-cloud-net.b-cdn.net
+
+# Storage Zone Name (from Bunny CDN dashboard)
+BUNNY_STORAGE_ZONE_NAME=your-storage-zone-name
+
+# Storage Zone Password (from Bunny CDN dashboard)
+BUNNY_STORAGE_ZONE_PASSWORD=your-storage-zone-password
+
+# Storage Zone Region (choose closest to your users)
+# Options: ny (New York), la (Los Angeles), sg (Singapore), 
+#          syd (Sydney), fra (Frankfurt), sao (São Paulo)
+BUNNY_STORAGE_ZONE_REGION=ny
+
+# CDN URL for file access (your existing Bunny CDN setup)
+BUNNY_CDN_URL=https://trackr-cloud-net.b-cdn.net
+
+# Enable debug logging for file operations (optional)
+BUNNY_DEBUG=true
+
+# =============================================================================
+# EMAIL CONFIGURATION
+# =============================================================================
+# Email service settings for notifications
+# SMTP_HOST=smtp.gmail.com
+# SMTP_PORT=587
+# SMTP_USER=your-email@gmail.com
+# SMTP_PASSWORD=your-app-password
+# FROM_EMAIL=noreply@times10.com
+# FROM_NAME=Times10 Time Tracker
+
+# =============================================================================
+# SESSION & AUTHENTICATION
+# =============================================================================
+# Session and authentication settings
+# SESSION_SECRET=your-super-secret-session-key-here
+# JWT_SECRET=your-jwt-secret-key-here
+# COOKIE_SECRET=your-cookie-secret-key-here
+
+# =============================================================================
+# APPLICATION SETTINGS
+# =============================================================================
+# General application configuration
+# NODE_ENV=development
+# PORT=4321
+# HOST=localhost
+# APP_URL=http://localhost:4321
+
+# =============================================================================
+# EXTERNAL SERVICES
+# =============================================================================
+# Third-party service configurations
+# GRAVATAR_ENABLED=true
+# SLACK_WEBHOOK_URL=your-slack-webhook-url
+# GOOGLE_ANALYTICS_ID=your-ga-id
+
+# =============================================================================
+# DEVELOPMENT TOOLS
+# =============================================================================
+# Development and debugging settings
+# DEBUG=true
+# LOG_LEVEL=debug
+# ENABLE_DEV_TOOLS=true

@@ -3,6 +3,7 @@ import { db } from '../../../../db';
 import { taskFiles, taskLinks, teams, teamMembers, users } from '../../../../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { getSessionUser } from '../../../../utils/session';
+import { uploadToBunnyCdn, deleteFromBunnyCdn } from '../../../../utils/bunnyCdn';
 
 // GET /api/collaborations/[id]/files - Get files and links for a collaboration
 export const GET: APIRoute = async (context) => {
@@ -169,39 +170,68 @@ export const POST: APIRoute = async (context) => {
         });
       }
 
-      // For production, we'll use a cloud storage solution or return a mock URL
-      // This is a temporary solution - in production you should use AWS S3, Cloudinary, etc.
-      const timestamp = Date.now();
-      const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-      
       // Get taskId from form data or use a default
       const taskIdParam = formData.get('taskId') as string;
       const taskId = taskIdParam ? parseInt(taskIdParam) : 1; // Default to 1 if not provided
       
-      // For now, create a mock file record that represents the upload
-      // In production, this would be replaced with actual cloud storage
-      const mockFileData = {
-        id: Date.now(),
-        name: file.name,
-        url: `/uploads/${fileName}`, // Mock URL - in production this would be a real cloud storage URL
-        size: file.size,
-        mimeType: file.type,
-        author: {
-          id: currentUser.id,
-          name: currentUser.name,
-          email: currentUser.email
-        },
-        createdAt: new Date()
-      };
+      // Upload file to Bunny CDN Storage
+      console.log('📁 Uploading file to Bunny CDN:', file.name, 'Size:', file.size);
+      
+      try {
+        const uploadResult = await uploadToBunnyCdn(
+          file, 
+          `collaborations/${collaborationId}/tasks/${taskId}`,
+          undefined // Let Bunny CDN generate a unique filename
+        );
 
-      return new Response(JSON.stringify({
-        success: true,
-        data: mockFileData,
-        message: 'File uploaded successfully'
-      }), {
-        status: 201,
-        headers: { 'Content-Type': 'application/json' }
-      });
+        if (!uploadResult.success) {
+          console.error('❌ Bunny CDN upload failed:', uploadResult.error);
+          return new Response(JSON.stringify({
+            success: false,
+            error: `File upload failed: ${uploadResult.error}`
+          }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        console.log('✅ File uploaded successfully to Bunny CDN:', uploadResult.url);
+
+        // Create file record in database
+        const fileRecord = {
+          id: Date.now(),
+          name: file.name,
+          url: uploadResult.url!, // Real Bunny CDN URL
+          path: uploadResult.path!, // Storage path for future operations
+          size: file.size,
+          mimeType: file.type,
+          author: {
+            id: currentUser.id,
+            name: currentUser.name,
+            email: currentUser.email
+          },
+          createdAt: new Date()
+        };
+
+        return new Response(JSON.stringify({
+          success: true,
+          data: fileRecord,
+          message: 'File uploaded successfully to Bunny CDN'
+        }), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+      } catch (uploadError) {
+        console.error('❌ Bunny CDN upload error:', uploadError);
+        return new Response(JSON.stringify({
+          success: false,
+          error: `File upload failed: ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}`
+        }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
 
     } else {
       // Handle JSON data (links or other data)
@@ -296,6 +326,115 @@ export const POST: APIRoute = async (context) => {
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to create file/link'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+};
+
+// DELETE /api/collaborations/[id]/files - Delete a file
+export const DELETE: APIRoute = async (context) => {
+  try {
+    const collaborationId = parseInt(context.params.id!);
+    
+    if (!collaborationId || isNaN(collaborationId)) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Invalid collaboration ID'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Check authentication
+    const currentUser = await getSessionUser(context);
+    if (!currentUser) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Check if user is member of the collaboration
+    const membership = await db.query.teamMembers.findFirst({
+      where: and(
+        eq(teamMembers.teamId, collaborationId),
+        eq(teamMembers.userId, currentUser.id)
+      )
+    });
+
+    if (!membership && currentUser.role !== 'admin' && currentUser.role !== 'developer') {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Access denied'
+      }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Get file path from query parameters
+    const url = new URL(context.request.url);
+    const filePath = url.searchParams.get('path');
+    
+    if (!filePath) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'File path is required'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Delete file from Bunny CDN Storage
+    console.log('🗑️ Deleting file from Bunny CDN:', filePath);
+    
+    try {
+      const deleteResult = await deleteFromBunnyCdn(filePath);
+
+      if (!deleteResult.success) {
+        console.error('❌ Bunny CDN delete failed:', deleteResult.error);
+        return new Response(JSON.stringify({
+          success: false,
+          error: `File deletion failed: ${deleteResult.error}`
+        }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      console.log('✅ File deleted successfully from Bunny CDN');
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'File deleted successfully'
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+    } catch (deleteError) {
+      console.error('❌ Bunny CDN delete error:', deleteError);
+      return new Response(JSON.stringify({
+        success: false,
+        error: `File deletion failed: ${deleteError instanceof Error ? deleteError.message : 'Unknown error'}`
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+  } catch (error) {
+    console.error('Error deleting file:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Failed to delete file'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
