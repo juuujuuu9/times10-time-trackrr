@@ -525,18 +525,45 @@ const groupedTeams = Array.from(teamsByClient.values()).sort((a, b) =>
           return;
         }
 
-        projectList.innerHTML = projects.map(project => `
-          <button
-            type="button"
-            class="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-            data-project-id="${project.id}"
-            data-project-name="${project.name}"
-            data-client-name="${project.clientName || 'No Client'}"
-          >
-            <div class="font-medium text-gray-900">${project.name}</div>
-            <div class="text-sm text-gray-500">${project.clientName || 'No Client'}</div>
-          </button>
-        `).join('');
+        // Group projects by client
+        const projectsByClient = {};
+        projects.forEach(project => {
+          const clientName = project.clientName || 'No Client';
+          if (!projectsByClient[clientName]) {
+            projectsByClient[clientName] = [];
+          }
+          projectsByClient[clientName].push(project);
+        });
+
+        // Sort clients alphabetically
+        const sortedClients = Object.keys(projectsByClient).sort();
+
+        let html = '';
+        sortedClients.forEach(clientName => {
+          // Add client header
+          html += `
+            <div class="px-4 py-2 bg-gray-50 border-b border-gray-200">
+              <div class="text-sm font-semibold text-gray-900 uppercase tracking-wide">${clientName}</div>
+            </div>
+          `;
+          
+          // Add projects under this client
+          projectsByClient[clientName].forEach(project => {
+            html += `
+              <button
+                type="button"
+                class="w-full text-left px-6 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none border-b border-gray-100"
+                data-project-id="${project.id}"
+                data-project-name="${project.name}"
+                data-client-name="${project.clientName || 'No Client'}"
+              >
+                <div class="text-sm text-gray-900">${project.name}</div>
+              </button>
+            `;
+          });
+        });
+
+        projectList.innerHTML = html;
 
         // Add click handlers to project buttons
         projectList.querySelectorAll('button').forEach(btn => {

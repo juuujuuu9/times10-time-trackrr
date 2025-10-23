@@ -1143,7 +1143,7 @@ if (projectDetails && projectDetails.id) {
               </svg>
             </div>
           </div>
-          <button id="searchUsers" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors duration-200">
+          <button id="searchUsers" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-md transition-colors duration-200">
             Search
           </button>
         </div>
@@ -1164,7 +1164,7 @@ if (projectDetails && projectDetails.id) {
         <button 
           type="button" 
           id="saveTeamChanges" 
-          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors duration-200"
+          class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-md transition-colors duration-200"
         >
           Save Changes
         </button>
@@ -1477,7 +1477,7 @@ if (projectDetails && projectDetails.id) {
           </button>
           <button 
             type="submit" 
-            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors duration-200"
+            class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-md transition-colors duration-200"
           >
             Create Task
           </button>
@@ -1511,6 +1511,9 @@ if (projectDetails && projectDetails.id) {
     createdAt: task.createdAt
   }))
 }}>
+  // Create mutable copy of team members data
+  let currentTeamMembers = [...teamMembersData];
+  
   // Notification system
   function showNotification(message, type = 'success', duration = 5000) {
     const container = document.getElementById('notificationContainer');
@@ -1742,7 +1745,7 @@ if (projectDetails && projectDetails.id) {
     function populateAssigneeList() {
       if (!assigneeList) return;
       assigneeList.innerHTML = '';
-      teamMembersData.forEach((member) => {
+      currentTeamMembers.forEach((member) => {
         const assigneeItem = document.createElement('div');
         assigneeItem.className = 'flex items-center space-x-3';
         assigneeItem.innerHTML = `
@@ -1775,7 +1778,7 @@ if (projectDetails && projectDetails.id) {
     function populateCurrentMembers() {
       if (!currentMembersList) return;
       currentMembersList.innerHTML = '';
-      teamMembersData.forEach((member) => {
+      currentTeamMembers.forEach((member) => {
         const memberItem = document.createElement('div');
         memberItem.className = 'flex items-center justify-between p-2 bg-gray-50 rounded-md';
         memberItem.innerHTML = `
@@ -1858,7 +1861,7 @@ if (projectDetails && projectDetails.id) {
 
       users.forEach(user => {
         // Check if user is already a team member
-        const isAlreadyMember = teamMembersData.some(member => member.id === user.id);
+        const isAlreadyMember = currentTeamMembers.some(member => member.id === user.id);
         
         const userItem = document.createElement('div');
         userItem.className = `flex items-center justify-between p-2 rounded-md cursor-pointer transition-colors duration-200 ${isAlreadyMember ? 'bg-gray-100 cursor-not-allowed' : 'bg-white hover:bg-blue-50 hover:border-blue-200 border border-transparent'}`;
@@ -2475,7 +2478,7 @@ if (projectDetails && projectDetails.id) {
 
       users.forEach(user => {
         // Check if user is already a team member
-        const isAlreadyMember = teamMembersData.some(member => member.id === user.id);
+        const isAlreadyMember = currentTeamMembers.some(member => member.id === user.id);
         
         // Skip users who are already members
         if (isAlreadyMember) {
@@ -2711,9 +2714,9 @@ if (projectDetails && projectDetails.id) {
         results.innerHTML = '<div class="text-center py-4 text-gray-500">Loading team members...</div>';
 
         // Use team members data instead of fetching all users
-        if (Array.isArray(teamMembersData) && teamMembersData.length > 0) {
+        if (Array.isArray(currentTeamMembers) && currentTeamMembers.length > 0) {
           // Transform the team members data to match the expected format
-          taskAllUsers = teamMembersData.map(member => ({
+          taskAllUsers = currentTeamMembers.map(member => ({
             id: member.id,
             name: member.name,
             email: member.email,
@@ -3076,7 +3079,7 @@ if (projectDetails && projectDetails.id) {
         async function() {
           try {
             // Get current team member IDs (excluding the one to remove)
-            const updatedMemberIds = teamMembersData
+            const updatedMemberIds = currentTeamMembers
               .filter(member => member.id !== parseInt(memberId))
               .map(member => member.id);
             
@@ -3263,7 +3266,7 @@ if (projectDetails && projectDetails.id) {
         role: 'member',
         joinedAt: new Date()
       };
-      teamMembersData.push(newMember);
+      currentTeamMembers.push(newMember);
       
       // Update UI
       populateCurrentMembers();
@@ -3278,7 +3281,7 @@ if (projectDetails && projectDetails.id) {
     }
 
     async function removeMemberFromTeam(memberId) {
-      const member = teamMembersData.find(m => m.id === parseInt(memberId));
+      const member = currentTeamMembers.find(m => m.id === parseInt(memberId));
       if (!member) return;
       
       const confirmed = await window.DialogueSystem.confirm(
@@ -3290,7 +3293,7 @@ if (projectDetails && projectDetails.id) {
       
       if (confirmed) {
         // Remove from team members data
-        teamMembersData = teamMembersData.filter(m => m.id !== parseInt(memberId));
+        currentTeamMembers = currentTeamMembers.filter(m => m.id !== parseInt(memberId));
         
         // Update UI
         populateCurrentMembers();
@@ -3427,7 +3430,7 @@ if (projectDetails && projectDetails.id) {
     saveTeamChanges.addEventListener('click', async function() {
       try {
         // Get current team member IDs
-        const currentMemberIds = teamMembersData.map(member => member.id);
+        const currentMemberIds = currentTeamMembers.map(member => member.id);
         
         // Update team members via API
         const response = await fetch(`/api/admin/teams/${collaborationId}/members`, {

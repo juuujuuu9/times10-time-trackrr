@@ -141,7 +141,7 @@ export const POST: APIRoute = async (context) => {
     // Check if collaboration already exists for this project
     const existingCollaboration = await db.query.teams.findFirst({
       where: and(
-        eq(teams.name, project.name),
+        eq(teams.projectId, projectId),
         eq(teams.archived, false)
       )
     });
