@@ -493,8 +493,8 @@ if (projectDetails && projectDetails.id) {
           </div>
           {projectDetails && (
             <div class="text-sm text-gray-600">
-              <p class="font-medium">{projectDetails.name}</p>
-              <p class="text-gray-500">{projectDetails.client?.name}</p>
+              {/* <p class="font-medium">{projectDetails.name}</p> */}
+              <p class="text-gray-500 uppercase leading-relaxed tracking-wide text-xs">{projectDetails.client?.name}</p>
             </div>
           )}
         </div>

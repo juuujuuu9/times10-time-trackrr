@@ -212,7 +212,7 @@ export default function TaskTimer({ taskId, projectId, taskName, projectName, cu
         {/* Timer Display or Switch Message */}
         <div className="flex-shrink-0">
           {isTrackingDifferentProject ? (
-            <div className="text-sm text-gray-500 text-center">
+            <div className="text-sm text-gray-500 text-right pl-4">
               <div className="font-medium">Switch to {projectName}</div>
               <div className="text-xs">Click to track time here</div>
             </div>
