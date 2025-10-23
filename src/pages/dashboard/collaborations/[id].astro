@@ -289,10 +289,11 @@ let totalTimeTracked = "0h";
 let dueDate = "No due date";
 
 if (projectDetails && projectDetails.id) {
-  // Get time entries for this project with same filters as dashboard
+  // Get time entries for this project filtered by current user only
   const projectTimeEntries = await db.query.timeEntries.findMany({
     where: and(
       eq(timeEntries.projectId, projectDetails.id),
+      eq(timeEntries.userId, currentUser.id), // Filter by current user
       // Exclude ongoing timers (same as dashboard)
       sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
     ),
@@ -329,9 +330,10 @@ if (projectDetails && projectDetails.id) {
     totalTimeTracked = `${remainingMinutes}m`;
   }
   
-  console.log('Time tracking calculation:', {
+  console.log('Current user time tracking calculation:', {
     projectId: projectDetails.id,
     projectName: projectDetails.name,
+    userId: currentUser.id,
     totalEntries: projectTimeEntries.length,
     totalSeconds,
     totalHours,
@@ -489,7 +491,7 @@ if (projectDetails && projectDetails.id) {
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
-            {totalTimeTracked} tracked
+            <span data-time-tracked>{totalTimeTracked} tracked by you</span>
           </div>
           {projectDetails && (
             <div class="text-sm text-gray-600">
@@ -4159,6 +4161,83 @@ if (projectDetails && projectDetails.id) {
         showNotification('Failed to update task status: ' + errorMessage, 'error');
       }
     };
+  });
+
+  // Real-time time tracking updates
+  let timeUpdateInterval = null;
+  let isTimerRunning = false;
+
+  // Function to update time display
+  const updateTimeDisplay = async () => {
+    try {
+      const response = await fetch(`/api/time-entries/project/${projectDetailsData.id}/user-time`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.totalTime) {
+          const timeElement = document.querySelector('[data-time-tracked]');
+          if (timeElement) {
+            timeElement.textContent = `${data.totalTime} tracked by you`;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error updating time display:', error);
+    }
+  };
+
+  // Listen for timer events
+  document.addEventListener('timerStarted', () => {
+    console.log('🕐 Timer started, enabling real-time updates');
+    isTimerRunning = true;
+    if (!timeUpdateInterval) {
+      timeUpdateInterval = window.setInterval(updateTimeDisplay, 1000); // Update every second
+    }
+  });
+
+  document.addEventListener('timerStopped', () => {
+    console.log('🕐 Timer stopped, updating time display');
+    isTimerRunning = false;
+    updateTimeDisplay(); // Final update
+    if (timeUpdateInterval) {
+      clearInterval(timeUpdateInterval);
+      timeUpdateInterval = null;
+    }
+  });
+
+  document.addEventListener('timerPaused', () => {
+    console.log('🕐 Timer paused, updating time display');
+    updateTimeDisplay(); // Update when paused
+  });
+
+  document.addEventListener('timerResumed', () => {
+    console.log('🕐 Timer resumed, enabling real-time updates');
+    isTimerRunning = true;
+    if (!timeUpdateInterval) {
+      timeUpdateInterval = window.setInterval(updateTimeDisplay, 1000);
+    }
+  });
+
+  // Listen for new time entries
+  document.addEventListener('timeEntryAdded', () => {
+    console.log('⏱️ New time entry added, updating display');
+    updateTimeDisplay();
+  });
+
+  document.addEventListener('timeEntryUpdated', () => {
+    console.log('⏱️ Time entry updated, updating display');
+    updateTimeDisplay();
+  });
+
+  document.addEventListener('timeEntryDeleted', () => {
+    console.log('⏱️ Time entry deleted, updating display');
+    updateTimeDisplay();
+  });
+
+  // Clean up interval when page unloads
+  window.addEventListener('beforeunload', () => {
+    if (timeUpdateInterval) {
+      clearInterval(timeUpdateInterval);
+    }
   });
 
 </script>

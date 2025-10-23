@@ -117,6 +117,7 @@ let totalTimeTracked = "0h";
 const taskTimeEntries = await db.query.timeEntries.findMany({
   where: and(
     eq(timeEntries.projectId, task.projectId),
+    eq(timeEntries.userId, currentUser.id), // Filter by current user
     // Add task-specific filtering when task field is available
     // For now, we'll use project time entries
     sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
@@ -221,7 +222,7 @@ if (totalHours > 0) {
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
-            {totalTimeTracked} tracked
+            <span data-time-tracked>{totalTimeTracked} tracked by you</span>
           </div>
           <div class="text-sm text-gray-600">
             <p class="font-medium">{(task.project as any)?.name}</p>
@@ -437,6 +438,83 @@ if (totalHours > 0) {
             if (showAllButton) {
               showAllButton.classList.remove('text-gray-600', 'hover:bg-gray-50');
               showAllButton.classList.add('bg-gray-100', 'text-gray-800', 'border-gray-300');
+            }
+          });
+
+          // Real-time time tracking updates
+          let timeUpdateInterval = null;
+          let isTimerRunning = false;
+
+          // Function to update time display
+          const updateTimeDisplay = async () => {
+            try {
+              const response = await fetch(`/api/time-entries/project/${task.projectId}/user-time`);
+              if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.totalTime) {
+                  const timeElement = document.querySelector('[data-time-tracked]');
+                  if (timeElement) {
+                    timeElement.textContent = `${data.totalTime} tracked by you`;
+                  }
+                }
+              }
+            } catch (error) {
+              console.error('Error updating time display:', error);
+            }
+          };
+
+          // Listen for timer events
+          document.addEventListener('timerStarted', () => {
+            console.log('🕐 Timer started, enabling real-time updates');
+            isTimerRunning = true;
+            if (!timeUpdateInterval) {
+              timeUpdateInterval = setInterval(updateTimeDisplay, 1000); // Update every second
+            }
+          });
+
+          document.addEventListener('timerStopped', () => {
+            console.log('🕐 Timer stopped, updating time display');
+            isTimerRunning = false;
+            updateTimeDisplay(); // Final update
+            if (timeUpdateInterval) {
+              clearInterval(timeUpdateInterval);
+              timeUpdateInterval = null;
+            }
+          });
+
+          document.addEventListener('timerPaused', () => {
+            console.log('🕐 Timer paused, updating time display');
+            updateTimeDisplay(); // Update when paused
+          });
+
+          document.addEventListener('timerResumed', () => {
+            console.log('🕐 Timer resumed, enabling real-time updates');
+            isTimerRunning = true;
+            if (!timeUpdateInterval) {
+              timeUpdateInterval = setInterval(updateTimeDisplay, 1000);
+            }
+          });
+
+          // Listen for new time entries
+          document.addEventListener('timeEntryAdded', () => {
+            console.log('⏱️ New time entry added, updating display');
+            updateTimeDisplay();
+          });
+
+          document.addEventListener('timeEntryUpdated', () => {
+            console.log('⏱️ Time entry updated, updating display');
+            updateTimeDisplay();
+          });
+
+          document.addEventListener('timeEntryDeleted', () => {
+            console.log('⏱️ Time entry deleted, updating display');
+            updateTimeDisplay();
+          });
+
+          // Clean up interval when page unloads
+          window.addEventListener('beforeunload', () => {
+            if (timeUpdateInterval) {
+              clearInterval(timeUpdateInterval);
             }
           });
         </script>
