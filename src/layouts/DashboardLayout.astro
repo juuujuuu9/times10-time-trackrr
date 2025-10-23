@@ -44,7 +44,7 @@ const isCollaborationsPage = Astro.url.pathname.includes('/collaborations');
             </div>
             <div class="flex items-center relative">
               <!-- Timer Display -->
-              <div id="headerTimer" class="hidden sm:flex items-center justify-center mr-4 px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
+              <div id="headerTimer" class="hidden sm:flex items-center justify-center mr-4 px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium dashboard-timer-hidden">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
@@ -493,12 +493,39 @@ const isCollaborationsPage = Astro.url.pathname.includes('/collaborations');
           this.setupEventListeners();
           this.loadTimerState();
           this.setupStopButton();
+          this.checkDashboardPage();
           
           // Initial server check only on page load
           this.checkServerTimerState();
           
           // Disable periodic server checks to prevent interference with local timer
           // The timer will be completely local and only sync on events
+        }
+
+        checkDashboardPage() {
+          // Hide timer only on the exact /dashboard page, not sub-pages
+          if (window.location.pathname === '/dashboard' || window.location.pathname === '/dashboard/') {
+            console.log('🔄 [HEADER TIMER] Hiding timer on dashboard page');
+            this.headerTimer?.classList.add('dashboard-timer-hidden');
+          } else if (window.location.pathname.startsWith('/dashboard/')) {
+            // On dashboard sub-pages, only show timer when active
+            console.log('🔄 [HEADER TIMER] On dashboard sub-page, checking timer state');
+            this.updateDashboardSubPageVisibility();
+          } else {
+            console.log('🔄 [HEADER TIMER] Showing timer on page:', window.location.pathname);
+            this.headerTimer?.classList.remove('dashboard-timer-hidden');
+          }
+        }
+
+        updateDashboardSubPageVisibility() {
+          // On dashboard sub-pages, only show timer when it's actually running
+          if (this.isLocalTimerRunning && this.startTime) {
+            console.log('🔄 [HEADER TIMER] Timer is active, showing on dashboard sub-page');
+            this.headerTimer?.classList.remove('dashboard-timer-hidden');
+          } else {
+            console.log('🔄 [HEADER TIMER] Timer is inactive, hiding on dashboard sub-page');
+            this.headerTimer?.classList.add('dashboard-timer-hidden');
+          }
         }
 
         setupStopButton() {
@@ -700,6 +727,9 @@ const isCollaborationsPage = Astro.url.pathname.includes('/collaborations');
             console.error('🛑 [HEADER STOP] Stop button element not found when trying to show');
           }
           
+          // Update visibility for dashboard sub-pages
+          this.updateDashboardSubPageVisibility();
+          
           // Update display every 100ms for super smooth updates
           this.intervalId = setInterval(() => {
             if (this.startTime) {
@@ -727,6 +757,9 @@ const isCollaborationsPage = Astro.url.pathname.includes('/collaborations');
           } else {
             console.error('🛑 [HEADER STOP] Stop button element not found when trying to hide');
           }
+          
+          // Update visibility for dashboard sub-pages
+          this.updateDashboardSubPageVisibility();
         }
 
         updateDisplay(elapsed: number) {
@@ -1019,6 +1052,11 @@ const isCollaborationsPage = Astro.url.pathname.includes('/collaborations');
   /* Prevent stop button from spinning */
   #headerTimerStopBtn svg {
     animation: none !important;
+  }
+
+  /* Hide timer on dashboard page */
+  .dashboard-timer-hidden {
+    display: none !important;
   }
 
   @keyframes spin {
