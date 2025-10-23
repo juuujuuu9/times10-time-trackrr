@@ -1,8 +1,11 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db/index';
-import { tasks } from '../../../db/schema';
+import { tasks, taskAssignments, users, projects } from '../../../db/schema';
 import { eq, sql } from 'drizzle-orm';
 import postgres from 'postgres';
+import { sendDueDateChangeEmail } from '../../../utils/email';
+import { getSessionUser } from '../../../utils/session';
+import { getEmailBaseUrl } from '../../../utils/url';
 
 export const GET: APIRoute = async () => {
   try {
@@ -133,7 +136,7 @@ export const POST: APIRoute = async ({ request }) => {
   }
 };
 
-export const PUT: APIRoute = async ({ request }) => {
+export const PUT: APIRoute = async ({ request, cookies }) => {
   try {
     const body = await request.json();
     const { id, name, description, projectId, status, priority, dueDate } = body;
@@ -148,7 +151,41 @@ export const PUT: APIRoute = async ({ request }) => {
       });
     }
 
+    // Get current user for email notifications
+    const currentUser = await getSessionUser({ cookies } as any);
+    if (!currentUser) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     console.log('PUT /api/admin/tasks - Updating task with ID:', id);
+    
+    // Get existing task to check for due date changes
+    const existingTask = await db.query.tasks.findFirst({
+      where: eq(tasks.id, parseInt(id)),
+      with: {
+        project: true,
+        assignments: {
+          with: {
+            user: true
+          }
+        }
+      }
+    });
+
+    if (!existingTask) {
+      console.log('PUT /api/admin/tasks - Task not found');
+      return new Response(JSON.stringify({ error: 'Task not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Store old due date for email notifications
+    const oldDueDate = existingTask.dueDate;
+    const newDueDate = dueDate ? new Date(dueDate + 'T12:00:00') : null;
     
     const updatedTask = await db
       .update(tasks)
@@ -158,7 +195,7 @@ export const PUT: APIRoute = async ({ request }) => {
         projectId: parseInt(projectId),
         status: status || 'pending',
         priority: priority || 'regular',
-        dueDate: dueDate ? new Date(dueDate + 'T12:00:00') : null, // Set to noon to avoid timezone issues
+        dueDate: newDueDate,
         updatedAt: new Date() 
       })
       .where(eq(tasks.id, parseInt(id)))
@@ -172,6 +209,40 @@ export const PUT: APIRoute = async ({ request }) => {
         status: 404,
         headers: { 'Content-Type': 'application/json' },
       });
+    }
+
+    // Send due date change notifications if due date changed
+    if (oldDueDate !== newDueDate && existingTask.assignments && existingTask.assignments.length > 0) {
+      try {
+        const baseUrl = getEmailBaseUrl();
+        const dashboardUrl = `${baseUrl}/admin/collaborations/${existingTask.teamId || 'general'}`;
+        
+        // Send due date change notifications to all assignees
+        for (const assignment of existingTask.assignments) {
+          if (assignment.user && assignment.user.email && assignment.user.id !== currentUser.id) {
+            try {
+              console.log(`📧 Attempting to send due date change email to ${assignment.user.email}`);
+              await sendDueDateChangeEmail({
+                email: assignment.user.email,
+                userName: assignment.user.name,
+                taskName: existingTask.name,
+                projectName: existingTask.project?.name || 'Unknown Project',
+                oldDueDate: oldDueDate ? oldDueDate.toLocaleDateString() : 'No due date',
+                newDueDate: newDueDate ? newDueDate.toLocaleDateString() : 'No due date',
+                changedBy: currentUser.name,
+                dashboardUrl: dashboardUrl,
+              });
+              console.log(`📧 Due date change email sent to ${assignment.user.email}`);
+            } catch (emailError) {
+              console.error(`Failed to send due date change email to ${assignment.user.email}:`, emailError);
+              // Don't fail the entire operation if email fails
+            }
+          }
+        }
+      } catch (notificationError) {
+        console.error('Error sending due date change notifications:', notificationError);
+        // Don't fail the entire operation if notifications fail
+      }
     }
 
     console.log('PUT /api/admin/tasks - Task updated successfully');
