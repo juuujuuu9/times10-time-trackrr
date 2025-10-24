@@ -469,7 +469,8 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         comments: [],
         mediaUrl: uploadedFiles[0], // Use first file as primary media URL
         mediaUrls: uploadedFiles, // Store all URLs for multiple file display
-        fileNames: fileNames // Store all filenames for display
+        fileNames: fileNames, // Store all filenames for display
+        fileSizes: files.map(file => file.size) // Store all file sizes for display
       };
       
       setPosts(prevPosts => [optimisticMedia, ...prevPosts]);
@@ -482,6 +483,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         mediaUrl: uploadedFiles[0], // Primary media URL
         mediaUrls: uploadedFiles, // All media URLs
         fileNames: fileNames, // All file names
+        fileSizes: files.map(file => file.size), // All file sizes
         mentionedUsers: mentionedUsers.map(user => user.id)
       };
 
@@ -1434,6 +1436,14 @@ const TaskStream: React.FC<TaskStreamProps> = ({
     return url.split('/').pop() || 'Media File';
   };
 
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
   const getFileIcon = (url: string) => {
     const extension = getFileExtension(url);
     
@@ -1932,6 +1942,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                       {post.fileNames?.[index] || getFilename(url)}
                                     </div>
                                     <div className="text-xs text-gray-500">{getFileTypeLabel(url)}</div>
+                                    <div className="text-xs text-gray-400">{formatFileSize(post.fileSizes?.[index] || 0)}</div>
                                   </div>
                                   <button
                                     onClick={() => handleDownloadFile(url, post.fileNames?.[index] || getFilename(url) || 'file')}

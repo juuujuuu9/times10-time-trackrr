@@ -211,6 +211,15 @@ export const GET: APIRoute = async (context) => {
         }
       }
 
+      let fileSizes = null;
+      if (parent.fileSizes) {
+        try {
+          fileSizes = JSON.parse(parent.fileSizes);
+        } catch (e) {
+          console.warn('Failed to parse fileSizes:', e);
+        }
+      }
+
       return {
         id: parent.id,
         type: parent.type || 'insight',
@@ -227,6 +236,7 @@ export const GET: APIRoute = async (context) => {
         mediaUrl: parent.mediaUrl,
         mediaUrls: mediaUrls,
         fileNames: fileNames,
+        fileSizes: fileSizes,
         linkPreview: linkPreview,
         subtasks: subtask?.subtasks || null
       };
@@ -321,6 +331,7 @@ export const POST: APIRoute = async (context) => {
       mediaUrl, 
       mediaUrls,
       fileNames,
+      fileSizes,
       linkPreview, 
       subtask,
       subtaskData,
@@ -369,6 +380,7 @@ export const POST: APIRoute = async (context) => {
       mediaUrl: mediaUrl || null,
       mediaUrls: mediaUrls ? JSON.stringify(mediaUrls) : null,
       fileNames: fileNames ? JSON.stringify(fileNames) : null,
+      fileSizes: fileSizes ? JSON.stringify(fileSizes) : null,
       linkPreview: linkPreview ? JSON.stringify(linkPreview) : null,
       subtaskData: (subtask || subtaskData) ? JSON.stringify(subtask || subtaskData) : null,
       archived: false

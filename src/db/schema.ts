@@ -184,6 +184,7 @@ export const taskDiscussions = pgTable('task_discussions', {
   mediaUrl: varchar('media_url', { length: 500 }), // URL for media files
   mediaUrls: text('media_urls'), // JSON array of media URLs for multiple files
   fileNames: text('file_names'), // JSON array of file names for multiple files
+  fileSizes: text('file_sizes'), // JSON array of file sizes for multiple files
   linkPreview: text('link_preview'), // JSON string for link preview data
   subtaskData: text('subtask_data'), // JSON string for subtask data
   archived: boolean('archived').notNull().default(false),
