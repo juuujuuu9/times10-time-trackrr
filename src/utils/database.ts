@@ -8,11 +8,11 @@ import { neon } from '@neondatabase/serverless';
 // Database configurations
 const DATABASE_CONFIGS = {
   local: {
-    url: process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_8hQj7xVaUtiZ@ep-blue-sky-123456.us-east-1.aws.neon.tech/neondb?sslmode=require',
+    url: process.env.DATABASE_URL || process.env.LOCAL_DATABASE_URL || 'postgresql://localhost:5432/times10_dev',
     name: 'Local Development'
   },
   production: {
-    url: 'postgres://neondb_owner:npg_DTnBFMrw5Za0@ep-jolly-art-af9o1fww-pooler.c-2.us-west-2.aws.neon.tech/neondb?sslmode=require',
+    url: process.env.PROD_DATABASE_URL || 'postgres://neondb_owner:npg_DTnBFMrw5Za0@ep-jolly-art-af9o1fww-pooler.c-2.us-west-2.aws.neon.tech/neondb?sslmode=require',
     name: 'Production'
   }
 };
