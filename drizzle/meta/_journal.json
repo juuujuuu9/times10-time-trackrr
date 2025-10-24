@@ -85,6 +85,13 @@
       "when": 1760588026744,
       "tag": "0011_acoustic_sunspot",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1761272631974,
+      "tag": "0012_stormy_thundra",
+      "breakpoints": true
     }
   ]
 }

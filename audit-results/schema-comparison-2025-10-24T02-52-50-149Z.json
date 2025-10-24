@@ -1,0 +1,47 @@
+{
+  "summary": {
+    "timestamp": "2025-10-24T02:52:51.785Z",
+    "local_tables": 20,
+    "prod_tables": 20,
+    "critical_differences": 1,
+    "warnings": 0
+  },
+  "differences": {
+    "tables": {
+      "missing_in_prod": [],
+      "missing_in_local": [],
+      "different_columns": {
+        "task_discussions": {
+          "missing_in_prod": [
+            "file_sizes"
+          ],
+          "missing_in_local": []
+        }
+      },
+      "different_constraints": {},
+      "different_indexes": {}
+    },
+    "sequences": {
+      "missing_in_prod": [],
+      "missing_in_local": [],
+      "different": {}
+    },
+    "functions": {
+      "missing_in_prod": [],
+      "missing_in_local": [],
+      "different": {}
+    },
+    "triggers": {
+      "missing_in_prod": [],
+      "missing_in_local": [],
+      "different": {}
+    }
+  },
+  "recommendations": [
+    {
+      "type": "CRITICAL",
+      "message": "Tables with column differences: task_discussions",
+      "action": "Review and sync column definitions between environments"
+    }
+  ]
+}

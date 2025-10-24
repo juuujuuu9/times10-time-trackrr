@@ -6,7 +6,7 @@ import { requireAuth } from '../../utils/session';
 
 export const GET: APIRoute = async ({ request }) => {
   try {
-    const user = await requireAuth('/')({ request } as any);
+    const user = await requireAuth({ request } as any, '/');
     if (!user) {
       return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
         status: 401,
@@ -42,7 +42,7 @@ export const GET: APIRoute = async ({ request }) => {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const user = await requireAuth('/')({ request } as any);
+    const user = await requireAuth({ request } as any, '/');
     if (!user) {
       return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
         status: 401,
@@ -98,7 +98,7 @@ export const POST: APIRoute = async ({ request }) => {
 
 export const DELETE: APIRoute = async ({ request }) => {
   try {
-    const user = await requireAuth('/')({ request } as any);
+    const user = await requireAuth({ request } as any, '/');
     if (!user) {
       return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
         status: 401,

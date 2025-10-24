@@ -58,11 +58,21 @@ export async function getSessionUser(context: APIContext): Promise<Authenticated
   }
 }
 
-export function requireAuth(redirectTo: string = '/') {
-  return async function(context: APIContext) {
-    const user = await getSessionUser(context);
-    
-    if (!user) {
+export async function requireAuth(context: APIContext, redirectTo: string = '/') {
+  // Check if context is valid
+  if (!context) {
+    return null;
+  }
+  
+  const user = await getSessionUser(context);
+  
+  if (!user) {
+    // Check if this is an API context (has request property)
+    if ('request' in context) {
+      // For API contexts, return null instead of throwing
+      return null;
+    } else {
+      // For page contexts, try to redirect
       try {
         return context.redirect(redirectTo);
       } catch (error) {
@@ -70,16 +80,26 @@ export function requireAuth(redirectTo: string = '/') {
         throw new Error('Authentication required');
       }
     }
-    
-    return user;
-  };
+  }
+  
+  return user;
 }
 
-export function requireRole(requiredRole: string, redirectTo: string = '/dashboard') {
-  return async function(context: APIContext) {
-    const user = await getSessionUser(context);
-    
-    if (!user) {
+export async function requireRole(context: APIContext, requiredRole: string, redirectTo: string = '/dashboard') {
+  // Check if context is valid
+  if (!context) {
+    return null;
+  }
+  
+  const user = await getSessionUser(context);
+  
+  if (!user) {
+    // Check if this is an API context (has request property)
+    if ('request' in context) {
+      // For API contexts, return null instead of throwing
+      return null;
+    } else {
+      // For page contexts, try to redirect
       try {
         return context.redirect('/');
       } catch (error) {
@@ -87,18 +107,25 @@ export function requireRole(requiredRole: string, redirectTo: string = '/dashboa
         throw new Error('Authentication required');
       }
     }
-    
-    const roleHierarchy = {
-      'admin': 3,
-      'developer': 3,
-      'team_manager': 2,
-      'user': 1,
-    };
-    
-    const userLevel = roleHierarchy[user.role as keyof typeof roleHierarchy] || 0;
-    const requiredLevel = roleHierarchy[requiredRole as keyof typeof roleHierarchy] || 0;
-    
-    if (userLevel < requiredLevel) {
+  }
+  
+  const roleHierarchy = {
+    'admin': 3,
+    'developer': 3,
+    'team_manager': 2,
+    'user': 1,
+  };
+  
+  const userLevel = roleHierarchy[user.role as keyof typeof roleHierarchy] || 0;
+  const requiredLevel = roleHierarchy[requiredRole as keyof typeof roleHierarchy] || 0;
+  
+  if (userLevel < requiredLevel) {
+    // Check if this is an API context (has request property)
+    if ('request' in context) {
+      // For API contexts, return null instead of throwing
+      return null;
+    } else {
+      // For page contexts, try to redirect
       try {
         return context.redirect(redirectTo);
       } catch (error) {
@@ -106,7 +133,7 @@ export function requireRole(requiredRole: string, redirectTo: string = '/dashboa
         throw new Error('Insufficient permissions');
       }
     }
-    
-    return user;
-  };
+  }
+  
+  return user;
 } 

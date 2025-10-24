@@ -7,7 +7,7 @@ import { requireAuth } from '../../../utils/session';
 // GET: Get current user's ongoing timers only
 export const GET: APIRoute = async (context) => {
   try {
-    const currentUser = await requireAuth()(context);
+    const currentUser = await requireAuth(context);
     if (!currentUser || typeof currentUser === 'string') {
       return new Response(JSON.stringify({ 
         success: false, 
