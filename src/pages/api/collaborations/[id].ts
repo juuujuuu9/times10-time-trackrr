@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db';
-import { teams, teamMembers as teamMembersTable, projects } from '../../../db/schema';
+import { teams, teamMembers as teamMembersTable, projects, clients } from '../../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getSessionUser } from '../../../utils/session';
 
@@ -31,13 +31,18 @@ export const GET: APIRoute = async (context) => {
       });
     }
 
-    // Get collaboration details
+    // Get collaboration details with project and client information
     const collaboration = await db.query.teams.findFirst({
       where: eq(teams.id, collaborationId),
       with: {
         members: {
           with: {
             user: true
+          }
+        },
+        project: {
+          with: {
+            client: true
           }
         }
       }
@@ -65,9 +70,16 @@ export const GET: APIRoute = async (context) => {
       });
     }
 
+    // Extract client and project information for file organization
+    const responseData = {
+      ...collaboration,
+      clientName: collaboration.project?.client?.name || 'Unknown Client',
+      projectName: collaboration.project?.name || 'Unknown Project'
+    };
+
     return new Response(JSON.stringify({
       success: true,
-      data: collaboration
+      data: responseData
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }

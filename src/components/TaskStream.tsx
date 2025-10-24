@@ -78,6 +78,37 @@ const TaskStream: React.FC<TaskStreamProps> = ({
   const [showAddMediaModal, setShowAddMediaModal] = useState(false);
   const [showLinkDropModal, setShowLinkDropModal] = useState(false);
   const [showSubtaskModal, setShowSubtaskModal] = useState(false);
+  const [collaborationInfo, setCollaborationInfo] = useState<{
+    clientName: string;
+    projectName: string;
+  } | null>(null);
+
+  // Load collaboration information for file organization
+  const loadCollaborationInfo = useCallback(async () => {
+    try {
+      console.log('🔍 Loading collaboration info for:', collaborationId);
+      const response = await fetch(`/api/collaborations/${collaborationId}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          const info = {
+            clientName: data.data.clientName || 'Unknown Client',
+            projectName: data.data.projectName || 'Unknown Project'
+          };
+          setCollaborationInfo(info);
+          console.log('📁 Collaboration info loaded:', info);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error loading collaboration info:', error);
+      // Set fallback values
+      setCollaborationInfo({
+        clientName: 'Unknown Client',
+        projectName: 'Unknown Project'
+      });
+    }
+  }, [collaborationId]);
 
   // Listen for filter change events from parent
   useEffect(() => {
@@ -239,7 +270,8 @@ const TaskStream: React.FC<TaskStreamProps> = ({
 
   useEffect(() => {
     loadPosts();
-  }, [loadPosts]);
+    loadCollaborationInfo();
+  }, [loadPosts, loadCollaborationInfo]);
 
   // Handle click outside to close reply inputs
   useEffect(() => {
@@ -388,16 +420,16 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         // Get client and project information for organized file structure
         console.log('🔍 Getting client and project information for organized file structure...');
         
-        // For now, we'll use placeholder names - in a real implementation,
-        // you'd fetch this from the collaboration data
-        const clientName = 'Acme Corporation'; // TODO: Get from collaboration data
-        const projectName = 'Website Redesign'; // TODO: Get from collaboration data
+        // Use actual collaboration info or fallback to defaults
+        const clientName = collaborationInfo?.clientName || 'Unknown Client';
+        const projectName = collaborationInfo?.projectName || 'Unknown Project';
         
         console.log('📁 File organization info:', {
           clientName,
           projectName,
           collaborationId,
-          taskId
+          taskId,
+          collaborationInfo
         });
         
         const uploadResult = await uploadDirectlyToBunnyCdn(
