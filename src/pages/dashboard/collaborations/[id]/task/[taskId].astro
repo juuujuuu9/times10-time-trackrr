@@ -154,16 +154,32 @@ if (totalHours > 0) {
 ---
 
 <DashboardLayout title={`${task.name} - Task Stream`}>
-  <div class="flex h-full mx-auto px-4 sm:px-8 mt-8 w-full">
+  <div class="flex flex-col md:flex-row h-full mx-auto px-4 sm:px-8 mt-2 md:mt-8 w-full">
+    <div class="flex items-center flex-1 w-full md:w-auto m-2 mb-3 md:hidden">
+      <!-- Mobile Breadcrumbs -->
+      <nav class="flex items-center space-x-2 text-sm">
+        <a href="/dashboard/collaborations" class="text-gray-500 hover:text-gray-700 underline">Collaborations</a>
+        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+        </svg>
+        <a href={`/dashboard/collaborations/${collaborationId}`} class="text-gray-500 hover:text-gray-700 underline">
+          {(task.project as any)?.client?.name || 'Unknown Client'} - {(task.project as any)?.name || 'Unknown Project'}
+        </a>
+        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+        </svg>
+        <span class="text-gray-500">{task.name}</span>
+      </nav>
+    </div>
     <!-- Left Sidebar -->
-    <div class="w-1/4 bg-white border-r border-gray-200 p-6 rounded-xl sticky top-8" style="height: fit-content;">
+    <div class="w-full md:w-1/4 bg-white border-r-0 md:border-r border-b md:border-b-0 border-gray-200 p-2 md:p-6 rounded-xl static md:sticky md:top-8 mb-6 md:mb-0" style="height: fit-content;">
       <!-- Task Overview Card -->
-      <div class="bg-white rounded-lg border border-gray-200 p-4 mb-6 h-auto">
+      <div class="bg-white rounded-lg border border-gray-200 p-4 md:mb-6 h-auto">
         <div class="flex flex-col items-start justify-between mb-3">
           <div class="flex justify-between items-center w-full mb-3">
             <!-- Team Members -->
             <div class="flex items-center">
-              <div class="flex -space-x-2">
+              <div class="flex -space-x-2 flex-wrap gap-2 md:flex-nowrap md:gap-0">
                 {teamMembers.slice(0, 4).map((member: any, index: number) => (
                   <div 
                     class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 border-2 border-white relative group cursor-pointer"
@@ -247,7 +263,7 @@ if (totalHours > 0) {
       </div>
 
       <!-- Quick Filters -->
-      <div class="mb-6">
+      <div class="mb-6 hidden md:block">
         <h3 class="text-sm font-semibold text-gray-900 mb-3">Quick Filters</h3>
         <div class="space-y-2">
           <button data-filter="all" class="w-full flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-md transition-colors border border-transparent">
@@ -288,7 +304,7 @@ if (totalHours > 0) {
 
 
       <!-- Dropdown Filters -->
-      <div>
+      <div class="hidden md:block">
         <div class="space-y-2">
           <select id="member-filter" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
             <option value="all">All Members</option>
@@ -307,10 +323,10 @@ if (totalHours > 0) {
     </div>
 
     <!-- Main Content Area -->
-    <div class="flex-1 p-6 pt-0" style="min-height: calc(100vh - 120px);">
+    <div class="w-full md:flex-1 p-0 md:p-6 md:pt-0" style="min-height: calc(100vh - 120px);">
       <!-- Header with Breadcrumbs -->
       <div class="flex justify-between gap-4 items-center mb-6">
-        <div class="flex items-center flex-1">
+        <div class="items-center flex-1 hidden md:flex">
           <!-- Breadcrumbs -->
           <nav class="flex items-center space-x-2 text-sm">
             <a href="/dashboard/collaborations" class="text-gray-500 hover:text-gray-700 underline">Collaborations</a>
@@ -329,7 +345,7 @@ if (totalHours > 0) {
       </div>
 
       <!-- Main Stream Interface -->
-      <div class="space-y-6" style="padding-bottom: 200px;">
+      <div class="space-y-6 px-2 md:px-0" style="padding-bottom: 200px;">
         <div data-task-stream>
           <TaskStream 
             taskId={taskId}
