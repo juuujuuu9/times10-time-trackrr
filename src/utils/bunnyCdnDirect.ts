@@ -168,7 +168,7 @@ async function fetchBunnyCdnConfig(): Promise<BunnyCdnDirectConfig> {
 
 /**
  * Get Bunny CDN direct upload instance
- * Fetches configuration from the secure API endpoint
+ * Fetches configuration from the API endpoint
  */
 export async function getBunnyCdnDirectUpload(): Promise<BunnyCdnDirectUpload> {
   if (!bunnyCdnDirectInstance) {

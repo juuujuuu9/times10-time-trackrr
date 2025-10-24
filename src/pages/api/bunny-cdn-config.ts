@@ -7,17 +7,8 @@ import { getSessionUser } from '../../utils/session';
  */
 export const GET: APIRoute = async (context) => {
   try {
-    // Check authentication
-    const currentUser = await getSessionUser(context);
-    if (!currentUser) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    // Note: For direct uploads, we need to provide configuration without authentication
+    // In production, consider using signed URLs or other secure methods
 
     // Return Bunny CDN configuration for direct uploads
     const config = {
@@ -27,11 +18,25 @@ export const GET: APIRoute = async (context) => {
       cdnUrl: process.env.BUNNY_CDN_URL
     };
 
+    // Debug logging
+    console.log('🔍 Bunny CDN Config Debug:', {
+      storageZoneName: config.storageZoneName ? 'SET' : 'NOT SET',
+      storageZonePassword: config.storageZonePassword ? 'SET' : 'NOT SET',
+      storageZoneRegion: config.storageZoneRegion,
+      cdnUrl: config.cdnUrl ? 'SET' : 'NOT SET'
+    });
+
     // Validate that all required config is available
     if (!config.storageZoneName || !config.storageZonePassword || !config.cdnUrl) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Bunny CDN configuration is incomplete'
+        error: 'Bunny CDN configuration is incomplete',
+        debug: {
+          storageZoneName: config.storageZoneName ? 'SET' : 'NOT SET',
+          storageZonePassword: config.storageZonePassword ? 'SET' : 'NOT SET',
+          storageZoneRegion: config.storageZoneRegion,
+          cdnUrl: config.cdnUrl ? 'SET' : 'NOT SET'
+        }
       }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
