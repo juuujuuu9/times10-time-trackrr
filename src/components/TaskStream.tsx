@@ -1851,6 +1851,10 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                             placeholder="Leave a message or quick note here. @mention team members to notify them."
                             teamMembers={teamMembers}
                             currentUser={currentUser}
+                            collaborationId={collaborationId}
+                            taskId={taskId}
+                            clientName={collaborationInfo?.clientName}
+                            projectName={collaborationInfo?.projectName}
                           />
                           <div className="flex items-center space-x-2 mt-2">
                             <button
@@ -2045,6 +2049,10 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                               placeholder="Leave a message or quick note here. @mention team members to notify them."
                               teamMembers={teamMembers}
                               currentUser={currentUser}
+                              collaborationId={collaborationId}
+                              taskId={taskId}
+                              clientName={collaborationInfo?.clientName}
+                              projectName={collaborationInfo?.projectName}
                               className="w-full"
                             />
                             <button
@@ -2089,6 +2097,10 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                     placeholder="Edit your comment..."
                                     teamMembers={teamMembers}
                                     currentUser={currentUser}
+                                    collaborationId={collaborationId}
+                                    taskId={taskId}
+                                    clientName={collaborationInfo?.clientName}
+                                    projectName={collaborationInfo?.projectName}
                                     className="w-full"
                                   />
                                   <div className="flex items-center space-x-2 mt-1">
@@ -2163,6 +2175,10 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                         placeholder="Leave a message or quick note here. @mention team members to notify them."
                                         teamMembers={teamMembers}
                                         currentUser={currentUser}
+                                        collaborationId={collaborationId}
+                                        taskId={taskId}
+                                        clientName={collaborationInfo?.clientName}
+                                        projectName={collaborationInfo?.projectName}
                                         className="w-full"
                                       />
                                       <button

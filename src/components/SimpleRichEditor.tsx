@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { uploadDirectlyToBunnyCdn } from '../utils/bunnyCdnDirect';
 
 interface User {
   id: string | number;
@@ -16,6 +17,11 @@ interface SimpleRichEditorProps {
   currentUser?: User;
   onMentionedUsersChange?: (users: User[]) => void;
   initialMentionedUsers?: User[];
+  // Props for image upload
+  collaborationId?: number;
+  taskId?: number;
+  clientName?: string;
+  projectName?: string;
 }
 
 const SimpleRichEditor: React.FC<SimpleRichEditorProps> = ({
@@ -26,7 +32,11 @@ const SimpleRichEditor: React.FC<SimpleRichEditorProps> = ({
   teamMembers = [],
   currentUser,
   onMentionedUsersChange,
-  initialMentionedUsers = []
+  initialMentionedUsers = [],
+  collaborationId,
+  taskId,
+  clientName,
+  projectName
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const [isBold, setIsBold] = useState(false);
@@ -37,6 +47,8 @@ const SimpleRichEditor: React.FC<SimpleRichEditorProps> = ({
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionedUsers, setMentionedUsers] = useState<User[]>(initialMentionedUsers);
   const [cursorPosition, setCursorPosition] = useState(0);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (editorRef.current && content !== editorRef.current.innerHTML) {
@@ -200,6 +212,102 @@ const SimpleRichEditor: React.FC<SimpleRichEditorProps> = ({
     execCommand('insertOrderedList');
   };
 
+  // Handle image upload
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file.');
+      return;
+    }
+
+    // Validate file size (max 10MB for inline images)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      alert('Image file is too large. Please select an image smaller than 10MB.');
+      return;
+    }
+
+    setIsUploadingImage(true);
+
+    try {
+      // Use collaboration and task info for organized file structure
+      const folder = collaborationId && taskId 
+        ? `collaborations/${collaborationId}/tasks/${taskId}/inline-images`
+        : 'inline-images';
+      
+      const uploadResult = await uploadDirectlyToBunnyCdn(
+        file,
+        folder,
+        undefined, // Let Bunny CDN generate a unique filename
+        clientName || 'Unknown Client',
+        projectName || 'Unknown Project'
+      );
+
+      if (uploadResult.success && uploadResult.url) {
+        // Insert the image into the editor at the current cursor position
+        insertImageAtCursor(uploadResult.url, file.name);
+      } else {
+        throw new Error(uploadResult.error || 'Failed to upload image');
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Failed to upload image. Please try again.');
+    } finally {
+      setIsUploadingImage(false);
+      // Reset the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Insert image at current cursor position
+  const insertImageAtCursor = (imageUrl: string, altText: string) => {
+    if (!editorRef.current) return;
+
+    // Create image element
+    const img = document.createElement('img');
+    img.src = imageUrl;
+    img.alt = altText;
+    img.className = 'inline-image max-w-full h-auto rounded-lg';
+    img.style.maxWidth = '100%';
+    img.style.height = 'auto';
+    img.style.margin = '8px 0';
+    img.style.borderRadius = '8px';
+    img.style.display = 'block';
+
+    // Get current selection
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      
+      // Insert the image
+      range.deleteContents();
+      range.insertNode(img);
+      
+      // Move cursor after the image
+      range.setStartAfter(img);
+      range.setEndAfter(img);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    } else {
+      // If no selection, append to the end
+      editorRef.current.appendChild(img);
+    }
+
+    // Update content
+    onChange(editorRef.current.innerHTML);
+    editorRef.current.focus();
+  };
+
+  // Trigger file input click
+  const triggerImageUpload = () => {
+    fileInputRef.current?.click();
+  };
+
   return (
     <div className={`border border-gray-300 rounded-lg ${className}`}>
       {/* Toolbar */}
@@ -301,6 +409,25 @@ const SimpleRichEditor: React.FC<SimpleRichEditorProps> = ({
 
         <div className="w-px h-6 bg-gray-300 mx-1"></div>
 
+        {/* Image Upload */}
+        <button
+          type="button"
+          onClick={triggerImageUpload}
+          disabled={isUploadingImage}
+          className={`p-2 rounded hover:bg-gray-100 transition-colors ${
+            isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
+          title="Insert Image"
+        >
+          {isUploadingImage ? (
+            <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+          ) : (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+          )}
+        </button>
+
         {/* Link */}
         <button
           type="button"
@@ -314,6 +441,15 @@ const SimpleRichEditor: React.FC<SimpleRichEditorProps> = ({
           </svg>
         </button>
       </div>
+
+      {/* Hidden file input for image upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        style={{ display: 'none' }}
+      />
 
       {/* Editor Content */}
       <div className="relative">
@@ -419,6 +555,22 @@ const SimpleRichEditor: React.FC<SimpleRichEditorProps> = ({
         }
         [contenteditable] a:hover {
           color: #1d4ed8;
+        }
+        [contenteditable] .inline-image {
+          max-width: 100%;
+          height: auto;
+          border-radius: 8px;
+          margin: 8px 0;
+          display: block;
+          cursor: pointer;
+          transition: opacity 0.2s ease;
+        }
+        [contenteditable] .inline-image:hover {
+          opacity: 0.9;
+        }
+        [contenteditable] .inline-image:focus {
+          outline: 2px solid #3b82f6;
+          outline-offset: 2px;
         }
       `}</style>
     </div>
