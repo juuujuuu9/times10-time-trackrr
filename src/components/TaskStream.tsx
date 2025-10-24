@@ -385,12 +385,27 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         // Upload file directly to Bunny CDN (bypasses Vercel's 4.5MB limit)
         console.log('📁 Uploading file directly to Bunny CDN:', file.name, 'Size:', file.size);
         
+        // Get client and project information for organized file structure
+        console.log('🔍 Getting client and project information for organized file structure...');
+        
+        // For now, we'll use placeholder names - in a real implementation,
+        // you'd fetch this from the collaboration data
+        const clientName = 'Acme Corporation'; // TODO: Get from collaboration data
+        const projectName = 'Website Redesign'; // TODO: Get from collaboration data
+        
+        console.log('📁 File organization info:', {
+          clientName,
+          projectName,
+          collaborationId,
+          taskId
+        });
+        
         const uploadResult = await uploadDirectlyToBunnyCdn(
           file,
           `collaborations/${collaborationId}/tasks/${taskId}`,
           undefined, // Let Bunny CDN generate a unique filename
-          'Unknown_Client', // TODO: Get from collaboration data
-          'Unknown_Project' // TODO: Get from collaboration data
+          clientName,
+          projectName
         );
         
         console.log('📁 Direct upload result:', uploadResult);

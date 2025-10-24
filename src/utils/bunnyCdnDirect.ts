@@ -50,13 +50,13 @@ class BunnyCdnDirectUpload {
       const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
       const fileName = customFileName || `${timestamp}_${randomId}_${sanitizedName}`;
       
-      // Create organized file path structure
+      // Create organized file path structure with human-readable names
       let filePath: string;
       if (clientName && projectName) {
-        // Sanitize names for folder structure
-        const sanitizedClientName = clientName.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const sanitizedProjectName = projectName.replace(/[^a-zA-Z0-9.-]/g, '_');
-        filePath = `clients/${sanitizedClientName}/projects/${sanitizedProjectName}/${folder}/${fileName}`;
+        // Sanitize names for folder structure (keep spaces, replace only problematic characters)
+        const sanitizedClientName = clientName.replace(/[<>:"/\\|?*]/g, '_').trim();
+        const sanitizedProjectName = projectName.replace(/[<>:"/\\|?*]/g, '_').trim();
+        filePath = `${sanitizedClientName}/${sanitizedProjectName}/${fileName}`;
       } else {
         // Fallback to original structure
         filePath = `${folder}/${fileName}`;
