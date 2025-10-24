@@ -31,8 +31,8 @@ const AddMediaModal: React.FC<AddMediaModalProps> = ({
   const [showMentions, setShowMentions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // File size limit: 1GB (direct upload to Bunny CDN)
-  const MAX_FILE_SIZE = 1024 * 1024 * 1024; // 1GB in bytes
+  // File size limit: 10GB (direct upload to Bunny CDN)
+  const MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024; // 10GB in bytes
 
 
   // Handle file selection
@@ -51,7 +51,7 @@ const AddMediaModal: React.FC<AddMediaModalProps> = ({
       });
       
       if (invalidFiles.length > 0) {
-        alert(`Some files exceed 1GB limit:\n${invalidFiles.join('\n')}`);
+        alert(`Some files exceed 10GB limit:\n${invalidFiles.join('\n')}`);
       }
       
       if (validFiles.length > 0) {
@@ -81,7 +81,7 @@ const AddMediaModal: React.FC<AddMediaModalProps> = ({
       });
       
       if (invalidFiles.length > 0) {
-        alert(`Some files exceed 1GB limit:\n${invalidFiles.join('\n')}`);
+        alert(`Some files exceed 10GB limit:\n${invalidFiles.join('\n')}`);
       }
       
       if (validFiles.length > 0) {

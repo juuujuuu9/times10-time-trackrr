@@ -414,7 +414,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         
-        // Upload file directly to Bunny CDN (bypasses Vercel's 4.5MB limit)
+        // Upload file directly to Bunny CDN (supports files up to 10GB)
         console.log('📁 Uploading file directly to Bunny CDN:', file.name, 'Size:', file.size);
         
         // Get client and project information for organized file structure

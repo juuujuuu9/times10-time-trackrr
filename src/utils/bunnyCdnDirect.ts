@@ -34,6 +34,7 @@ class BunnyCdnDirectUpload {
 
   /**
    * Upload file directly to Bunny CDN from frontend
+   * Supports files up to 10GB with progress tracking
    */
   async uploadFile(
     file: File,
