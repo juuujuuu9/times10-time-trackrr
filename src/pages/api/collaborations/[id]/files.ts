@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../../db';
-import { taskFiles, taskLinks, teams, teamMembers, users } from '../../../../db/schema';
+import { taskFiles, taskLinks, teams, teamMembers, users, projects, clients } from '../../../../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { getSessionUser } from '../../../../utils/session';
 import { uploadToBunnyCdn, deleteFromBunnyCdn } from '../../../../utils/bunnyCdn';
@@ -174,14 +174,43 @@ export const POST: APIRoute = async (context) => {
       const taskIdParam = formData.get('taskId') as string;
       const taskId = taskIdParam ? parseInt(taskIdParam) : 1; // Default to 1 if not provided
       
-      // Upload file to Bunny CDN Storage
+      // Get client and project information for organized file structure
+      console.log('🔍 Getting client and project information for organized file structure...');
+      const collaborationInfo = await db
+        .select({
+          teamId: teams.id,
+          teamName: teams.name,
+          projectId: projects.id,
+          projectName: projects.name,
+          clientId: clients.id,
+          clientName: clients.name
+        })
+        .from(teams)
+        .leftJoin(projects, eq(projects.id, teams.projectId))
+        .leftJoin(clients, eq(clients.id, projects.clientId))
+        .where(eq(teams.id, collaborationId))
+        .limit(1);
+
+      const clientName = collaborationInfo[0]?.clientName || 'Unknown_Client';
+      const projectName = collaborationInfo[0]?.projectName || 'Unknown_Project';
+      
+      console.log('📁 File organization info:', {
+        clientName,
+        projectName,
+        collaborationId,
+        taskId
+      });
+      
+      // Upload file to Bunny CDN Storage with organized structure
       console.log('📁 Uploading file to Bunny CDN:', file.name, 'Size:', file.size);
       
       try {
         const uploadResult = await uploadToBunnyCdn(
           file, 
           `collaborations/${collaborationId}/tasks/${taskId}`,
-          undefined // Let Bunny CDN generate a unique filename
+          undefined, // Let Bunny CDN generate a unique filename
+          clientName,
+          projectName
         );
 
         if (!uploadResult.success) {

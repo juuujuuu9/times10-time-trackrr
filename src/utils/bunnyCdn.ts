@@ -34,12 +34,14 @@ class BunnyCdnStorage {
   }
 
   /**
-   * Upload a file to Bunny CDN Storage
+   * Upload a file to Bunny CDN Storage with organized structure
    */
   async uploadFile(
     file: File, 
     folder: string = 'uploads',
-    customFileName?: string
+    customFileName?: string,
+    clientName?: string,
+    projectName?: string
   ): Promise<UploadResult> {
     try {
       // Generate a unique filename to prevent conflicts
@@ -48,8 +50,17 @@ class BunnyCdnStorage {
       const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
       const fileName = customFileName || `${timestamp}_${randomId}_${sanitizedName}`;
       
-      // Create the file path
-      const filePath = `${folder}/${fileName}`;
+      // Create organized file path structure
+      let filePath: string;
+      if (clientName && projectName) {
+        // Sanitize names for folder structure
+        const sanitizedClientName = clientName.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const sanitizedProjectName = projectName.replace(/[^a-zA-Z0-9.-]/g, '_');
+        filePath = `clients/${sanitizedClientName}/projects/${sanitizedProjectName}/${folder}/${fileName}`;
+      } else {
+        // Fallback to original structure
+        filePath = `${folder}/${fileName}`;
+      }
       
       // Convert file to buffer
       const fileBuffer = await file.arrayBuffer();
@@ -236,10 +247,12 @@ export function getBunnyCdnStorage(): BunnyCdnStorage {
 export async function uploadToBunnyCdn(
   file: File, 
   folder: string = 'uploads',
-  customFileName?: string
+  customFileName?: string,
+  clientName?: string,
+  projectName?: string
 ): Promise<UploadResult> {
   const storage = getBunnyCdnStorage();
-  return await storage.uploadFile(file, folder, customFileName);
+  return await storage.uploadFile(file, folder, customFileName, clientName, projectName);
 }
 
 /**
