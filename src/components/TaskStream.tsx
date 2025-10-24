@@ -8,6 +8,7 @@ import SubtaskModal from './SubtaskModal';
 import SubtaskCard from './SubtaskCard';
 import CentralizedSubtaskTable from './CentralizedSubtaskTable';
 import SimpleRichEditor from './SimpleRichEditor';
+import { uploadDirectlyToBunnyCdn, deleteDirectlyFromBunnyCdn } from '../utils/bunnyCdnDirect';
 
 interface User {
   id: number;
@@ -381,42 +382,24 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         
-        // Check file size before upload (4MB limit)
-        const maxFileSize = 4 * 1024 * 1024; // 4MB
-        if (file.size > maxFileSize) {
-          throw new Error(`File "${file.name}" is too large. Maximum size is 4MB. Your file is ${Math.round(file.size / (1024 * 1024))}MB.`);
-        }
+        // Upload file directly to Bunny CDN (bypasses Vercel's 4.5MB limit)
+        console.log('📁 Uploading file directly to Bunny CDN:', file.name, 'Size:', file.size);
         
-        // Upload file using FormData
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('taskId', taskId.toString());
-
-        const fileResponse = await fetch(`/api/collaborations/${collaborationId}/files`, {
-          method: 'POST',
-          body: formData, // No Content-Type header needed for FormData
-        });
-
-        // Handle different response types
-        let fileResult;
-        if (fileResponse.status === 413) {
-          // File too large - try to parse JSON error message
-          try {
-            fileResult = await fileResponse.json();
-          } catch {
-            throw new Error(`File "${file.name}" is too large. Maximum size is 4MB.`);
-          }
-        } else {
-          fileResult = await fileResponse.json();
-        }
+        const uploadResult = await uploadDirectlyToBunnyCdn(
+          file,
+          `collaborations/${collaborationId}/tasks/${taskId}`,
+          undefined, // Let Bunny CDN generate a unique filename
+          'Unknown_Client', // TODO: Get from collaboration data
+          'Unknown_Project' // TODO: Get from collaboration data
+        );
         
-        console.log('📁 File upload response:', fileResult);
+        console.log('📁 Direct upload result:', uploadResult);
         
-        if (!fileResult.success) {
-          throw new Error(fileResult.error || `Failed to upload file: ${file.name}`);
+        if (!uploadResult.success) {
+          throw new Error(uploadResult.error || `Failed to upload file: ${file.name}`);
         }
 
-        uploadedFiles.push(fileResult.data.url);
+        uploadedFiles.push(uploadResult.url!);
         fileNames.push(file.name);
       }
 
