@@ -3,7 +3,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { requireRole } from '../../../utils/session';
 
 // Require admin role
-const user = await requireRole('admin', '/admin')(Astro);
+const user = await requireRole(Astro, 'admin', '/admin');
 
 const workspace = Astro.url.searchParams.get('workspace');
 ---

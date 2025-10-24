@@ -59,8 +59,9 @@ export async function getSessionUser(context: APIContext): Promise<Authenticated
 }
 
 export async function requireAuth(context: APIContext, redirectTo: string = '/') {
-  // Check if context is valid
-  if (!context) {
+  // Check if context is valid and is an APIContext object
+  if (!context || typeof context !== 'object') {
+    console.error('Invalid context provided to requireAuth:', typeof context);
     return null;
   }
   
@@ -86,8 +87,9 @@ export async function requireAuth(context: APIContext, redirectTo: string = '/')
 }
 
 export async function requireRole(context: APIContext, requiredRole: string, redirectTo: string = '/dashboard') {
-  // Check if context is valid
-  if (!context) {
+  // Check if context is valid and is an APIContext object
+  if (!context || typeof context !== 'object') {
+    console.error('Invalid context provided to requireRole:', typeof context, context);
     return null;
   }
   

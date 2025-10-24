@@ -8,7 +8,7 @@ import { requireRole } from '../../../utils/session';
 export const DELETE: APIRoute = async (context) => {
   try {
     // Require admin role
-    const currentUser = await requireRole('admin', '/admin')(context) as any;
+    const currentUser = await requireRole(context, 'admin', '/admin') as any;
     
     console.log('Clearing all ongoing timers...');
 

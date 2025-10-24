@@ -8,7 +8,7 @@ import { assignGeneralTasksToUser } from '../../utils/assignGeneralTasks';
 export const POST: APIRoute = async (context) => {
   try {
     // Require admin role
-    const currentUser = await requireRole('admin', '/admin')(context) as any;
+    const currentUser = await requireRole(context, 'admin', '/admin') as any;
     
     console.log('🔄 Assigning general tasks to existing users...');
 

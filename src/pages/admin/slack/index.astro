@@ -6,7 +6,7 @@ import { slackWorkspaces, slackUsers, users } from '../../../db/schema';
 import { eq, desc } from 'drizzle-orm';
 
 // Require admin role
-const user = await requireRole('admin', '/admin')(Astro);
+const user = await requireRole(Astro, 'admin', '/admin');
 
 // Get Slack workspaces
 const workspaces = await db

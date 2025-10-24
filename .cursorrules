@@ -1,6 +1,6 @@
 # .cursorrules
 
-ruleset: 2.0.0
+ruleset: 3.0.0
 
 ## Meta-Directive
 This file defines how Cursor should interpret, enforce, and adapt to this project's evolving codebase. Cursor must treat this as a living contract that reflects actual development patterns.
@@ -14,26 +14,26 @@ This file defines how Cursor should interpret, enforce, and adapt to this projec
 
 ## Rule Hierarchy & Conflict Resolution
 
-### 1. FOUNDATIONAL (RULE-001): Simplicity First - Warning
+### 1. FOUNDATIONAL (RULE-001-010): Core Principles - Warning/Error
 - **OVERRIDES**: All other rules when they conflict with simplicity
 - **PRINCIPLE**: The simplest solution that works is always preferred
 - **APPLICATION**: When rules conflict, choose the simpler approach
 
-### 2. ARCHITECTURAL (RULE-002-010): Code Quality - Error/Warning
+### 2. ARCHITECTURAL (RULE-011-020): Code Quality - Error/Warning
 - **FOLLOWS**: RULE-001 (Simplicity First)
 - **COVERS**: TypeScript, Structure, Security, Performance, Accessibility
 
-### 3. DOMAIN-SPECIFIC (RULE-011-015): Application Logic - Warning
+### 3. DOMAIN-SPECIFIC (RULE-021-030): Application Logic - Warning
 - **FOLLOWS**: RULE-001 (Simplicity First)
 - **COVERS**: Time tracking, database operations, API patterns
 
-### 4. OPERATIONAL (RULE-016-020): Production Safety - Error
+### 4. OPERATIONAL (RULE-031-040): Production Safety - Error
 - **FOLLOWS**: RULE-001 (Simplicity First)
 - **COVERS**: Database management, deployment, debugging
 
 ---
 
-## Core Rules
+## FOUNDATIONAL RULES
 
 ### RULE-001: Simplicity First
 - Choose the most direct path to solve the problem
@@ -43,6 +43,7 @@ This file defines how Cursor should interpret, enforce, and adapt to this projec
 - **When in doubt, choose the simpler solution**
 **Severity:** Warning (guiding principle)
 **Applies to:** All code suggestions and refactors
+**Exceptions:** When security or data integrity requires complexity
 
 ### RULE-002: TypeScript Configuration
 - Strict mode enabled
@@ -51,6 +52,7 @@ This file defines how Cursor should interpret, enforce, and adapt to this projec
 - Use simple unions/intersections over complex generics
 **Severity:** Error
 **Applies to:** All TypeScript code
+**Exceptions:** Third-party library integrations where types are unavailable
 
 ### RULE-003: Project Structure
 - Organize by feature, not file type
@@ -59,6 +61,7 @@ This file defines how Cursor should interpret, enforce, and adapt to this projec
 - Flat structure > deep nesting (max 3 levels)
 **Severity:** Warning
 **Applies to:** File organization
+**Exceptions:** When feature boundaries are unclear or cross-cutting concerns exist
 
 ### RULE-004: Code Quality Standards
 - Functions max 50 lines without clear reason
@@ -68,68 +71,169 @@ This file defines how Cursor should interpret, enforce, and adapt to this projec
 - Use semantic HTML first, ARIA when insufficient
 **Severity:** Warning
 **Applies to:** All code
+**Exceptions:** Complex business logic that cannot be simplified without losing clarity
 
-### RULE-005: UI Design Standards
-- **NO BLUE BUTTONS**: Use `bg-gray-600` for prominent buttons, not blue
-- **NO HOVER SCALE EFFECTS**: Never use `hover:scale-105` or similar transform effects
-- Keep hover effects simple: color changes only (`hover:bg-gray-700`)
-- Avoid `transform` and `scale` classes in hover states
-**Severity:** Error
-**Applies to:** All UI components and buttons
-
-### RULE-006: Security Requirements
+### RULE-005: Security Requirements
 - No secrets in client-side code
 - Use parameterized queries only (no string concatenation)
 - Sanitize user-generated content
 - Use framework security features, avoid custom crypto/auth
 **Severity:** Error
 **Applies to:** All security-sensitive code
+**Exceptions:** None - security rules are absolute
 
-### RULE-007: Performance Guidelines
+### RULE-006: Performance Guidelines
 - Optimize images before commit
 - Limit client-side hydration (`client:load` sparingly)
 - Lazy load heavy components
 - Measure before optimizing; avoid speculative performance code
 **Severity:** Warning
 **Applies to:** Performance-critical code
+**Exceptions:** When performance optimization conflicts with maintainability
 
-### RULE-008: Accessibility Standards
+### RULE-007: Accessibility Standards
 - Enforce keyboard navigation support
 - Include ARIA attributes where semantic HTML insufficient
 - Test focus management in interactive components
 - Use semantic HTML first; ARIA only when HTML semantics insufficient
 **Severity:** Error
 **Applies to:** All user-facing code
+**Exceptions:** None - accessibility is non-negotiable
 
-### RULE-009: Testing Requirements
+### RULE-008: Testing Requirements
 - Write tests for behavior, not implementation
 - Avoid brittle tests that break with refactoring
 - Test critical user flows
 - Include edge cases for time-sensitive features
 **Severity:** Warning
 **Applies to:** All feature development
+**Exceptions:** Prototype code or experimental features
 
-### RULE-010: Documentation Standards
+### RULE-009: Documentation Standards
 - Document complex business logic
 - Include "why" explanations for non-obvious decisions
 - Keep README files current
 - Document API endpoints with examples
 **Severity:** Warning
 **Applies to:** All code and features
+**Exceptions:** Self-explanatory code that follows clear patterns
 
-### RULE-011: Deployment Safety
-- Use conventional commits (feat:, fix:, docs:, etc.)
-- Include "Rule Impact: RULE-###" in PR descriptions when relevant
-- Test in staging before production
-- Verify database migrations before deployment
+### RULE-010: Error Handling
+- Use try-catch blocks for all async operations
+- Provide user-friendly error messages
+- Log detailed errors to console for debugging
+- Handle both network errors and application errors
+- Distinguish between user errors and system errors
 **Severity:** Error
-**Applies to:** All deployments
+**Applies to:** All async operations
+**Exceptions:** None - proper error handling is critical for production
 
 ---
 
-## Domain-Specific Rules
+## ARCHITECTURAL RULES
 
-### RULE-011: Date/Time Handling
+### RULE-011: UI Design Standards
+- **NO BLUE BUTTONS**: Use `bg-gray-600` for prominent buttons, not blue
+- **NO HOVER SCALE EFFECTS**: Never use `hover:scale-105` or similar transform effects
+- Keep hover effects simple: color changes only (`hover:bg-gray-700`)
+- Avoid `transform` and `scale` classes in hover states
+**Severity:** Error
+**Applies to:** All UI components and buttons
+**Exceptions:** When design system requires specific colors or effects
+
+### RULE-012: API Design
+- Always return consistent error response format
+- Include success/error status in responses
+- Use `projectId` as primary field name, support `taskId` for backward compatibility
+- Never create mock data when API endpoints are missing
+- Always ask: "Would you like me to create the missing API endpoint?"
+**Severity:** Error
+**Applies to:** All API development
+**Exceptions:** When backward compatibility requires different field names
+
+### RULE-013: Real-time Features
+- Implement real-time updates using custom events for cross-component communication
+- Clean up event listeners in `useEffect` cleanup functions
+- Include comprehensive data in custom events to avoid additional API calls
+- Test real-time updates across different components
+- Include fallback mechanisms when real-time updates fail
+**Severity:** Warning
+**Applies to:** Real-time feature development
+**Exceptions:** When real-time updates are not critical for functionality
+
+### RULE-014: Dependency Management
+- Justify every new dependency
+- Prefer platform/framework features over libraries
+- Remove unused dependencies immediately
+- Ask: "Can I write this in 20 lines instead of importing a package?"
+**Severity:** Warning
+**Applies to:** Package management
+**Exceptions:** When framework features are insufficient or overly complex
+
+### RULE-015: Code Review Standards
+- Verify refactor maintains rule compliance
+- Flag rules that would be violated by proposed changes
+- Suggest rule-aligned alternative approaches
+- Prioritize clarity over cleverness in all refactors
+- Remove unnecessary indirection and abstraction layers
+**Severity:** Warning
+**Applies to:** All code reviews
+**Exceptions:** When refactoring would break critical functionality
+
+### RULE-016: Environment Configuration
+- Use environment-specific database URLs for audits
+- Create environment-agnostic audit scripts
+- Provide clear error messages for missing environment variables
+- Test in multiple environments before production
+**Severity:** Warning
+**Applies to:** Environment setup
+**Exceptions:** When environment differences are intentional
+
+### RULE-017: Debugging Practices
+- Add comprehensive logging to API calls during development
+- Use distinctive console log prefixes for easy filtering
+- Remove debug logs before production deployment
+- Test database connections before performing operations
+- Create minimal test endpoints to isolate issues
+**Severity:** Warning
+**Applies to:** Development and debugging
+**Exceptions:** When logging would expose sensitive information
+
+### RULE-018: Function Call Patterns
+- Always verify function parameter order matches function signature
+- Use TypeScript to catch parameter order mismatches at compile time
+- Never assume parameter order without checking function definition
+- Include parameter type checking in function implementations
+- Add runtime validation for critical function parameters
+**Severity:** Error
+**Applies to:** All function calls and implementations
+**Exceptions:** When function signatures are intentionally flexible
+
+### RULE-019: Type Safety
+- Always validate function parameters before using them
+- Use `typeof` checks for primitive types and `'in'` operator for object properties
+- Include detailed error logging with parameter types and values
+- Never use `'in'` operator on non-objects (strings, numbers, etc.)
+- Add runtime type guards for critical function parameters
+**Severity:** Error
+**Applies to:** All error handling and type checking code
+**Exceptions:** When type checking would significantly impact performance
+
+### RULE-020: Authentication Patterns
+- Always pass APIContext as first parameter to authentication functions
+- Pattern: `requireRole(context, role, redirectTo)` not `requireRole(role, redirectTo)(context)`
+- Include context validation in all authentication functions
+- Add detailed logging for authentication failures
+- Test authentication flows with both valid and invalid contexts
+**Severity:** Error
+**Applies to:** All authentication and authorization code
+**Exceptions:** When authentication context is not available
+
+---
+
+## DOMAIN-SPECIFIC RULES
+
+### RULE-021: Date/Time Handling
 - **CRITICAL**: Manual duration entries MUST have `startTime: null` and `endTime: null`
 - Use `createdAt` field for date association with manual entries, not `startTime`
 - Always use local date components for date construction to avoid timezone issues
@@ -137,8 +241,9 @@ This file defines how Cursor should interpret, enforce, and adapt to this projec
 - Use timezone utilities from `src/utils/timezoneUtils.ts`
 **Severity:** Error
 **Applies to:** All date/time operations
+**Exceptions:** None - timezone handling is critical for time tracking
 
-### RULE-012: Database Operations
+### RULE-022: Database Operations
 - Always run schema audits before and after migrations
 - Verify all expected tables exist in production
 - Check foreign key constraints and indexes
@@ -147,148 +252,9 @@ This file defines how Cursor should interpret, enforce, and adapt to this projec
 - Delete in dependency order: child tables first, then parent tables
 **Severity:** Error
 **Applies to:** All database operations
+**Exceptions:** When emergency fixes require immediate deployment
 
-### RULE-013: API Design
-- Always return consistent error response format
-- Include success/error status in responses
-- Use `projectId` as primary field name, support `taskId` for backward compatibility
-- Never create mock data when API endpoints are missing
-- Always ask: "Would you like me to create the missing API endpoint?"
-**Severity:** Error
-**Applies to:** All API development
-
-### RULE-014: Error Handling
-- Use try-catch blocks for all async operations
-- Provide user-friendly error messages
-- Log detailed errors to console for debugging
-- Handle both network errors and application errors
-- Distinguish between user errors and system errors
-**Severity:** Error
-**Applies to:** All async operations
-
-### RULE-015: Real-time Features
-- Implement real-time updates using custom events for cross-component communication
-- Clean up event listeners in `useEffect` cleanup functions
-- Include comprehensive data in custom events to avoid additional API calls
-- Test real-time updates across different components
-- Include fallback mechanisms when real-time updates fail
-**Severity:** Warning
-**Applies to:** Real-time feature development
-
----
-
-## Operational Rules
-
-### RULE-016: Debugging Practices
-- Add comprehensive logging to API calls during development
-- Use distinctive console log prefixes for easy filtering
-- Remove debug logs before production deployment
-- Test database connections before performing operations
-- Create minimal test endpoints to isolate issues
-**Severity:** Warning
-**Applies to:** Development and debugging
-
-### RULE-017: Code Review Standards
-- Verify refactor maintains rule compliance
-- Flag rules that would be violated by proposed changes
-- Suggest rule-aligned alternative approaches
-- Prioritize clarity over cleverness in all refactors
-- Remove unnecessary indirection and abstraction layers
-**Severity:** Warning
-**Applies to:** All code reviews
-
-### RULE-018: Dependency Management
-- Justify every new dependency
-- Prefer platform/framework features over libraries
-- Remove unused dependencies immediately
-- Ask: "Can I write this in 20 lines instead of importing a package?"
-**Severity:** Warning
-**Applies to:** Package management
-
-### RULE-019: Environment Configuration
-- Use environment-specific database URLs for audits
-- Create environment-agnostic audit scripts
-- Provide clear error messages for missing environment variables
-- Test in multiple environments before production
-**Severity:** Warning
-**Applies to:** Environment setup
-
-### RULE-020: Production Readiness
-- All code must be deployable without manual intervention
-- Include comprehensive error handling for missing tables
-- Test error states in production environments
-- Verify all collaborative features work without 500 errors
-- Document the impact of schema changes on application functionality
-**Severity:** Error
-**Applies to:** Production deployments
-
-### RULE-021: API Endpoint Structure
-- **CRITICAL**: Always use Astro context pattern: `async (context)` not `async ({ request, cookies })`
-- Use `context.request.json()` not `request.json()`
-- Use `getSessionUser(context)` not `getSessionUser({ cookies } as any)`
-- All API endpoints must follow consistent error response format
-- Include detailed logging for database operations
-- Test API endpoints with proper context structure
-**Severity:** Error
-**Applies to:** All API endpoint development
-
-### RULE-022: Permission System Patterns
-- **CRITICAL**: Create collaboration-specific endpoints instead of reusing admin endpoints
-- Check collaboration membership, not just admin roles for collaboration features
-- Use direct database queries for team members instead of complex relationship queries
-- Validate team membership with explicit user ID checks
-- Include detailed debugging for permission validation
-- Never assume relationship queries work - test with direct queries
-**Severity:** Error
-**Applies to:** All permission-sensitive features
-
-### RULE-023: Database Relationship Queries
-- **CRITICAL**: When relationship queries fail, use direct table queries as fallback
-- Always test relationship queries with actual data
-- Include debugging logs for relationship query results
-- Prefer explicit joins over complex relationship queries for critical operations
-- Validate that relationship queries return expected data structure
-**Severity:** Warning
-**Applies to:** All database operations using relationships
-
-### RULE-024: Error Handling and Debugging
-- **CRITICAL**: Include detailed error logging with error names, messages, and stack traces
-- Log database operation inputs and outputs for debugging
-- Provide specific error messages that help identify the root cause
-- Include debugging information in error responses (in development)
-- Test error scenarios to ensure proper error handling
-**Severity:** Error
-**Applies to:** All error handling code
-
-### RULE-025: Task Assignment Validation
-- **CRITICAL**: Validate that users are team members before task assignment
-- Use direct team member queries, not relationship queries
-- Include detailed logging for team member validation
-- Check both direct team association and project association for tasks
-- Provide clear error messages for invalid user assignments
-**Severity:** Error
-**Applies to:** All task assignment operations
-
-### RULE-026: Frontend Terminology
-- **CRITICAL**: Never use "Discussions" in frontend text - use "Insights" instead
-- All user-facing text must use "Insights" for collaborative content
-- API responses and error messages must use "Insights" terminology
-- Search functionality must reference "insights" not "discussions"
-- Database schema names can remain as `taskDiscussions` for consistency
-**Severity:** Error
-**Applies to:** All frontend development and API responses
-
-### RULE-027: Collaboration System Architecture
-- **CRITICAL**: Tasks created in collaborations may not have direct teamId association
-- Use project-based association for task validation when teamId is null
-- Create collaboration-specific API endpoints for all collaboration operations
-- Never reuse admin endpoints for collaboration features
-- Include both teamId and projectId validation for task operations
-- Test task operations with both direct team association and project association
-**Severity:** Error
-**Applies to:** All collaboration-related features
-
-### RULE-022: Database Synchronization Workflow
+### RULE-023: Database Synchronization
 - **CRITICAL**: Always run `node comprehensive-db-audit.js` before making schema changes
 - Use `./sync-databases.sh` for quick local-to-production deployment
 - Use `./deploy-to-production.sh` for major schema changes requiring backups
@@ -297,8 +263,9 @@ This file defines how Cursor should interpret, enforce, and adapt to this projec
 - Keep audit results in `audit-results/` directory for tracking
 **Severity:** Error
 **Applies to:** All database schema changes and deployments
+**Exceptions:** When audit tools are unavailable and emergency fixes are required
 
-### RULE-023: Database Deployment Safety
+### RULE-024: Database Deployment Safety
 - Always create production backup before major schema changes
 - Test schema changes locally before deploying to production
 - Use force mode (`--force`) only when absolutely necessary
@@ -307,6 +274,173 @@ This file defines how Cursor should interpret, enforce, and adapt to this projec
 - Document any manual schema changes in deployment notes
 **Severity:** Error
 **Applies to:** All production database operations
+**Exceptions:** When backup creation would cause unacceptable downtime
+
+### RULE-025: Permission System Patterns
+- **CRITICAL**: Create collaboration-specific endpoints instead of reusing admin endpoints
+- Check collaboration membership, not just admin roles for collaboration features
+- Use direct database queries for team members instead of complex relationship queries
+- Validate team membership with explicit user ID checks
+- Include detailed debugging for permission validation
+- Never assume relationship queries work - test with direct queries
+**Severity:** Error
+**Applies to:** All permission-sensitive features
+**Exceptions:** When performance requires optimized relationship queries
+
+### RULE-026: Database Relationship Queries
+- **CRITICAL**: When relationship queries fail, use direct table queries as fallback
+- Always test relationship queries with actual data
+- Include debugging logs for relationship query results
+- Prefer explicit joins over complex relationship queries for critical operations
+- Validate that relationship queries return expected data structure
+**Severity:** Warning
+**Applies to:** All database operations using relationships
+**Exceptions:** When relationship queries are the only viable option
+
+### RULE-027: Task Assignment Validation
+- **CRITICAL**: Validate that users are team members before task assignment
+- Use direct team member queries, not relationship queries
+- Include detailed logging for team member validation
+- Check both direct team association and project association for tasks
+- Provide clear error messages for invalid user assignments
+**Severity:** Error
+**Applies to:** All task assignment operations
+**Exceptions:** When task assignment is not team-based
+
+### RULE-028: Frontend Terminology
+- **CRITICAL**: Never use "Discussions" in frontend text - use "Insights" instead
+- All user-facing text must use "Insights" for collaborative content
+- API responses and error messages must use "Insights" terminology
+- Search functionality must reference "insights" not "discussions"
+- Database schema names can remain as `taskDiscussions` for consistency
+**Severity:** Error
+**Applies to:** All frontend development and API responses
+**Exceptions:** When database schema consistency requires different terminology
+
+### RULE-029: Collaboration System Architecture
+- **CRITICAL**: Tasks created in collaborations may not have direct teamId association
+- Use project-based association for task validation when teamId is null
+- Create collaboration-specific API endpoints for all collaboration operations
+- Never reuse admin endpoints for collaboration features
+- Include both teamId and projectId validation for task operations
+- Test task operations with both direct team association and project association
+**Severity:** Error
+**Applies to:** All collaboration-related features
+**Exceptions:** When collaboration features are not project-based
+
+### RULE-030: Production Readiness
+- All code must be deployable without manual intervention
+- Include comprehensive error handling for missing tables
+- Test error states in production environments
+- Verify all collaborative features work without 500 errors
+- Document the impact of schema changes on application functionality
+**Severity:** Error
+**Applies to:** Production deployments
+**Exceptions:** When manual intervention is required for security or compliance
+
+---
+
+## OPERATIONAL RULES
+
+### RULE-031: API Endpoint Structure
+- **CRITICAL**: Always use Astro context pattern: `async (context)` not `async ({ request, cookies })`
+- Use `context.request.json()` not `request.json()`
+- Use `getSessionUser(context)` not `getSessionUser({ cookies } as any)`
+- All API endpoints must follow consistent error response format
+- Include detailed logging for database operations
+- Test API endpoints with proper context structure
+**Severity:** Error
+**Applies to:** All API endpoint development
+**Exceptions:** When legacy endpoints require different patterns
+
+### RULE-032: Deployment Safety
+- Use conventional commits (feat:, fix:, docs:, etc.)
+- Include "Rule Impact: RULE-###" in PR descriptions when relevant
+- Test in staging before production
+- Verify database migrations before deployment
+**Severity:** Error
+**Applies to:** All deployments
+**Exceptions:** When emergency fixes require immediate deployment
+
+### RULE-033: Monitoring and Observability
+- Include comprehensive logging for all critical operations
+- Use structured logging with consistent formats
+- Monitor database performance and query execution times
+- Set up alerts for critical system failures
+- Track user actions and system events
+**Severity:** Warning
+**Applies to:** All production systems
+**Exceptions:** When logging would impact performance significantly
+
+### RULE-034: Maintenance and Refactoring
+- Regularly review and update dependencies
+- Refactor code that violates current rules
+- Remove dead code and unused imports
+- Update documentation when code changes
+- Plan refactoring sessions for technical debt
+**Severity:** Warning
+**Applies to:** All code maintenance
+**Exceptions:** When refactoring would break critical functionality
+
+### RULE-035: Scalability Considerations
+- Design for horizontal scaling where possible
+- Use efficient database queries and indexes
+- Implement caching strategies for frequently accessed data
+- Monitor resource usage and performance metrics
+- Plan for increased user load and data volume
+**Severity:** Warning
+**Applies to:** All system design decisions
+**Exceptions:** When simplicity conflicts with scalability requirements
+
+### RULE-036: Security Monitoring
+- Log all authentication attempts and failures
+- Monitor for suspicious activity patterns
+- Implement rate limiting for API endpoints
+- Regular security audits and vulnerability assessments
+- Keep security dependencies updated
+**Severity:** Error
+**Applies to:** All security-sensitive systems
+**Exceptions:** None - security monitoring is critical
+
+### RULE-037: Data Backup and Recovery
+- Implement automated backup strategies
+- Test backup restoration procedures regularly
+- Document disaster recovery procedures
+- Maintain multiple backup copies in different locations
+- Verify data integrity after backup operations
+**Severity:** Error
+**Applies to:** All production data systems
+**Exceptions:** When backup operations would cause unacceptable downtime
+
+### RULE-038: Performance Optimization
+- Profile application performance regularly
+- Optimize database queries and indexes
+- Implement lazy loading for heavy components
+- Use CDN for static assets
+- Monitor and optimize memory usage
+**Severity:** Warning
+**Applies to:** All performance-critical code
+**Exceptions:** When optimization conflicts with maintainability
+
+### RULE-039: Code Quality Metrics
+- Track code coverage and test quality
+- Monitor cyclomatic complexity and maintainability
+- Regular code reviews and quality assessments
+- Use automated tools for code quality checks
+- Set quality gates for deployments
+**Severity:** Warning
+**Applies to:** All code development
+**Exceptions:** When quality metrics conflict with delivery timelines
+
+### RULE-040: Documentation Maintenance
+- Keep technical documentation current
+- Document all API changes and breaking changes
+- Maintain runbooks for operational procedures
+- Update architecture diagrams when systems change
+- Document troubleshooting procedures
+**Severity:** Warning
+**Applies to:** All system documentation
+**Exceptions:** When documentation updates would delay critical fixes
 
 ---
 
@@ -431,6 +565,22 @@ When reviewing or suggesting code, ask:
 - Test locally before production deployment
 - Monitor application after deployment
 - Keep audit results for tracking changes
+
+### Common Anti-Patterns to Avoid
+- ❌ Call functions with parameters in wrong order: `requireRole('admin', '/admin')(context)`
+- ❌ Use `'in'` operator on non-objects (strings, numbers, primitives)
+- ❌ Assume parameter types without validation
+- ❌ Skip context validation in authentication functions
+- ❌ Ignore TypeScript errors about parameter mismatches
+- ❌ Create function calls without checking the function signature first
+
+### ✅ Best Practices for Function Calls
+- Always check function signature before calling
+- Use TypeScript strict mode to catch parameter errors
+- Include runtime validation for critical parameters
+- Add detailed error logging for debugging
+- Test function calls with both valid and invalid parameters
+- Use consistent parameter order patterns across similar functions
 
 ---
 
