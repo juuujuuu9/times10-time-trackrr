@@ -170,6 +170,18 @@ export const POST: APIRoute = async (context) => {
         });
       }
 
+      // Check file size (Vercel limit is 4.5MB for serverless functions)
+      const maxFileSize = 4 * 1024 * 1024; // 4MB limit (leaving some buffer)
+      if (file.size > maxFileSize) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: `File too large. Maximum size is ${Math.round(maxFileSize / (1024 * 1024))}MB. Your file is ${Math.round(file.size / (1024 * 1024))}MB.`
+        }), {
+          status: 413,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
       // Get taskId from form data or use a default
       const taskIdParam = formData.get('taskId') as string;
       const taskId = taskIdParam ? parseInt(taskIdParam) : 1; // Default to 1 if not provided

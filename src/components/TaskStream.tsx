@@ -381,6 +381,12 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         
+        // Check file size before upload (4MB limit)
+        const maxFileSize = 4 * 1024 * 1024; // 4MB
+        if (file.size > maxFileSize) {
+          throw new Error(`File "${file.name}" is too large. Maximum size is 4MB. Your file is ${Math.round(file.size / (1024 * 1024))}MB.`);
+        }
+        
         // Upload file using FormData
         const formData = new FormData();
         formData.append('file', file);
@@ -391,7 +397,18 @@ const TaskStream: React.FC<TaskStreamProps> = ({
           body: formData, // No Content-Type header needed for FormData
         });
 
-        const fileResult = await fileResponse.json();
+        // Handle different response types
+        let fileResult;
+        if (fileResponse.status === 413) {
+          // File too large - try to parse JSON error message
+          try {
+            fileResult = await fileResponse.json();
+          } catch {
+            throw new Error(`File "${file.name}" is too large. Maximum size is 4MB.`);
+          }
+        } else {
+          fileResult = await fileResponse.json();
+        }
         
         console.log('📁 File upload response:', fileResult);
         

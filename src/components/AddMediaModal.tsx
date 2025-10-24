@@ -31,8 +31,8 @@ const AddMediaModal: React.FC<AddMediaModalProps> = ({
   const [showMentions, setShowMentions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // File size limit: 1GB
-  const MAX_FILE_SIZE = 1024 * 1024 * 1024; // 1GB in bytes
+  // File size limit: 4MB (matching Vercel serverless function limit)
+  const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB in bytes
 
 
   // Handle file selection
@@ -44,14 +44,14 @@ const AddMediaModal: React.FC<AddMediaModalProps> = ({
       
       files.forEach(file => {
         if (file.size > MAX_FILE_SIZE) {
-          invalidFiles.push(`${file.name} (${(file.size / (1024 * 1024 * 1024)).toFixed(2)}GB)`);
+          invalidFiles.push(`${file.name} (${(file.size / (1024 * 1024)).toFixed(2)}MB)`);
         } else {
           validFiles.push(file);
         }
       });
       
       if (invalidFiles.length > 0) {
-        alert(`Some files exceed 1GB limit:\n${invalidFiles.join('\n')}`);
+        alert(`Some files exceed 4MB limit:\n${invalidFiles.join('\n')}`);
       }
       
       if (validFiles.length > 0) {
@@ -74,14 +74,14 @@ const AddMediaModal: React.FC<AddMediaModalProps> = ({
       
       files.forEach(file => {
         if (file.size > MAX_FILE_SIZE) {
-          invalidFiles.push(`${file.name} (${(file.size / (1024 * 1024 * 1024)).toFixed(2)}GB)`);
+          invalidFiles.push(`${file.name} (${(file.size / (1024 * 1024)).toFixed(2)}MB)`);
         } else {
           validFiles.push(file);
         }
       });
       
       if (invalidFiles.length > 0) {
-        alert(`Some files exceed 1GB limit:\n${invalidFiles.join('\n')}`);
+        alert(`Some files exceed 4MB limit:\n${invalidFiles.join('\n')}`);
       }
       
       if (validFiles.length > 0) {
