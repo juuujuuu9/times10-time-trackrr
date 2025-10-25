@@ -1611,10 +1611,10 @@ export default function Timer() {
     return (
       <div className="space-y-4">
         {/* Timer Display and Add Task Button Row */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
           {/* Timer Display */}
           <div 
-            className="text-[2.5rem] text-black"
+            className="text-[2.5rem] text-black text-center sm:text-left mb-4 sm:mb-0"
             style={{ 
               fontFamily: '"Istok Web", system-ui, sans-serif',
               fontWeight: 'bold',
@@ -1626,11 +1626,11 @@ export default function Timer() {
           
           {/* Add Task and Quick Entry Buttons (only for current week) */}
           {weekOffset === 0 && (
-            <div className="flex items-center space-x-2">
+            <div className="flex space-x-2 w-full sm:w-auto">
               <button
                 onClick={() => setAddTaskDropdownOpen(!addTaskDropdownOpen)}
                 disabled={isRunning}
-                className={`flex items-center space-x-1 px-3 py-1 text-sm rounded transition-colors ${
+                className={`flex-1 sm:flex-none flex items-center justify-center space-x-1 px-3 py-1 text-sm rounded transition-colors ${
                   isRunning 
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50' 
                     : 'bg-black text-white hover:bg-gray-800'
@@ -1652,7 +1652,7 @@ export default function Timer() {
                   }
                 }}
                 disabled={isRunning}
-                className={`flex items-center space-x-1 px-3 py-1 text-sm rounded transition-colors ${
+                className={`flex-1 sm:flex-none flex items-center justify-center space-x-1 px-3 py-1 text-sm rounded transition-colors ${
                   isRunning 
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50' 
                     : 'bg-black text-white hover:bg-gray-800'
@@ -2110,7 +2110,7 @@ export default function Timer() {
   // Show loading state while data is being loaded
   if (dataLoading) {
     return (
-      <div className="bg-white p-6 rounded-lg shadow-lg">
+      <div className="bg-white p-2 sm:p-6 rounded-lg shadow-lg">
         <h2 className="text-2xl font-bold text-gray-800 mb-4">Time Tracker</h2>
         <div className="text-center py-8">
           <div className="w-8 h-8 border-4 border-gray-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
@@ -2123,7 +2123,7 @@ export default function Timer() {
   // Show authentication required message if no user is logged in
   if (!currentUserId) {
     return (
-      <div className="bg-white p-6 rounded-lg shadow-lg">
+      <div className="bg-white p-2 sm:p-6 rounded-lg shadow-lg">
         <h2 className="text-2xl font-bold text-gray-800 mb-4">Time Tracker</h2>
         <div className="text-center py-8">
           <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -2137,7 +2137,7 @@ export default function Timer() {
   }
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg">
+    <div className="bg-white p-2 pb-6 sm:p-6 rounded-lg shadow-lg">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
         
         <div className="flex items-centflex items-center justify-center sm:justify-start mb-2 py-3 sm:mb-0 bg-[#f9fafb] rounded-lg sm:bg-transparent justify-center sm:justify-start mb-4 sm:mb-0">
@@ -2252,7 +2252,7 @@ export default function Timer() {
 
       {/* Task Selection - List Layout */}
       {layoutMode === 'list' && (
-        <div className="mb-6">
+        <div className="mb-0 sm:mb-6">
           {renderTaskList()}
         </div>
       )}
