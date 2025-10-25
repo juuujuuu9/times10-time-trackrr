@@ -90,7 +90,7 @@ export const POST: APIRoute = async (context) => {
   try {
     console.log('🔍 [TIMER DEBUG] POST /api/timers/ongoing - Starting timer request');
     
-    const currentUser = await requireAuth()(context);
+    const currentUser = await requireAuth(context);
     if (!currentUser || typeof currentUser === 'string') {
       console.log('❌ [TIMER DEBUG] Authentication failed');
       return new Response(JSON.stringify({ 
@@ -224,7 +224,7 @@ export const POST: APIRoute = async (context) => {
 // PUT: Stop ongoing timer
 export const PUT: APIRoute = async (context) => {
   try {
-    const currentUser = await requireAuth()(context);
+    const currentUser = await requireAuth(context);
     if (!currentUser || typeof currentUser === 'string') {
       return new Response(JSON.stringify({ 
         success: false, 
@@ -316,7 +316,7 @@ export const PUT: APIRoute = async (context) => {
 // DELETE: Force stop ongoing timer without saving
 export const DELETE: APIRoute = async (context) => {
   try {
-    const currentUser = await requireAuth()(context);
+    const currentUser = await requireAuth(context);
     if (!currentUser || typeof currentUser === 'string') {
       return new Response(JSON.stringify({ 
         success: false, 
