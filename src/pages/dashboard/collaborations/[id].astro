@@ -352,19 +352,21 @@ if (projectDetails && projectDetails.id) {
 <DashboardLayout title={`${collaboration.name} - Collaboration`}>
 
   <div class="flex flex-col md:flex-row h-full mx-auto px-2 sm:px-8 mt-2 md:mt-8 w-full">
-    <div class="flex items-center flex-1 w-full md:w-auto m-2 mb-3 block md:hidden">
+    <div class="flex items-center flex-1 w-full md:w-auto m-2 mb-3 block md:hidden relative">
       <!-- Mobile Breadcrumbs -->
-      <nav class="flex items-center space-x-2 text-sm">
-        <a href="/dashboard/collaborations" class="text-gray-500 hover:text-gray-700 underline">Collaborations</a>
-        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <nav class="flex items-center space-x-2 text-sm overflow-x-auto scrollbar-hide whitespace-nowrap relative" style="max-width: calc(100vw - 2rem); overflow: scroll !important;">
+        <a href="/dashboard/collaborations" class="text-gray-500 hover:text-gray-700 underline flex-shrink-0">Collaborations</a>
+        <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
         </svg>
         {projectDetails ? (
-          <span class="text-gray-500">{projectDetails.client?.name || 'Unknown Client'} - {projectDetails.name}</span>
+          <span class="text-gray-500 flex-shrink-0">{projectDetails.client?.name || 'Unknown Client'} - {projectDetails.name}</span>
         ) : (
-          <span class="text-gray-500">{(collaboration as any).name}</span>
+          <span class="text-gray-500 flex-shrink-0">{(collaboration as any).name}</span>
         )}
       </nav>
+      <!-- Fade-out gradient overlay -->
+      <div class="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-[#f0eef5] to-transparent pointer-events-none"></div>
     </div>
     <!-- Left Sidebar -->
     <div class="w-full md:w-1/4 bg-white border-r-0 md:border-r border-b md:border-b-0 border-gray-200 p-2 md:p-6 rounded-xl static md:sticky md:top-8 mb-3 md:mb-0" style="height: fit-content;">
@@ -4309,5 +4311,15 @@ if (projectDetails && projectDetails.id) {
   
   .overflow-y-auto {
     overflow: visible !important;
+  }
+  
+  /* Hide scrollbar for mobile breadcrumbs */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Safari and Chrome */
   }
 </style>
