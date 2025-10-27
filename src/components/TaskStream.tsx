@@ -1720,7 +1720,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
   }
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-4 sm:space-y-6 pb-6 sm:pb-8 px-2 sm:px-0">
       {/* Notification banners (in-DOM) */}
       {/* NOTE: Search for "Notification banners (in-DOM)" to find this system quickly. */}
       <div
@@ -1731,12 +1731,12 @@ const TaskStream: React.FC<TaskStreamProps> = ({
         {notifications.map(n => (
           <div
             key={n.id}
-            className={`flex items-start justify-between rounded-md px-4 py-2 border ${n.type === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-800'}`}
+            className={`flex items-start justify-between rounded-md px-3 sm:px-4 py-2 border ${n.type === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-800'}`}
           >
-            <span className="text-sm">{n.text}</span>
+            <span className="text-xs sm:text-sm pr-2">{n.text}</span>
             <button
               onClick={() => dismissNotification(n.id)}
-              className="ml-4 text-xs opacity-70 hover:opacity-100"
+              className="text-xs opacity-70 hover:opacity-100 flex-shrink-0"
               title="Dismiss"
               aria-label="Dismiss notification"
             >
@@ -1760,13 +1760,13 @@ const TaskStream: React.FC<TaskStreamProps> = ({
 
       {/* Moved per-post deletion confirmation inline under each post */}
       {/* Post Creation Area */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
           <button 
             onClick={() => setShowAddInsightModal(true)}
-            className="flex items-center justify-center space-x-3 px-6 py-4 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl transition-colors border border-blue-200"
+            className="flex items-center justify-center space-x-2 sm:space-x-3 px-4 sm:px-6 py-3 sm:py-4 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl transition-colors border border-blue-200"
           >
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
               <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g>
               <g id="SVGRepo_iconCarrier">
@@ -1774,66 +1774,68 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                 <path fillRule="evenodd" clipRule="evenodd" d="M13.2215 7.8897C13.5586 8.13046 13.6366 8.59887 13.3959 8.93593L12.1001 10.75H13.6427C13.9237 10.75 14.181 10.907 14.3096 11.1568C14.4382 11.4066 14.4163 11.7073 14.253 11.9359L12.1102 14.9359C11.8694 15.273 11.401 15.3511 11.0639 15.1103C10.7269 14.8695 10.6488 14.4011 10.8896 14.0641L12.1853 12.25H10.6427C10.3618 12.25 10.1044 12.093 9.97585 11.8432C9.84729 11.5934 9.86913 11.2927 10.0324 11.0641L12.1753 8.06407C12.416 7.72701 12.8844 7.64894 13.2215 7.8897Z" fill="currentColor"></path>
               </g>
             </svg>
-            <span className="font-semibold">Add Insight</span>
+            <span className="font-semibold text-sm sm:text-base">Add Insight</span>
           </button>
           
           <button 
             onClick={() => setShowAddMediaModal(true)}
-            className="flex items-center justify-center space-x-3 px-6 py-4 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl transition-colors border border-red-200"
+            className="flex items-center justify-center space-x-2 sm:space-x-3 px-4 sm:px-6 py-3 sm:py-4 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl transition-colors border border-red-200"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
             </svg>
-            <span className="font-semibold">Upload Files</span>
+            <span className="font-semibold text-sm sm:text-base">Upload Files</span>
           </button>
           
           <button 
             onClick={() => setShowLinkDropModal(true)}
-            className="flex items-center justify-center space-x-3 px-6 py-4 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 rounded-xl transition-colors border border-yellow-200"
+            className="flex items-center justify-center space-x-2 sm:space-x-3 px-4 sm:px-6 py-3 sm:py-4 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 rounded-xl transition-colors border border-yellow-200"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
             </svg>
-            <span className="font-semibold">Drop Link</span>
+            <span className="font-semibold text-sm sm:text-base">Drop Link</span>
           </button>
           
           <button 
             onClick={() => setShowSubtaskModal(true)}
-            className="flex items-center justify-center space-x-3 px-6 py-4 bg-green-50 hover:bg-green-100 text-green-700 rounded-xl transition-colors border border-green-200"
+            className="flex items-center justify-center space-x-2 sm:space-x-3 px-4 sm:px-6 py-3 sm:py-4 bg-green-50 hover:bg-green-100 text-green-700 rounded-xl transition-colors border border-green-200"
           >
-            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 512 512">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 512 512">
               <path d="M139.61 35.5a12 12 0 0 0-17 0L58.93 98.81l-22.7-22.12a12 12 0 0 0-17 0L3.53 92.41a12 12 0 0 0 0 17l47.59 47.4a12.78 12.78 0 0 0 17.61 0l15.59-15.62L156.52 69a12.09 12.09 0 0 0 .09-17zm0 159.19a12 12 0 0 0-17 0l-63.68 63.72-22.7-22.1a12 12 0 0 0-17 0L3.53 252a12 12 0 0 0 0 17L51 316.5a12.77 12.77 0 0 0 17.6 0l15.7-15.69 72.2-72.22a12 12 0 0 0 .09-16.9zM64 368c-26.49 0-48.59 21.5-48.59 48S37.53 464 64 464a48 48 0 0 0 0-96zm432 16H208a16 16 0 0 0-16 16v32a16 16 0 0 0 16 16h288a16 16 0 0 0 16-16v-32a16 16 0 0 0-16-16zm0-320H208a16 16 0 0 0-16 16v32a16 16 0 0 0 16 16h288a16 16 0 0 0 16-16V80a16 16 0 0 0-16-16zm0 160H208a16 16 0 0 0-16 16v32a16 16 0 0 0 16 16h288a16 16 0 0 0 16-16v-32a16 16 0 0 0-16-16z"></path>
             </svg>
-            <span className="font-semibold">Create Subtask</span>
+            <span className="font-semibold text-sm sm:text-base">Create Subtask</span>
           </button>
         </div>
       </div>
 
       {/* Stream Feed */}
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {filteredPosts.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-gray-500 mb-4">No posts yet</div>
-            <p className="text-sm text-gray-400">Be the first to share an insight, upload media, or create a subtask!</p>
+          <div className="text-center py-8 sm:py-12 px-4">
+            <div className="text-gray-500 mb-3 sm:mb-4 text-sm sm:text-base">No posts yet</div>
+            <p className="text-xs sm:text-sm text-gray-400">Be the first to share an insight, upload media, or create a subtask!</p>
           </div>
         ) : (
           filteredPosts.map((post) => {
             const typeStyle = getTypeStyling(post.type);
             
             return (
-              <div key={post.id} className={`bg-white rounded-xl border border-gray-200 p-4 pt-4 relative ${post.author.id === currentUser.id && post.comments && post.comments.length > 0 ? 'pb-12' : ''} ${post.author.id === currentUser.id && post.type === 'media' ? (post.comments && post.comments.length > 0 ? 'pb-12' : 'pb-8') : ''}`}>
-                <div className="flex items-start space-x-3">
+              <div key={post.id} className={`bg-white rounded-xl border border-gray-200 p-3 sm:p-4 pt-3 sm:pt-4 relative ${post.author.id === currentUser.id && post.comments && post.comments.length > 0 ? 'pb-12' : ''} ${post.author.id === currentUser.id && post.type === 'media' ? (post.comments && post.comments.length > 0 ? 'pb-12' : 'pb-8') : ''}`}>
+                <div className="flex items-start space-x-2 sm:space-x-3">
                   
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-start space-x-2 mb-2 justify-between">
-                      <div className="flex items-center space-x-2">
-                        <div className={`w-10 h-10 ${typeStyle.bg} rounded-full flex items-center justify-center text-sm font-medium ${typeStyle.text} flex-shrink-0`}>
+                      <div className="flex items-center space-x-2 min-w-0 flex-1">
+                        <div className={`w-8 h-8 sm:w-10 sm:h-10 ${typeStyle.bg} rounded-full flex items-center justify-center text-xs sm:text-sm font-medium ${typeStyle.text} flex-shrink-0`}>
                           {getUserInitials(post.author)}
                         </div>
-                        <span className="font-medium text-gray-900">{post.author.name}</span>
-                        <span className="text-sm text-gray-500">{formatTimeAgo(post.createdAt)}</span>
+                        <div className="min-w-0 flex-1">
+                          <span className="font-medium text-gray-900 text-sm sm:text-base truncate block">{post.author.name}</span>
+                          <span className="text-xs sm:text-sm text-gray-500">{formatTimeAgo(post.createdAt)}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 flex-shrink-0">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${typeStyle.bg} ${typeStyle.text}`}>
                           {typeStyle.icon} {post.type === 'media' ? 'Files' : post.type.charAt(0).toUpperCase() + post.type.slice(1)}
                         </span>
@@ -1872,7 +1874,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                           </div>
                         </div>
                       ) : (
-                        <div className="text-gray-700 mb-6 mt-6 text-lg prose prose-sm max-w-none">
+                        <div className="text-gray-700 mb-4 sm:mb-6 mt-4 sm:mt-6 text-base sm:text-lg prose prose-sm max-w-none">
                           {renderContentWithMentions(post.content, post.author, post.id)}
                         </div>
                       )
@@ -1883,11 +1885,11 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                       <div className={`mb-3 ${!(post.type === 'media' && post.content.match(/^Uploaded \d+ file/)) && post.content && post.content.trim() ? '' : 'mt-4'}`}>
                         {/* Multiple Files */}
                         {post.mediaUrls && post.mediaUrls.length > 1 && (
-                          <div className="bg-gray-100 rounded-lg p-4">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center space-x-3">
-                                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                                  <svg className="w-6 h-6 text-red-600" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <div className="bg-gray-100 rounded-lg p-3 sm:p-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 space-y-2 sm:space-y-0">
+                              <div className="flex items-center space-x-2 sm:space-x-3">
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <g clipPath="url(#clip0_901_1141)">
                                       <path d="M12 13H15M12 16H20M12 20H20M12 24H20M21 7V2C21 1.447 20.553 1 20 1H2C1.447 1 1 1.447 1 2V24C1 24 1 25 2 25H3M26 27H30C30.553 27 31 26.553 31 26V4C31 3.447 30.553 3 30 3H24M26 30C26 30.553 25.553 31 25 31H7C6.447 31 6 30.553 6 30V8C6 7.447 6.447 7 7 7H25C25.553 7 26 7.447 26 8V30Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                     </g>
@@ -1898,14 +1900,14 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                     </defs>
                                   </svg>
                                 </div>
-                                <div>
-                                  <div className="font-medium text-gray-900">{post.mediaUrls.length} files uploaded</div>
-                                  <div className="text-sm text-gray-500">Multiple media files</div>
+                                <div className="min-w-0">
+                                  <div className="font-medium text-gray-900 text-sm sm:text-base">{post.mediaUrls.length} files uploaded</div>
+                                  <div className="text-xs sm:text-sm text-gray-500">Multiple media files</div>
                                 </div>
                               </div>
                               <button
                                 onClick={() => post.mediaUrls && handleDownloadAll(post.mediaUrls, post.fileNames || [])}
-                                className="flex items-center space-x-2 px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
+                                className="flex items-center justify-center space-x-2 px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-xs sm:text-sm w-full sm:w-auto"
                               >
                                 <svg className="w-4 h-4" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
                                   <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
@@ -1922,29 +1924,30 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                     </g>
                                   </g>
                                 </svg>
-                                <span>Download all as ZIP</span>
+                                <span className="hidden sm:inline">Download all as ZIP</span>
+                                <span className="sm:hidden">Download ZIP</span>
                               </button>
                             </div>
                             <div className="space-y-2">
                               {post.mediaUrls.map((url: string, index: number) => (
-                                <div key={index} className="bg-white rounded-lg p-3 border border-gray-200 flex items-center space-x-3 hover:bg-gray-50 transition-colors">
-                                  <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
+                                <div key={index} className="bg-white rounded-lg p-2 sm:p-3 border border-gray-200 flex items-center space-x-2 sm:space-x-3 hover:bg-gray-50 transition-colors">
+                                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
                                     {getFileIconSvg(url)}
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-medium text-gray-900 truncate">
+                                    <div className="text-xs sm:text-sm font-medium text-gray-900 truncate">
                                       {post.fileNames?.[index] || getFilename(url)}
                                     </div>
                                     <div className="text-xs text-gray-500">{getFileTypeLabel(url)}</div>
                                   </div>
                                   <button
                                     onClick={() => handleDownloadFile(url, post.fileNames?.[index] || getFilename(url) || 'file')}
-                                    className="flex items-center space-x-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors"
+                                    className="flex items-center space-x-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors flex-shrink-0"
                                   >
                                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                     </svg>
-                                    <span>Download</span>
+                                    <span className="hidden sm:inline">Download</span>
                                   </button>
                                 </div>
                               ))}
@@ -1954,20 +1957,20 @@ const TaskStream: React.FC<TaskStreamProps> = ({
 
                         {/* Single File */}
                         {(!post.mediaUrls || post.mediaUrls.length === 1) && (
-                          <div className="bg-gray-100 rounded-lg p-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-3">
-                                <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center">
+                          <div className="bg-gray-100 rounded-lg p-3 sm:p-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                              <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
                                   {getFileIconSvg(post.mediaUrl)}
                                 </div>
-                                <div>
-                                  <div className="font-medium text-gray-900">{getFilename(post.mediaUrl)}</div>
-                                  <div className="text-sm text-gray-500">{getFileTypeLabel(post.mediaUrl)}</div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium text-gray-900 text-sm sm:text-base truncate">{getFilename(post.mediaUrl)}</div>
+                                  <div className="text-xs sm:text-sm text-gray-500">{getFileTypeLabel(post.mediaUrl)}</div>
                                 </div>
                               </div>
                               <button
                                 onClick={() => post.mediaUrl && handleDownloadFile(post.mediaUrl, getFilename(post.mediaUrl) || 'file')}
-                                className="flex items-center space-x-2 px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
+                                className="flex items-center justify-center space-x-2 px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-xs sm:text-sm w-full sm:w-auto"
                               >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -2005,7 +2008,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                     
                     {/* Post Actions */}
                     {editingPostId !== post.id && (
-                      <div className="flex items-center space-x-4 text-sm text-gray-600">
+                      <div className="flex items-center space-x-3 sm:space-x-4 text-xs sm:text-sm text-gray-600">
                         {post.author.id === currentUser.id ? (
                           // User's own post - show Edit button only if there's meaningful content
                           post.content && 
@@ -2013,7 +2016,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                           !(post.type === 'media' && post.content.match(/^Uploaded \d+ file/)) && (
                             <button
                               onClick={() => startEditingPost(post.id, post.content)}
-                              className="hover:underline transition-all text-gray-600"
+                              className="hover:underline transition-all text-gray-600 px-2 py-1 rounded hover:bg-gray-100"
                             >
                               Edit
                             </button>
@@ -2023,9 +2026,9 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                           !replyOpen[post.id] && (
                             <button
                               onClick={() => handleReplyClick(post)}
-                              className="flex items-center space-x-1 hover:underline transition-all"
+                              className="flex items-center space-x-1 hover:underline transition-all px-2 py-1 rounded hover:bg-gray-100"
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                               </svg>
                               <span>Reply</span>
@@ -2038,11 +2041,11 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                     {/* Reply input for top-level posts */}
                     {replyOpen[post.id] && (
                       <div className="mt-4 reply-input-container">
-                        <div className="flex items-start space-x-3">
+                        <div className="flex flex-col sm:flex-row sm:items-start space-y-3 sm:space-y-0 sm:space-x-3">
                           <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 flex-shrink-0">
                             {getUserInitials(currentUser)}
                           </div>
-                          <div className="flex-1 flex items-center space-x-2">
+                          <div className="flex-1 flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
                             <SimpleRichEditor
                               content={newComment[post.id] || ''}
                               onChange={(value: string) => setNewComment(prev => ({ ...prev, [post.id]: value }))}
@@ -2057,7 +2060,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                             />
                             <button
                               onClick={() => handleSubmitComment(post.id)}
-                              className="px-3 py-2 text-sm rounded bg-gray-600 text-white hover:bg-gray-700"
+                              className="px-3 py-2 text-xs sm:text-sm rounded bg-gray-600 text-white hover:bg-gray-700 w-full sm:w-auto"
                             >
                               Post
                             </button>
@@ -2075,17 +2078,17 @@ const TaskStream: React.FC<TaskStreamProps> = ({
 
                     {/* Comments */}
                     {post.comments && post.comments.length > 0 && (
-                      <div className="mt-4 space-y-4">
+                      <div className="mt-4 space-y-3 sm:space-y-4">
                         {post.comments
                           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                           .map((comment) => (
-                          <div key={comment.id} className="relative flex items-start space-x-3">
+                          <div key={comment.id} className="relative flex items-start space-x-2 sm:space-x-3">
                             {/* <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 flex-shrink-0 mt-0.5">
                               {getUserInitials(comment.author)}
                             </div> */}
-                            <div className="flex-1 bg-gray-50 border border-gray-200 rounded-lg p-3">
-                              <div className="flex items-center space-x-2 mb-1">
-                                <span className="font-medium text-gray-900 text-sm">{comment.author.name}</span>
+                            <div className="flex-1 bg-gray-50 border border-gray-200 rounded-lg p-2 sm:p-3">
+                              <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2 mb-1">
+                                <span className="font-medium text-gray-900 text-xs sm:text-sm">{comment.author.name}</span>
                                 <span className="text-xs text-gray-500">{formatTimeAgo(comment.createdAt)}</span>
                               </div>
                               {editingCommentId === comment.id ? (
@@ -2125,13 +2128,13 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                               )}
                               {/* Comment actions: Reply for others, Edit/Delete for own comments */}
                               {editingCommentId !== comment.id && (
-                                <div className="flex items-center space-x-3 mt-2 text-xs text-gray-600">
+                                <div className="flex items-center space-x-2 sm:space-x-3 mt-2 text-xs text-gray-600">
                                   {comment.author.id === currentUser.id ? (
                                     // User's own comment - show Edit and Delete buttons
                                     <div className="flex items-center space-x-2">
                                       <button
                                         onClick={() => startEditingComment(comment.id, comment.content)}
-                                        className="hover:underline transition-all text-gray-600"
+                                        className="hover:underline transition-all text-gray-600 px-1 py-0.5 rounded hover:bg-gray-200"
                                       >
                                         Edit
                                       </button>
@@ -2142,7 +2145,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                             handleDeleteComment(comment.id, post.id);
                                           }
                                         }}
-                                        className="hover:underline transition-all text-gray-600"
+                                        className="hover:underline transition-all text-gray-600 px-1 py-0.5 rounded hover:bg-gray-200"
                                       >
                                         Delete
                                       </button>
@@ -2152,7 +2155,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                     !replyOpen[comment.id] && (
                                       <button
                                         onClick={() => handleReplyClick({ id: comment.id, author: comment.author })}
-                                        className="hover:underline transition-all"
+                                        className="hover:underline transition-all px-1 py-0.5 rounded hover:bg-gray-200"
                                       >
                                         Reply
                                       </button>
@@ -2164,11 +2167,11 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                               {/* Comment Input (visible only when Reply opened for this comment) */}
                               {replyOpen[comment.id] && (
                                 <div className="mt-2 reply-input-container">
-                                  <div className="flex items-start space-x-3">
-                                    <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 flex-shrink-0">
+                                  <div className="flex flex-col sm:flex-row sm:items-start space-y-2 sm:space-y-0 sm:space-x-3">
+                                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium text-gray-600 flex-shrink-0">
                                       {getUserInitials(currentUser)}
                                     </div>
-                                    <div className="flex-1 flex items-center space-x-2">
+                                    <div className="flex-1 flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
                                       <SimpleRichEditor
                                         content={newComment[comment.id] || ''}
                                         onChange={(value: string) => setNewComment(prev => ({ ...prev, [comment.id]: value }))}
@@ -2183,7 +2186,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                       />
                                       <button
                                         onClick={() => handleSubmitComment(comment.id)}
-                                        className="px-3 py-2 text-sm rounded bg-gray-600 text-white hover:bg-gray-700"
+                                        className="px-3 py-2 text-xs sm:text-sm rounded bg-gray-600 text-white hover:bg-gray-700 w-full sm:w-auto"
                                       >
                                         Post
                                       </button>
@@ -2194,20 +2197,20 @@ const TaskStream: React.FC<TaskStreamProps> = ({
 
                               {/* Child replies (second level only) */}
                               {comment.replies && comment.replies.length > 0 && (
-                                <div className="mt-3 space-y-3">
+                                <div className="mt-3 space-y-2 sm:space-y-3">
                                   {comment.replies
                                     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                                     .map((child) => (
-                                    <div key={child.id} className="flex items-start space-x-3">
+                                    <div key={child.id} className="flex items-start space-x-2 sm:space-x-3">
                                       {/* <div className="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center text-[10px] font-medium text-gray-600 flex-shrink-0 mt-0.5">
                                         {getUserInitials(child.author)}
                                       </div> */}
-                                      <div className="flex-1 bg-white border border-gray-200 rounded-lg p-3">
-                                        <div className="flex items-center space-x-2 mb-1">
-                                          <span className="font-medium text-gray-900 text-sm">{child.author.name}</span>
+                                      <div className="flex-1 bg-white border border-gray-200 rounded-lg p-2 sm:p-3">
+                                        <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2 mb-1">
+                                          <span className="font-medium text-gray-900 text-xs sm:text-sm">{child.author.name}</span>
                                           <span className="text-xs text-gray-500">{formatTimeAgo(child.createdAt)}</span>
                                         </div>
-                                        <div className="text-gray-700 text-sm prose prose-sm max-w-none">
+                                        <div className="text-gray-700 text-xs sm:text-sm prose prose-sm max-w-none">
                                           {renderContentWithMentions(child.content, child.author, post.id)}
                                         </div>
                                         {/* No Reply button for second-level to avoid deeper nesting */}
@@ -2224,9 +2227,9 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                   </div>
                 </div>
                 {post.author.id === currentUser.id && !replyOpen[post.id] && (
-                  <div className="absolute bottom-3 right-3 flex items-center space-x-2">
+                  <div className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3 flex items-center space-x-2">
                     {pendingDeleteId === post.id ? (
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-1 sm:space-x-2">
                         <button
                           onClick={cancelDeletePost}
                           className="px-2 py-0.5 text-xs rounded border border-gray-300 text-gray-700 hover:bg-gray-100"
@@ -2250,9 +2253,9 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                         aria-label="Delete post"
                         title="Delete post"
                         onClick={() => requestDeletePost(post.id)}
-                        className="text-gray-400 hover:text-red-600 transition-colors"
+                        className="text-gray-400 hover:text-red-600 transition-colors p-1 rounded hover:bg-gray-100"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                         </svg>
                       </button>

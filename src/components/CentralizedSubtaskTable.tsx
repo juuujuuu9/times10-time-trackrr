@@ -45,7 +45,7 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
   // Debug subtask IDs and data structure
   if (subtasks && subtasks.length > 0) {
     console.log('🔍 All subtasks data:', subtasks);
-    const invalidSubtasks = subtasks.filter(subtask => !subtask.id || subtask.id === '0' || subtask.id === 0);
+    const invalidSubtasks = subtasks.filter(subtask => !subtask.id || subtask.id === '0');
     if (invalidSubtasks.length > 0) {
       console.warn('⚠️ Found subtasks with invalid IDs:', invalidSubtasks);
     }
@@ -56,7 +56,7 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
         id: subtask.id,
         status: subtask.status,
         completed: subtask.completed,
-        validId: subtask.id && subtask.id !== '0' && subtask.id !== 0
+        validId: subtask.id && subtask.id !== '0'
       });
     });
   }
@@ -281,14 +281,14 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto" style={{ overflow: 'visible' }}>
-        <table className="w-full">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[800px]">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide">NAME</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide">ASSIGNEE</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide">DUE</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide">STATUS</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide min-w-[200px]">NAME</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide min-w-[150px]">ASSIGNEE</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide min-w-[100px]">DUE</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide min-w-[120px]">STATUS</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700 uppercase text-xs tracking-wide w-12">ACTIONS</th>
             </tr>
           </thead>
@@ -314,13 +314,13 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
                         <div className="w-4 h-4 rounded-full border-2 border-current"></div>
                       )}
                     </button>
-                    <div className={`${subtask.completed ? 'line-through text-gray-500' : ''}`}>
-                      <div className="font-medium text-gray-900">{subtask.name}</div>
+                    <div className={`${subtask.completed ? 'line-through text-gray-500' : ''} min-w-0 flex-1`}>
+                      <div className="font-medium text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis" title={subtask.name}>{subtask.name}</div>
                     </div>
                   </div>
                 </td>
                 <td className="py-3 px-4">
-                  <div className="flex items-center space-x-2 relative">
+                  <div className="flex items-center space-x-2 relative whitespace-nowrap">
                     {subtask.assignees && subtask.assignees.length > 0 ? (
                       <div className="flex -space-x-2">
                         {subtask.assignees.slice(0, 4).map((assignee, index) => (
@@ -444,7 +444,7 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
                     )}
                   </div>
                 </td>
-                <td className="py-3 px-4">
+                <td className="py-3 px-4 whitespace-nowrap">
                   {subtask.dueDate ? (
                     <span className={`text-sm ${subtask.completed ? 'text-gray-400 line-through' : isOverdue(subtask.dueDate) ? 'text-red-600 font-medium' : 'text-gray-900'}`}>
                       {formatDate(subtask.dueDate)}
@@ -453,8 +453,8 @@ const CentralizedSubtaskTable: React.FC<CentralizedSubtaskTableProps> = ({
                     <span className="text-sm text-gray-400">No due date</span>
                   )}
                 </td>
-                <td className="py-3 px-4">
-                  {subtask.id && subtask.id !== '0' && subtask.id !== 0 ? (
+                <td className="py-3 px-4 whitespace-nowrap">
+                  {subtask.id && subtask.id !== '0' ? (
                     <StatusDropdown
                       currentStatus={subtask.status || 'pending'}
                       onStatusChange={(newStatus) => handleStatusUpdate(subtask.id, newStatus)}
