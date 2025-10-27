@@ -362,11 +362,11 @@ if (projectDetails && projectDetails.id) {
         {projectDetails ? (
           <span class="text-gray-500 flex-shrink-0">{projectDetails.client?.name || 'Unknown Client'} - {projectDetails.name}</span>
         ) : (
-          <span class="text-gray-500 flex-shrink-0">{(collaboration as any).name}</span>
+          <span class="text-gray-500 flex-shrink-0 pr-12">{(collaboration as any).name}</span>
         )}
       </nav>
       <!-- Fade-out gradient overlay -->
-      <div class="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-[#f0eef5] to-transparent pointer-events-none"></div>
+      <div class="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#f0eef5] to-transparent pointer-events-none"></div>
     </div>
     <!-- Left Sidebar -->
     <div class="w-full md:w-1/4 bg-white border-r-0 md:border-r border-b md:border-b-0 border-gray-200 p-2 md:p-6 rounded-xl static md:sticky md:top-8 mb-3 md:mb-0" style="height: fit-content;">
