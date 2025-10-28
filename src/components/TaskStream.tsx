@@ -1720,7 +1720,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 pb-6 sm:pb-8 px-2 sm:px-0">
+    <div className="space-y-4 sm:space-y-6 pb-6 sm:pb-8 px-0 sm:px-0">
       {/* Notification banners (in-DOM) */}
       {/* NOTE: Search for "Notification banners (in-DOM)" to find this system quickly. */}
       <div
@@ -1760,8 +1760,8 @@ const TaskStream: React.FC<TaskStreamProps> = ({
 
       {/* Moved per-post deletion confirmation inline under each post */}
       {/* Post Creation Area */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+      <div className="bg-white rounded-xl border border-gray-200 p-2 sm:p-6">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-2 sm:gap-4">
           <button 
             onClick={() => setShowAddInsightModal(true)}
             className="flex items-center justify-center space-x-2 sm:space-x-3 px-4 sm:px-6 py-3 sm:py-4 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl transition-colors border border-blue-200"
@@ -1821,7 +1821,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
             const typeStyle = getTypeStyling(post.type);
             
             return (
-              <div key={post.id} className={`bg-white rounded-xl border border-gray-200 p-3 sm:p-4 pt-3 sm:pt-4 relative ${post.author.id === currentUser.id && post.comments && post.comments.length > 0 ? 'pb-12' : ''} ${post.author.id === currentUser.id && post.type === 'media' ? (post.comments && post.comments.length > 0 ? 'pb-12' : 'pb-8') : ''}`}>
+              <div key={post.id} className={`bg-white rounded-xl border border-gray-200 p-2 sm:p-4 pt-3 sm:pt-4 relative ${post.author.id === currentUser.id && post.comments && post.comments.length > 0 ? 'pb-12' : ''} ${post.author.id === currentUser.id && post.type === 'media' ? (post.comments && post.comments.length > 0 ? 'pb-12' : 'pb-8') : ''}`}>
                 <div className="flex items-start space-x-2 sm:space-x-3">
                   
                   <div className="flex-1 min-w-0">
