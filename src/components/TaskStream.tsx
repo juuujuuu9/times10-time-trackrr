@@ -1825,7 +1825,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                 <div className="flex items-start space-x-2 sm:space-x-3">
                   
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start space-x-2 mb-2 justify-between">
+                    <div className="flex items-start space-x-2 mb-2 pb-2 border-b border-gray-100 justify-between">
                       <div className="flex items-center space-x-2 min-w-0 flex-1">
                         <div className={`w-8 h-8 sm:w-10 sm:h-10 ${typeStyle.bg} rounded-full flex items-center justify-center text-xs sm:text-sm font-medium ${typeStyle.text} flex-shrink-0`}>
                           {getUserInitials(post.author)}
