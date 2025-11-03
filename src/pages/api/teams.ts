@@ -5,10 +5,10 @@ import { eq, and } from 'drizzle-orm';
 import { getSessionUser } from '../../utils/session';
 
 // GET /api/teams - Get all teams for the current user
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async (context) => {
   try {
     // Check authentication
-    const currentUser = await getSessionUser(request);
+    const currentUser = await getSessionUser(context);
     if (!currentUser) {
       return new Response(JSON.stringify({
         success: false,
@@ -58,10 +58,10 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 // POST /api/teams - Create a new team
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async (context) => {
   try {
     // Check authentication
-    const currentUser = await getSessionUser(request);
+    const currentUser = await getSessionUser(context);
     if (!currentUser) {
       return new Response(JSON.stringify({
         success: false,
@@ -83,7 +83,7 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    const body = await request.json().catch(() => ({}));
+    const body = await context.request.json().catch(() => ({}));
     const { name, description } = body;
 
     // Validate required fields

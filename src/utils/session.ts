@@ -14,6 +14,12 @@ export interface AuthenticatedUser {
 
 export async function getSessionUser(context: APIContext): Promise<AuthenticatedUser | null> {
   try {
+    // Defensive check: ensure cookies object exists
+    if (!context || !context.cookies) {
+      console.error('Invalid context or missing cookies object:', { context: !!context, cookies: !!context?.cookies });
+      return null;
+    }
+    
     const token = context.cookies.get('session_token')?.value;
 
     if (!token) {

@@ -136,9 +136,9 @@ export const POST: APIRoute = async ({ request }) => {
   }
 };
 
-export const PUT: APIRoute = async ({ request, cookies }) => {
+export const PUT: APIRoute = async (context) => {
   try {
-    const body = await request.json();
+    const body = await context.request.json();
     const { id, name, description, projectId, status, priority, dueDate } = body;
 
     console.log('PUT /api/admin/tasks - Request body:', body);
@@ -152,7 +152,7 @@ export const PUT: APIRoute = async ({ request, cookies }) => {
     }
 
     // Get current user for email notifications
-    const currentUser = await getSessionUser({ cookies } as any);
+    const currentUser = await getSessionUser(context);
     if (!currentUser) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,

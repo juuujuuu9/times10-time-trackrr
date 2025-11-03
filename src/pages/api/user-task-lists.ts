@@ -4,9 +4,9 @@ import { userTaskLists } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { requireAuth } from '../../utils/session';
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async (context) => {
   try {
-    const user = await requireAuth({ request } as any, '/');
+    const user = await requireAuth(context, '/');
     if (!user) {
       return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
         status: 401,
@@ -40,9 +40,9 @@ export const GET: APIRoute = async ({ request }) => {
   }
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async (context) => {
   try {
-    const user = await requireAuth({ request } as any, '/');
+    const user = await requireAuth(context, '/');
     if (!user) {
       return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
         status: 401,
@@ -50,7 +50,7 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    const body = await request.json();
+    const body = await context.request.json();
     const { taskId } = body;
 
     if (!taskId || typeof taskId !== 'number') {
@@ -96,9 +96,9 @@ export const POST: APIRoute = async ({ request }) => {
   }
 };
 
-export const DELETE: APIRoute = async ({ request }) => {
+export const DELETE: APIRoute = async (context) => {
   try {
-    const user = await requireAuth({ request } as any, '/');
+    const user = await requireAuth(context, '/');
     if (!user) {
       return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
         status: 401,
@@ -106,7 +106,7 @@ export const DELETE: APIRoute = async ({ request }) => {
       });
     }
 
-    const body = await request.json();
+    const body = await context.request.json();
     const { taskId } = body;
 
     if (!taskId || typeof taskId !== 'number') {
