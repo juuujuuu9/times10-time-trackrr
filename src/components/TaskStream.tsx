@@ -34,6 +34,7 @@ interface Post {
     url: string;
     image?: string;
     googleWorkspaceInfo?: any; // Google Workspace document info
+    figmaInfo?: any; // Figma file info
   };
   subtasks?: {
     id: string;
@@ -552,7 +553,8 @@ const TaskStream: React.FC<TaskStreamProps> = ({
           description: linkData.description || '',
           url: linkData.url,
           image: linkData.image,
-          googleWorkspaceInfo: (linkData as any).googleWorkspaceInfo
+          googleWorkspaceInfo: (linkData as any).googleWorkspaceInfo,
+          figmaInfo: (linkData as any).figmaInfo
         }
       };
 
@@ -568,7 +570,8 @@ const TaskStream: React.FC<TaskStreamProps> = ({
           description: linkData.description || '',
           url: linkData.url,
           image: linkData.image,
-          googleWorkspaceInfo: (linkData as any).googleWorkspaceInfo
+          googleWorkspaceInfo: (linkData as any).googleWorkspaceInfo,
+          figmaInfo: (linkData as any).figmaInfo
         },
         mentionedUsers: mentionedUsers.map(user => user.id)
       };
@@ -1712,7 +1715,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       return (
         <div 
           dangerouslySetInnerHTML={{ __html: text }}
-          className="prose prose-sm max-w-none"
+          className="prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:ml-6 [&_ul]:my-2 [&_ul_li]:mb-1 [&_ol]:list-decimal [&_ol]:ml-6 [&_ol]:my-2 [&_ol_li]:mb-1"
         />
       );
     }
@@ -1931,7 +1934,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                           </div>
                         </div>
                       ) : (
-                        <div className="text-gray-700 mb-4 sm:mb-6 mt-4 sm:mt-6 text-base sm:text-lg prose prose-sm max-w-none">
+                        <div className="text-gray-700 mb-4 sm:mb-6 mt-4 sm:mt-6 text-base sm:text-lg prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:ml-6 [&_ul]:my-2 [&_ul_li]:mb-1 [&_ol]:list-decimal [&_ol]:ml-6 [&_ol]:my-2 [&_ol_li]:mb-1">
                           {renderContentWithMentions(post.content, post.author, post.id)}
                         </div>
                       )
@@ -2049,6 +2052,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                           description={post.linkPreview.description}
                           image={post.linkPreview.image}
                           googleWorkspaceInfo={(post.linkPreview as any).googleWorkspaceInfo}
+                          figmaInfo={(post.linkPreview as any).figmaInfo}
                         />
                       </div>
                     )}
@@ -2180,7 +2184,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                   </div>
                                 </div>
                               ) : (
-                                <div className="text-gray-700 text-sm prose prose-sm max-w-none">
+                                <div className="text-gray-700 text-sm prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:ml-6 [&_ul]:my-2 [&_ul_li]:mb-1 [&_ol]:list-decimal [&_ol]:ml-6 [&_ol]:my-2 [&_ol_li]:mb-1">
                                   {renderContentWithMentions(comment.content, comment.author, post.id)}
                                 </div>
                               )}
@@ -2268,7 +2272,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                                           <span className="font-medium text-gray-900 text-xs sm:text-sm">{child.author.name}</span>
                                           <span className="text-xs text-gray-500">{formatTimeAgo(child.createdAt)}</span>
                                         </div>
-                                        <div className="text-gray-700 text-xs sm:text-sm prose prose-sm max-w-none">
+                                        <div className="text-gray-700 text-xs sm:text-sm prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:ml-6 [&_ul]:my-2 [&_ul_li]:mb-1 [&_ol]:list-decimal [&_ol]:ml-6 [&_ol]:my-2 [&_ol_li]:mb-1">
                                           {renderContentWithMentions(child.content, child.author, post.id)}
                                         </div>
                                         {/* No Reply button for second-level to avoid deeper nesting */}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { ExternalLink, Globe, Image as ImageIcon } from 'lucide-react';
 import { extractGoogleWorkspaceInfo, getGoogleWorkspaceTypeName, type GoogleWorkspaceInfo } from '../utils/googleWorkspace';
+import { extractFigmaInfo, type FigmaInfo } from '../utils/figma';
 
 interface LinkPreviewProps {
   url: string;
@@ -10,6 +11,7 @@ interface LinkPreviewProps {
   domain?: string;
   className?: string;
   googleWorkspaceInfo?: GoogleWorkspaceInfo;
+  figmaInfo?: FigmaInfo;
 }
 
 const LinkPreview: React.FC<LinkPreviewProps> = ({
@@ -19,12 +21,13 @@ const LinkPreview: React.FC<LinkPreviewProps> = ({
   image,
   domain,
   className = '',
-  googleWorkspaceInfo
+  googleWorkspaceInfo,
+  figmaInfo
 }) => {
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const targetUrl = googleWorkspaceInfo?.viewUrl || url;
+    const targetUrl = googleWorkspaceInfo?.viewUrl || figmaInfo?.viewUrl || url;
     window.open(targetUrl, '_blank', 'noopener,noreferrer');
   };
 
@@ -40,6 +43,10 @@ const LinkPreview: React.FC<LinkPreviewProps> = ({
   const gwsInfo = googleWorkspaceInfo || extractGoogleWorkspaceInfo(url);
   const isGoogleWorkspace = !!gwsInfo;
   const canEmbed = gwsInfo && (gwsInfo.type === 'docs' || gwsInfo.type === 'sheets' || gwsInfo.type === 'slides' || gwsInfo.type === 'forms');
+
+  // If it's a Figma file, show embeddable preview
+  const figma = figmaInfo || extractFigmaInfo(url);
+  const isFigma = !!figma;
 
   return (
     <div 
@@ -61,8 +68,23 @@ const LinkPreview: React.FC<LinkPreviewProps> = ({
         </div>
       )}
 
-      {/* Regular Image Preview (only if not Google Workspace or if Google Workspace doesn't support embedding) */}
-      {(!isGoogleWorkspace || !canEmbed) && image && (
+      {/* Figma Embed Preview */}
+      {isFigma && (
+        <div className="relative w-full" style={{ aspectRatio: '16/9', minHeight: '400px' }}>
+          <iframe
+            src={figma.embedUrl}
+            className="w-full h-full border-0"
+            style={{ minHeight: '400px' }}
+            title={title || figma.fileName || 'Figma Design'}
+            allow="fullscreen"
+            sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms"
+          />
+          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-5 transition-all duration-200 pointer-events-none" />
+        </div>
+      )}
+
+      {/* Regular Image Preview (only if not Google Workspace/Figma or if they don't support embedding) */}
+      {(!isGoogleWorkspace || !canEmbed) && !isFigma && image && (
         <div className="aspect-video bg-gray-100 relative">
           <img
             src={image}
@@ -85,6 +107,15 @@ const LinkPreview: React.FC<LinkPreviewProps> = ({
               <div className="flex items-center space-x-2 mb-2">
                 <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">
                   {getGoogleWorkspaceTypeName(gwsInfo.type)}
+                </span>
+              </div>
+            )}
+
+            {/* Figma Badge */}
+            {isFigma && (
+              <div className="flex items-center space-x-2 mb-2">
+                <span className="text-xs font-medium text-purple-600 bg-purple-50 px-2 py-1 rounded">
+                  Figma Design
                 </span>
               </div>
             )}

@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { X, Link, ExternalLink, Image, Globe } from 'lucide-react';
 import SimpleRichEditor from './SimpleRichEditor';
 import { extractGoogleWorkspaceInfo, getGoogleWorkspaceTypeName, type GoogleWorkspaceInfo } from '../utils/googleWorkspace';
+import { extractFigmaInfo, type FigmaInfo } from '../utils/figma';
 
 interface LinkPreview {
   url: string;
@@ -10,6 +11,7 @@ interface LinkPreview {
   image?: string;
   domain?: string;
   googleWorkspaceInfo?: GoogleWorkspaceInfo;
+  figmaInfo?: FigmaInfo;
 }
 
 interface User {
@@ -96,7 +98,47 @@ const LinkDropModal: React.FC<LinkDropModalProps> = ({ isOpen, onClose, onAddLin
         };
       }
 
-      // Regular link preview for non-Google Workspace links
+      // Check if it's a Figma link
+      const figmaInfo = extractFigmaInfo(url);
+      
+      if (figmaInfo) {
+        // For Figma links, we can show a preview with the file name
+        const response = await fetch('/api/link-preview', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ url }),
+        });
+
+        let title: string | undefined;
+        let description: string | undefined;
+        
+        let apiFigmaInfo: FigmaInfo | undefined;
+        
+        if (response.ok) {
+          const data = await response.json();
+          title = data.title;
+          description = data.description;
+          // Use figmaInfo from API if available, otherwise use the one we extracted
+          apiFigmaInfo = data.figmaInfo;
+        }
+
+        // If no title from API, use file name or generic title
+        if (!title) {
+          title = figmaInfo.fileName || 'Figma Design';
+        }
+
+        return {
+          url,
+          title,
+          description: description || 'View and interact with this Figma design.',
+          domain: extractDomain(url),
+          figmaInfo: apiFigmaInfo || figmaInfo,
+        };
+      }
+
+      // Regular link preview for non-Google Workspace/Figma links
       const response = await fetch('/api/link-preview', {
         method: 'POST',
         headers: {
@@ -288,6 +330,20 @@ const LinkDropModal: React.FC<LinkDropModalProps> = ({ isOpen, onClose, onAddLin
                     />
                   </div>
                 )}
+
+                {/* Figma Embed Preview */}
+                {preview.figmaInfo && (
+                  <div className="relative w-full" style={{ aspectRatio: '16/9', minHeight: '300px', maxHeight: '400px' }}>
+                    <iframe
+                      src={preview.figmaInfo.embedUrl}
+                      className="w-full h-full border-0"
+                      style={{ minHeight: '300px', maxHeight: '400px' }}
+                      title={preview.title || preview.figmaInfo.fileName || 'Figma Design'}
+                      allow="fullscreen"
+                      sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms"
+                    />
+                  </div>
+                )}
                 
                 {/* Regular Image Preview */}
                 {(!preview.googleWorkspaceInfo || 
@@ -295,6 +351,7 @@ const LinkDropModal: React.FC<LinkDropModalProps> = ({ isOpen, onClose, onAddLin
                    preview.googleWorkspaceInfo.type !== 'sheets' && 
                    preview.googleWorkspaceInfo.type !== 'slides' && 
                    preview.googleWorkspaceInfo.type !== 'forms')) && 
+                  !preview.figmaInfo && 
                   preview.image && (
                   <div className="aspect-video bg-gray-100 max-h-48">
                     <img
@@ -316,6 +373,15 @@ const LinkDropModal: React.FC<LinkDropModalProps> = ({ isOpen, onClose, onAddLin
                         <div className="flex items-center space-x-2 mb-2">
                           <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">
                             {getGoogleWorkspaceTypeName(preview.googleWorkspaceInfo.type)}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Figma Badge */}
+                      {preview.figmaInfo && (
+                        <div className="flex items-center space-x-2 mb-2">
+                          <span className="text-xs font-medium text-purple-600 bg-purple-50 px-2 py-1 rounded">
+                            Figma Design
                           </span>
                         </div>
                       )}
