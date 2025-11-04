@@ -33,6 +33,7 @@ interface Post {
     description: string;
     url: string;
     image?: string;
+    googleWorkspaceInfo?: any; // Google Workspace document info
   };
   subtasks?: {
     id: string;
@@ -550,7 +551,8 @@ const TaskStream: React.FC<TaskStreamProps> = ({
           title: linkData.title || '',
           description: linkData.description || '',
           url: linkData.url,
-          image: linkData.image
+          image: linkData.image,
+          googleWorkspaceInfo: (linkData as any).googleWorkspaceInfo
         }
       };
 
@@ -565,7 +567,8 @@ const TaskStream: React.FC<TaskStreamProps> = ({
           title: linkData.title || '',
           description: linkData.description || '',
           url: linkData.url,
-          image: linkData.image
+          image: linkData.image,
+          googleWorkspaceInfo: (linkData as any).googleWorkspaceInfo
         },
         mentionedUsers: mentionedUsers.map(user => user.id)
       };
@@ -2039,12 +2042,13 @@ const TaskStream: React.FC<TaskStreamProps> = ({
                     
                     {/* Link Preview */}
                     {post.linkPreview && (
-                      <div className="mb-3 max-w-[375px] w-full">
+                      <div className="mb-3 max-w-full w-full">
                         <LinkPreview
                           url={post.linkPreview.url}
                           title={post.linkPreview.title}
                           description={post.linkPreview.description}
                           image={post.linkPreview.image}
+                          googleWorkspaceInfo={(post.linkPreview as any).googleWorkspaceInfo}
                         />
                       </div>
                     )}

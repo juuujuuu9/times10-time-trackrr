@@ -1,5 +1,6 @@
 import React from 'react';
 import { ExternalLink, Globe, Image as ImageIcon } from 'lucide-react';
+import { extractGoogleWorkspaceInfo, getGoogleWorkspaceTypeName, type GoogleWorkspaceInfo } from '../utils/googleWorkspace';
 
 interface LinkPreviewProps {
   url: string;
@@ -8,6 +9,7 @@ interface LinkPreviewProps {
   image?: string;
   domain?: string;
   className?: string;
+  googleWorkspaceInfo?: GoogleWorkspaceInfo;
 }
 
 const LinkPreview: React.FC<LinkPreviewProps> = ({
@@ -16,12 +18,14 @@ const LinkPreview: React.FC<LinkPreviewProps> = ({
   description,
   image,
   domain,
-  className = ''
+  className = '',
+  googleWorkspaceInfo
 }) => {
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    window.open(url, '_blank', 'noopener,noreferrer');
+    const targetUrl = googleWorkspaceInfo?.viewUrl || url;
+    window.open(targetUrl, '_blank', 'noopener,noreferrer');
   };
 
   const displayDomain = domain || (() => {
@@ -32,13 +36,33 @@ const LinkPreview: React.FC<LinkPreviewProps> = ({
     }
   })();
 
+  // If it's a Google Workspace document, show embeddable preview
+  const gwsInfo = googleWorkspaceInfo || extractGoogleWorkspaceInfo(url);
+  const isGoogleWorkspace = !!gwsInfo;
+  const canEmbed = gwsInfo && (gwsInfo.type === 'docs' || gwsInfo.type === 'sheets' || gwsInfo.type === 'slides' || gwsInfo.type === 'forms');
+
   return (
     <div 
       className={`bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer group ${className}`}
       onClick={handleClick}
     >
-      {/* Image */}
-      {image && (
+      {/* Google Workspace Embed Preview */}
+      {isGoogleWorkspace && canEmbed && (
+        <div className="relative w-full" style={{ aspectRatio: '16/9', minHeight: '400px' }}>
+          <iframe
+            src={gwsInfo.embedUrl}
+            className="w-full h-full border-0"
+            style={{ minHeight: '400px' }}
+            title={title || getGoogleWorkspaceTypeName(gwsInfo.type)}
+            allow="clipboard-read; clipboard-write"
+            sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms"
+          />
+          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-5 transition-all duration-200 pointer-events-none" />
+        </div>
+      )}
+
+      {/* Regular Image Preview (only if not Google Workspace or if Google Workspace doesn't support embedding) */}
+      {(!isGoogleWorkspace || !canEmbed) && image && (
         <div className="aspect-video bg-gray-100 relative">
           <img
             src={image}
@@ -56,6 +80,15 @@ const LinkPreview: React.FC<LinkPreviewProps> = ({
       <div className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
+            {/* Google Workspace Badge */}
+            {isGoogleWorkspace && (
+              <div className="flex items-center space-x-2 mb-2">
+                <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                  {getGoogleWorkspaceTypeName(gwsInfo.type)}
+                </span>
+              </div>
+            )}
+
             {/* Title */}
             {title ? (
               <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">

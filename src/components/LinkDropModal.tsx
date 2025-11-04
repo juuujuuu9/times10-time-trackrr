@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { X, Link, ExternalLink, Image, Globe } from 'lucide-react';
 import SimpleRichEditor from './SimpleRichEditor';
+import { extractGoogleWorkspaceInfo, getGoogleWorkspaceTypeName, type GoogleWorkspaceInfo } from '../utils/googleWorkspace';
 
 interface LinkPreview {
   url: string;
@@ -8,6 +9,7 @@ interface LinkPreview {
   description?: string;
   image?: string;
   domain?: string;
+  googleWorkspaceInfo?: GoogleWorkspaceInfo;
 }
 
 interface User {
@@ -57,6 +59,44 @@ const LinkDropModal: React.FC<LinkDropModalProps> = ({ isOpen, onClose, onAddLin
 
   const fetchLinkPreview = useCallback(async (url: string): Promise<LinkPreview> => {
     try {
+      // Check if it's a Google Workspace link first
+      const gwsInfo = extractGoogleWorkspaceInfo(url);
+      
+      if (gwsInfo) {
+        // For Google Workspace links, we can show a preview with the document type
+        // The title might be extracted from the URL or we can use a generic title
+        const response = await fetch('/api/link-preview', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ url }),
+        });
+
+        let title: string | undefined;
+        let description: string | undefined;
+        
+        if (response.ok) {
+          const data = await response.json();
+          title = data.title;
+          description = data.description;
+        }
+
+        // If no title from API, use a generic title based on document type
+        if (!title) {
+          title = `${getGoogleWorkspaceTypeName(gwsInfo.type)} Document`;
+        }
+
+        return {
+          url,
+          title,
+          description: description || `View and edit this ${getGoogleWorkspaceTypeName(gwsInfo.type).toLowerCase()} document.`,
+          domain: extractDomain(url),
+          googleWorkspaceInfo: gwsInfo,
+        };
+      }
+
+      // Regular link preview for non-Google Workspace links
       const response = await fetch('/api/link-preview', {
         method: 'POST',
         headers: {
@@ -228,10 +268,34 @@ const LinkDropModal: React.FC<LinkDropModalProps> = ({ isOpen, onClose, onAddLin
 
           {/* Preview */}
           {preview && (
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg border max-w-[375px] w-full mx-auto">
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg border max-w-[500px] w-full mx-auto">
               <h3 className="text-sm font-medium text-gray-700 mb-3">Preview</h3>
               <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                {preview.image && (
+                {/* Google Workspace Embed Preview */}
+                {preview.googleWorkspaceInfo && 
+                  (preview.googleWorkspaceInfo.type === 'docs' || 
+                   preview.googleWorkspaceInfo.type === 'sheets' || 
+                   preview.googleWorkspaceInfo.type === 'slides' || 
+                   preview.googleWorkspaceInfo.type === 'forms') && (
+                  <div className="relative w-full" style={{ aspectRatio: '16/9', minHeight: '300px', maxHeight: '400px' }}>
+                    <iframe
+                      src={preview.googleWorkspaceInfo.embedUrl}
+                      className="w-full h-full border-0"
+                      style={{ minHeight: '300px', maxHeight: '400px' }}
+                      title={preview.title || getGoogleWorkspaceTypeName(preview.googleWorkspaceInfo.type)}
+                      allow="clipboard-read; clipboard-write"
+                      sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms"
+                    />
+                  </div>
+                )}
+                
+                {/* Regular Image Preview */}
+                {(!preview.googleWorkspaceInfo || 
+                  (preview.googleWorkspaceInfo.type !== 'docs' && 
+                   preview.googleWorkspaceInfo.type !== 'sheets' && 
+                   preview.googleWorkspaceInfo.type !== 'slides' && 
+                   preview.googleWorkspaceInfo.type !== 'forms')) && 
+                  preview.image && (
                   <div className="aspect-video bg-gray-100 max-h-48">
                     <img
                       src={preview.image}
@@ -243,9 +307,19 @@ const LinkDropModal: React.FC<LinkDropModalProps> = ({ isOpen, onClose, onAddLin
                     />
                   </div>
                 )}
+                
                 <div className="p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
+                      {/* Google Workspace Badge */}
+                      {preview.googleWorkspaceInfo && (
+                        <div className="flex items-center space-x-2 mb-2">
+                          <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                            {getGoogleWorkspaceTypeName(preview.googleWorkspaceInfo.type)}
+                          </span>
+                        </div>
+                      )}
+                      
                       {preview.title && (
                         <h4 className="text-base font-semibold text-gray-900 mb-2 line-clamp-2">
                           {preview.title}

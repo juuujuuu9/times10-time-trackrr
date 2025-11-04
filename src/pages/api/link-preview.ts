@@ -1,11 +1,13 @@
 import type { APIRoute } from 'astro';
 import { JSDOM } from 'jsdom';
+import { extractGoogleWorkspaceInfo, type GoogleWorkspaceInfo } from '../../utils/googleWorkspace';
 
 interface LinkPreviewData {
   title?: string;
   description?: string;
   image?: string;
   url: string;
+  googleWorkspaceInfo?: GoogleWorkspaceInfo;
 }
 
 export const POST: APIRoute = async ({ request }) => {
@@ -90,12 +92,23 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
+    // Check if it's a Google Workspace document
+    const gwsInfo = extractGoogleWorkspaceInfo(url);
+    
     const previewData: LinkPreviewData = {
       title: title || undefined,
       description: description || undefined,
       image: imageUrl || undefined,
-      url: url
+      url: url,
+      googleWorkspaceInfo: gwsInfo || undefined
     };
+
+    // If it's a Google Workspace document and we don't have a title, try to extract from URL
+    if (gwsInfo && !title) {
+      // For Google Workspace, we can't reliably extract the title from the URL alone
+      // The title would need to come from the HTML or be set by the user
+      // For now, we'll leave it undefined and let the frontend handle it
+    }
 
     return new Response(JSON.stringify({
       success: true,
