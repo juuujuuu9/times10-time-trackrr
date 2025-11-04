@@ -549,6 +549,9 @@ const user = await requireAuth(Astro, '/') as any;
         updateRecentEntries([], []);
       }
 
+      // Get user's timezone offset to send to server (use once for both API calls)
+      const tzOffset = new Date().getTimezoneOffset();
+      
       // Load today's stats using the same API as Timer component
       const today = new Date();
       const startOfToday = new Date(today);
@@ -556,7 +559,7 @@ const user = await requireAuth(Astro, '/') as any;
       const endOfToday = new Date(today);
       endOfToday.setHours(23, 59, 59, 999);
       
-      const todayStatsResponse = await fetch(`/api/reports/daily-duration-totals?userId=${encodeURIComponent(userId)}&startDate=${encodeURIComponent(startOfToday.toISOString())}&endDate=${encodeURIComponent(endOfToday.toISOString())}`);
+      const todayStatsResponse = await fetch(`/api/reports/daily-duration-totals?userId=${encodeURIComponent(userId)}&startDate=${encodeURIComponent(startOfToday.toISOString())}&endDate=${encodeURIComponent(endOfToday.toISOString())}&tzOffset=${tzOffset}`);
       if (todayStatsResponse.ok) {
         const todayStatsData = await todayStatsResponse.json();
         updateTodayStats(todayStatsData, true);
@@ -573,7 +576,7 @@ const user = await requireAuth(Astro, '/') as any;
       weekEnd.setDate(weekStart.getDate() + 6);
       weekEnd.setHours(23, 59, 59, 999);
       
-      const statsResponse = await fetch(`/api/reports/daily-duration-totals?userId=${encodeURIComponent(userId)}&startDate=${encodeURIComponent(weekStart.toISOString())}&endDate=${encodeURIComponent(weekEnd.toISOString())}`);
+      const statsResponse = await fetch(`/api/reports/daily-duration-totals?userId=${encodeURIComponent(userId)}&startDate=${encodeURIComponent(weekStart.toISOString())}&endDate=${encodeURIComponent(weekEnd.toISOString())}&tzOffset=${tzOffset}`);
       if (statsResponse.ok) {
         const statsData = await statsResponse.json();
         updateWeeklyStats(statsData, true);
@@ -829,7 +832,12 @@ const user = await requireAuth(Astro, '/') as any;
                     class="date-input w-24 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                     value="${taskDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}"
                     data-entry-id="${entry.id}"
-                    data-current-date="${taskDate.toISOString().split('T')[0]}"
+                    data-current-date="${(() => {
+                      const year = taskDate.getUTCFullYear();
+                      const month = taskDate.getUTCMonth() + 1;
+                      const day = taskDate.getUTCDate();
+                      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    })()}"
                     placeholder="mm/dd/yyyy"
                     title="Click to open date picker"
                   />
@@ -1027,6 +1035,9 @@ const user = await requireAuth(Astro, '/') as any;
     // Update stats every 30 seconds to reflect ongoing timer progress
     realTimeUpdateInterval = setInterval(async () => {
       try {
+        // Get user's timezone offset to send to server (use once for both API calls)
+        const tzOffset = new Date().getTimezoneOffset();
+        
         // Update today's stats using the same API as Timer component
         const today = new Date();
         const startOfToday = new Date(today);
@@ -1034,7 +1045,7 @@ const user = await requireAuth(Astro, '/') as any;
         const endOfToday = new Date(today);
         endOfToday.setHours(23, 59, 59, 999);
         
-        const todayStatsResponse = await fetch(`/api/reports/daily-duration-totals?userId=${encodeURIComponent(userId)}&startDate=${encodeURIComponent(startOfToday.toISOString())}&endDate=${encodeURIComponent(endOfToday.toISOString())}`);
+        const todayStatsResponse = await fetch(`/api/reports/daily-duration-totals?userId=${encodeURIComponent(userId)}&startDate=${encodeURIComponent(startOfToday.toISOString())}&endDate=${encodeURIComponent(endOfToday.toISOString())}&tzOffset=${tzOffset}`);
         if (todayStatsResponse.ok) {
           const todayStatsData = await todayStatsResponse.json();
           updateTodayStats(todayStatsData, true);
@@ -1051,7 +1062,7 @@ const user = await requireAuth(Astro, '/') as any;
         weekEnd.setDate(weekStart.getDate() + 6);
         weekEnd.setHours(23, 59, 59, 999);
         
-        const statsResponse = await fetch(`/api/reports/daily-duration-totals?userId=${encodeURIComponent(userId)}&startDate=${encodeURIComponent(weekStart.toISOString())}&endDate=${encodeURIComponent(weekEnd.toISOString())}`);
+        const statsResponse = await fetch(`/api/reports/daily-duration-totals?userId=${encodeURIComponent(userId)}&startDate=${encodeURIComponent(weekStart.toISOString())}&endDate=${encodeURIComponent(weekEnd.toISOString())}&tzOffset=${tzOffset}`);
         if (statsResponse.ok) {
           const statsData = await statsResponse.json();
           updateWeeklyStats(statsData, true);
@@ -1187,14 +1198,19 @@ const user = await requireAuth(Astro, '/') as any;
     if (currentTimerState && currentTimerState.isRunning) {
       try {
         // Get current stats and update with real-time data
+        const userId = await getCurrentUserId();
+        if (!userId) return;
+        
+        // Get user's timezone offset to send to server (use once for both API calls)
+        const tzOffset = new Date().getTimezoneOffset();
+        
         const today = new Date();
         const startOfToday = new Date(today);
         startOfToday.setHours(0, 0, 0, 0);
         const endOfToday = new Date(today);
         endOfToday.setHours(23, 59, 59, 999);
         
-        const userId = await getCurrentUserId();
-        const todayStatsResponse = await fetch(`/api/reports/daily-duration-totals?userId=${encodeURIComponent(userId)}&startDate=${encodeURIComponent(startOfToday.toISOString())}&endDate=${encodeURIComponent(endOfToday.toISOString())}`);
+        const todayStatsResponse = await fetch(`/api/reports/daily-duration-totals?userId=${encodeURIComponent(userId)}&startDate=${encodeURIComponent(startOfToday.toISOString())}&endDate=${encodeURIComponent(endOfToday.toISOString())}&tzOffset=${tzOffset}`);
         if (todayStatsResponse.ok) {
           const stats = await todayStatsResponse.json();
           updateTodayStats(stats, true);
@@ -1211,7 +1227,7 @@ const user = await requireAuth(Astro, '/') as any;
         weekEnd.setDate(weekStart.getDate() + 6);
         weekEnd.setHours(23, 59, 59, 999);
         
-        const weeklyStatsResponse = await fetch(`/api/reports/daily-duration-totals?userId=${encodeURIComponent(userId)}&startDate=${encodeURIComponent(weekStart.toISOString())}&endDate=${encodeURIComponent(weekEnd.toISOString())}`);
+        const weeklyStatsResponse = await fetch(`/api/reports/daily-duration-totals?userId=${encodeURIComponent(userId)}&startDate=${encodeURIComponent(weekStart.toISOString())}&endDate=${encodeURIComponent(weekEnd.toISOString())}&tzOffset=${tzOffset}`);
         if (weeklyStatsResponse.ok) {
           const stats = await weeklyStatsResponse.json();
           updateWeeklyStats(stats, true);
@@ -2307,7 +2323,11 @@ const user = await requireAuth(Astro, '/') as any;
     // Set date fields based on entry type
     if (entry.startTime) {
       const startDate = new Date(entry.startTime);
-      const dateString = startDate.toISOString().split('T')[0];
+      // Use UTC components to avoid timezone shifts
+      const year = startDate.getUTCFullYear();
+      const month = startDate.getUTCMonth() + 1;
+      const day = startDate.getUTCDate();
+      const dateString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       if (editTimesDateInput) {
         editTimesDateInput.value = dateString;
       }
@@ -2316,10 +2336,11 @@ const user = await requireAuth(Astro, '/') as any;
     if (entry.durationManual && !entry.startTime && !entry.endTime) {
       // For manual duration entries, use createdAt for date association
       const taskDate = entry.createdAt ? new Date(entry.createdAt) : new Date();
-      const year = taskDate.getFullYear();
-      const month = taskDate.getMonth() + 1;
-      const day = taskDate.getDate();
-      const dateString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+      // Use UTC components to avoid timezone shifts
+      const year = taskDate.getUTCFullYear();
+      const month = taskDate.getUTCMonth() + 1;
+      const day = taskDate.getUTCDate();
+      const dateString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       console.log('🔍 Setting date picker for manual entry:', {
         taskDate,
         dateString,
@@ -3440,20 +3461,23 @@ const user = await requireAuth(Astro, '/') as any;
         
         if (isManualDurationEntry) {
           // For manual duration entries, update createdAt to the new date
-          const newCreatedAt = new Date(year, month - 1, day, 12, 0, 0, 0); // Use noon to avoid timezone issues
+          // Use UTC to avoid timezone shifts - create date at noon UTC
+          const newCreatedAt = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
           updateData.createdAt = newCreatedAt.toISOString();
           console.log('🔧 DASHBOARD: Updating manual duration entry createdAt:', updateData.createdAt);
         } else {
           // For timer-based entries, update startTime and endTime
           if (currentEntry.startTime) {
             const startTime = new Date(currentEntry.startTime);
-            const newStartTime = new Date(year, month - 1, day, startTime.getHours(), startTime.getMinutes(), 0, 0);
+            // Preserve UTC hours/minutes to avoid timezone shifts
+            const newStartTime = new Date(Date.UTC(year, month - 1, day, startTime.getUTCHours(), startTime.getUTCMinutes(), 0, 0));
             updateData.startTime = newStartTime.toISOString();
           }
           
           if (currentEntry.endTime) {
             const endTime = new Date(currentEntry.endTime);
-            const newEndTime = new Date(year, month - 1, day, endTime.getHours(), endTime.getMinutes(), 0, 0);
+            // Preserve UTC hours/minutes to avoid timezone shifts
+            const newEndTime = new Date(Date.UTC(year, month - 1, day, endTime.getUTCHours(), endTime.getUTCMinutes(), 0, 0));
             updateData.endTime = newEndTime.toISOString();
           }
         }
@@ -3536,7 +3560,11 @@ const user = await requireAuth(Astro, '/') as any;
               console.log('🔧 DASHBOARD: Flatpickr onChange triggered:', { selectedDates, dateStr, entryId });
               if (selectedDates.length > 0) {
                 const selectedDate = selectedDates[0];
-                const isoDate = selectedDate.toISOString().split('T')[0];
+                // Use UTC components to avoid timezone shifts
+                const year = selectedDate.getUTCFullYear();
+                const month = selectedDate.getUTCMonth() + 1;
+                const day = selectedDate.getUTCDate();
+                const isoDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 console.log('🔧 DASHBOARD: Calling saveDateChange with:', { isoDate, entryId });
                 dateInput.setAttribute('data-current-date', isoDate);
                 

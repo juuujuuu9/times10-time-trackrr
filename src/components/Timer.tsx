@@ -223,7 +223,9 @@ export default function Timer() {
     console.log('loadDailyDurationTotals: Loading for week', selectedWeekStart.toISOString(), 'to', selectedWeekEnd.toISOString());
 
     try {
-      const response = await fetch(`/api/reports/daily-duration-totals?userId=${currentUserId}&startDate=${encodeURIComponent(selectedWeekStart.toISOString())}&endDate=${encodeURIComponent(selectedWeekEnd.toISOString())}`, {
+      // Get user's timezone offset to send to server
+      const tzOffset = new Date().getTimezoneOffset();
+      const response = await fetch(`/api/reports/daily-duration-totals?userId=${currentUserId}&startDate=${encodeURIComponent(selectedWeekStart.toISOString())}&endDate=${encodeURIComponent(selectedWeekEnd.toISOString())}&tzOffset=${tzOffset}`, {
         credentials: 'include'
       });
       if (response.ok) {
@@ -253,7 +255,9 @@ export default function Timer() {
     console.log('loadTaskDailyTotals: Loading for week', selectedWeekStart.toISOString(), 'to', selectedWeekEnd.toISOString());
 
     try {
-      const response = await fetch(`/api/reports/task-daily-totals?userId=${currentUserId}&startDate=${encodeURIComponent(selectedWeekStart.toISOString())}&endDate=${encodeURIComponent(selectedWeekEnd.toISOString())}`, {
+      // Get user's timezone offset to send to server
+      const tzOffset = new Date().getTimezoneOffset();
+      const response = await fetch(`/api/reports/task-daily-totals?userId=${currentUserId}&startDate=${encodeURIComponent(selectedWeekStart.toISOString())}&endDate=${encodeURIComponent(selectedWeekEnd.toISOString())}&tzOffset=${tzOffset}`, {
         credentials: 'include'
       });
       if (response.ok) {

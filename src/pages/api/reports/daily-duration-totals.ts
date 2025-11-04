@@ -9,6 +9,7 @@ export const GET: APIRoute = async ({ url }) => {
     const userId = searchParams.get('userId');
     const startParam = searchParams.get('startDate');
     const endParam = searchParams.get('endDate');
+    const tzOffsetParam = searchParams.get('tzOffset'); // Timezone offset in minutes (e.g., -480 for PST)
     
     if (!userId) {
       return new Response(JSON.stringify({
@@ -18,6 +19,9 @@ export const GET: APIRoute = async ({ url }) => {
         headers: { 'Content-Type': 'application/json' }
       });
     }
+    
+    // Parse timezone offset (default to 0 if not provided)
+    const tzOffsetMinutes = tzOffsetParam ? parseInt(tzOffsetParam) : 0;
 
     // Determine week (Sunday to Saturday) or use provided range
     let startDate: Date;
@@ -78,16 +82,38 @@ export const GET: APIRoute = async ({ url }) => {
         sql`NOT (${timeEntries.startTime} IS NOT NULL AND ${timeEntries.endTime} IS NULL AND ${timeEntries.durationManual} IS NULL)`
       ));
 
-    // Calculate day of week in JavaScript using local timezone and group by day
+    // Calculate day of week based on the date the user sees in their timezone
+    // We use UTC date components and apply the user's timezone offset to get the correct local date
     const dailyTotalsMapLocal = new Map<number, number>();
     
     timeEntriesData.forEach(entry => {
       const entryDate = entry.startTime || entry.createdAt;
       if (!entryDate) return;
       
-      // Use UTC day-of-week to align with timezone-safe UTC timestamps we store
-      const d = new Date(entryDate);
-      const dayOfWeek = d.getUTCDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+      // Convert UTC timestamp to user's local date
+      // getTimezoneOffset() returns the offset in minutes from UTC
+      // For PST (UTC-8): offset = 480 (positive means behind UTC)
+      // Formula: LocalTime = UTCTime - offset
+      const utcDate = new Date(entryDate);
+      const utcTime = utcDate.getTime();
+      
+      // Apply timezone offset to get the local time timestamp
+      // Subtract offset to convert UTC to local (since offset is positive for timezones behind UTC)
+      const localTime = utcTime - (tzOffsetMinutes * 60 * 1000);
+      const localDate = new Date(localTime);
+      
+      // Extract date components from the adjusted timestamp
+      // The adjusted Date object represents the user's local time, but internally it's still UTC
+      // We use UTC methods to extract the date components that represent the user's local date
+      const year = localDate.getUTCFullYear();
+      const month = localDate.getUTCMonth();
+      const day = localDate.getUTCDate();
+      
+      // Calculate day of week for this date
+      // Use the date components directly to determine day of week
+      // This works because day of week is the same globally for a given calendar date
+      const dateOnly = new Date(Date.UTC(year, month, day));
+      const dayOfWeek = dateOnly.getUTCDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
       
       const duration = parseInt(entry.calculatedDuration.toString());
       const currentTotal = dailyTotalsMapLocal.get(dayOfWeek) || 0;
