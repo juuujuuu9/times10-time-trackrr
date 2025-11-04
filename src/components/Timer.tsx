@@ -2137,14 +2137,14 @@ export default function Timer() {
   }
 
   return (
-    <div className="bg-white p-2 pb-6 sm:p-6 rounded-lg shadow-lg">
+    <div className="bg-white p-2 pb-6 sm:p-6 rounded-lg rounded-t-none shadow-lg">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
         
         <div className="flex items-centflex items-center justify-center sm:justify-start mb-2 py-3 sm:mb-0 bg-[#f9fafb] rounded-lg sm:bg-transparent justify-center sm:justify-start mb-4 sm:mb-0">
           <h2 className="text-2xl font-bold text-gray-800">Hi, {currentUser?.name?.split(' ')[0] || 'User'}!</h2>
         </div>
         {/* Layout Toggle and Collaborations Button */}
-        <div className="flex items-center justify-between space-x-8 mt-2 sm:mt-0">
+        <div className="flex items-center justify-between space-x-4 mt-2 sm:mt-0">
                     
           {/* Collaborations Button */}
           <a

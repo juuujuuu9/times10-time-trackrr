@@ -73,6 +73,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
   const [filter, setFilter] = useState<'all' | 'insight' | 'media' | 'link' | 'subtask' | 'mentions'>('all');
   const [memberFilter, setMemberFilter] = useState<string>('all');
   const [timeFilter, setTimeFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [newComment, setNewComment] = useState<{ [postId: number]: string }>({});
   const [showAddInsightModal, setShowAddInsightModal] = useState(false);
   const [showAddMediaModal, setShowAddMediaModal] = useState(false);
@@ -130,10 +131,17 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       setTimeFilter(timeRange);
     };
 
+    const handleSearchChange = (event: CustomEvent) => {
+      const { query } = event.detail;
+      console.log('🔍 TaskStream received search change event:', query);
+      setSearchQuery(query);
+    };
+
     // Add event listeners for all filter changes
     document.addEventListener('taskStreamFilterChange', handleFilterChange as EventListener);
     document.addEventListener('taskStreamMemberFilterChange', handleMemberFilterChange as EventListener);
     document.addEventListener('taskStreamTimeFilterChange', handleTimeFilterChange as EventListener);
+    document.addEventListener('taskStreamSearchChange', handleSearchChange as EventListener);
     console.log('🔍 TaskStream event listeners added');
     
     // Cleanup
@@ -141,6 +149,7 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       document.removeEventListener('taskStreamFilterChange', handleFilterChange as EventListener);
       document.removeEventListener('taskStreamMemberFilterChange', handleMemberFilterChange as EventListener);
       document.removeEventListener('taskStreamTimeFilterChange', handleTimeFilterChange as EventListener);
+      document.removeEventListener('taskStreamSearchChange', handleSearchChange as EventListener);
       console.log('🔍 TaskStream event listeners removed');
     };
   }, []); // Remove dependencies to prevent infinite re-renders
@@ -1324,6 +1333,51 @@ const TaskStream: React.FC<TaskStreamProps> = ({
       // });
       
       if (!shouldInclude) return false;
+    }
+    
+    // Handle search filtering
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      let matches = false;
+      
+      // Search in post content (insights)
+      if (post.content && post.content.toLowerCase().includes(query)) {
+        matches = true;
+      }
+      
+      // Search in media file names
+      if (post.fileNames && post.fileNames.length > 0) {
+        const fileNameMatch = post.fileNames.some(fileName => 
+          fileName.toLowerCase().includes(query)
+        );
+        if (fileNameMatch) matches = true;
+      }
+      
+      // Search in link preview (title, description, url)
+      if (post.linkPreview) {
+        const titleMatch = post.linkPreview.title?.toLowerCase().includes(query);
+        const descMatch = post.linkPreview.description?.toLowerCase().includes(query);
+        const urlMatch = post.linkPreview.url?.toLowerCase().includes(query);
+        if (titleMatch || descMatch || urlMatch) matches = true;
+      }
+      
+      // Search in subtask names (if post has subtasks)
+      if (post.subtasks && post.subtasks.length > 0) {
+        const subtaskMatch = post.subtasks.some(subtask => 
+          subtask.name.toLowerCase().includes(query)
+        );
+        if (subtaskMatch) matches = true;
+      }
+      
+      // Search in comments
+      if (post.comments && post.comments.length > 0) {
+        const commentMatch = post.comments.some(comment => 
+          comment.content.toLowerCase().includes(query)
+        );
+        if (commentMatch) matches = true;
+      }
+      
+      if (!matches) return false;
     }
     
     // console.log('🔍 Post passed all filters');
