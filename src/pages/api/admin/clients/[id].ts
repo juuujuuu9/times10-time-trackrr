@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../../db/index';
-import { clients, projects, tasks, timeEntries, taskAssignments } from '../../../../db/schema';
+import { clients, projects, tasks, timeEntries, taskAssignments, taskDiscussions, taskFiles, taskLinks, taskNotes, userTaskLists, teams, teamMembers } from '../../../../db/schema';
 import { eq, inArray } from 'drizzle-orm';
 import { getSessionUser } from '../../../../utils/session';
 
@@ -78,7 +78,33 @@ export const DELETE: APIRoute = async ({ params, cookies }) => {
       if (taskIds.length > 0) {
         console.log(`Found ${taskIds.length} tasks to delete`);
 
-        // 3. Delete task assignments for these tasks
+        // 3. Delete all task-related data before deleting tasks
+        // Delete task discussions (insights)
+        await db
+          .delete(taskDiscussions)
+          .where(inArray(taskDiscussions.taskId, taskIds));
+
+        // Delete task files
+        await db
+          .delete(taskFiles)
+          .where(inArray(taskFiles.taskId, taskIds));
+
+        // Delete task links
+        await db
+          .delete(taskLinks)
+          .where(inArray(taskLinks.taskId, taskIds));
+
+        // Delete task notes
+        await db
+          .delete(taskNotes)
+          .where(inArray(taskNotes.taskId, taskIds));
+
+        // Delete user task lists
+        await db
+          .delete(userTaskLists)
+          .where(inArray(userTaskLists.taskId, taskIds));
+
+        // Delete task assignments
         await db
           .delete(taskAssignments)
           .where(inArray(taskAssignments.taskId, taskIds));
@@ -87,6 +113,28 @@ export const DELETE: APIRoute = async ({ params, cookies }) => {
         await db
           .delete(tasks)
           .where(inArray(tasks.projectId, projectIds));
+      }
+
+      // Delete teams and team members for these projects
+      const projectTeams = await db
+        .select({ id: teams.id })
+        .from(teams)
+        .where(inArray(teams.projectId, projectIds));
+
+      const teamIds = projectTeams.map(t => t.id);
+
+      if (teamIds.length > 0) {
+        console.log(`Found ${teamIds.length} teams to delete`);
+
+        // Delete team members first
+        await db
+          .delete(teamMembers)
+          .where(inArray(teamMembers.teamId, teamIds));
+
+        // Delete teams
+        await db
+          .delete(teams)
+          .where(inArray(teams.projectId, projectIds));
       }
 
       // 5. Delete time entries for these projects
