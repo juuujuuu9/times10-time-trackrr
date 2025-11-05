@@ -33,9 +33,9 @@ export const DELETE: APIRoute = async ({ params, cookies }) => {
       });
     }
 
-    // Only admins can delete clients
-    if (user.role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Only administrators can delete clients' }), {
+    // Only admins and developers can delete clients
+    if (user.role !== 'admin' && user.role !== 'developer') {
+      return new Response(JSON.stringify({ error: 'Only administrators and developers can delete clients' }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' },
       });
