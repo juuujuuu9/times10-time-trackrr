@@ -645,7 +645,7 @@ if (projectDetails && projectDetails.id) {
               <tr>
                 <th class="px-2 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/3">Task</th>
                 <th class="px-2 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">Assignee</th>
-                <th class="px-2 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">Due</th>
+                <th class="px-2 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Due</th>
                 <th class="px-2 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">Priority</th>
                 <th class="px-2 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">Status</th>
                 <th class="px-2 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">Actions</th>
@@ -861,7 +861,7 @@ if (projectDetails && projectDetails.id) {
                       </div>
                     </div>
                   </td>
-                  <td class="px-6 py-4 text-sm">
+                  <td class="px-6 py-4 text-sm whitespace-nowrap">
                     {task.dueDate ? (() => {
                       const dueDate = new Date(task.dueDate);
                       const today = new Date();
@@ -871,14 +871,14 @@ if (projectDetails && projectDetails.id) {
                       return (
                         <span class={`${task.status === 'completed' ? 'line-through text-gray-400' : isOverdue ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
                           {dueDate.toLocaleDateString('en-US', { 
-                            year: 'numeric', 
                             month: '2-digit', 
                             day: '2-digit',
+                            year: '2-digit',
                             timeZone: 'UTC'
                           })}
                         </span>
                       );
-                    })() : <span class="text-gray-500">No due date</span>}
+                    })() : <span class="text-gray-500 text-xs">No due date</span>}
                   </td>
                   <td class="px-6 py-4">
                     <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -1035,13 +1035,13 @@ if (projectDetails && projectDetails.id) {
                         </div>
                       </div>
                     </td>
-                    <td class="px-6 py-3 text-sm">
+                    <td class="px-6 py-3 text-sm whitespace-nowrap">
                       {subtask.dueDate ? (
                         <span class={`text-sm ${subtask.completed ? 'text-gray-400' : 'text-gray-900'}`}>
                           {new Date(subtask.dueDate).toLocaleDateString('en-US', { 
-                            year: 'numeric', 
                             month: '2-digit', 
                             day: '2-digit',
+                            year: '2-digit',
                             timeZone: 'UTC'
                           })}
                         </span>
