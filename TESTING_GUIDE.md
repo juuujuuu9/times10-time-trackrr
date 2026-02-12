@@ -20,6 +20,19 @@ This automatically creates:
 - ✅ 3 assigned tasks for time tracking
 - ✅ Complete project/client structure
 
+**To enhance tasks with realistic demo content:**
+```bash
+curl -X POST http://localhost:4321/api/enhance-test-tasks
+```
+
+This adds:
+- Rich, realistic task descriptions with requirements
+- Technical task notes and insights
+- Team discussions showing collaboration
+- External links to relevant resources
+- Sample file attachments (simulated)
+- Updated task priorities and status
+
 ## What You Can Test
 
 ### 🔐 Authentication & User Management
@@ -72,6 +85,31 @@ The test user (`user@example.com`) has **regular team member** access:
 - View financial/cost data
 - Manage other users' tasks
 - System administration features
+
+## Enhanced Demo Tasks
+
+Each test task now includes realistic demo content:
+
+### 1. **Design User Interface** (High Priority - In Progress)
+- **Rich Description**: Modern, responsive UI design with accessibility requirements
+- **Task Notes**: Design system references and user research insights
+- **Discussions**: Team collaboration on wireframes, navigation, and color palettes
+- **Links**: Figma files, design system docs, WCAG guidelines
+- **Files**: Wireframes, user personas, color palettes (simulated)
+
+### 2. **Implement Authentication** (Critical Priority - In Progress)
+- **Rich Description**: JWT authentication system with security requirements
+- **Task Notes**: Security considerations and database schema updates
+- **Discussions**: Technical implementation decisions and security best practices
+- **Links**: JWT specifications, OWASP guidelines, bcrypt documentation
+- **Files**: Authentication flow diagrams, security checklists, code examples
+
+### 3. **Write API Documentation** (Regular Priority - Pending)
+- **Rich Description**: Comprehensive API documentation with OpenAPI specs
+- **Task Notes**: API structure overview and documentation standards
+- **Discussions**: Tool selection and documentation methodology
+- **Links**: OpenAPI specs, Swagger UI docs, API best practices
+- **Files**: OpenAPI specifications, API examples, documentation templates
 
 ## Testing Workflows
 
