@@ -33,6 +33,11 @@ All three test tasks have been enhanced with realistic, demo-ready content that 
 - User personas (PDF)
 - Color palette (PNG)
 
+### 🔗 Personal Links (3)
+- **GitHub**: [Julian's GitHub Profile](https://github.com/juuujuuu9) - Code repositories and open source projects
+- **LinkedIn**: [Julian's LinkedIn Profile](https://www.linkedin.com/in/julian-hardee-creator/) - Professional networking
+- **Website**: [Julian's Personal Website](https://www.julianhardee.com/) - Portfolio and work showcase
+
 ---
 
 ## Task 2: Implement Authentication
@@ -64,6 +69,11 @@ All three test tasks have been enhanced with realistic, demo-ready content that 
 - Security checklist
 - JWT implementation code
 
+### 🔗 Personal Links (3)
+- **GitHub**: [Julian's GitHub Profile](https://github.com/juuujuuu9) - Code repositories and open source projects
+- **LinkedIn**: [Julian's LinkedIn Profile](https://www.linkedin.com/in/julian-hardee-creator/) - Professional networking
+- **Website**: [Julian's Personal Website](https://www.julianhardee.com/) - Portfolio and work showcase
+
 ---
 
 ## Task 3: Write API Documentation
@@ -94,6 +104,11 @@ All three test tasks have been enhanced with realistic, demo-ready content that 
 - OpenAPI specification file
 - API examples collection
 - Documentation template
+
+### 🔗 Personal Links (3)
+- **GitHub**: [Julian's GitHub Profile](https://github.com/juuujuuu9) - Code repositories and open source projects
+- **LinkedIn**: [Julian's LinkedIn Profile](https://www.linkedin.com/in/julian-hardee-creator/) - Professional networking
+- **Website**: [Julian's Personal Website](https://www.julianhardee.com/) - Portfolio and work showcase
 
 ---
 

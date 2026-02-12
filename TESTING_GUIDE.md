@@ -33,6 +33,16 @@ This adds:
 - Sample file attachments (simulated)
 - Updated task priorities and status
 
+**To add personal portfolio links:**
+```bash
+curl -X POST http://localhost:4321/api/add-personal-links
+```
+
+This adds Julian's professional links to each task:
+- GitHub Profile: Code repositories and open source projects
+- LinkedIn Profile: Professional networking and connections
+- Personal Website: Portfolio and work showcase
+
 ## What You Can Test
 
 ### 🔐 Authentication & User Management
