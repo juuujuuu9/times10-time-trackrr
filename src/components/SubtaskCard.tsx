@@ -123,8 +123,8 @@ const SubtaskCard: React.FC<SubtaskCardProps> = ({ subtasks, className = '', tas
                 <td className="py-3 px-4">
                   <div className="font-medium text-gray-900">{subtask.name}</div>
                 </td>
-                <td className="py-3 px-4">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(subtask.status)}`}>
+                <td className="py-3 px-4 whitespace-nowrap">
+                  <span className={`inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(subtask.status)}`}>
                     {subtask.status.charAt(0).toUpperCase() + subtask.status.slice(1).replace('_', ' ')}
                   </span>
                 </td>

@@ -256,7 +256,7 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
       <button
         ref={buttonRef}
         type="button"
-        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${currentOption.color} ${
+        className={`inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-medium ${currentOption.color} ${
           disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'
         } ${completed ? 'grayscale opacity-60' : ''} transition-opacity`}
         onClick={(e) => {
@@ -352,7 +352,7 @@ export default function StatusDropdown({ currentStatus, onStatusChange, taskId, 
                 aria-label={`Set status to ${option.label}`}
               >
                 {renderStatusIcon(option.value)}
-                <span className="flex-1">{option.label}</span>
+                <span className="flex-1 whitespace-nowrap">{option.label}</span>
                 {option.value === localStatus && (
                   <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />

@@ -880,8 +880,8 @@ if (projectDetails && projectDetails.id) {
                       );
                     })() : <span class="text-gray-500 text-xs">No due date</span>}
                   </td>
-                  <td class="px-6 py-4">
-                    <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class={`inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       task.priority === 'urgent' ? 'bg-red-100 text-red-800' :
                       task.priority === 'high' ? 'bg-orange-100 text-orange-800' :
                       task.priority === 'regular' ? 'bg-blue-100 text-blue-800' :
@@ -890,7 +890,7 @@ if (projectDetails && projectDetails.id) {
                       {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
                     </span>
                   </td>
-                  <td class="px-6 py-4">
+                  <td class="px-6 py-4 whitespace-nowrap">
                     <StatusDropdown 
                       currentStatus={task.status}
                       onStatusChange={async (newStatus) => {
@@ -1052,7 +1052,7 @@ if (projectDetails && projectDetails.id) {
                     <td class="px-6 py-3">
                       <!-- Priority column removed for subtasks -->
                     </td>
-                    <td class="px-6 py-3">
+                    <td class="px-6 py-3 whitespace-nowrap">
                       <StatusDropdown 
                         currentStatus={subtask.status || (subtask.completed ? 'completed' : 'pending')}
                         onStatusChange={async (newStatus) => {

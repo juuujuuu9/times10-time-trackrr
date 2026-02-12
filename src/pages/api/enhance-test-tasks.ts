@@ -7,51 +7,32 @@ import { getSessionUser } from '../../utils/session';
 // Demo content for each task
 const taskEnhancements = {
   'Design User Interface': {
-    description: `Create a modern, responsive user interface for the new customer dashboard. This includes designing the layout, color scheme, typography, and interactive components. The design should follow our brand guidelines and provide an intuitive user experience across desktop and mobile devices.
-
-**Key Requirements:**
-- Responsive design for desktop, tablet, and mobile
-- Accessibility compliance (WCAG 2.1 AA)
-- Dark mode support
-- Consistent with existing design system
-- User testing feedback integration`,
+    description: `Create responsive UI for customer dashboard with layout, colors, typography and components per brand`,
     
     notes: [
       {
         title: 'Design System Reference',
-        content: `Reviewed the current design system documentation. Key components to focus on:
-- Primary color: #3B82F6 (blue-500)
-- Typography: Inter font family
-- Spacing: 8px grid system
-- Border radius: 4px, 8px, 16px scale
-
-Need to ensure consistency with existing components in the component library.`,
+        content: `Reviewed design system. Key: #3B82F6, Inter font, 8px grid. Ensure consistency with component library.`,
         isPrivate: false
       },
       {
         title: 'User Research Insights',
-        content: `Based on recent user interviews:
-- Users prefer clean, minimalist interfaces
-- Quick access to key metrics is essential
-- Mobile usage is 60% of total traffic
-- Loading speed is critical for user retention
-
-These insights should guide our design decisions.`,
+        content: `Users prefer clean interfaces. Mobile is 60% of traffic. Quick metrics access and loading speed are critical.`,
         isPrivate: false
       }
     ],
     
     discussions: [
       {
-        content: `Started working on the wireframes for the dashboard layout. Thinking of a card-based design with clear visual hierarchy. What are your thoughts on the navigation structure?`,
+        content: `Started wireframes for dashboard. Card-based design with clear hierarchy. Thoughts on navigation?`,
         type: 'insight'
       },
       {
-        content: `Great progress on the wireframes! I suggest we use a sidebar navigation for desktop and a bottom tab bar for mobile. This pattern tested well in our previous user research.`,
+        content: `Sidebar for desktop, bottom tab bar for mobile. This pattern tested well in user research.`,
         type: 'insight'
       },
       {
-        content: `Added initial color palette options to Figma. Please review and provide feedback on the primary and secondary color combinations.`,
+        content: `Added color palette options to Figma. Please review primary and secondary combinations.`,
         type: 'insight'
       }
     ],
@@ -100,54 +81,32 @@ These insights should guide our design decisions.`,
   },
   
   'Implement Authentication': {
-    description: `Implement secure authentication system with JWT tokens, refresh tokens, and multi-factor authentication support. The system should handle user registration, login, password reset, and session management while maintaining high security standards.
-
-**Technical Requirements:**
-- JWT access tokens with 15-minute expiry
-- Refresh tokens with 7-day expiry
-- bcrypt password hashing with salt rounds
-- Rate limiting on authentication endpoints
-- Multi-factor authentication (MFA) support
-- OAuth 2.0 integration ready`,
+    description: `Implement secure auth system with JWT, refresh tokens and MFA for user registration and login`,
     
     notes: [
       {
         title: 'Security Considerations',
-        content: `Key security requirements identified:
-- Implement rate limiting: 5 attempts per 15 minutes per IP
-- Use secure HTTP-only cookies for refresh tokens
-- Implement CSRF protection for state-changing operations
-- Add account lockout after 5 failed attempts
-- Log all authentication events for security monitoring
-
-Reference: OWASP Authentication Cheat Sheet`,
+        content: `Rate limit 5 attempts/15min per IP. HTTP-only cookies for refresh tokens. CSRF protection. Account lockout after 5 fails. Log all auth events.`,
         isPrivate: false
       },
       {
         title: 'Database Schema Updates',
-        content: `Need to add the following fields to users table:
-- mfa_enabled (boolean)
-- mfa_secret (varchar)
-- failed_login_attempts (integer)
-- locked_until (timestamp)
-- password_changed_at (timestamp)
-
-Also need to create refresh_tokens table for better token management.`,
+        content: `Add to users: mfa_enabled, mfa_secret, failed_login_attempts, locked_until. Create refresh_tokens table.`,
         isPrivate: true
       }
     ],
     
     discussions: [
       {
-        content: `Started implementing the JWT token generation. Using RS256 algorithm for better security. Should we also implement token blacklisting for logout functionality?`,
+        content: `Implementing JWT with RS256. Should we add token blacklisting for logout?`,
         type: 'insight'
       },
       {
-        content: `Token blacklisting would be good for security, but let's start with shorter token lifetimes first. We can add blacklisting in the next iteration. Focus on getting the basic flow working reliably.`,
+        content: `Start with shorter token lifetimes first. Add blacklisting in next iteration. Focus on basic flow.`,
         type: 'insight'
       },
       {
-        content: `Rate limiting is now implemented using express-rate-limit. Testing with different scenarios - seems to be working well. Next up: password reset flow.`,
+        content: `Rate limiting done with express-rate-limit. Working well. Next: password reset flow.`,
         type: 'insight'
       }
     ],
@@ -196,57 +155,32 @@ Also need to create refresh_tokens table for better token management.`,
   },
   
   'Write API Documentation': {
-    description: `Create comprehensive API documentation for all endpoints including authentication, time tracking, project management, and team collaboration features. The documentation should be developer-friendly with clear examples, request/response schemas, and error handling guidelines.
-
-**Documentation Requirements:**
-- OpenAPI 3.0 specification
-- Interactive API explorer (Swagger UI)
-- Code examples in multiple languages
-- Authentication flow documentation
-- Rate limiting and error code explanations
-- Webhook event documentation`,
+    description: `Create API documentation for auth, time tracking and project management with examples and error`,
     
     notes: [
       {
         title: 'API Structure Overview',
-        content: `API Organization:
-- /api/auth/* - Authentication endpoints
-- /api/time-entries/* - Time tracking
-- /api/tasks/* - Task management
-- /api/projects/* - Project operations
-- /api/teams/* - Team collaboration
-- /api/collaborations/* - Collaborative features
-- /api/reports/* - Analytics and reporting
-
-Each endpoint follows RESTful conventions with consistent response formats.`,
+        content: `API org: auth, time-entries, tasks, projects, teams, collaborations, reports. RESTful with consistent response formats.`,
         isPrivate: false
       },
       {
         title: 'Documentation Standards',
-        content: `Documentation guidelines:
-- Use clear, concise descriptions
-- Include request/response examples
-- Document all error codes and scenarios
-- Provide curl examples for each endpoint
-- Include rate limiting information
-- Add deprecation notices where applicable
-
-Follow the existing API response format: { success, data, error, message }`,
+        content: `Clear descriptions, request/response examples, error codes, curl examples. Format: { success, data, error, message }`,
         isPrivate: false
       }
     ],
     
     discussions: [
       {
-        content: `Started with the OpenAPI specification. Defining the basic structure and components. Should we use Swagger UI or Redoc for the documentation interface?`,
+        content: `Started OpenAPI spec. Swagger UI or Redoc for the docs interface?`,
         type: 'insight'
       },
       {
-        content: `Swagger UI is more interactive and familiar to developers. Let's go with that. I've set up the basic structure - please review the authentication section when you have a chance.`,
+        content: `Swagger UI is more interactive. Basic structure set up. Please review auth section.`,
         type: 'insight'
       },
       {
-        content: `Added code examples for JavaScript, Python, and curl. Also documented the error response format. Working on the webhook section now.`,
+        content: `Added JS, Python, curl examples. Documented error format. Working on webhooks.`,
         type: 'insight'
       }
     ],
