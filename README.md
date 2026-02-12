@@ -2,6 +2,8 @@
 
 A full-stack time tracking and project management application built for agencies and teams. Tracks billable hours, manages tasks across clients and projects, and provides analytics dashboards—all with role-based access control, collaborative features, and third-party integrations.
 
+**🚀 Try it now!** Test login: `user@example.com` / `user` (see [Quick Test & Demo](#quick-test--demo) below)
+
 **Live demo:** [trackr.times10.net](https://trackr.times10.net)
 
 ---
@@ -154,6 +156,7 @@ src/
 | Email notifications | Invitations, assignments, password reset |
 | File uploads | Media attachments via Bunny CDN |
 | Rich text | TipTap/Lexical editors with mentions and formatting |
+| **Test Login** | **user@example.com / user** - Try it now! |
 
 ---
 
@@ -185,6 +188,34 @@ PUBLIC_SITE_URL=https://your-domain.com
 ```bash
 npm run dev
 ```
+
+### Quick Test & Demo
+
+**Test Login Credentials:**
+- **Email**: `user@example.com`
+- **Password**: `user`
+
+**To set up test data**, call the setup endpoint:
+```bash
+curl -X POST http://localhost:4321/api/setup-test-user
+```
+
+This creates:
+- A test user with regular team member access
+- A test team and collaboration
+- 3 sample tasks assigned to the test user
+- All necessary project/client relationships
+
+**Demo Features to Test:**
+- Login and authentication
+- Time tracking on assigned tasks
+- Team collaboration features (discussions, files, notes)
+- Dashboard views and reports
+- Task assignment and management
+
+The test user has regular team member permissions - perfect for demonstrating how the app works for non-admin users.
+
+**📖 Comprehensive Testing Guide**: See [TESTING_GUIDE.md](./TESTING_GUIDE.md) for detailed testing workflows, API examples, and feature walkthroughs.
 
 ### Build & Deploy
 ```bash
