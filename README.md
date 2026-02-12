@@ -1,39 +1,213 @@
-# Cursor Guides
+# Times10 Time Tracker (Trackr)
 
-This folder contains all the documentation files referenced in the cursor rules for the Times10 Time Tracker project.
+A full-stack time tracking and project management application built for agencies and teams. Tracks billable hours, manages tasks across clients and projects, and provides analytics dashboards—all with role-based access control, collaborative features, and third-party integrations.
 
-## File Organization
+**Live demo:** [trackr.times10.net](https://trackr.times10.net)
 
-### Core Rules
-- **`cursor-task-prompts.md`** - Main cursor rules and task prompts
-- **`extension-proposal.md`** - Template for API extension proposals
+---
 
-### Field Mapping & API Patterns
-- **`API_FIELD_MAPPING_PATTERNS.md`** - Comprehensive field mapping patterns
-- **`DURATION_EDITING_PATTERNS.md`** - Duration editing specific patterns
-- **`TIME_EDITING_GUIDE.md`** - Time editing workflow guide
+## Tech Stack
 
-### Build & Deployment
-- **`VERCEL_BUILD_TROUBLESHOOTING.md`** - Vercel build failure troubleshooting
+### Frontend
+- **Astro 5** – Multi-page app with SSR, Islands architecture, and static page generation
+- **React 18** – Interactive components (charts, rich text editors, forms)
+- **TypeScript** – Strict mode, end-to-end type safety
+- **Tailwind CSS** – Utility-first styling, responsive layouts
+- **Chart.js** – Time-series charts, team performance dashboards
+- **TipTap / Lexical** – Rich text editors with mentions, links, code blocks
 
-## Usage
+### Backend & API
+- **Astro API Routes** – Serverless endpoints (file-based routing)
+- **Node.js** – Server-side logic, middleware, validation
 
-All references in cursor rules now point to files in this folder using the `/cursor-guides/` path prefix.
+### Database & ORM
+- **PostgreSQL** – Primary data store (Neon serverless)
+- **Drizzle ORM** – Type-safe schema, migrations, queries
+- **Neon** – Serverless Postgres with connection pooling
 
-### Quick Reference
-- **Main rules**: `/cursor-guides/cursor-task-prompts.md`
-- **API extensions**: `/cursor-guides/extension-proposal.md`
-- **Field mapping**: `/cursor-guides/API_FIELD_MAPPING_PATTERNS.md`
-- **Build issues**: `/cursor-guides/VERCEL_BUILD_TROUBLESHOOTING.md`
+### Auth & Security
+- **Session-based auth** – HTTP-only cookies, 7-day expiry
+- **bcrypt** – Password hashing
+- **Role-based access** – Admin, user roles with middleware guards
+- **Parameterized queries** – SQL injection prevention
 
-## Maintenance
+### Integrations & Services
+- **Resend** – Transactional email (invitations, password reset, task assignments)
+- **Slack** – OAuth, slash commands (`/track`, `/tasks`), user linking
+- **Bunny CDN** – File uploads, media storage for task attachments
+- **Vercel** – Hosting, serverless functions, edge config
 
-When adding new cursor rule documentation:
-1. Add the file to this folder
-2. Update references in `cursor-task-prompts.md`
-3. Update this README if needed
-4. Keep all cursor-related documentation centralized here
+### DevOps & Tooling
+- **Drizzle Kit** – Migrations, schema push, studio
+- **ESLint / Astro Check** – Linting and type checking
+- **Conventional commits** – Structured changelog and deployments
 
-This organization ensures all cursor rules and their referenced documentation are easily discoverable and maintainable.
-# Deployment retry - Mon Oct 20 10:57:44 PDT 2025
-# Manual deployment trigger - Mon Oct 20 10:59:45 PDT 2025
+---
+
+## Architecture
+
+### High-Level Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Client (Browser)                          │
+│  Astro Pages (SSR)  │  React Islands  │  Tailwind UI             │
+└─────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     Astro API Routes (Vercel)                    │
+│  /api/auth/*  │  /api/time-entries/*  │  /api/slack/*  │  etc.  │
+│  Session middleware  │  requireRole()  │  getSessionUser()       │
+└─────────────────────────────────────────────────────────────────┘
+                                    │
+            ┌───────────────────────┼───────────────────────┐
+            ▼                       ▼                       ▼
+┌───────────────────┐   ┌───────────────────┐   ┌───────────────────┐
+│  Neon PostgreSQL  │   │  Resend (Email)   │   │  Slack API        │
+│  Drizzle ORM      │   │  Bunny CDN        │   │  OAuth + Commands │
+└───────────────────┘   └───────────────────┘   └───────────────────┘
+```
+
+### Project Structure
+
+```
+src/
+├── components/       # React components (charts, editors, timers)
+├── db/               # Drizzle schema, queries, relations
+├── layouts/          # Astro layouts (admin, dashboard)
+├── lib/api/          # API client, contracts, schemas
+├── pages/
+│   ├── api/          # API routes (auth, time-entries, slack, etc.)
+│   ├── admin/        # Admin dashboards, reports, settings
+│   └── dashboard/    # User-facing dashboards, collaborations
+├── services/         # notificationService, timeEntryService, timezoneService
+├── utils/            # auth, session, email, timezone, validation
+└── styles/           # Global CSS
+```
+
+### Data Model Highlights
+
+- **Clients** → **Projects** → **Tasks** (hierarchical)
+- **Time entries** → linked to projects and users (timer + manual duration)
+- **Teams** → **Team members** (many-to-many)
+- **Task discussions**, **task files**, **task links** – collaborative content
+- **Sessions**, **invitation tokens**, **password reset tokens** – auth flows
+
+### API Design
+
+- REST-style endpoints under `/api/`
+- Consistent JSON responses: `{ success, data?, error?, message? }`
+- Context-based auth: `getSessionUser(context)`, `requireRole(context, role)`
+- Parameterized SQL and input validation throughout
+
+---
+
+## Problems Solved
+
+### 1. Accurate Time Tracking
+- **Timer-based** and **manual duration** entries
+- Timezone-safe date handling (avoid `toISOString()`-related bugs)
+- `createdAt` used for manual entries; `startTime`/`endTime` for timer entries
+- Unified time entry API for reporting and exports
+
+### 2. Project & Cost Visibility
+- Dashboards by **client**, **project**, and **team member**
+- Filters: All Time, Today, This Week, This Month, This Quarter
+- Cost calculation: hours × user pay rate per entry, summed per project
+- Export and reporting APIs for external tools
+
+### 3. Collaboration & Communication
+- **Teams** per project with leads and members
+- **Insights** (discussions) on tasks with threaded replies
+- **Task files** and **links** stored on Bunny CDN
+- Email notifications for task/subtask assignments and collaboration invites
+
+### 4. Integrations Without Context Switching
+- **Slack**: `/track`, `/tasks`, OAuth user linking
+- Time logged from Slack without leaving the app
+
+### 5. Auth & Access Control
+- Session-based auth with HTTP-only cookies
+- Role-based access (admin vs user)
+- Invitation flow with token-based setup
+- Password reset via Resend
+
+### 6. Database Reliability
+- Drizzle migrations with audit scripts
+- Local/production database sync workflows
+- Backup and restore procedures
+
+---
+
+## Key Features
+
+| Feature | Description |
+|---------|-------------|
+| Time tracking | Timer start/stop and manual duration entry |
+| Projects & clients | Hierarchical client → project → task structure |
+| Teams | Team creation, member management, role assignment |
+| Collaborative tasks | Insights (discussions), files, links, notes |
+| Dashboards | Team performance, project analysis, client overview |
+| Reports | Daily/weekly stats, time-series, task totals |
+| Slack integration | Slash commands, OAuth, user linking |
+| Email notifications | Invitations, assignments, password reset |
+| File uploads | Media attachments via Bunny CDN |
+| Rich text | TipTap/Lexical editors with mentions and formatting |
+
+---
+
+## Getting Started
+
+### Prerequisites
+- Node.js 18+
+- PostgreSQL (or Neon account)
+
+### Installation
+
+```bash
+git clone https://github.com/juuujuuu9/times10-time-trackrr.git
+cd times10-time-trackrr
+npm install
+```
+
+### Environment Variables
+Create `.env` or `.env.local`:
+
+```env
+DATABASE_URL=postgresql://...
+RESEND_API_KEY=re_...
+PUBLIC_SITE_URL=https://your-domain.com
+# Optional: Slack, Bunny CDN
+```
+
+### Development
+```bash
+npm run dev
+```
+
+### Build & Deploy
+```bash
+npm run build
+# Deploy to Vercel (recommended)
+```
+
+---
+
+## Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `npm run dev` | Start dev server |
+| `npm run build` | Production build |
+| `npm run db:studio` | Drizzle Studio |
+| `npm run db:generate` | Generate migrations |
+| `npm run db:push` | Push schema to DB |
+| `npm run db:sync` | Sync local ↔ production |
+| `npm run db:deploy` | Full production deployment workflow |
+
+---
+
+## License
+
+Proprietary – Times10
